@@ -267,12 +267,25 @@ model CashRegister {
   expectedAmount  Float?
   status          String   @default("open") // open | closed
   notes           String?
+  currentUserId   String?  // Current cashier
   establishmentId String
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   closedAt        DateTime?
 
   movements CashMovement[]
+  transfers CashTransfer[]
+}
+
+model CashTransfer {
+  id              String   @id @default(cuid())
+  cashRegisterId  String
+  cashRegister    CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+  fromUserId      String
+  toUserId        String
+  amount          Float    // Cash amount at transfer
+  notes           String?
+  createdAt       DateTime @default(now())
 }
 
 model CashMovement {

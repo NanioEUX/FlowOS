@@ -17,6 +17,7 @@ const ALL_PERMISSIONS = [
   { value: "cardapio", label: "Cardápio", desc: "Gerenciar cardápio" },
   { value: "estoque", label: "Estoque", desc: "Gerenciar estoque" },
   { value: "entregas", label: "Entregas", desc: "Gerenciar entregas" },
+  { value: "financeiro", label: "Financeiro", desc: "Relatórios financeiros" },
   { value: "relatorios", label: "Relatórios", desc: "Ver relatórios" },
   { value: "config", label: "Configurações", desc: "Configurações do estabelecimento" },
   { value: "usuarios", label: "Usuários", desc: "Gerenciar usuários" },
@@ -27,6 +28,14 @@ const ROLE_LABELS: Record<string, string> = {
   atendente: "Atendente",
   motoboy: "Motoboy",
 }
+
+const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  admin: [],
+  atendente: ["caixa"],
+  motoboy: ["entregas"],
+}
+
+const ALL_PERMISSIONS_VALUES = ALL_PERMISSIONS.map((p) => p.value)
 
 export default function UsuariosPage() {
   const searchParams = useSearchParams()
@@ -56,6 +65,16 @@ export default function UsuariosPage() {
     setForm({ name: "", email: "", password: "123456", role: "atendente", permissions: ["caixa"] })
     setError("")
     setShowForm(true)
+  }
+
+  function handleRoleChange(role: string) {
+    if (role === "motoboy") {
+      setForm({ ...form, role, permissions: ["entregas"] })
+    } else if (role === "admin") {
+      setForm({ ...form, role, permissions: [...ALL_PERMISSIONS_VALUES] })
+    } else {
+      setForm({ ...form, role, permissions: ["caixa"] })
+    }
   }
 
   function openEdit(user: any) {
@@ -269,16 +288,16 @@ export default function UsuariosPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Papel</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Perfil</label>
                   <div className="flex gap-2">
                     {Object.entries(ROLE_LABELS).map(([value, label]) => (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setForm({ ...form, role: value })}
+                        onClick={() => handleRoleChange(value)}
                         className={`flex-1 rounded-lg border p-2 text-sm font-medium transition-colors ${
                           form.role === value
-                            ? "border-green-500 bg-green-50 text-green-700"
+                            ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
                             : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                         }`}
                       >
@@ -288,35 +307,42 @@ export default function UsuariosPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-zinc-700">Permissões</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {ALL_PERMISSIONS.map((perm) => (
-                      <button
-                        key={perm.value}
-                        type="button"
-                        onClick={() => togglePermission(perm.value)}
-                        className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
-                          form.permissions.includes(perm.value)
-                            ? "border-green-500 bg-green-50 text-green-700"
-                            : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                        }`}
-                      >
-                        <div className={`flex h-4 w-4 items-center justify-center rounded border ${
-                          form.permissions.includes(perm.value)
-                            ? "border-green-500 bg-green-500"
-                            : "border-zinc-300"
-                        }`}>
-                          {form.permissions.includes(perm.value) && <Check className="h-3 w-3 text-white" />}
-                        </div>
-                        <div>
-                          <p className="font-medium">{perm.label}</p>
-                          <p className="text-[10px] text-zinc-400">{perm.desc}</p>
-                        </div>
-                      </button>
-                    ))}
+                {form.role !== "motoboy" && (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-700">Permissões</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ALL_PERMISSIONS.map((perm) => (
+                        <button
+                          key={perm.value}
+                          type="button"
+                          onClick={() => togglePermission(perm.value)}
+                          className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
+                            form.permissions.includes(perm.value)
+                              ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
+                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                          }`}
+                        >
+                          <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                            form.permissions.includes(perm.value)
+                              ? "border-[#FF6B35] bg-[#FF6B35]"
+                              : "border-zinc-300"
+                          }`}>
+                            {form.permissions.includes(perm.value) && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">{perm.label}</p>
+                            <p className="text-[10px] text-zinc-400">{perm.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {form.role === "admin" && (
+                      <p className="mt-2 text-xs text-zinc-400">
+                        Administradores podem ter todas as permissões ou apenas algumas
+                      </p>
+                    )}
                   </div>
-                </div>
+                )}
 
                 {error && <p className="text-sm text-red-500">{error}</p>}
 

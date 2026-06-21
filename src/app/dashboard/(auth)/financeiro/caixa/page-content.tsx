@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Lock, Unlock, DollarSign, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle, Loader2, X, Plus } from "lucide-react"
+import { Lock, Unlock, DollarSign, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle, Loader2, X, Plus, ArrowRightLeft } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +17,12 @@ interface CashRegister {
   expectedAmount: number | null
   status: string
   notes: string | null
+  currentUserId: string | null
+  establishmentId: string
   createdAt: string
   closedAt: string | null
   movements: CashMovement[]
+  transfers: CashTransfer[]
 }
 
 interface CashMovement {
@@ -29,6 +32,21 @@ interface CashMovement {
   description: string | null
   paymentMethod: string | null
   createdAt: string
+}
+
+interface CashTransfer {
+  id: string
+  fromUserId: string
+  toUserId: string
+  amount: number
+  notes: string | null
+  createdAt: string
+}
+
+interface User {
+  id: string
+  name: string
+  email: string
 }
 
 export default function CaixaFinanceiroPage() {
@@ -41,6 +59,11 @@ export default function CaixaFinanceiroPage() {
   const [openingAmount, setOpeningAmount] = useState("")
   const [closingAmount, setClosingAmount] = useState("")
   const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferAmount, setTransferAmount] = useState("")
+  const [transferToUser, setTransferToUser] = useState("")
+  const [transferNotes, setTransferNotes] = useState("")
+  const [users, setUsers] = useState<User[]>([])
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "variavel" })
   const [saving, setSaving] = useState(false)
 
@@ -54,7 +77,16 @@ export default function CaixaFinanceiroPage() {
     setLoading(false)
   }
 
-  useEffect(() => { loadRegister() }, [establishmentId])
+  async function loadUsers() {
+    if (!establishmentId) return
+    try {
+      const res = await fetchAuth(`/api/users?establishmentId=${establishmentId}`)
+      const data = await res.json()
+      setUsers(data.filter((u: User) => u.id !== JSON.parse(localStorage.getItem("pedefacil-user") || "{}").id))
+    } catch {}
+  }
+
+  useEffect(() => { loadRegister(); loadUsers() }, [establishmentId])
 
   async function openRegister() {
     setSaving(true)
@@ -137,6 +169,29 @@ export default function CaixaFinanceiroPage() {
     }
   }
 
+  async function transferCashRegister() {
+    if (!register || !transferToUser || !transferAmount) return
+    setSaving(true)
+    try {
+      await fetchAuth(`/api/cash-register/${register.id}/transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toUserId: transferToUser,
+          amount: parseFloat(transferAmount),
+          notes: transferNotes || null,
+        }),
+      })
+      setTransferAmount("")
+      setTransferToUser("")
+      setTransferNotes("")
+      setShowTransferModal(false)
+      await loadRegister()
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const totalIn = register?.movements.filter((m) => m.amount > 0).reduce((sum, m) => sum + m.amount, 0) || 0
   const totalOut = register?.movements.filter((m) => m.amount < 0).reduce((sum, m) => sum + Math.abs(m.amount), 0) || 0
   const currentBalance = (register?.openingAmount || 0) + totalIn - totalOut
@@ -209,6 +264,9 @@ export default function CaixaFinanceiroPage() {
         <Button onClick={() => setShowExpenseForm(true)} variant="outline" size="sm" className="text-red-600">
           <Plus className="h-4 w-4 mr-1" /> Despesa
         </Button>
+        <Button onClick={() => { setTransferAmount(currentBalance.toString()); setShowTransferModal(true) }} variant="outline" size="sm" className="text-blue-600">
+          <ArrowRightLeft className="h-4 w-4 mr-1" /> Transferir
+        </Button>
         <div className="flex-1" />
         <Button onClick={closeRegister} variant="danger" size="sm">
           <Lock className="h-4 w-4 mr-1" /> Fechar Caixa
@@ -257,6 +315,52 @@ export default function CaixaFinanceiroPage() {
             </select>
             <Button onClick={addExpense} disabled={saving} className="bg-red-600 hover:bg-red-700">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrar"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transfer modal */}
+      {showTransferModal && (
+        <Card className="border-blue-200">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Transferir Caixa</h3>
+              <button onClick={() => setShowTransferModal(false)}><X className="h-4 w-4 text-zinc-400" /></button>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Informe o valor em espécie no caixa e selecione o atendente que vai assumir.
+            </p>
+            <div className="rounded-lg bg-blue-50 p-3">
+              <p className="text-xs text-blue-600">Saldo atual: {formatCurrency(currentBalance)}</p>
+            </div>
+            <Input
+              type="number"
+              placeholder="Valor em espécie (R$)"
+              value={transferAmount}
+              onChange={(e) => setTransferAmount(e.target.value)}
+            />
+            <select
+              value={transferToUser}
+              onChange={(e) => setTransferToUser(e.target.value)}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+            >
+              <option value="">Selecione o atendente</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+            <Input
+              placeholder="Observações (opcional)"
+              value={transferNotes}
+              onChange={(e) => setTransferNotes(e.target.value)}
+            />
+            <Button
+              onClick={transferCashRegister}
+              disabled={saving || !transferToUser || !transferAmount}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Transferência"}
             </Button>
           </CardContent>
         </Card>
