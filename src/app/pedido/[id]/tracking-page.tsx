@@ -214,7 +214,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
               <span className="text-lg">💬</span>
               <div>
                 <p className="text-sm font-medium text-amber-800">Nova resposta do estabelecimento</p>
-                <p className="text-xs text-amber-600">Clique em "Enviar mensagem" para ver</p>
+                <p className="text-xs text-amber-600">Clique em &quot;Enviar mensagem&quot; para ver</p>
               </div>
             </div>
             <button onClick={dismissNotification} className="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1">
