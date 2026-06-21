@@ -544,7 +544,7 @@ export default function CardapioPage() {
                 value={form.instagramUrl}
                 onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
               />
-              <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como "Siga-nos" vinculado à logo</p>
+              <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
