@@ -120,22 +120,12 @@ export async function POST(req: NextRequest) {
           .map((i: any) => `${i.name} x${i.quantity}`)
           .join(", ")
 
-        const splitRules = []
-        if (establishment.asaasWalletId && establishment.platformFee > 0) {
-          splitRules.push({
-            walletId: establishment.asaasWalletId,
-            percentual: 100 - establishment.platformFee,
-            description: `Repasse para ${establishment.name}`,
-          })
-        }
-
         const payment = await createPaymentLink({
           apiKey: establishment.asaasApiKey,
           customerName,
           customerPhone: customerPhone || "",
           value: order.total,
           description: `Pedido #${orderNumber} - ${establishment.name} - ${itemNames}`,
-          splitRules: splitRules.length > 0 ? splitRules : undefined,
         })
 
         paymentLink = payment.invoiceUrl

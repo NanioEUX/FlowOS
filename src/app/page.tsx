@@ -159,11 +159,11 @@ export default function HomePage() {
             <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-6xl">
               Seu cardápio online.
               <br />
-              <span className="text-[#FF6B35]">Sem comissão escondida.</span>
+              <span className="text-[#FF6B35]">Mensalidade fixa, sem surpresas.</span>
             </h1>
             <p className="mt-6 text-lg text-zinc-600">
               Plataforma completa de pedidos para seu restaurante. Cliente acessa seu cardápio,
-              escolhe o que quer, paga por Pix/cartão e o pedido vai direto para seu painel.
+              escolhe o que quer, paga por Pix/cartão e o pedido vai direto para seu painel. Sem comissão sobre vendas.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/cadastro">
@@ -371,10 +371,10 @@ export default function HomePage() {
       <section className="bg-zinc-50 py-20">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-center text-3xl font-bold text-zinc-900">
-            Onde os outros cobram porcentagem, aqui você investe!
+            Mensalidade fixa. Zero comissão.
           </h2>
           <p className="mt-2 text-center text-zinc-600">
-            Compare e veja a diferença no seu bolso.
+            Compare e veja quanto você economiza por mês.
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2">
             {/* Marketplace */}
@@ -447,10 +447,10 @@ export default function HomePage() {
       <section className="bg-white py-20" id="planos">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="text-center text-3xl font-bold text-zinc-900">
-            Planos simples, sem surpresas
+            Mensalidade fixa, sem surpresas
           </h2>
           <p className="mt-2 text-center text-zinc-600">
-            Escolha o plano ideal para o tamanho do seu negócio
+            Escolha o plano ideal para o tamanho do seu negócio. Cancele quando quiser.
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan) => (

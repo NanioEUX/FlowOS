@@ -804,15 +804,44 @@ export default function CardapioPage() {
                   onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                 />
 
-                {/* Image URL */}
+                {/* Image */}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">
                     <ImageIcon className="mr-1 inline h-3 w-3" />
-                    URL da Imagem
+                    Imagem do Produto
                   </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:border-green-400 transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span>Selecionar foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onloadend = () => setProductForm({ ...productForm, image: reader.result as string })
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                    </label>
+                    {productForm.image && (
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, image: "" })}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
                   <Input
                     placeholder="https://exemplo.com/foto.jpg"
-                    value={productForm.image}
+                    value={productForm.image.startsWith("data:") ? "" : productForm.image}
                     onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
                   />
                   {productForm.image && (

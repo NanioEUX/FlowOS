@@ -246,6 +246,8 @@ export default function CaixaPOSPage() {
   }
 
   function closeTable(num: number) {
+    const items = tableCarts[num] || []
+    if (items.length > 0 && !confirm(`Mesa ${num} possui ${items.length} item(ns). Deseja fechar e descartar?`)) return
     setTableCarts((prev) => {
       const next = { ...prev }
       delete next[num]
@@ -269,6 +271,8 @@ export default function CaixaPOSPage() {
 
   async function finalizeSale() {
     if (!user?.establishmentId || cart.length === 0) return
+    const label = activeTable ? `Mesa ${activeTable}` : "Balcão"
+    if (!confirm(`Finalizar venda ${label} - ${formatCurrency(cartTotal)}?`)) return
     setClosing(true)
     try {
       const res = await fetchAuth("/api/orders", {
@@ -422,6 +426,8 @@ export default function CaixaPOSPage() {
 
   async function transferCashRegister() {
     if (!cashRegister || !transferUserId || !user?.establishmentId) return
+    const toUser = allUsers.find((u: any) => u.id === transferUserId)
+    if (!confirm(`Transferir caixa para ${toUser?.name || "outro atendente"}? Você será desconectado.`)) return
     try {
       await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
         method: "POST",
@@ -434,7 +440,7 @@ export default function CaixaPOSPage() {
       })
       setShowCashRegisterModal(false)
       setTransferUserId("")
-      loadData(user.establishmentId)
+      handleLogout()
     } catch (err) {
       console.error(err)
     }
