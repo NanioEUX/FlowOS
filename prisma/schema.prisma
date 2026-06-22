@@ -140,6 +140,7 @@ model Order {
   paymentStatus    String   @default("pending")
   notes            String?
   method           String   @default("site")
+  tableNumber      Int?
   deliveryPerson   String?
   deliveryPersonId String?
   deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])

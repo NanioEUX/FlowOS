@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -96,6 +96,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [showCart, setShowCart] = useState(false)
+  const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup">("online")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
@@ -869,6 +870,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
             <p className="text-sm font-medium text-amber-800">{closedMessage}</p>
             <p className="mt-1 text-xs text-amber-600">Aguarde, estaremos de volta!</p>
+            <button
+              onClick={() => setShowBusinessHours(true)}
+              className="mt-2 text-xs font-medium text-amber-700 underline hover:text-amber-900"
+            >
+              Ver horários de funcionamento
+            </button>
           </div>
         </div>
       )}
@@ -918,6 +925,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         )}
 
       </div>
+
+      {/* Footer */}
+      {cart.length === 0 && !showCart && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-zinc-200 bg-white p-3 shadow-lg">
+          <div className="mx-auto flex max-w-3xl items-center justify-center">
+            <button
+              onClick={() => setShowBusinessHours(true)}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700"
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Horários de funcionamento
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Cart FAB */}
       {cart.length > 0 && !showCart && (
@@ -987,6 +1009,38 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 Confirmar
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Business Hours Modal */}
+      {showBusinessHours && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-t-2xl bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-zinc-900">Horários de Funcionamento</h2>
+              <button onClick={() => setShowBusinessHours(false)} className="text-zinc-400 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {parsedBusinessHours?.map((h: any) => (
+                <div key={h.day} className={`flex items-center justify-between rounded-lg px-3 py-2 ${h.active ? "bg-green-50" : "bg-zinc-50"}`}>
+                  <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day}</span>
+                  {h.active ? (
+                    <span className="text-sm text-green-700">{h.open} – {h.close}</span>
+                  ) : (
+                    <span className="text-sm text-zinc-400">Fechado</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowBusinessHours(false)}
+              className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

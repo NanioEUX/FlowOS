@@ -6,7 +6,7 @@ import crypto from "crypto"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount } = body
+    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, tableNumber } = body
 
     if (!establishmentId || !customerName || !items || !total) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         status: body.status || "pending",
         couponId: couponId || null,
         orderNumber,
+        tableNumber: tableNumber || null,
       },
     })
 

@@ -89,6 +89,9 @@ export default function CaixaPOSPage() {
   const [activeTab, setActiveTab] = useState<"caixa" | "pedidos" | "entregas">("caixa")
   const [orders, setOrders] = useState<any[]>([])
   const [deliveryPeople, setDeliveryPeople] = useState<any[]>([])
+  const [activeTable, setActiveTable] = useState<number | null>(null)
+  const [tableCarts, setTableCarts] = useState<Record<number, CartItem[]>>({})
+  const [nextTableNum, setNextTableNum] = useState(1)
 
   useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
@@ -186,6 +189,38 @@ export default function CaixaPOSPage() {
     setCart((prev) => prev.filter((i) => i.productId !== productId))
   }
 
+  function selectTable(num: number) {
+    setTableCarts((prev) => ({ ...prev, [activeTable!]: cart }))
+    setActiveTable(num)
+    setCart(tableCarts[num] || [])
+  }
+
+  function openNewTable() {
+    const num = nextTableNum
+    setTableCarts((prev) => ({ ...prev, [num]: [] }))
+    setNextTableNum(num + 1)
+    setActiveTable(num)
+    setCart([])
+  }
+
+  function closeTable(num: number) {
+    setTableCarts((prev) => {
+      const next = { ...prev }
+      delete next[num]
+      return next
+    })
+    if (activeTable === num) {
+      setActiveTable(null)
+      setCart([])
+    }
+  }
+
+  function deselectTable() {
+    setTableCarts((prev) => ({ ...prev, [activeTable!]: cart }))
+    setActiveTable(null)
+    setCart([])
+  }
+
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
 
   async function finalizeSale() {
@@ -197,13 +232,14 @@ export default function CaixaPOSPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           establishmentId: user.establishmentId,
-          customerName: "Cliente Balcão",
+          customerName: activeTable ? `Mesa ${activeTable}` : "Cliente Balcão",
           items: JSON.stringify(cart),
           total: cartTotal,
           orderType: "presencial",
           paymentMethod: payment,
           method: "caixa",
           status: sendToPrep ? "preparing" : "delivered",
+          tableNumber: activeTable,
         }),
       })
       const data = await res.json()
@@ -214,14 +250,18 @@ export default function CaixaPOSPage() {
           body: JSON.stringify({
             type: "sale",
             amount: cartTotal,
-            description: `Venda ${payment === "cash" ? "Dinheiro" : payment === "card" ? "Cartão" : "Pix"}`,
+            description: `Venda ${activeTable ? `Mesa ${activeTable}` : "Balcão"} - ${payment === "cash" ? "Dinheiro" : payment === "card" ? "Cartão" : "Pix"}`,
             paymentMethod: payment,
           }),
         })
       }
       const orderData = data.order
       setLastOrder({ ...orderData, items: cart, establishmentName: user.establishment?.name })
+      if (activeTable) {
+        closeTable(activeTable)
+      }
       setCart([])
+      setActiveTable(null)
       setSendToPrep(false)
       if (printReceipt && orderData) {
         setShowSuccess(true)
@@ -488,13 +528,75 @@ export default function CaixaPOSPage() {
               <Plus className="h-3 w-3" />
             </button>
           </div>
+
+          {/* Tables */}
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-xs font-medium text-zinc-500">Mesas</p>
+              {activeTable !== null && (
+                <button onClick={deselectTable} className="text-[10px] text-zinc-400 hover:text-zinc-600">
+                  Voltar ao balcão
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {activeTable === null && (
+                <div
+                  className="flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
+                  onClick={openNewTable}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="mt-0.5 text-[10px] font-medium">Nova mesa</span>
+                </div>
+              )}
+              {Object.keys(tableCarts).map((key) => {
+                const num = Number(key)
+                const items = tableCarts[num] || []
+                const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
+                const isActive = activeTable === num
+                return (
+                  <div
+                    key={num}
+                    className={`relative flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 p-2 transition-all cursor-pointer ${
+                      isActive
+                        ? "border-green-500 bg-green-50 shadow-md"
+                        : "border-zinc-200 bg-white hover:border-green-300"
+                    }`}
+                    onClick={() => selectTable(num)}
+                  >
+                    <button
+                      onClick={(e) => { e.stopPropagation(); closeTable(num) }}
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                    <span className={`text-sm font-bold ${isActive ? "text-green-700" : "text-zinc-700"}`}>{num}</span>
+                    {items.length > 0 && (
+                      <span className="text-[9px] text-zinc-500">{items.length} it{items.length === 1 ? "em" : "ens"}</span>
+                    )}
+                  </div>
+                )
+              })}
+              {activeTable !== null && (
+                <div
+                  className="flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
+                  onClick={openNewTable}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="mt-0.5 text-[10px] font-medium">Nova</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Cart + Summary */}
         <div className="flex w-80 flex-col border-l border-zinc-200 bg-white">
           {/* Cart Header */}
           <div className="border-b border-zinc-100 px-4 py-2">
-            <h2 className="text-sm font-semibold text-zinc-800">Venda Atual</h2>
+            <h2 className="text-sm font-semibold text-zinc-800">
+              {activeTable ? `Mesa ${activeTable}` : "Venda Atual"}
+            </h2>
           </div>
 
           {/* Cart Items */}
@@ -611,7 +713,7 @@ export default function CaixaPOSPage() {
               ) : (
                 <>
                   <CheckCircle className="h-5 w-5" />
-                  FINALIZAR VENDA
+                  {activeTable ? `FINALIZAR MESA ${activeTable}` : "FINALIZAR VENDA"}
                 </>
               )}
             </button>
