@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
         email: user.email,
         role: user.role,
         permissions,
+        canCloseRegister: user.canCloseRegister,
         mustChangePassword: user.mustChangePassword,
         deliveryPerson,
       },

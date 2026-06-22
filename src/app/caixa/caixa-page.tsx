@@ -26,6 +26,7 @@ interface UserData {
   email: string
   role: string
   permissions: string[]
+  canCloseRegister?: boolean
   establishmentId: string
   establishment?: { id: string; name: string; slug: string }
 }
@@ -92,6 +93,38 @@ export default function CaixaPOSPage() {
   const [activeTable, setActiveTable] = useState<number | null>(null)
   const [tableCarts, setTableCarts] = useState<Record<number, CartItem[]>>({})
   const [nextTableNum, setNextTableNum] = useState(1)
+  const [showCashRegisterModal, setShowCashRegisterModal] = useState(false)
+  const [cashRegisterAction, setCashRegisterAction] = useState<"open" | "close" | "transfer">("open")
+  const [openingAmount, setOpeningAmount] = useState("")
+  const [closingAmount, setClosingAmount] = useState("")
+  const [transferUserId, setTransferUserId] = useState("")
+  const [allUsers, setAllUsers] = useState<any[]>([])
+
+  // Load table state from localStorage
+  useEffect(() => {
+    if (!user?.establishmentId) return
+    const saved = localStorage.getItem(`pedefacil-tables-${user.establishmentId}`)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setTableCarts(parsed.tableCarts || {})
+        setNextTableNum(parsed.nextTableNum || 1)
+        setActiveTable(parsed.activeTable || null)
+        setCart(parsed.activeCart || [])
+      } catch {}
+    }
+  }, [user?.establishmentId])
+
+  // Save table state to localStorage
+  useEffect(() => {
+    if (!user?.establishmentId) return
+    localStorage.setItem(`pedefacil-tables-${user.establishmentId}`, JSON.stringify({
+      tableCarts,
+      nextTableNum,
+      activeTable,
+      activeCart: cart,
+    }))
+  }, [tableCarts, nextTableNum, activeTable, cart, user?.establishmentId])
 
   useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
@@ -113,13 +146,17 @@ export default function CaixaPOSPage() {
       fetchAuth(`/api/categories?establishmentId=${establishmentId}`),
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
       fetchAuth(`/api/cash-register?establishmentId=${establishmentId}`),
+      fetchAuth(`/api/users?establishmentId=${establishmentId}`),
     ]
     if (user?.permissions?.includes("pedidos") || user?.permissions?.includes("entregas")) {
       promises.push(fetchAuth(`/api/delivery-persons?establishmentId=${establishmentId}`))
     }
-    const [catRes, orderRes, regRes, dpRes] = await Promise.all(promises)
+    const [catRes, orderRes, regRes, usersRes, dpRes] = await Promise.all(promises)
     const regData = await regRes.json()
     setCashRegister(regData)
+    if (usersRes.ok) {
+      setAllUsers(await usersRes.json())
+    }
     if (catRes.ok) {
       const cats = await catRes.json()
       const allProducts: Product[] = []
@@ -190,13 +227,18 @@ export default function CaixaPOSPage() {
   }
 
   function selectTable(num: number) {
-    setTableCarts((prev) => ({ ...prev, [activeTable!]: cart }))
+    if (activeTable !== null) {
+      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+    }
     setActiveTable(num)
     setCart(tableCarts[num] || [])
   }
 
   function openNewTable() {
     const num = nextTableNum
+    if (activeTable !== null) {
+      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+    }
     setTableCarts((prev) => ({ ...prev, [num]: [] }))
     setNextTableNum(num + 1)
     setActiveTable(num)
@@ -216,7 +258,9 @@ export default function CaixaPOSPage() {
   }
 
   function deselectTable() {
-    setTableCarts((prev) => ({ ...prev, [activeTable!]: cart }))
+    if (activeTable !== null) {
+      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+    }
     setActiveTable(null)
     setCart([])
   }
@@ -329,6 +373,73 @@ export default function CaixaPOSPage() {
     win.close()
   }
 
+  async function openCashRegister() {
+    if (!user?.establishmentId) return
+    try {
+      const res = await fetchAuth("/api/cash-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          establishmentId: user.establishmentId,
+          openingAmount: parseFloat(openingAmount) || 0,
+          notes: `Aberto por ${user.name}`,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCashRegister(data)
+        setShowCashRegisterModal(false)
+        setOpeningAmount("")
+        loadData(user.establishmentId)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function closeCashRegister() {
+    if (!cashRegister || !user?.establishmentId) return
+    try {
+      const movements = cashRegister.movements || []
+      const totalMovements = movements.reduce((sum: number, m: any) => sum + m.amount, 0)
+      const expected = cashRegister.openingAmount + totalMovements
+      await fetchAuth(`/api/cash-register/${cashRegister.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          closingAmount: parseFloat(closingAmount) || expected,
+          notes: `Fechado por ${user.name}`,
+        }),
+      })
+      setCashRegister(null)
+      setShowCashRegisterModal(false)
+      setClosingAmount("")
+      loadData(user.establishmentId)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function transferCashRegister() {
+    if (!cashRegister || !transferUserId || !user?.establishmentId) return
+    try {
+      await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toUserId: transferUserId,
+          amount: 0,
+          notes: `Transferência de ${user.name}`,
+        }),
+      })
+      setShowCashRegisterModal(false)
+      setTransferUserId("")
+      loadData(user.establishmentId)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem("pedefacil-user")
     router.push("/login")
@@ -366,7 +477,36 @@ export default function CaixaPOSPage() {
           </div>
           <div className="font-bold">{formatCurrency(todayStats.total)}</div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {cashRegister ? (
+            <>
+              <span className="flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-300" />
+                Caixa Aberto
+              </span>
+              {user?.canCloseRegister && (
+                <button
+                  onClick={() => { setCashRegisterAction("close"); setShowCashRegisterModal(true) }}
+                  className="rounded-lg bg-red-500 px-2 py-1 text-[10px] font-medium hover:bg-red-600"
+                >
+                  Fechar
+                </button>
+              )}
+              <button
+                onClick={() => { setCashRegisterAction("transfer"); setShowCashRegisterModal(true) }}
+                className="rounded-lg bg-green-700 px-2 py-1 text-[10px] font-medium hover:bg-green-800"
+              >
+                Transferir
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
+              className="rounded-lg bg-yellow-500 px-3 py-1 text-[10px] font-medium hover:bg-yellow-600"
+            >
+              Abrir Caixa
+            </button>
+          )}
           <span className="hidden text-sm sm:block">{currentTime}</span>
           <span className="text-sm">{user.name}</span>
           <button onClick={handleLogout} className="rounded-lg bg-green-700 p-1.5 hover:bg-green-800">
@@ -791,6 +931,86 @@ export default function CaixaPOSPage() {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cash Register Modal */}
+      {showCashRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-2xl bg-white p-6 shadow-2xl w-full max-w-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-zinc-900">
+                {cashRegisterAction === "open" ? "Abrir Caixa" : cashRegisterAction === "close" ? "Fechar Caixa" : "Transferir Caixa"}
+              </h3>
+              <button onClick={() => setShowCashRegisterModal(false)} className="text-zinc-400 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {cashRegisterAction === "open" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-zinc-500">Valor em caixa (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={openingAmount}
+                    onChange={(e) => setOpeningAmount(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+                <button onClick={openCashRegister} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
+                  Abrir Caixa
+                </button>
+              </div>
+            )}
+
+            {cashRegisterAction === "close" && (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-zinc-50 p-3 text-sm">
+                  <p className="text-zinc-500">Valor esperado: <span className="font-bold text-zinc-900">{formatCurrency(
+                    (cashRegister?.openingAmount || 0) + (cashRegister?.movements || []).reduce((s: number, m: any) => s + m.amount, 0)
+                  )}</span></p>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500">Valor contado (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={closingAmount}
+                    onChange={(e) => setClosingAmount(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+                <button onClick={closeCashRegister} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700">
+                  Fechar Caixa
+                </button>
+              </div>
+            )}
+
+            {cashRegisterAction === "transfer" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-zinc-500">Transferir para</label>
+                  <select
+                    value={transferUserId}
+                    onChange={(e) => setTransferUserId(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  >
+                    <option value="">Selecionar atendente...</option>
+                    {allUsers.filter((u: any) => u.id !== user?.id && u.role !== "motoboy").map((u: any) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button onClick={transferCashRegister} disabled={!transferUserId} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+                  Transferir Caixa
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

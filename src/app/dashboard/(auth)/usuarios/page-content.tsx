@@ -47,7 +47,7 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "atendente", permissions: ["caixa"] as string[] })
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "atendente", permissions: ["caixa"] as string[], canCloseRegister: false })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -67,7 +67,7 @@ export default function UsuariosPage() {
 
   function openNew() {
     setEditingUser(null)
-    setForm({ name: "", email: "", password: "123456", role: "atendente", permissions: ["caixa"] })
+    setForm({ name: "", email: "", password: "123456", role: "atendente", permissions: ["caixa"], canCloseRegister: false })
     setError("")
     setShowForm(true)
   }
@@ -90,6 +90,7 @@ export default function UsuariosPage() {
       password: "",
       role: user.role,
       permissions: JSON.parse(user.permissions || '["caixa"]'),
+      canCloseRegister: user.canCloseRegister || false,
     })
     setError("")
     setShowForm(true)
@@ -121,7 +122,7 @@ export default function UsuariosPage() {
 
     try {
       if (editingUser) {
-        const body: any = { name: form.name, email: form.email, role: form.role, permissions: form.permissions }
+        const body: any = { name: form.name, email: form.email, role: form.role, permissions: form.permissions, canCloseRegister: form.canCloseRegister }
         if (form.password) body.password = form.password
         await fetchAuth(`/api/users/${editingUser.id}`, {
           method: "PATCH",
@@ -250,6 +251,11 @@ export default function UsuariosPage() {
                         {ALL_PERMISSIONS.find((ap) => ap.value === p)?.label || p}
                       </span>
                     ))}
+                    {user.canCloseRegister && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                        Fecha Caixa
+                      </span>
+                    )}
                   </div>
                   {deliveryLink && (
                     <div className="mt-2 rounded-lg bg-purple-50 p-2">
@@ -378,6 +384,21 @@ export default function UsuariosPage() {
                       </p>
                     )}
                   </div>
+                )}
+
+                {form.permissions.includes("caixa") && form.role !== "motoboy" && (
+                  <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.canCloseRegister}
+                      onChange={(e) => setForm({ ...form, canCloseRegister: e.target.checked })}
+                      className="h-4 w-4 rounded border-zinc-300 text-[#FF6B35] focus:ring-[#FF6B35]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-700">Pode fechar caixa</p>
+                      <p className="text-[10px] text-zinc-400">Permite fechar e transferir o caixa</p>
+                    </div>
+                  </label>
                 )}
 
                 {error && <p className="text-sm text-red-500">{error}</p>}

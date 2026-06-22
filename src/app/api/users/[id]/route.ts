@@ -26,6 +26,7 @@ export async function PATCH(
     if (body.role) data.role = body.role
     if (body.permissions) data.permissions = JSON.stringify(body.permissions)
     if (typeof body.isActive === "boolean") data.isActive = body.isActive
+    if (typeof body.canCloseRegister === "boolean") data.canCloseRegister = body.canCloseRegister
     if (body.password && body.password.length > 0) {
       data.password = await bcrypt.hash(body.password, 10)
     }
@@ -39,6 +40,7 @@ export async function PATCH(
         email: true,
         role: true,
         permissions: true,
+        canCloseRegister: true,
         isActive: true,
         createdAt: true,
       },

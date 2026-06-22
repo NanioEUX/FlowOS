@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       email: true,
       role: true,
       permissions: true,
+      canCloseRegister: true,
       isActive: true,
       createdAt: true,
     },
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { name, email, password, role, permissions, establishmentId } = body
+    const { name, email, password, role, permissions, establishmentId, canCloseRegister } = body
 
     if (!name || !email || !password || !establishmentId) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         role: role || "atendente",
         permissions: JSON.stringify(permissions || ["caixa"]),
+        canCloseRegister: canCloseRegister || false,
         establishmentId,
       },
       select: {
@@ -57,6 +59,7 @@ export async function POST(req: NextRequest) {
         email: true,
         role: true,
         permissions: true,
+        canCloseRegister: true,
         isActive: true,
         createdAt: true,
       },
