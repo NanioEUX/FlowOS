@@ -374,6 +374,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
 
+    if (orderType === "delivery" && !customer.address) {
+      setOrderError("Informe o número do endereço")
+      setOrdering(false)
+      return
+    }
+
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -1027,11 +1033,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             <form onSubmit={handleSiteOrder} className="space-y-4">
               {orderType === "delivery" ? (
                 <div className="space-y-2">
-                  {cepAddress && !editingAddress ? (
+                  {cepAddress && !editingAddress && customer.address ? (
                     <div className="rounded-lg bg-zinc-50 p-2 text-sm text-zinc-600">
-                      {cepAddress.logradouro}, {customer.address || "s/n"} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}
+                      {cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}
                       <button type="button" onClick={() => { setPreviousCep(cep); setPreviousCepAddress(cepAddress); setPreviousAddress(customer.address); setEditingAddress(true); setCep(""); setCepAddress(null); setCustomer({ ...customer, address: "" }) }} className="ml-2 text-xs text-green-600 hover:underline">Alterar</button>
                     </div>
+                  ) : cepAddress && !editingAddress ? (
+                    <>
+                      <div className="rounded-lg bg-zinc-50 p-2 text-sm text-zinc-600">
+                        {cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}
+                      </div>
+                      <Input label="Número" id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                    </>
                   ) : editingAddress && !cepAddress ? (
                     <>
                       <div className="flex gap-2">
