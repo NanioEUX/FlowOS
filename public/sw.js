@@ -1,21 +1,23 @@
-const CACHE_NAME = "pedefacil-v2"
+const CACHE_NAME = "pedefacil-v3"
 
 const urlsToCache = [
-  "/",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/favicon.svg",
+  "/icons/pedefacil-login.png",
+  "/icons/pedefacil-sidebar.png",
+  "/icons/pedefacil-icon.svg",
 ]
 
-self.addEventListener("install", (event: any) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   )
   self.skipWaiting()
 })
 
-self.addEventListener("activate", (event: any) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -25,11 +27,18 @@ self.addEventListener("activate", (event: any) => {
   )
 })
 
-self.addEventListener("fetch", (event: any) => {
+self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url)
 
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/")) {
     event.respondWith(fetch(event.request))
+    return
+  }
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    )
     return
   }
 
@@ -50,7 +59,7 @@ self.addEventListener("fetch", (event: any) => {
   )
 })
 
-self.addEventListener("push", (event: any) => {
+self.addEventListener("push", (event) => {
   let data = { title: "PedeFácil", body: "Nova notificação", url: "/" }
   try {
     data = JSON.parse(event.data.text())
@@ -70,12 +79,12 @@ self.addEventListener("push", (event: any) => {
   )
 })
 
-self.addEventListener("notificationclick", (event: any) => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close()
   const url = event.notification.data?.url || "/"
   event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients: any) => {
-      const existingClient = clients.find((c: any) => c.url.includes(self.location.origin))
+    self.clients.matchAll({ type: "window" }).then((clients) => {
+      const existingClient = clients.find((c) => c.url.includes(self.location.origin))
       if (existingClient) {
         existingClient.navigate(url)
         existingClient.focus()
