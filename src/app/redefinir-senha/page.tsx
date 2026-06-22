@@ -74,7 +74,7 @@ function RedefinirSenhaForm() {
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <Link href="/">
-              <img src="/icons/pedefacil-login.png" alt="PedeFácil" className="mx-auto h-16" />
+              <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="mx-auto h-16" />
             </Link>
           </div>
 
@@ -106,7 +106,7 @@ function RedefinirSenhaForm() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link href="/">
-            <img src="/icons/pedefacil-login.png" alt="PedeFácil" className="mx-auto h-16" />
+            <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="mx-auto h-16" />
           </Link>
         </div>
 

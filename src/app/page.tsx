@@ -135,7 +135,7 @@ export default function HomePage() {
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <img src="/icons/pedefacil-sidebar.png" alt="PedeFácil" className="h-8" />
+            <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="h-8" />
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login">
@@ -580,7 +580,7 @@ export default function HomePage() {
       <footer className="border-t border-zinc-200 bg-white py-8">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-zinc-500">
           <div className="mb-4">
-            <img src="/icons/pedefacil-sidebar.png" alt="PedeFácil" className="mx-auto h-6" />
+            <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="mx-auto h-6" />
           </div>
           <p>PedeFácil © 2024 — Seu cardápio, seu controle</p>
           <div className="mt-3 flex items-center justify-center gap-4 text-xs">

@@ -104,7 +104,7 @@ export default function DemoPage() {
                 Voltar
               </Button>
             </Link>
-            <img src="/icons/pedefacil-sidebar.png" alt="PedeFácil" className="h-8" />
+            <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="h-8" />
           </div>
           <Link href="/cadastro">
             <Button className="bg-[#FF6B35] hover:bg-[#E55A2B]">

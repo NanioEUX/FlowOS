@@ -86,7 +86,7 @@ export default function TrocarSenhaPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#FFF7F3] to-white p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <img src="/icons/pedefacil-login.png" alt="PedeFácil" className="mx-auto h-16" />
+          <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="mx-auto h-16" />
         </div>
 
         <Card className="border-zinc-200 shadow-lg">

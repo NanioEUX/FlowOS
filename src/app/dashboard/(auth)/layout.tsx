@@ -135,7 +135,7 @@ export default function DashboardLayout({
             {establishment?.logo ? (
               <img src={establishment.logo} alt={establishment.name} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
-              <img src="/icons/pedefacil-sidebar.png" alt="PedeFácil" className="h-8" />
+              <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="h-8" />
             )}
           </div>
           <div className="min-w-0 flex-1">

@@ -533,20 +533,15 @@ export default function CaixaPOSPage() {
           <div className="mt-3">
             <div className="mb-1.5 flex items-center justify-between">
               <p className="text-xs font-medium text-zinc-500">Mesas</p>
-              {activeTable !== null && (
-                <button onClick={deselectTable} className="text-[10px] text-zinc-400 hover:text-zinc-600">
-                  Voltar ao balcão
-                </button>
-              )}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {activeTable === null && (
                 <div
-                  className="flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
+                  className="flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
                   onClick={openNewTable}
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="mt-0.5 text-[10px] font-medium">Nova mesa</span>
+                  <Plus className="h-5 w-5" />
+                  <span className="mt-1 text-xs font-medium">Nova mesa</span>
                 </div>
               )}
               {Object.keys(tableCarts).map((key) => {
@@ -557,7 +552,7 @@ export default function CaixaPOSPage() {
                 return (
                   <div
                     key={num}
-                    className={`relative flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 p-2 transition-all cursor-pointer ${
+                    className={`relative flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 p-2 transition-all cursor-pointer ${
                       isActive
                         ? "border-green-500 bg-green-50 shadow-md"
                         : "border-zinc-200 bg-white hover:border-green-300"
@@ -566,24 +561,27 @@ export default function CaixaPOSPage() {
                   >
                     <button
                       onClick={(e) => { e.stopPropagation(); closeTable(num) }}
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                     >
-                      <X className="h-2.5 w-2.5" />
+                      <X className="h-3 w-3" />
                     </button>
-                    <span className={`text-sm font-bold ${isActive ? "text-green-700" : "text-zinc-700"}`}>{num}</span>
+                    <span className={`text-lg font-bold ${isActive ? "text-green-700" : "text-zinc-700"}`}>{num}</span>
                     {items.length > 0 && (
-                      <span className="text-[9px] text-zinc-500">{items.length} it{items.length === 1 ? "em" : "ens"}</span>
+                      <span className="text-[10px] text-zinc-500">{items.length} it{items.length === 1 ? "em" : "ens"}</span>
+                    )}
+                    {total > 0 && (
+                      <span className="text-[9px] font-medium text-green-600">{formatCurrency(total)}</span>
                     )}
                   </div>
                 )
               })}
               {activeTable !== null && (
                 <div
-                  className="flex h-16 min-w-[4rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
+                  className="flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
                   onClick={openNewTable}
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="mt-0.5 text-[10px] font-medium">Nova</span>
+                  <Plus className="h-5 w-5" />
+                  <span className="mt-1 text-xs font-medium">Nova</span>
                 </div>
               )}
             </div>
@@ -594,9 +592,20 @@ export default function CaixaPOSPage() {
         <div className="flex w-80 flex-col border-l border-zinc-200 bg-white">
           {/* Cart Header */}
           <div className="border-b border-zinc-100 px-4 py-2">
-            <h2 className="text-sm font-semibold text-zinc-800">
-              {activeTable ? `Mesa ${activeTable}` : "Venda Atual"}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-zinc-800">
+                {activeTable ? `Mesa ${activeTable}` : "Venda Atual"}
+              </h2>
+              {activeTable !== null && (
+                <button
+                  onClick={deselectTable}
+                  className="flex items-center gap-1 rounded-lg bg-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-600 hover:bg-zinc-200"
+                >
+                  <X className="h-3 w-3" />
+                  Balcão
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Cart Items */}

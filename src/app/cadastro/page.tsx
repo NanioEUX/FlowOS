@@ -81,7 +81,7 @@ export default function CadastroPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#FFF7F3] to-white py-12">
       <div className="mx-auto max-w-lg px-4">
         <Link href="/" className="mb-8 flex justify-center">
-          <img src="/icons/pedefacil-login.png" alt="PedeFácil" className="h-12" />
+          <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="h-12" />
         </Link>
 
         <Card className="border-zinc-200 shadow-lg">
