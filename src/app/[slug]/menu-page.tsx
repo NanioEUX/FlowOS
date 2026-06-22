@@ -188,6 +188,36 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return currentMinutes >= openMinutes && currentMinutes < closeMinutes
   }, [parsedBusinessHours])
 
+  const closedMessage = useMemo(() => {
+    if (!parsedBusinessHours || isOpen) return null
+    const now = new Date()
+    const dayIndex = now.getDay()
+    const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+    // Check if today is still open later today
+    const todayName = dayMap[dayIndex]
+    const today = parsedBusinessHours.find((h: any) => h.day === todayName)
+    if (today && today.active) {
+      const [openH, openM] = today.open.split(":").map(Number)
+      const openMinutes = openH * 60 + openM
+      if (currentMinutes < openMinutes) {
+        return `Encerramos por hoje, mas ${todayName.toLowerCase()} às ${today.open} retornamos`
+      }
+    }
+
+    // Find next open day
+    for (let i = 1; i <= 7; i++) {
+      const nextIndex = (dayIndex + i) % 7
+      const nextName = dayMap[nextIndex]
+      const nextDay = parsedBusinessHours.find((h: any) => h.day === nextName)
+      if (nextDay && nextDay.active) {
+        return `Encerramos por hoje, mas ${nextName.toLowerCase()} às ${nextDay.open} retornamos`
+      }
+    }
+    return "Estabelecimento temporariamente fechado"
+  }, [parsedBusinessHours, isOpen])
+
   // Loyalty
   const parsedLoyalty = useMemo(() => {
     try {
@@ -197,6 +227,29 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [useLoyalty, setUseLoyalty] = useState(false)
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0)
+
+  const loyaltyDiscount = useMemo(() => {
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (parsedLoyalty.redeemType === "product") {
+      // Product redemption: no monetary discount, handled separately
+      return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
+    }
+    const discount = parsedLoyalty.redeemDiscount || 10
+    if (customerLoyaltyPoints >= pointsNeeded) return discount
+    return 0
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints])
+
+  const loyaltyFreeProduct = useMemo(() => {
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
+    if (parsedLoyalty.redeemType !== "product") return null
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (customerLoyaltyPoints >= pointsNeeded) {
+      const product = cart.find((item: any) => item.productId === parsedLoyalty.redeemProductId)
+      return product || null
+    }
+    return null
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart])
 
   useEffect(() => {
     if (customer.name || customer.phone) {
@@ -293,15 +346,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       : couponData.discountValue
     : 0
 
-  const loyaltyDiscount = useMemo(() => {
-    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
-    const pointsNeeded = parsedLoyalty.redeemPoints || 100
-    const discount = parsedLoyalty.redeemDiscount || 10
-    if (customerLoyaltyPoints >= pointsNeeded) return discount
-    return 0
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints])
-
-  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount
+  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -446,9 +491,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           total,
           deliveryFee,
           couponId: couponData?.id || undefined,
-          useLoyalty: useLoyalty && loyaltyDiscount > 0,
-          loyaltyPointsUsed: useLoyalty && loyaltyDiscount > 0 ? (parsedLoyalty?.redeemPoints || 0) : 0,
-          loyaltyDiscount,
+          useLoyalty: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct),
+          loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? (parsedLoyalty?.redeemPoints || 0) : 0,
+          loyaltyDiscount: loyaltyDiscount + (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0),
+          loyaltyFreeProduct: loyaltyFreeProduct ? loyaltyFreeProduct.name : null,
           notes: customer.notes,
           method: "site",
         }),
@@ -818,11 +864,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       </div>
 
       {/* Closed banner */}
-      {!isOpen && (
+      {!isOpen && closedMessage && (
         <div className="mx-auto max-w-3xl px-4 pt-3">
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
-            <p className="text-sm font-semibold text-red-700">Estabelecimento fechado no momento</p>
-            <p className="mt-1 text-xs text-red-500">Confira os horários de funcionamento</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+            <p className="text-sm font-medium text-amber-800">{closedMessage}</p>
+            <p className="mt-1 text-xs text-amber-600">Aguarde, estaremos de volta!</p>
           </div>
         </div>
       )}
@@ -1065,7 +1111,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       <div className="flex items-center gap-2">
                         <Star className="h-4 w-4 text-amber-500" />
                         <div>
-                          <p className="text-sm font-medium text-zinc-900">Usar pontos de fidelidade</p>
+                          <p className="text-sm font-medium text-zinc-900">
+                            {parsedLoyalty.redeemType === "product" ? "Trocar pontos por produto" : "Usar pontos de fidelidade"}
+                          </p>
                           <p className="text-xs text-zinc-500">{customerLoyaltyPoints} pontos disponíveis</p>
                         </div>
                       </div>
@@ -1078,10 +1126,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       />
                     </label>
                     {customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100) && (
-                      <p className="mt-1 text-xs text-zinc-400">Faltam {(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar R$ {parsedLoyalty.redeemDiscount || 10} de desconto</p>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {parsedLoyalty.redeemType === "product"
+                          ? `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar um produto`
+                          : `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar R$ ${parsedLoyalty.redeemDiscount || 10} de desconto`}
+                      </p>
                     )}
                     {useLoyalty && loyaltyDiscount > 0 && (
                       <p className="mt-1 text-xs text-green-600">-{formatCurrency(loyaltyDiscount)} de desconto aplicado</p>
+                    )}
+                    {useLoyalty && loyaltyFreeProduct && (
+                      <p className="mt-1 text-xs text-green-600">+{loyaltyFreeProduct.name} (Produto grátis!)</p>
+                    )}
+                    {parsedLoyalty.redeemType === "product" && parsedLoyalty.redeemProductId && !loyaltyFreeProduct && customerLoyaltyPoints >= (parsedLoyalty.redeemPoints || 100) && (
+                      <p className="mt-1 text-xs text-zinc-500">Adicione o produto ao carrinho para resgatar</p>
                     )}
                   </div>
                 )}
@@ -1109,6 +1167,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       <span>-{formatCurrency(loyaltyDiscount)}</span>
                     </div>
                   )}
+                  {loyaltyFreeProduct && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Produto grátis ({loyaltyFreeProduct.name})</span>
+                      <span>-{formatCurrency(loyaltyFreeProduct.price)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-zinc-200 pt-2 text-lg font-bold">
                     <span>Total</span>
                     <span className="text-green-600">{formatCurrency(total)}</span>
@@ -1120,9 +1184,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     size="lg"
                     className="w-full gap-2"
                     onClick={() => setShowCheckout(true)}
+                    disabled={!isOpen}
                   >
                     <ShoppingBag className="h-5 w-5" />
-                    Finalizar pedido
+                    {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
                   </Button>
                 </div>
               </div>
