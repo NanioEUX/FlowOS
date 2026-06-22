@@ -816,15 +816,31 @@ export default function CardapioPage() {
                       <span>Selecionar foto</span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
-                          if (file) {
-                            const reader = new FileReader()
-                            reader.onloadend = () => setProductForm({ ...productForm, image: reader.result as string })
-                            reader.readAsDataURL(file)
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onloadend = () => {
+                            const img = new window.Image()
+                            img.onload = () => {
+                              const MAX = 800
+                              let w = img.width, h = img.height
+                              if (w > MAX || h > MAX) {
+                                if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+                                else { w = Math.round(w * MAX / h); h = MAX }
+                              }
+                              const canvas = document.createElement("canvas")
+                              canvas.width = w
+                              canvas.height = h
+                              canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
+                              const compressed = canvas.toDataURL("image/jpeg", 0.8)
+                              setProductForm({ ...productForm, image: compressed })
+                            }
+                            img.src = reader.result as string
                           }
+                          reader.readAsDataURL(file)
                         }}
                       />
                     </label>
