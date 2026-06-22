@@ -122,7 +122,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const parsed = JSON.parse(saved)
         setCustomer(parsed)
         setPhoneInput(parsed.phone || "")
-        setAddressSaved(true)
         if (parsed.cep) {
           setCep(parsed.cep)
           fetch(`https://viacep.com.br/ws/${parsed.cep}/json/`)
@@ -153,10 +152,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cepAddress, setCepAddress] = useState<any>(null)
   const [cepLoading, setCepLoading] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
-  const [addressSaved, setAddressSaved] = useState(false)
-  const [previousCep, setPreviousCep] = useState("")
-  const [previousCepAddress, setPreviousCepAddress] = useState<any>(null)
-  const [previousAddress, setPreviousAddress] = useState("")
   const [cepError, setCepError] = useState("")
   const [orderError, setOrderError] = useState("")
   const [couponCode, setCouponCode] = useState("")
@@ -274,7 +269,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         if (data && !data.notFound) {
           setCustomerData(data)
           setCustomer((prev) => ({ ...prev, name: data.name || prev.name, phone: data.phone, address: data.address || prev.address }))
-          setAddressSaved(true)
           // Pre-fill CEP - the useEffect([cep, orderType]) will handle the ViaCEP lookup
           if (data.cep) {
             setCep(data.cep)
@@ -1028,7 +1022,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-zinc-900">Finalizar pedido</h2>
-              <button onClick={() => { setShowCheckout(false); setEditingAddress(false); setAddressSaved(false) }} className="text-zinc-400 hover:text-zinc-600">
+              <button onClick={() => { setShowCheckout(false); setEditingAddress(false) }} className="text-zinc-400 hover:text-zinc-600">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -1036,51 +1030,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             <form onSubmit={handleSiteOrder} className="space-y-4">
               {orderType === "delivery" ? (
                 <div className="space-y-2">
-                  {cepAddress && customer.address && addressSaved ? (
-                    <div className="rounded-lg bg-zinc-50 p-2 text-sm text-zinc-600">
-                      {cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}
-                      <button type="button" onClick={() => { setPreviousCep(cep); setPreviousCepAddress(cepAddress); setPreviousAddress(customer.address); setEditingAddress(true); setAddressSaved(false); setCep(""); setCepAddress(null); setCustomer({ ...customer, address: "" }) }} className="ml-2 text-xs text-green-600 hover:underline">Alterar</button>
-                    </div>
-                  ) : cepAddress && !customer.address ? (
-                    <>
-                      <div className="rounded-lg bg-zinc-50 p-2 text-sm text-zinc-600">
-                        {cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}
-                      </div>
-                      <Input label="Número" id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
-                    </>
-                  ) : editingAddress ? (
-                    <>
-                      <div className="flex gap-2">
-                        <Input label="CEP" id="cep" placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))} className="w-32" />
-                        {cep.length === 8 && !cepLoading && (
-                          <button type="button" onClick={lookupCep} className="mt-6 text-xs text-green-600 hover:underline self-start">
-                            Buscar
-                          </button>
-                        )}
-                        {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin text-zinc-400" />}
-                      </div>
-                      {cepError && <p className="text-xs text-red-500">{cepError}</p>}
-                      {!cepAddress && (
-                        <button type="button" onClick={() => { setCep(previousCep); setCepAddress(previousCepAddress); setEditingAddress(false); setCustomer({ ...customer, address: previousAddress }) }} className="text-xs text-zinc-500 hover:text-zinc-700">
-                          Cancelar
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex gap-2">
-                        <Input label="CEP" id="cep" placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))} className="w-32" />
-                        {cep.length === 8 && !cepLoading && (
-                          <button type="button" onClick={lookupCep} className="mt-6 text-xs text-green-600 hover:underline self-start">
-                            Buscar
-                          </button>
-                        )}
-                        {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin text-zinc-400" />}
-                      </div>
-                      {cepError && <p className="text-xs text-red-500">{cepError}</p>}
-                      <Input label="Número" id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
-                    </>
+                  <div className="flex gap-2">
+                    <Input label="CEP" id="cep" placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))} className="w-32" />
+                    {cep.length === 8 && !cepLoading && (
+                      <button type="button" onClick={lookupCep} className="mt-6 text-xs text-green-600 hover:underline self-start">
+                        Buscar
+                      </button>
+                    )}
+                    {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin text-zinc-400" />}
+                  </div>
+                  {cepError && <p className="text-xs text-red-500">{cepError}</p>}
+                  {cepAddress && (
+                    <p className="text-xs text-zinc-500">{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
                   )}
+                  <Input label="Número" id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
                   <input type="hidden" name="fullAddress" value={fullAddress} />
                 </div>
               ) : (
