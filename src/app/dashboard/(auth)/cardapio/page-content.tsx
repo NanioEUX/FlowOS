@@ -174,22 +174,37 @@ export default function CardapioPage() {
 
     let productId = editingProduct?.id
 
-    if (editingProduct) {
-      await fetchAuth(`/api/products/${editingProduct.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-    } else {
-      const maxOrder = categories.find((c) => c.id === productForm.categoryId)?.products.length || 0
-      body.order = maxOrder
-      const res = await fetchAuth("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      productId = data.id
+    try {
+      if (editingProduct) {
+        const res = await fetchAuth(`/api/products/${editingProduct.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Erro desconhecido" }))
+          alert(`Erro ao salvar: ${err.error || res.statusText}`)
+          return
+        }
+      } else {
+        const maxOrder = categories.find((c) => c.id === productForm.categoryId)?.products.length || 0
+        body.order = maxOrder
+        const res = await fetchAuth("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Erro desconhecido" }))
+          alert(`Erro ao criar: ${err.error || res.statusText}`)
+          return
+        }
+        const data = await res.json()
+        productId = data.id
+      }
+    } catch (e: any) {
+      alert(`Erro de rede: ${e.message}`)
+      return
     }
 
     if (productId) {
@@ -825,7 +840,7 @@ export default function CardapioPage() {
                           reader.onloadend = () => {
                             const img = new window.Image()
                             img.onload = () => {
-                              const MAX = 800
+                              const MAX = 600
                               let w = img.width, h = img.height
                               if (w > MAX || h > MAX) {
                                 if (w > h) { h = Math.round(h * MAX / w); w = MAX }
@@ -835,7 +850,7 @@ export default function CardapioPage() {
                               canvas.width = w
                               canvas.height = h
                               canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
-                              const compressed = canvas.toDataURL("image/jpeg", 0.8)
+                              const compressed = canvas.toDataURL("image/jpeg", 0.7)
                               setProductForm({ ...productForm, image: compressed })
                             }
                             img.src = reader.result as string
