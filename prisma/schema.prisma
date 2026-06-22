@@ -26,6 +26,8 @@ model Establishment {
   textColor        String  @default("#1a1a2e")
   headerColor      String  @default("#ffffff")
   colorsPublished  Boolean @default(false)
+  businessHours    String? @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
+  loyaltyConfig    String? @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10}")
   isActive      Boolean  @default(true)
   asaasApiKey   String?
   asaasWalletId String?
@@ -60,6 +62,7 @@ model Customer {
   cep            String?
   totalOrders    Int      @default(0)
   totalSpent     Float    @default(0)
+  loyaltyPoints  Int      @default(0)
   lastOrderAt    DateTime?
   establishmentId String
   establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)

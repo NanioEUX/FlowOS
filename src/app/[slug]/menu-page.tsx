@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,8 @@ interface Establishment {
   headerColor: string
   colorsPublished: boolean
   instagramUrl: string | null
+  businessHours: string | null
+  loyaltyConfig: string | null
 }
 
 interface CustomerData {
@@ -51,6 +53,7 @@ interface CustomerData {
   phone: string
   totalOrders: number
   totalSpent: number
+  loyaltyPoints: number
 }
 
 interface Props {
@@ -162,6 +165,39 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [couponData, setCouponData] = useState<{ id: string; code: string; discountType: string; discountValue: number } | null>(null)
   const [couponError, setCouponError] = useState("")
 
+  // Business hours
+  const parsedBusinessHours = useMemo(() => {
+    try {
+      return establishment.businessHours ? JSON.parse(establishment.businessHours) : null
+    } catch { return null }
+  }, [establishment.businessHours])
+
+  const isOpen = useMemo(() => {
+    if (!parsedBusinessHours) return true
+    const now = new Date()
+    const dayIndex = now.getDay()
+    const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+    const todayName = dayMap[dayIndex]
+    const today = parsedBusinessHours.find((h: any) => h.day === todayName)
+    if (!today || !today.active) return false
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const [openH, openM] = today.open.split(":").map(Number)
+    const [closeH, closeM] = today.close.split(":").map(Number)
+    const openMinutes = openH * 60 + openM
+    const closeMinutes = closeH * 60 + closeM
+    return currentMinutes >= openMinutes && currentMinutes < closeMinutes
+  }, [parsedBusinessHours])
+
+  // Loyalty
+  const parsedLoyalty = useMemo(() => {
+    try {
+      return establishment.loyaltyConfig ? JSON.parse(establishment.loyaltyConfig) : null
+    } catch { return null }
+  }, [establishment.loyaltyConfig])
+
+  const [useLoyalty, setUseLoyalty] = useState(false)
+  const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0)
+
   useEffect(() => {
     if (customer.name || customer.phone) {
       localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, cep }))
@@ -257,7 +293,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       : couponData.discountValue
     : 0
 
-  const total = subtotal + deliveryFee - couponDiscount
+  const loyaltyDiscount = useMemo(() => {
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    const discount = parsedLoyalty.redeemDiscount || 10
+    if (customerLoyaltyPoints >= pointsNeeded) return discount
+    return 0
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints])
+
+  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -273,6 +317,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         if (data && !data.notFound) {
           setCustomerData(data)
           setCustomer((prev) => ({ ...prev, name: data.name || prev.name, phone: data.phone, address: data.address || prev.address }))
+          setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
           if (data.cep && data.address) {
             setAddressSaved(true)
           }
@@ -401,6 +446,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           total,
           deliveryFee,
           couponId: couponData?.id || undefined,
+          useLoyalty: useLoyalty && loyaltyDiscount > 0,
+          loyaltyPointsUsed: useLoyalty && loyaltyDiscount > 0 ? (parsedLoyalty?.redeemPoints || 0) : 0,
+          loyaltyDiscount,
           notes: customer.notes,
           method: "site",
         }),
@@ -603,6 +651,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               Acompanhe o status em tempo real.
             </p>
 
+            {parsedLoyalty?.enabled && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="text-sm font-medium text-amber-700">
+                  <Star className="inline h-4 w-4 mr-1" />
+                  {useLoyalty && loyaltyDiscount > 0
+                    ? `Usado ${parsedLoyalty.redeemPoints} pontos (-${formatCurrency(loyaltyDiscount)})`
+                    : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} pontos ganhos!`}
+                </p>
+              </div>
+            )}
+
             {orderResult.paymentLink && (
               <div className="mt-4">
                 <a href={orderResult.paymentLink} target="_blank" rel="noopener noreferrer">
@@ -678,6 +737,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           {customer.name ? (
             <div className="text-right shrink-0">
               <p className="text-xs font-medium" style={{ color: theme.primary }}>Olá, {customer.name}!</p>
+              {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
+                <p className="text-[10px] text-amber-600 flex items-center justify-end gap-0.5">
+                  <Star className="h-2.5 w-2.5" />{customerLoyaltyPoints} pontos
+                </p>
+              )}
               <button
                 onClick={() => { setCustomerData(null); setPhoneInput(""); setCustomer({ name: "", phone: "", address: "", notes: "" }); setCep(""); setCepAddress(null); localStorage.removeItem(`pedefacil-customer-${establishment.slug}`) }}
                 className="text-[10px] text-zinc-400 hover:text-zinc-600"
@@ -752,6 +816,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           </div>
         )}
       </div>
+
+      {/* Closed banner */}
+      {!isOpen && (
+        <div className="mx-auto max-w-3xl px-4 pt-3">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+            <p className="text-sm font-semibold text-red-700">Estabelecimento fechado no momento</p>
+            <p className="mt-1 text-xs text-red-500">Confira os horários de funcionamento</p>
+          </div>
+        </div>
+      )}
 
       {/* Categories & Products */}
       <div className="mx-auto max-w-3xl px-4 py-6">
@@ -984,6 +1058,34 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 )}
                 {couponError && <p className="text-xs text-red-500 pt-1">{couponError}</p>}
 
+                {/* Loyalty */}
+                {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
+                  <div className="pt-3">
+                    <label className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500" />
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900">Usar pontos de fidelidade</p>
+                          <p className="text-xs text-zinc-500">{customerLoyaltyPoints} pontos disponíveis</p>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={useLoyalty}
+                        onChange={(e) => setUseLoyalty(e.target.checked)}
+                        disabled={customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100)}
+                        className="h-4 w-4 rounded border-zinc-300 text-amber-500 focus:ring-amber-500"
+                      />
+                    </label>
+                    {customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100) && (
+                      <p className="mt-1 text-xs text-zinc-400">Faltam {(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar R$ {parsedLoyalty.redeemDiscount || 10} de desconto</p>
+                    )}
+                    {useLoyalty && loyaltyDiscount > 0 && (
+                      <p className="mt-1 text-xs text-green-600">-{formatCurrency(loyaltyDiscount)} de desconto aplicado</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="pt-3 space-y-1">
                   <div className="flex justify-between text-sm text-zinc-600">
                     <span>Subtotal</span>
@@ -997,8 +1099,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   )}
                   {couponDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span>Desconto</span>
+                      <span>Desconto (cupom)</span>
                       <span>-{formatCurrency(couponDiscount)}</span>
+                    </div>
+                  )}
+                  {loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-amber-600">
+                      <span>Desconto (pontos)</span>
+                      <span>-{formatCurrency(loyaltyDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-zinc-200 pt-2 text-lg font-bold">

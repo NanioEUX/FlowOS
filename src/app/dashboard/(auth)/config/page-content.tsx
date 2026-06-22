@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Star } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,6 +48,16 @@ export default function ConfigPage() {
   })
   const [paymentConfig, setPaymentConfig] = useState({ online: true, delivery: true, pickup: true })
   const [orderConfig, setOrderConfig] = useState({ delivery: true, pickup: true })
+  const [businessHours, setBusinessHours] = useState([
+    { day: "Segunda", open: "09:00", close: "22:00", active: true },
+    { day: "Terça", open: "09:00", close: "22:00", active: true },
+    { day: "Quarta", open: "09:00", close: "22:00", active: true },
+    { day: "Quinta", open: "09:00", close: "22:00", active: true },
+    { day: "Sexta", open: "09:00", close: "22:00", active: true },
+    { day: "Sábado", open: "09:00", close: "23:00", active: true },
+    { day: "Domingo", open: "00:00", close: "00:00", active: false },
+  ])
+  const [loyaltyConfig, setLoyaltyConfig] = useState({ enabled: false, pointsPerReal: 1, redeemPoints: 100, redeemDiscount: 10 })
 
   useEffect(() => {
     if (!establishmentId) return
@@ -75,6 +85,12 @@ export default function ConfigPage() {
           if (data.orderConfig) {
             try { setOrderConfig(JSON.parse(data.orderConfig)) } catch {}
           }
+          if (data.businessHours) {
+            try { setBusinessHours(JSON.parse(data.businessHours)) } catch {}
+          }
+          if (data.loyaltyConfig) {
+            try { setLoyaltyConfig(JSON.parse(data.loyaltyConfig)) } catch {}
+          }
         }
       })
   }, [establishmentId])
@@ -94,6 +110,8 @@ export default function ConfigPage() {
           deliveryFreeAbove: form.deliveryFeeType === "free_above" ? Number(form.deliveryFreeAbove) : 0,
           paymentConfig: JSON.stringify(paymentConfig),
           orderConfig: JSON.stringify(orderConfig),
+          businessHours: JSON.stringify(businessHours),
+          loyaltyConfig: JSON.stringify(loyaltyConfig),
         }),
       })
 
@@ -249,6 +267,126 @@ export default function ConfigPage() {
                 </div>
               </label>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Horário de Funcionamento */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+              <Clock className="h-4 w-4" />
+              Horário de Funcionamento
+            </h3>
+            <p className="text-sm text-zinc-500">Configure os horários. Fora desse horário, o cardápio informa que está fechado.</p>
+            <div className="space-y-2">
+              {businessHours.map((h, i) => (
+                <div key={h.day} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                  <label className="flex items-center gap-2 min-w-[120px]">
+                    <input
+                      type="checkbox"
+                      checked={h.active}
+                      onChange={(e) => {
+                        const updated = [...businessHours]
+                        updated[i] = { ...updated[i], active: e.target.checked }
+                        setBusinessHours(updated)
+                      }}
+                      className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day}</span>
+                  </label>
+                  {h.active ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={h.open}
+                        onChange={(e) => {
+                          const updated = [...businessHours]
+                          updated[i] = { ...updated[i], open: e.target.value }
+                          setBusinessHours(updated)
+                        }}
+                        className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                      <span className="text-xs text-zinc-400">até</span>
+                      <input
+                        type="time"
+                        value={h.close}
+                        onChange={(e) => {
+                          const updated = [...businessHours]
+                          updated[i] = { ...updated[i], close: e.target.value }
+                          setBusinessHours(updated)
+                        }}
+                        className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-zinc-400">Fechado</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fidelidade */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+              <Star className="h-4 w-4" />
+              Programa de Fidelidade
+            </h3>
+            <p className="text-sm text-zinc-500">Clientes acumulam pontos a cada pedido e trocam por desconto.</p>
+            <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
+              <input
+                type="checkbox"
+                checked={loyaltyConfig.enabled}
+                onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, enabled: e.target.checked })}
+                className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+              />
+              <div>
+                <span className="font-medium text-zinc-900">Ativar fidelidade</span>
+                <p className="text-xs text-zinc-500">Clientes ganham pontos a cada R$ 1 gasto</p>
+              </div>
+            </label>
+            {loyaltyConfig.enabled && (
+              <div className="rounded-lg bg-zinc-50 p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos por R$ 1</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={loyaltyConfig.pointsPerReal}
+                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, pointsPerReal: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={loyaltyConfig.redeemPoints}
+                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto ao resgatar (R$)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.50"
+                    value={loyaltyConfig.redeemDiscount}
+                    onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemDiscount: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Ex: {loyaltyConfig.pointsPerReal} ponto(s) por R$ 1 • {loyaltyConfig.redeemPoints} pontos = R$ {loyaltyConfig.redeemDiscount} de desconto
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

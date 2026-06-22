@@ -6,7 +6,7 @@ import crypto from "crypto"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId } = body
+    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount } = body
 
     if (!establishmentId || !customerName || !items || !total) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
@@ -38,6 +38,20 @@ export async function POST(req: NextRequest) {
       })
       if (customer) {
         customerId = customer.id
+        // Calculate loyalty points: earn points based on subtotal (before loyalty discount)
+        const subtotal = (typeof items === "string" ? JSON.parse(items) : items).reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+        let pointsDelta = 0
+        if (useLoyalty && loyaltyPointsUsed > 0) {
+          pointsDelta -= loyaltyPointsUsed
+        }
+        if (establishment.loyaltyConfig) {
+          try {
+            const lc = JSON.parse(establishment.loyaltyConfig)
+            if (lc.enabled) {
+              pointsDelta += Math.floor(subtotal * (lc.pointsPerReal || 1))
+            }
+          } catch {}
+        }
         await prisma.customer.update({
           where: { id: customer.id },
           data: {
@@ -46,11 +60,22 @@ export async function POST(req: NextRequest) {
             cep: customerCep || customer.cep,
             totalOrders: { increment: 1 },
             totalSpent: { increment: total },
+            loyaltyPoints: { increment: pointsDelta },
           },
         })
       } else {
+        let initialPoints = 0
+        if (establishment.loyaltyConfig) {
+          try {
+            const lc = JSON.parse(establishment.loyaltyConfig)
+            if (lc.enabled) {
+              const subtotal = (typeof items === "string" ? JSON.parse(items) : items).reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+              initialPoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
+            }
+          } catch {}
+        }
         customer = await prisma.customer.create({
-          data: { phone: customerPhone, name: customerName, address: customerComplement, cep: customerCep, establishmentId, totalOrders: 1, totalSpent: total },
+          data: { phone: customerPhone, name: customerName, address: customerComplement, cep: customerCep, establishmentId, totalOrders: 1, totalSpent: total, loyaltyPoints: initialPoints },
         })
         customerId = customer.id
       }
