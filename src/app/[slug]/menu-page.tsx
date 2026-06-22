@@ -898,7 +898,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   <p className="mb-2 text-xs font-medium text-zinc-400 uppercase">{cat.name}</p>
                   <div className="space-y-3">
                     {filtered.map((product) => (
-                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} />
+                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} />
                     ))}
                   </div>
                 </div>
@@ -919,7 +919,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 <h2 className="mb-4 text-xl font-semibold text-zinc-900">{cat.name}</h2>
                 <div className="space-y-3">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} />
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} />
                   ))}
                 </div>
               </div>
@@ -952,7 +952,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <p className="text-sm text-zinc-500">{totalItems} itens</p>
               <p className="text-lg font-bold text-green-600">{formatCurrency(total)}</p>
             </div>
-            <Button size="lg" onClick={() => setShowCart(true)} className="gap-2">
+            <Button size="lg" onClick={() => setShowCart(true)} className="gap-2" disabled={!isOpen}>
               <ShoppingBag className="h-5 w-5" />
               Revisar pedido
             </Button>
@@ -1586,9 +1586,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   )
 }
 
-function ProductCard({ product, onAdd, theme }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string } }) {
+function ProductCard({ product, onAdd, theme, disabled }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string }; disabled?: boolean }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4">
+    <div className={`flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 ${disabled ? "opacity-50" : ""}`}>
       {product.image ? (
         <img
           src={product.image}
@@ -1610,7 +1610,7 @@ function ProductCard({ product, onAdd, theme }: { product: Product; onAdd: (p: P
         )}
         <p className="mt-1 font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
       </div>
-      <Button size="sm" onClick={() => onAdd(product)} className="flex-shrink-0" style={{ backgroundColor: theme.primary }}>+</Button>
+      <Button size="sm" onClick={() => onAdd(product)} className="flex-shrink-0" style={{ backgroundColor: theme.primary }} disabled={disabled}>+</Button>
     </div>
   )
 }
