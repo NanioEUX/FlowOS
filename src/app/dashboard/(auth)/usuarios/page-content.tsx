@@ -377,6 +377,29 @@ export default function UsuariosPage() {
                           </div>
                         </button>
                       ))}
+                      {form.permissions.includes("caixa") && form.role !== "motoboy" && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, canCloseRegister: !form.canCloseRegister })}
+                          className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
+                            form.canCloseRegister
+                              ? "border-amber-400 bg-amber-50 text-amber-700"
+                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                          }`}
+                        >
+                          <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                            form.canCloseRegister
+                              ? "border-amber-500 bg-amber-500"
+                              : "border-zinc-300"
+                          }`}>
+                            {form.canCloseRegister && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div>
+                            <p className="font-medium">Fecha Caixa</p>
+                            <p className="text-[10px] text-zinc-400">Fechar e transferir</p>
+                          </div>
+                        </button>
+                      )}
                     </div>
                     {form.role === "admin" && (
                       <p className="mt-2 text-xs text-zinc-400">
@@ -384,21 +407,6 @@ export default function UsuariosPage() {
                       </p>
                     )}
                   </div>
-                )}
-
-                {form.permissions.includes("caixa") && form.role !== "motoboy" && (
-                  <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.canCloseRegister}
-                      onChange={(e) => setForm({ ...form, canCloseRegister: e.target.checked })}
-                      className="h-4 w-4 rounded border-zinc-300 text-[#FF6B35] focus:ring-[#FF6B35]"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-zinc-700">Pode fechar caixa</p>
-                      <p className="text-[10px] text-zinc-400">Permite fechar e transferir o caixa</p>
-                    </div>
-                  </label>
                 )}
 
                 {error && <p className="text-sm text-red-500">{error}</p>}
