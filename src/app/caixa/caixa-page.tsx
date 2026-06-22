@@ -674,17 +674,8 @@ export default function CaixaPOSPage() {
             <div className="mb-1.5 flex items-center justify-between">
               <p className="text-xs font-medium text-zinc-500">Mesas</p>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {activeTable === null && (
-                <div
-                  className="flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
-                  onClick={openNewTable}
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="mt-1 text-xs font-medium">Nova mesa</span>
-                </div>
-              )}
-              {Object.keys(tableCarts).map((key) => {
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {Object.keys(tableCarts).sort((a, b) => Number(a) - Number(b)).map((key) => {
                 const num = Number(key)
                 const items = tableCarts[num] || []
                 const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -692,38 +683,42 @@ export default function CaixaPOSPage() {
                 return (
                   <div
                     key={num}
-                    className={`relative flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 p-2 transition-all cursor-pointer ${
+                    className={`relative flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all cursor-pointer overflow-hidden ${
                       isActive
-                        ? "border-green-500 bg-green-50 shadow-md"
-                        : "border-zinc-200 bg-white hover:border-green-300"
+                        ? "border-green-500 bg-green-50 shadow-lg"
+                        : "border-zinc-200 bg-white hover:border-green-300 hover:shadow-md"
                     }`}
                     onClick={() => selectTable(num)}
                   >
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-full w-full"><path d="M2 7h20v2H2V7zm1 3h4l1 10h10l1-10h4v10H3V10zm15-6h2v3h-2V4zM4 4h2v3H4V4z"/></svg>
+                    </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); closeTable(num) }}
-                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 z-10"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
-                    <span className={`text-lg font-bold ${isActive ? "text-green-700" : "text-zinc-700"}`}>{num}</span>
+                    <span className={`text-2xl font-bold z-10 ${isActive ? "text-green-700" : "text-zinc-700"}`}>{num}</span>
                     {items.length > 0 && (
-                      <span className="text-[10px] text-zinc-500">{items.length} it{items.length === 1 ? "em" : "ens"}</span>
+                      <span className="text-xs text-zinc-500 z-10">{items.length} it{items.length === 1 ? "em" : "ens"}</span>
                     )}
                     {total > 0 && (
-                      <span className="text-[9px] font-medium text-green-600">{formatCurrency(total)}</span>
+                      <span className="text-xs font-medium text-green-600 z-10">{formatCurrency(total)}</span>
+                    )}
+                    {items.length === 0 && total === 0 && (
+                      <span className="text-[10px] text-zinc-400 z-10">Vazia</span>
                     )}
                   </div>
                 )
               })}
-              {activeTable !== null && (
-                <div
-                  className="flex h-20 min-w-[5rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
-                  onClick={openNewTable}
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="mt-1 text-xs font-medium">Nova</span>
-                </div>
-              )}
+              <div
+                className="flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 bg-white text-zinc-400 transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer"
+                onClick={openNewTable}
+              >
+                <Plus className="h-6 w-6" />
+                <span className="mt-1 text-xs font-medium">Nova mesa</span>
+              </div>
             </div>
           </div>
         </div>
