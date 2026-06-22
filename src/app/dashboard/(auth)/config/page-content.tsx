@@ -304,7 +304,7 @@ export default function ConfigPage() {
                       }}
                       className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
                     />
-                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day}</span>
+                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day?.trim()}</span>
                   </label>
                   {h.active ? (
                     <div className="flex items-center gap-2">

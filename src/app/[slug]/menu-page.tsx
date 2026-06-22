@@ -179,7 +179,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     const dayIndex = now.getDay()
     const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
     const todayName = dayMap[dayIndex]
-    const today = parsedBusinessHours.find((h: any) => h.day === todayName)
+    const today = parsedBusinessHours.find((h: any) => h.day?.trim() === todayName)
     if (!today || !today.active) return false
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
     const [openH, openM] = today.open.split(":").map(Number)
@@ -198,7 +198,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     // Check if today is still open later today
     const todayName = dayMap[dayIndex]
-    const today = parsedBusinessHours.find((h: any) => h.day === todayName)
+    const today = parsedBusinessHours.find((h: any) => h.day?.trim() === todayName)
     if (today && today.active) {
       const [openH, openM] = today.open.split(":").map(Number)
       const openMinutes = openH * 60 + openM
@@ -211,7 +211,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     for (let i = 1; i <= 7; i++) {
       const nextIndex = (dayIndex + i) % 7
       const nextName = dayMap[nextIndex]
-      const nextDay = parsedBusinessHours.find((h: any) => h.day === nextName)
+      const nextDay = parsedBusinessHours.find((h: any) => h.day?.trim() === nextName)
       if (nextDay && nextDay.active) {
         return `Encerramos por hoje, mas ${nextName.toLowerCase()} às ${nextDay.open} retornamos`
       }
@@ -1029,7 +1029,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             <div className="space-y-2">
               {parsedBusinessHours?.map((h: any) => (
                 <div key={h.day} className={`flex items-center justify-between rounded-lg px-3 py-2 ${h.active ? "bg-green-50" : "bg-zinc-50"}`}>
-                  <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day}</span>
+                  <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day?.trim()}</span>
                   {h.active ? (
                     <span className="text-sm text-green-700">{h.open} – {h.close}</span>
                   ) : (
