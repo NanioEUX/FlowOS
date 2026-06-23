@@ -49,6 +49,8 @@ interface Establishment {
   deliveryMessage: string | null
   confirmationTitle: string | null
   confirmationImage: string | null
+  closedTitle: string | null
+  closedSub: string | null
 }
 
 interface CustomerData {
@@ -203,25 +205,44 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     // Check if today is still open later today
     const todayName = dayMap[dayIndex]
     const today = parsedBusinessHours.find((h: any) => h.day?.trim() === todayName)
+    let nextDayName = ""
+    let nextDayTime = ""
     if (today && today.active) {
       const [openH, openM] = today.open.split(":").map(Number)
       const openMinutes = openH * 60 + openM
       if (currentMinutes < openMinutes) {
-        return `Encerramos por hoje, mas ${todayName.toLowerCase()} às ${today.open} retornamos`
+        nextDayName = todayName.toLowerCase()
+        nextDayTime = today.open
       }
     }
 
     // Find next open day
-    for (let i = 1; i <= 7; i++) {
-      const nextIndex = (dayIndex + i) % 7
-      const nextName = dayMap[nextIndex]
-      const nextDay = parsedBusinessHours.find((h: any) => h.day?.trim() === nextName)
-      if (nextDay && nextDay.active) {
-        return `Encerramos por hoje, mas ${nextName.toLowerCase()} às ${nextDay.open} retornamos`
+    if (!nextDayName) {
+      for (let i = 1; i <= 7; i++) {
+        const nextIndex = (dayIndex + i) % 7
+        const nextName = dayMap[nextIndex]
+        const nextDay = parsedBusinessHours.find((h: any) => h.day?.trim() === nextName)
+        if (nextDay && nextDay.active) {
+          nextDayName = nextName.toLowerCase()
+          nextDayTime = nextDay.open
+          break
+        }
       }
     }
-    return "Estabelecimento temporariamente fechado"
-  }, [parsedBusinessHours, isOpen])
+
+    const customTitle = establishment.closedTitle
+    const customSub = establishment.closedSub
+
+    const title = customTitle
+      ? customTitle.replace(/\{day\}/g, nextDayName).replace(/\{time\}/g, nextDayTime)
+      : nextDayName
+        ? `Encerramos por hoje, mas ${nextDayName} às ${nextDayTime} retornamos`
+        : "Estabelecimento temporariamente fechado"
+
+    const sub = customSub || "Aguarde, estaremos de volta!"
+
+    return { title, sub }
+  }, [parsedBusinessHours, isOpen, establishment.closedTitle, establishment.closedSub])
 
   // Loyalty
   const parsedLoyalty = useMemo(() => {
@@ -887,8 +908,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {!isOpen && closedMessage && (
         <div className="mx-auto max-w-3xl px-4 pt-3">
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
-            <p className="text-sm font-medium text-amber-800">{closedMessage}</p>
-            <p className="mt-1 text-xs text-amber-600">Aguarde, estaremos de volta!</p>
+            <p className="text-sm font-medium text-amber-800">{closedMessage.title}</p>
+            <p className="mt-1 text-xs text-amber-600">{closedMessage.sub}</p>
             <button
               onClick={() => setShowBusinessHours(true)}
               className="mt-2 text-xs font-medium text-amber-700 underline hover:text-amber-900"

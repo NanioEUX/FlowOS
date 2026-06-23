@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,6 +88,8 @@ export default function CardapioPage() {
     deliveryMessage: "Obrigado pelo seu pedido!",
     confirmationTitle: "Pedido enviado!",
     confirmationImage: "",
+    closedTitle: "",
+    closedSub: "",
   })
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [savedAppearance, setSavedAppearance] = useState(false)
@@ -127,6 +129,8 @@ export default function CardapioPage() {
         deliveryMessage: data.deliveryMessage || "Obrigado pelo seu pedido!",
         confirmationTitle: data.confirmationTitle || "Pedido enviado!",
         confirmationImage: data.confirmationImage || "",
+        closedTitle: data.closedTitle || "",
+        closedSub: data.closedSub || "",
       })
       setColors({
         primaryColor: data.primaryColor || "#16a34a",
@@ -323,6 +327,8 @@ export default function CardapioPage() {
           deliveryMessage: form.deliveryMessage,
           confirmationTitle: form.confirmationTitle,
           confirmationImage: form.confirmationImage,
+          closedTitle: form.closedTitle,
+          closedSub: form.closedSub,
         }),
       })
       if (res.ok) {
@@ -672,6 +678,46 @@ export default function CardapioPage() {
                     onChange={(e) => setForm({ ...form, deliveryMessage: e.target.value })}
                   />
                   <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de entrega</p>
+                </div>
+              </div>
+
+              {/* Mensagem de Fechamento */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <h4 className="text-sm font-semibold text-amber-800">Mensagem quando fechado</h4>
+                </div>
+                <p className="text-xs text-amber-600">Personalize a mensagem exibida quando o estabelecimento estiver fechado. Use {'{day}'} e {'{time}'} para preencher automaticamente.</p>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título</label>
+                  <Input
+                    placeholder="Encerramos por hoje, mas {day} às {time} retornamos"
+                    value={form.closedTitle}
+                    onChange={(e) => setForm({ ...form, closedTitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Submensagem</label>
+                  <Input
+                    placeholder="Aguarde, estaremos de volta!"
+                    value={form.closedSub}
+                    onChange={(e) => setForm({ ...form, closedSub: e.target.value })}
+                  />
+                </div>
+                {/* Preview */}
+                <div className="rounded-lg border border-amber-200 bg-white p-3">
+                  <p className="mb-2 text-[10px] font-medium text-zinc-400 uppercase">Preview (simula terça às 14:00)</p>
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+                    <p className="text-sm font-medium text-amber-800">
+                      {form.closedTitle
+                        ? form.closedTitle.replace(/\{day\}/g, "quarta").replace(/\{time\}/g, "09:00")
+                        : "Encerramos por hoje, mas quarta às 09:00 retornamos"}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-600">
+                      {form.closedSub || "Aguarde, estaremos de volta!"}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-amber-700 underline">Ver horários de funcionamento</p>
+                  </div>
                 </div>
               </div>
             </div>

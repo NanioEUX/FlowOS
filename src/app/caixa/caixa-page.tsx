@@ -87,7 +87,12 @@ export default function CaixaPOSPage() {
   })
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [showReceipt, setShowReceipt] = useState(false)
-  const [activeTab, setActiveTab] = useState<"caixa" | "balcao" | "pedidos">("caixa")
+  const [activeTab, setActiveTab] = useState<"caixa" | "balcao" | "pedidos">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("pedefacil-caixa-tab") as any) || "caixa"
+    }
+    return "caixa"
+  })
   const [orders, setOrders] = useState<any[]>([])
   const [deliveryPeople, setDeliveryPeople] = useState<any[]>([])
   const [activeTable, setActiveTable] = useState<number | null>(null)
@@ -135,6 +140,10 @@ export default function CaixaPOSPage() {
   }, [tableCarts, nextTableNum, activeTable, cart, user?.establishmentId])
 
   useEffect(() => {
+    localStorage.setItem("pedefacil-caixa-tab", activeTab)
+  }, [activeTab])
+
+  useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
     if (!stored) {
       router.push("/login")
@@ -147,6 +156,15 @@ export default function CaixaPOSPage() {
     }
     setUser(userData)
     loadData(userData.establishmentId)
+
+    // Cross-tab sync: listen for changes from other tabs
+    function handleStorage(e: StorageEvent) {
+      if (e.key === "pedefacil-last-action" && e.newValue) {
+        loadData(userData.establishmentId)
+      }
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
   }, [router])
 
   async function loadData(establishmentId: string) {
@@ -348,6 +366,27 @@ export default function CaixaPOSPage() {
 
     setClosing(true)
     try {
+      // Optimistic: create temporary order for instant UI feedback
+      const tempId = `temp-${Date.now()}`
+      const tempOrder = {
+        id: tempId,
+        orderNumber: Math.floor(Math.random() * 9000) + 1000,
+        establishmentId: user.establishmentId,
+        customerName: tableLabel,
+        items: JSON.stringify(cart),
+        total: cartTotal,
+        orderType: "presencial",
+        paymentMethod: isMesa ? "pending" : payment,
+        method: "caixa",
+        status: sendToPrep ? "preparing" : (isMesa ? "new" : "delivered"),
+        tableNumber: activeTable,
+        createdAt: new Date().toISOString(),
+        deliveredAt: sendToPrep ? null : (isMesa ? null : new Date().toISOString()),
+      }
+      if (sendToPrep || isMesa) {
+        setOrders((prev) => [tempOrder, ...prev])
+      }
+
       const res = await fetchAuth("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -367,6 +406,8 @@ export default function CaixaPOSPage() {
 
       if (!res.ok) {
         console.error("Erro ao criar pedido:", data)
+        // Remove optimistic temp order
+        setOrders((prev) => prev.filter((o) => o.id !== tempId))
         alert(data.error || "Erro ao criar pedido")
         return
       }
@@ -397,8 +438,15 @@ export default function CaixaPOSPage() {
 
       setLastOrder({ ...orderData, items: cart, establishmentName: user.establishment?.name })
 
-      // Update orders in real time
-      setOrders((prev) => [orderData, ...prev])
+      // Update orders in real time - replace temp with real order
+      setOrders((prev) => prev.map((o) => o.id === tempId ? orderData : o))
+      // If temp wasn't added (e.g. balcão without sendToPrep), add it
+      if (!sendToPrep && !isMesa) {
+        setOrders((prev) => [orderData, ...prev])
+      }
+
+      // Notify other tabs
+      localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "order-created", ts: Date.now() }))
 
       // Don't close table for mesa - keep it open for more orders
       setCart([])
@@ -1331,6 +1379,8 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
   })
 
   async function updateStatus(orderId: string, status: string) {
+    // Optimistic: notify and refresh
+    localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "status-changed", ts: Date.now() }))
     await fetchAuth(`/api/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1553,6 +1603,7 @@ function BalcaoTab({ orders, tableNames, establishmentId, onRefresh }: { orders:
   })
 
   async function updateStatus(orderId: string, status: string) {
+    localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "status-changed", ts: Date.now() }))
     await fetchAuth(`/api/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

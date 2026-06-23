@@ -42,6 +42,8 @@ model Establishment {
   deliveryMessage   String?
   confirmationTitle String?
   confirmationImage String?
+  closedTitle       String?
+  closedSub         String?
   cashRegisters     CashRegister[]
   categories        Category[]
   coupons           Coupon[]
