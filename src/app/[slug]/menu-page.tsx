@@ -69,9 +69,9 @@ interface Props {
 }
 
 const BADGE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  mais_vendido: { label: "Mais Vendido", icon: Star, color: "bg-amber-100 text-amber-700 border-amber-200" },
-  novo: { label: "Novo", icon: Sparkles, color: "bg-blue-100 text-blue-700 border-blue-200" },
-  promocao: { label: "Promoção", icon: Tag, color: "bg-red-100 text-red-700 border-red-200" },
+  mais_vendido: { label: "Mais Vendido", icon: Star, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+  novo: { label: "Novo", icon: Sparkles, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  promocao: { label: "Promoção", icon: Tag, color: "bg-red-500/10 text-red-400 border-red-500/20" },
 }
 
 function ProductBadge({ badge }: { badge: string | null }) {
@@ -90,14 +90,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // Color theme - use published colors or defaults
   const theme = establishment.colorsPublished ? {
     primary: establishment.primaryColor,
-    background: establishment.backgroundColor,
-    text: establishment.textColor,
-    header: establishment.headerColor,
+    background: "#0a0a0f",
+    text: "#ffffff",
+    header: "rgba(10,10,15,0.8)",
   } : {
-    primary: "#16a34a",
-    background: "#ffffff",
-    text: "#1a1a2e",
-    header: "#ffffff",
+    primary: "#FF6B35",
+    background: "#0a0a0f",
+    text: "#ffffff",
+    header: "rgba(10,10,15,0.8)",
   }
 
   const [cart, setCart] = useState<CartItem[]>([])
@@ -710,34 +710,33 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   if (orderResult?.success) {
     return (
       <>
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-6">
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-4">
+        <div className="w-full max-w-md rounded-[20px] border border-white/[0.08] bg-white/[0.03] text-center backdrop-blur-xl p-8">
             <div className="mb-4 flex justify-center">
               {(establishment.confirmationImage || establishment.logo) ? (
-                <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover shadow-sm" />
+                <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle className="h-8 w-8 text-green-400" />
                 </div>
               )}
             </div>
-            <h2 className="text-xl font-bold text-zinc-900">{establishment.confirmationTitle || "Pedido enviado!"}</h2>
+            <h2 className="text-xl font-bold text-white">{establishment.confirmationTitle || "Pedido enviado!"}</h2>
 
             {orderResult.orderType === "pickup" && establishment.pickupMessage && (
-              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
-                <p className="text-sm text-green-700">{establishment.pickupMessage}</p>
+              <div className="mt-3 rounded-lg border border-green-500/20 bg-green-500/[0.06] p-3">
+                <p className="text-sm text-green-300">{establishment.pickupMessage}</p>
               </div>
             )}
             {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
-              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
-                <p className="text-sm text-green-700">{establishment.deliveryMessage}</p>
+              <div className="mt-3 rounded-lg border border-green-500/20 bg-green-500/[0.06] p-3">
+                <p className="text-sm text-green-300">{establishment.deliveryMessage}</p>
               </div>
             )}
 
             {parsedLoyalty?.enabled && (
-              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
-                <p className="text-sm font-medium text-amber-700">
+              <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3">
+                <p className="text-sm font-medium text-amber-300">
                   <Star className="inline h-4 w-4 mr-1" />
                   {useLoyalty && loyaltyDiscount > 0
                     ? `Usado ${parsedLoyalty.redeemPoints} pontos (-${formatCurrency(loyaltyDiscount)})`
@@ -749,13 +748,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             {orderResult.paymentLink && (
               <div className="mt-4">
                 <a href={orderResult.paymentLink} target="_blank" rel="noopener noreferrer">
-                  <Button className="w-full gap-2" variant="primary">
+                  <button className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90">
                     <CreditCard className="h-4 w-4" />
                     Pagar agora (Pix / Cartão)
                     <ExternalLink className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </a>
-                <p className="mt-1 text-xs text-zinc-400">Pagamento processado por Asaas</p>
+                <p className="mt-1 text-xs text-white/30">Pagamento processado por Asaas</p>
               </div>
             )}
 
@@ -790,9 +789,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: theme.background }}>
+    <div className="min-h-screen pb-24 bg-[#0a0a0f] text-white overflow-x-hidden">
+      {/* Background orb */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px]" style={{ backgroundColor: `${theme.primary}10` }} />
+      </div>
+
       {/* Header */}
-      <div className="shadow-sm sticky top-0 z-10" style={{ backgroundColor: theme.header }}>
+      <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3">
           {establishment.instagramUrl ? (
             <a href={establishment.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center shrink-0">
@@ -801,7 +805,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               ) : (
                 <img src="/icons/pedefacil-icon.svg" alt="PedeFácil" className="h-14 w-14" />
               )}
-              <span className="text-[9px] text-zinc-400 hover:text-pink-500 transition-colors mt-0.5 flex items-center gap-0.5">
+              <span className="text-[9px] text-white/30 hover:text-pink-500 transition-colors mt-0.5 flex items-center gap-0.5">
                 <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                 Siga-nos
               </span>
@@ -816,38 +820,38 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+            <h1 className="text-base font-bold truncate text-white">{establishment.name}</h1>
             {establishment.description && (
-              <p className="text-[11px] leading-tight truncate" style={{ color: theme.text, opacity: 0.6 }}>{establishment.description}</p>
+              <p className="text-[11px] leading-tight truncate text-white/40">{establishment.description}</p>
             )}
           </div>
           {customer.name ? (
             <div className="text-right shrink-0">
-              <p className="text-xs font-medium" style={{ color: theme.primary }}>Olá, {customer.name}!</p>
+              <p className="text-xs font-medium text-white/70">Olá, {customer.name}!</p>
               {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
-                <p className="text-[10px] text-amber-600 flex items-center justify-end gap-0.5">
+                <p className="text-[10px] text-amber-400 flex items-center justify-end gap-0.5">
                   <Star className="h-2.5 w-2.5" />{customerLoyaltyPoints} pontos
                 </p>
               )}
               <button
                 onClick={() => { setCustomerData(null); setPhoneInput(""); setCustomer({ name: "", phone: "", address: "", notes: "" }); setCep(""); setCepAddress(null); localStorage.removeItem(`pedefacil-customer-${establishment.slug}`) }}
-                className="text-[10px] text-zinc-400 hover:text-zinc-600"
+                className="text-[10px] text-white/30 hover:text-white/60"
               >
                 Trocar
               </button>
             </div>
           ) : customerData ? (
             <div className="text-right shrink-0">
-              <p className="text-xs font-medium" style={{ color: theme.primary }}>Olá, {customerData.name || "cliente"}!</p>
+              <p className="text-xs font-medium text-white/70">Olá, {customerData.name || "cliente"}!</p>
               <button
                 onClick={() => { setCustomerData(null); setPhoneInput(""); setCustomer({ name: "", phone: "", address: "", notes: "" }); setCep(""); setCepAddress(null); localStorage.removeItem(`pedefacil-customer-${establishment.slug}`) }}
-                className="text-[10px] text-zinc-400 hover:text-zinc-600"
+                className="text-[10px] text-white/30 hover:text-white/60"
               >
                 Trocar
               </button>
             </div>
           ) : (
-            <button onClick={() => setShowIdentifyModal(true)} className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 shrink-0 animate-pulse">
+            <button onClick={() => setShowIdentifyModal(true)} className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 shrink-0 animate-pulse">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
@@ -860,18 +864,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         {/* Search Bar */}
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
             <input
               type="text"
               placeholder="Buscar no cardápio..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-10 pr-4 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.06] focus:outline-none backdrop-blur-sm transition-all"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -890,12 +894,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
                   activeCategory === cat.id
-                    ? "text-white"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    ? "text-white shadow-lg"
+                    : "bg-white/[0.05] text-white/50 hover:bg-white/[0.1] hover:text-white/70 border border-white/[0.06]"
                 }`}
-                style={activeCategory === cat.id ? { backgroundColor: theme.primary } : {}}
+                style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.primary}40` } : {}}
               >
                 {cat.name}
               </button>
@@ -907,12 +911,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Closed banner */}
       {!isOpen && closedMessage && (
         <div className="mx-auto max-w-3xl px-4 pt-3">
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
-            <p className="text-sm font-medium text-amber-800">{closedMessage.title}</p>
-            <p className="mt-1 text-xs text-amber-600">{closedMessage.sub}</p>
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-center backdrop-blur-sm">
+            <p className="text-sm font-medium text-amber-300">{closedMessage.title}</p>
+            <p className="mt-1 text-xs text-amber-400/70">{closedMessage.sub}</p>
             <button
               onClick={() => setShowBusinessHours(true)}
-              className="mt-2 text-xs font-medium text-amber-700 underline hover:text-amber-900"
+              className="mt-2 text-xs font-medium text-amber-400 underline hover:text-amber-300"
             >
               Ver horários de funcionamento
             </button>
@@ -924,7 +928,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       <div className="mx-auto max-w-3xl px-4 py-6">
         {searchQuery ? (
           <div>
-            <p className="mb-4 text-sm text-zinc-500">
+            <p className="mb-4 text-sm text-white/40">
               Resultados para &quot;{searchQuery}&quot;
             </p>
             {sortedCategories.map((cat) => {
@@ -932,7 +936,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               if (filtered.length === 0) return null
               return (
                 <div key={cat.id} className="mb-6">
-                  <p className="mb-2 text-xs font-medium text-zinc-400 uppercase">{cat.name}</p>
+                  <p className="mb-2 text-xs font-medium text-white/30 uppercase tracking-wider">{cat.name}</p>
                   <div className="space-y-3">
                     {filtered.map((product) => (
                       <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} />
@@ -953,7 +957,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 id={`cat-${cat.id}`}
                 className={`mb-8 ${!isActive ? "hidden" : ""}`}
               >
-                <h2 className="mb-4 text-xl font-semibold text-zinc-900">{cat.name}</h2>
+                <h2 className="mb-4 text-xl font-semibold text-white">{cat.name}</h2>
                 <div className="space-y-3">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} />
@@ -968,11 +972,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       {/* Footer */}
       {cart.length === 0 && !showCart && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-zinc-200 bg-white p-3 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/[0.06] bg-[#0a0a0f]/90 backdrop-blur-xl p-3">
           <div className="mx-auto flex max-w-3xl items-center justify-center">
             <button
               onClick={() => setShowBusinessHours(true)}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700"
+              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
             >
               <Clock className="h-3.5 w-3.5" />
               Horários de funcionamento
@@ -983,16 +987,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       {/* Cart FAB */}
       {cart.length > 0 && !showCart && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-zinc-200 bg-white p-4 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/[0.06] bg-[#0a0a0f]/90 backdrop-blur-xl p-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-zinc-500">{totalItems} itens</p>
-              <p className="text-lg font-bold text-green-600">{formatCurrency(total)}</p>
+              <p className="text-sm text-white/50">{totalItems} itens</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(total)}</p>
             </div>
-            <Button size="lg" onClick={() => setShowCart(true)} className="gap-2" disabled={!isOpen}>
+            <button onClick={() => setShowCart(true)} className="flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ backgroundColor: theme.primary, boxShadow: `0 0 30px ${theme.primary}40` }} disabled={!isOpen}>
               <ShoppingBag className="h-5 w-5" />
               Revisar pedido
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -1000,16 +1004,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Identify Modal */}
       {showIdentifyModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-t-2xl bg-white p-6">
+          <div className="w-full max-w-lg rounded-t-2xl bg-[#111] border-t border-white/[0.08] p-6 backdrop-blur-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-zinc-900">Identificar-se</h2>
-              <button onClick={() => setShowIdentifyModal(false)} className="text-zinc-400 hover:text-zinc-600">
+              <h2 className="text-lg font-bold text-white">Identificar-se</h2>
+              <button onClick={() => setShowIdentifyModal(false)} className="text-white/30 hover:text-white/60">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-500">WhatsApp</label>
+                <label className="text-xs text-white/40">WhatsApp</label>
                 <input
                   placeholder="(47) 99999-9999"
                   value={phoneInput}
@@ -1020,21 +1024,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     if (raw.length > 7) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`
                     setPhoneInput(formatted)
                   }}
-                  className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#FF6B35]/50 focus:outline-none"
                 />
-                {identifying && <p className="text-xs text-zinc-400 mt-1">Buscando cliente...</p>}
+                {identifying && <p className="text-xs text-white/30 mt-1">Buscando cliente...</p>}
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Seu nome</label>
+                <label className="text-xs text-white/40">Seu nome</label>
                 <input
                   placeholder="Como quer ser chamado?"
                   value={customer.name}
                   onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#FF6B35]/50 focus:outline-none"
                 />
               </div>
               {customerData && (
-                <p className="text-xs text-green-600">Cliente encontrado! Dados preenchidos automaticamente.</p>
+                <p className="text-xs text-green-400">Cliente encontrado! Dados preenchidos automaticamente.</p>
               )}
               <Button
                 onClick={() => {
@@ -1043,7 +1047,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     setShowIdentifyModal(false)
                   }
                 }}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
                 disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11}
               >
                 Confirmar
@@ -1056,28 +1060,28 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Business Hours Modal */}
       {showBusinessHours && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-t-2xl bg-white p-6">
+          <div className="w-full max-w-lg rounded-t-2xl bg-[#111] border-t border-white/[0.08] p-6 backdrop-blur-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-zinc-900">Horários de Funcionamento</h2>
-              <button onClick={() => setShowBusinessHours(false)} className="text-zinc-400 hover:text-zinc-600">
+              <h2 className="text-lg font-bold text-white">Horários de Funcionamento</h2>
+              <button onClick={() => setShowBusinessHours(false)} className="text-white/30 hover:text-white/60">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-2">
               {parsedBusinessHours?.map((h: any) => (
-                <div key={h.day} className={`flex items-center justify-between rounded-lg px-3 py-2 ${h.active ? "bg-green-50" : "bg-zinc-50"}`}>
-                  <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day?.trim()}</span>
+                <div key={h.day} className={`flex items-center justify-between rounded-lg px-3 py-2 ${h.active ? "bg-green-500/[0.06]" : "bg-white/[0.03]"}`}>
+                  <span className={`text-sm font-medium ${h.active ? "text-white" : "text-white/30"}`}>{h.day?.trim()}</span>
                   {h.active ? (
-                    <span className="text-sm text-green-700">{h.open} – {h.close}</span>
+                    <span className="text-sm text-green-300">{h.open} – {h.close}</span>
                   ) : (
-                    <span className="text-sm text-zinc-400">Fechado</span>
+                    <span className="text-sm text-white/30">Fechado</span>
                   )}
                 </div>
               ))}
             </div>
             <button
               onClick={() => setShowBusinessHours(false)}
-              className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+              className="mt-4 w-full rounded-lg bg-white/[0.08] py-2.5 text-sm font-medium text-white hover:bg-white/[0.12] border border-white/[0.08]"
             >
               Fechar
             </button>
@@ -1088,10 +1092,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Cart Drawer */}
       {showCart && !showCheckout && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[#111] border-t border-white/[0.08] p-6 backdrop-blur-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-zinc-900">Seu pedido</h2>
-              <button onClick={() => setShowCart(false)} className="text-zinc-400 hover:text-zinc-600">
+              <h2 className="text-xl font-bold text-white">Seu pedido</h2>
+              <button onClick={() => setShowCart(false)} className="text-white/30 hover:text-white/60">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -1102,7 +1106,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   type="button"
                   onClick={() => handleOrderTypeChange("delivery")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 text-sm ${
-                    orderType === "delivery" ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600"
+                    orderType === "delivery" ? "border-[#FF6B35]/50 bg-[#FF6B35]/[0.08] text-[#FF6B35]" : "border-white/[0.08] text-white/60"
                   }`}
                 >
                   <Bike className="h-5 w-5" />
@@ -1114,7 +1118,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   type="button"
                   onClick={() => handleOrderTypeChange("pickup")}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 text-sm ${
-                    orderType === "pickup" ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600"
+                    orderType === "pickup" ? "border-[#FF6B35]/50 bg-[#FF6B35]/[0.08] text-[#FF6B35]" : "border-white/[0.08] text-white/60"
                   }`}
                 >
                   <StoreIcon className="h-5 w-5" />
@@ -1124,17 +1128,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             </div>
 
             {orderType === "pickup" && establishment.address && (
-              <div className="mb-3 rounded-lg bg-green-50 border border-green-200 p-3">
+              <div className="mb-3 rounded-lg bg-green-500/[0.06] border border-green-500/20 p-3">
                 <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <MapPin className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800">Retirada em:</p>
-                    <p className="text-sm text-green-700">{establishment.address}</p>
+                    <p className="text-sm font-medium text-green-300">Retirada em:</p>
+                    <p className="text-sm text-green-400/80">{establishment.address}</p>
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-400 hover:text-green-300"
                     >
                       <ExternalLink className="h-3 w-3" />
                       Ver no mapa
@@ -1145,10 +1149,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             )}
 
             {orderType === "delivery" && deliveryFee > 0 && (
-              <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              <div className="mb-3 rounded-lg bg-amber-500/[0.06] p-3 text-sm text-amber-300">
                 <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
                 {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
-                  <p className="text-xs mt-1">
+                  <p className="text-xs mt-1 text-amber-400/70">
                     Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove || 0)}!
                     Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)}.
                   </p>
@@ -1156,30 +1160,30 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               </div>
             )}
             {orderType === "delivery" && deliveryFee === 0 && (
-              <div className="mb-3 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+              <div className="mb-3 rounded-lg bg-green-500/[0.06] p-3 text-sm text-green-300">
                 <p className="font-medium">Entrega grátis!</p>
               </div>
             )}
 
             {cart.length === 0 ? (
-              <p className="py-8 text-center text-zinc-500">Carrinho vazio</p>
+              <p className="py-8 text-center text-white/40">Carrinho vazio</p>
             ) : (
               <div className="space-y-3">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
+                  <div key={item.id} className="flex items-center justify-between rounded-lg bg-white/[0.03] p-3">
                     <div className="flex-1">
-                      <p className="font-medium text-zinc-900">{item.name}</p>
-                      <p className="text-sm text-zinc-500">{formatCurrency(item.price)}</p>
+                      <p className="font-medium text-white">{item.name}</p>
+                      <p className="text-sm text-white/40">{formatCurrency(item.price)}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-600 hover:bg-zinc-100">
+                      <button onClick={() => updateQuantity(item.id, -1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.12] text-white/60 hover:bg-white/[0.06]">
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="w-6 text-center font-medium">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-300 text-zinc-600 hover:bg-zinc-100">
+                      <span className="w-6 text-center font-medium text-white">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.id, 1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.12] text-white/60 hover:bg-white/[0.06]">
                         <Plus className="h-3 w-3" />
                       </button>
-                      <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-600">
+                      <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-500">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
@@ -1206,30 +1210,30 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 pt-3">
-                    <div className="flex items-center gap-2 text-sm text-green-700">
+                  <div className="flex items-center justify-between rounded-lg bg-green-500/[0.06] border border-green-500/20 px-3 py-2 pt-3">
+                    <div className="flex items-center gap-2 text-sm text-green-300">
                       <Tag className="h-4 w-4" />
                       <span className="font-medium">{couponData.code}</span>
                       <span>-{couponData.discountType === "percentage" ? `${couponData.discountValue}%` : formatCurrency(couponData.discountValue)}</span>
                     </div>
-                    <button onClick={removeCoupon} className="text-green-600 hover:text-green-800">
+                    <button onClick={removeCoupon} className="text-green-400 hover:text-green-300">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 )}
-                {couponError && <p className="text-xs text-red-500 pt-1">{couponError}</p>}
+                {couponError && <p className="text-xs text-red-400 pt-1">{couponError}</p>}
 
                 {/* Loyalty */}
                 {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
                   <div className="pt-3">
-                    <label className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 cursor-pointer">
+                    <label className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3 cursor-pointer">
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500" />
+                        <Star className="h-4 w-4 text-amber-400" />
                         <div>
-                          <p className="text-sm font-medium text-zinc-900">
+                          <p className="text-sm font-medium text-white">
                             {parsedLoyalty.redeemType === "product" ? "Trocar pontos por produto" : "Usar pontos de fidelidade"}
                           </p>
-                          <p className="text-xs text-zinc-500">{customerLoyaltyPoints} pontos disponíveis</p>
+                          <p className="text-xs text-white/40">{customerLoyaltyPoints} pontos disponíveis</p>
                         </div>
                       </div>
                       <input
@@ -1237,60 +1241,60 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                         checked={useLoyalty}
                         onChange={(e) => setUseLoyalty(e.target.checked)}
                         disabled={customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100)}
-                        className="h-4 w-4 rounded border-zinc-300 text-amber-500 focus:ring-amber-500"
+                        className="h-4 w-4 rounded border-white/20 text-amber-500 focus:ring-amber-500"
                       />
                     </label>
                     {customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100) && (
-                      <p className="mt-1 text-xs text-zinc-400">
+                      <p className="mt-1 text-xs text-white/30">
                         {parsedLoyalty.redeemType === "product"
                           ? `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar um produto`
                           : `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar R$ ${parsedLoyalty.redeemDiscount || 10} de desconto`}
                       </p>
                     )}
                     {useLoyalty && loyaltyDiscount > 0 && (
-                      <p className="mt-1 text-xs text-green-600">-{formatCurrency(loyaltyDiscount)} de desconto aplicado</p>
+                      <p className="mt-1 text-xs text-green-400">-{formatCurrency(loyaltyDiscount)} de desconto aplicado</p>
                     )}
                     {useLoyalty && loyaltyFreeProduct && (
-                      <p className="mt-1 text-xs text-green-600">+{loyaltyFreeProduct.name} (Produto grátis!)</p>
+                      <p className="mt-1 text-xs text-green-400">+{loyaltyFreeProduct.name} (Produto grátis!)</p>
                     )}
                     {parsedLoyalty.redeemType === "product" && parsedLoyalty.redeemProductId && !loyaltyFreeProduct && customerLoyaltyPoints >= (parsedLoyalty.redeemPoints || 100) && (
-                      <p className="mt-1 text-xs text-zinc-500">Adicione o produto ao carrinho para resgatar</p>
+                      <p className="mt-1 text-xs text-white/40">Adicione o produto ao carrinho para resgatar</p>
                     )}
                   </div>
                 )}
 
                 <div className="pt-3 space-y-1">
-                  <div className="flex justify-between text-sm text-zinc-600">
+                  <div className="flex justify-between text-sm text-white/60">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
                   {deliveryFee > 0 && (
-                    <div className="flex justify-between text-sm text-zinc-600">
+                    <div className="flex justify-between text-sm text-white/60">
                       <span>Taxa de entrega</span>
                       <span>{formatCurrency(deliveryFee)}</span>
                     </div>
                   )}
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-sm text-green-400">
                       <span>Desconto (cupom)</span>
                       <span>-{formatCurrency(couponDiscount)}</span>
                     </div>
                   )}
                   {loyaltyDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-amber-600">
+                    <div className="flex justify-between text-sm text-amber-400">
                       <span>Desconto (pontos)</span>
                       <span>-{formatCurrency(loyaltyDiscount)}</span>
                     </div>
                   )}
                   {loyaltyFreeProduct && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-sm text-green-400">
                       <span>Produto grátis ({loyaltyFreeProduct.name})</span>
                       <span>-{formatCurrency(loyaltyFreeProduct.price)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t border-zinc-200 pt-2 text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-green-600">{formatCurrency(total)}</span>
+                  <div className="flex justify-between border-t border-white/[0.08] pt-2 text-lg font-bold">
+                    <span className="text-white">Total</span>
+                    <span className="text-green-400">{formatCurrency(total)}</span>
                   </div>
                 </div>
 
@@ -1314,10 +1318,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Checkout - Site */}
       {showCheckout && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[#111] border-t border-white/[0.08] p-6 backdrop-blur-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-zinc-900">Finalizar pedido</h2>
-              <button onClick={() => { setShowCheckout(false); setEditingAddress(false) }} className="text-zinc-400 hover:text-zinc-600">
+              <h2 className="text-xl font-bold text-white">Finalizar pedido</h2>
+              <button onClick={() => { setShowCheckout(false); setEditingAddress(false) }} className="text-white/30 hover:text-white/60">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -1326,9 +1330,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               {orderType === "delivery" ? (
                 <div className="space-y-2">
                   {addressSaved && cepAddress ? (
-                    <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 space-y-2">
+                    <div className="rounded-lg bg-white/[0.03] p-3 text-sm text-white/60 space-y-2">
                       <p>{cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
-                      <button type="button" onClick={() => setAddressSaved(false)} className="text-xs text-green-600 hover:underline">
+                      <button type="button" onClick={() => setAddressSaved(false)} className="text-xs text-green-400 hover:underline">
                         Alterar endereço
                       </button>
                     </div>
@@ -1337,19 +1341,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       <div className="flex gap-2">
                         <Input label="CEP" id="cep" placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))} className="w-32" disabled={addressSaved} />
                         {cep.length === 8 && !cepLoading && (
-                          <button type="button" onClick={lookupCep} className="mt-6 text-xs text-green-600 hover:underline self-start">
+                          <button type="button" onClick={lookupCep} className="mt-6 text-xs text-green-400 hover:underline self-start">
                             Buscar
                           </button>
                         )}
-                        {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin text-zinc-400" />}
+                        {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin text-white/30" />}
                       </div>
-                      {cepError && <p className="text-xs text-red-500">{cepError}</p>}
+                      {cepError && <p className="text-xs text-red-400">{cepError}</p>}
                       {cepAddress && (
-                        <p className="text-xs text-zinc-500">{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
+                        <p className="text-xs text-white/40">{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
                       )}
                       <Input label="Número" id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} disabled={addressSaved} />
                       {cepAddress && customer.address && (
-                        <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }} className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                        <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }} className="w-full rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] px-4 py-2 text-sm font-medium text-white hover:opacity-90">
                           Salvar endereço
                         </button>
                       )}
@@ -1358,7 +1362,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   <input type="hidden" name="fullAddress" value={fullAddress} />
                 </div>
               ) : (
-                <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                <div className="rounded-lg bg-green-500/[0.06] p-3 text-sm text-green-300 border border-green-500/20">
                   <StoreIcon className="inline h-4 w-4 mr-1" />
                   Retirada no local: {establishment.address || "Consulte o estabelecimento"}
                 </div>
@@ -1367,7 +1371,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <Textarea label="Observações" id="notes" placeholder="Ex: Sem cebola, ponto da carne..." value={customer.notes} onChange={(e) => setCustomer({ ...customer, notes: e.target.value })} />
 
               <div>
-                <p className="mb-2 text-sm font-medium text-zinc-700">Pagamento</p>
+                <p className="mb-2 text-sm font-medium text-white/80">Pagamento</p>
                 <div className="grid grid-cols-2 gap-2">
                   {availablePayments.map((p) => (
                     <button
@@ -1375,7 +1379,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       type="button"
                       onClick={() => setPaymentMethod(p.key as any)}
                       className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
-                        paymentMethod === p.key ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600"
+                        paymentMethod === p.key ? "border-[#FF6B35]/50 bg-[#FF6B35]/[0.08] text-[#FF6B35]" : "border-white/[0.08] text-white/60"
                       }`}
                     >
                       {p.icon}
@@ -1385,40 +1389,40 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 </div>
               </div>
 
-              {orderError && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{orderError}</div>}
+              {orderError && <div className="rounded-lg bg-red-500/[0.06] p-3 text-sm text-red-400 border border-red-500/20">{orderError}</div>}
 
-              <div className="rounded-lg bg-zinc-50 p-3">
-                <p className="text-sm font-medium text-zinc-700 mb-2">Resumo</p>
-                <div className="flex items-center gap-1 text-xs text-zinc-500 mb-2">
+              <div className="rounded-lg bg-white/[0.03] p-3">
+                <p className="text-sm font-medium text-white/80 mb-2">Resumo</p>
+                <div className="flex items-center gap-1 text-xs text-white/40 mb-2">
                   {orderType === "delivery" ? <Bike className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
                   {orderType === "delivery" ? "Entrega" : "Retirada"}
                 </div>
                 {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm text-zinc-600">
+                  <div key={item.id} className="flex justify-between text-sm text-white/60">
                     <span>{item.name} x{item.quantity}</span>
                     <span>{formatCurrency(item.price * item.quantity)}</span>
                   </div>
                 ))}
-                <div className="mt-2 space-y-1 border-t border-zinc-200 pt-2">
-                  <div className="flex justify-between text-sm text-zinc-600">
+                <div className="mt-2 space-y-1 border-t border-white/[0.08] pt-2">
+                  <div className="flex justify-between text-sm text-white/60">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
                   {deliveryFee > 0 && (
-                    <div className="flex justify-between text-sm text-zinc-600">
+                    <div className="flex justify-between text-sm text-white/60">
                       <span>Taxa de entrega</span>
                       <span>{formatCurrency(deliveryFee)}</span>
                     </div>
                   )}
                   {couponDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-sm text-green-400">
                       <span>Desconto ({couponData?.code})</span>
                       <span>-{formatCurrency(couponDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-zinc-900">
+                  <div className="flex justify-between font-bold text-white">
                     <span>Total</span>
-                    <span className="text-green-600">{formatCurrency(total)}</span>
+                    <span className="text-green-400">{formatCurrency(total)}</span>
                   </div>
                 </div>
               </div>
@@ -1438,7 +1442,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           className={`fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-lg transition active:scale-95 sm:bottom-6 ${
             hasEstablishmentReply
               ? "bg-amber-500 hover:bg-amber-600 animate-pulse"
-              : "bg-green-600 hover:bg-green-700"
+              : "bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
           }`}
         >
           {hasEstablishmentReply ? (
@@ -1456,43 +1460,43 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Orders list modal */}
       {showOrdersList && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white flex flex-col">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-              <h2 className="text-lg font-bold text-zinc-900">Seus pedidos</h2>
-              <button onClick={() => setShowOrdersList(false)} className="text-zinc-400 hover:text-zinc-600">
+          <div className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-[#111] border-t sm:border border-white/[0.08] flex flex-col backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
+              <h2 className="text-lg font-bold text-white">Seus pedidos</h2>
+              <button onClick={() => setShowOrdersList(false)} className="text-white/30 hover:text-white/60">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {!customer.phone && !customerData?.phone ? (
                 <div className="text-center py-8">
-                  <User className="mx-auto h-8 w-8 text-zinc-300" />
-                  <p className="mt-2 text-sm text-zinc-500">Identifique-se para ver seus pedidos</p>
-                  <button onClick={() => { setShowOrdersList(false); setShowIdentifyModal(true) }} className="mt-2 text-sm text-green-600 hover:underline">
+                  <User className="mx-auto h-8 w-8 text-white/20" />
+                  <p className="mt-2 text-sm text-white/40">Identifique-se para ver seus pedidos</p>
+                  <button onClick={() => { setShowOrdersList(false); setShowIdentifyModal(true) }} className="mt-2 text-sm text-green-400 hover:underline">
                     Identificar-se
                   </button>
                 </div>
               ) : loadingOrders ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                  <Loader2 className="h-6 w-6 animate-spin text-green-400" />
                 </div>
               ) : customerOrders.length === 0 ? (
                 <div className="text-center py-8">
-                  <Package className="mx-auto h-8 w-8 text-zinc-300" />
-                  <p className="mt-2 text-sm text-zinc-500">Nenhum pedido encontrado</p>
+                  <Package className="mx-auto h-8 w-8 text-white/20" />
+                  <p className="mt-2 text-sm text-white/40">Nenhum pedido encontrado</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {customerOrders.map((order) => {
                     const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
                     const statusColors: Record<string, string> = {
-                      pending: "bg-yellow-100 text-yellow-700",
-                      confirmed: "bg-blue-100 text-blue-700",
-                      preparing: "bg-orange-100 text-orange-700",
-                      ready: "bg-green-100 text-green-700",
-                      out_for_delivery: "bg-purple-100 text-purple-700",
-                      delivered: "bg-green-100 text-green-700",
-                      cancelled: "bg-red-100 text-red-700",
+                      pending: "bg-amber-500/10 text-amber-400",
+                      confirmed: "bg-blue-500/10 text-blue-400",
+                      preparing: "bg-orange-500/10 text-orange-400",
+                      ready: "bg-green-500/10 text-green-400",
+                      out_for_delivery: "bg-purple-500/10 text-purple-400",
+                      delivered: "bg-green-500/10 text-green-400",
+                      cancelled: "bg-red-500/10 text-red-400",
                     }
                     const statusLabels: Record<string, string> = {
                       pending: "Pendente",
@@ -1512,20 +1516,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                             openTracking(order.id, `/pedido/${order.trackingToken}`)
                           }
                         }}
-                        className="w-full text-left rounded-xl border border-zinc-200 p-3 hover:border-green-300 hover:bg-green-50/50 transition-colors"
+                        className="w-full text-left rounded-xl border border-white/[0.08] p-3 hover:border-[#FF6B35]/30 hover:bg-white/[0.03] transition-colors"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-zinc-900 truncate">
+                            <p className="text-sm font-medium text-white truncate">
                               {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                             </p>
-                            <p className="text-xs text-zinc-400 mt-0.5">
+                            <p className="text-xs text-white/30 mt-0.5">
                               {new Date(order.createdAt).toLocaleDateString("pt-BR")} às {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-bold text-green-600">{formatCurrency(order.total)}</p>
-                            <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[order.status] || "bg-zinc-100 text-zinc-500"}`}>
+                            <p className="text-sm font-bold text-green-400">{formatCurrency(order.total)}</p>
+                            <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[order.status] || "bg-white/[0.05] text-white/40"}`}>
                               {statusLabels[order.status] || order.status}
                             </span>
                           </div>
@@ -1543,7 +1547,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Status change alert */}
       {statusAlert && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
-          <div className="rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-lg">
+          <div className="rounded-lg bg-[#FF6B35] px-6 py-3 text-sm font-semibold text-white shadow-lg">
             {statusAlert}
           </div>
         </div>
@@ -1552,10 +1556,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       {/* Tracking modal */}
       {showTracking && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white flex flex-col">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-[#111] border-t sm:border border-white/[0.08] flex flex-col backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-zinc-900">Acompanhar pedido</h2>
+                <h2 className="text-lg font-bold text-white">Acompanhar pedido</h2>
                 {trackingOrder && (
                   <span className="text-xl">{statusIcons[trackingOrder.status] || "📋"}</span>
                 )}
@@ -1567,11 +1571,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     loadCustomerOrders()
                     setShowOrdersList(true)
                   }}
-                  className="text-xs text-green-600 hover:text-green-700 font-medium"
+                  className="text-xs text-green-400 hover:text-green-300 font-medium"
                 >
                   Ver outros
                 </button>
-                <button onClick={() => setShowTracking(false)} className="text-zinc-400 hover:text-zinc-600">
+                <button onClick={() => setShowTracking(false)} className="text-white/30 hover:text-white/60">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -1587,10 +1591,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       const isCurrent = i === flowIdx
                       return (
                         <div key={step} className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${isCompleted ? "bg-green-100 text-green-600" : "bg-zinc-100 text-zinc-300"} ${isCurrent ? "ring-2 ring-green-500" : ""}`}>
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${isCompleted ? "bg-green-500/[0.12] text-green-400" : "bg-white/[0.05] text-white/20"} ${isCurrent ? "ring-2 ring-green-500" : ""}`}>
                             {statusIcons[step]}
                           </div>
-                          <span className={`text-sm font-medium ${isCompleted ? "text-zinc-900" : "text-zinc-400"} ${isCurrent ? "text-green-700" : ""}`}>
+                          <span className={`text-sm font-medium ${isCompleted ? "text-white" : "text-white/30"} ${isCurrent ? "text-green-300" : ""}`}>
                             {statusLabels[step]}
                           </span>
                           {isCurrent && <Badge variant="success" className="text-[10px]">Atual</Badge>}
@@ -1599,23 +1603,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     })}
                   </div>
 
-                  <div className="border-t border-zinc-200 pt-3">
-                    <p className="text-xs text-zinc-400">Total: <span className="font-semibold text-green-600">R$ {trackingOrder.total?.toFixed(2)}</span></p>
+                  <div className="border-t border-white/[0.08] pt-3">
+                    <p className="text-xs text-white/30">Total: <span className="font-semibold text-green-400">R$ {trackingOrder.total?.toFixed(2)}</span></p>
                   </div>
                 </>
               )}
 
-              <div className="border-t border-zinc-200 pt-3">
-                <h3 className="text-sm font-semibold text-zinc-700 mb-2">Mensagens</h3>
+              <div className="border-t border-white/[0.08] pt-3">
+                <h3 className="text-sm font-semibold text-white/80 mb-2">Mensagens</h3>
                 <div className="max-h-48 overflow-y-auto space-y-2 mb-3">
                   {trackingMessages.length === 0 && (
-                    <p className="text-center text-xs text-zinc-400 py-2">Envie uma mensagem ao estabelecimento</p>
+                    <p className="text-center text-xs text-white/30 py-2">Envie uma mensagem ao estabelecimento</p>
                   )}
                   {trackingMessages.map((msg: any) => (
                     <div key={msg.id} className={`flex ${msg.sender === "customer" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-lg px-3 py-1.5 text-sm ${msg.sender === "customer" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-800"}`}>
+                      <div className={`max-w-[80%] rounded-lg px-3 py-1.5 text-sm ${msg.sender === "customer" ? "bg-[#FF6B35] text-white" : "bg-white/[0.05] text-white/80"}`}>
                         <p>{msg.message}</p>
-                        <p className={`text-[10px] mt-0.5 ${msg.sender === "customer" ? "text-green-200" : "text-zinc-400"}`}>
+                        <p className={`text-[10px] mt-0.5 ${msg.sender === "customer" ? "text-white/60" : "text-white/30"}`}>
                           {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
@@ -1629,7 +1633,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     onChange={(e) => setTrackingInput(e.target.value.slice(0, 500))}
                     onKeyDown={(e) => e.key === "Enter" && sendTrackingMessage()}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    className="flex-1 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#FF6B35]/50 focus:outline-none"
                   />
                   <Button size="sm" onClick={sendTrackingMessage} disabled={!trackingInput.trim() || trackingSending}>
                     <Send className="h-4 w-4" />
@@ -1646,7 +1650,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
 function ProductCard({ product, onAdd, theme, disabled }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string }; disabled?: boolean }) {
   return (
-    <div className={`flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 ${disabled ? "opacity-50" : ""}`}>
+    <div className={`flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 transition-all duration-300 hover:border-white/[0.15] hover:bg-white/[0.06] backdrop-blur-sm ${disabled ? "opacity-50" : ""}`}>
       {product.image ? (
         <img
           src={product.image}
@@ -1654,21 +1658,21 @@ function ProductCard({ product, onAdd, theme, disabled }: { product: Product; on
           className="h-20 w-20 flex-shrink-0 rounded-xl object-cover"
         />
       ) : (
-        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-3xl">
+        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-3xl">
           🍕
         </div>
       )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-semibold text-zinc-900">{product.name}</h3>
+          <h3 className="font-semibold text-white">{product.name}</h3>
           <ProductBadge badge={product.badge} />
         </div>
         {product.description && (
-          <p className="mt-0.5 text-sm text-zinc-500 line-clamp-2">{product.description}</p>
+          <p className="mt-0.5 text-sm text-white/40 line-clamp-2">{product.description}</p>
         )}
-        <p className="mt-1 font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
+        <p className="mt-1 font-bold bg-gradient-to-r bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(to right, ${theme.primary}, ${theme.primary}cc)` }}>{formatCurrency(product.price)}</p>
       </div>
-      <Button size="sm" onClick={() => onAdd(product)} className="flex-shrink-0" style={{ backgroundColor: theme.primary }} disabled={disabled}>+</Button>
+      <button onClick={() => onAdd(product)} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white font-bold text-lg transition-opacity hover:opacity-90" style={{ backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.primary}40` }} disabled={disabled}>+</button>
     </div>
   )
 }
