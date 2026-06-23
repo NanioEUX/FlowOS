@@ -162,7 +162,7 @@ export default function HomePage() {
               <span className="text-[#FF6B35]">Mensalidade fixa, sem surpresas.</span>
             </h1>
             <p className="mt-6 text-lg text-zinc-600">
-              Plataforma completa de pedidos para seu restaurante. Cliente acessa seu cardápio,
+              Plataforma completa de pedidos e gerenciamento para seu estabelecimento. Cliente acessa seu cardápio,
               escolhe o que quer, paga por Pix/cartão e o pedido vai direto para seu painel. Mensalidade fixa, sem comissão.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">

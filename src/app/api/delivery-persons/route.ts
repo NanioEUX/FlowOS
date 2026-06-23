@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, phone, establishmentId, defaultPassword } = await req.json()
+    const { name, phone, establishmentId, defaultPassword, email: customEmail } = await req.json()
     if (!name || !phone || !establishmentId) {
       return NextResponse.json({ error: "name, phone e establishmentId obrigatórios" }, { status: 400 })
     }
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const password = defaultPassword || "123456"
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const email = `motoboy-${phone}@${Date.now()}.local`
+    const email = customEmail || `motoboy-${phone}@pedefacil.local`
 
     const user = await prisma.user.create({
       data: {

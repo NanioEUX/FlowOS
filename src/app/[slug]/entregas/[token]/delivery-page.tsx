@@ -59,6 +59,18 @@ export function DeliveryPage({ token }: { token: string }) {
   const [period, setPeriod] = useState<Period>("today")
 
   useEffect(() => {
+    // Check main login (from /login page) - prefer this
+    const userStored = localStorage.getItem("pedefacil-user")
+    if (userStored) {
+      try {
+        const userData = JSON.parse(userStored)
+        if (userData.role === "motoboy" && userData.deliveryPerson?.token === token) {
+          setAuthenticated(true)
+          return
+        }
+      } catch {}
+    }
+    // Check delivery page direct login
     const stored = localStorage.getItem(`pedefacil-motoboy-${token}`)
     if (stored) {
       try {
@@ -104,6 +116,7 @@ export function DeliveryPage({ token }: { token: string }) {
 
   async function handleLogout() {
     localStorage.removeItem(`pedefacil-motoboy-${token}`)
+    localStorage.removeItem("pedefacil-user")
     setAuthenticated(false)
     setPerson(null)
     setOrders([])

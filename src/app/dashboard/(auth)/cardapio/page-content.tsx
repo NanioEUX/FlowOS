@@ -84,6 +84,10 @@ export default function CardapioPage() {
     logo: "",
     cover: "",
     instagramUrl: "",
+    pickupMessage: "Vai ser um prazer recebê-lo. Estamos lhe aguardando!",
+    deliveryMessage: "Obrigado pelo seu pedido!",
+    confirmationTitle: "Pedido enviado!",
+    confirmationImage: "",
   })
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [savedAppearance, setSavedAppearance] = useState(false)
@@ -119,6 +123,10 @@ export default function CardapioPage() {
         logo: data.logo || "",
         cover: data.cover || "",
         instagramUrl: data.instagramUrl || "",
+        pickupMessage: data.pickupMessage || "Vai ser um prazer recebê-lo. Estamos lhe aguardando!",
+        deliveryMessage: data.deliveryMessage || "Obrigado pelo seu pedido!",
+        confirmationTitle: data.confirmationTitle || "Pedido enviado!",
+        confirmationImage: data.confirmationImage || "",
       })
       setColors({
         primaryColor: data.primaryColor || "#16a34a",
@@ -311,6 +319,10 @@ export default function CardapioPage() {
           logo: form.logo,
           cover: form.cover,
           instagramUrl: form.instagramUrl,
+          pickupMessage: form.pickupMessage,
+          deliveryMessage: form.deliveryMessage,
+          confirmationTitle: form.confirmationTitle,
+          confirmationImage: form.confirmationImage,
         }),
       })
       if (res.ok) {
@@ -579,6 +591,89 @@ export default function CardapioPage() {
                 onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
               />
               <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
+            </div>
+
+            <div className="border-t border-zinc-100 pt-4">
+              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Mensagens de Pedido</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título de Confirmação</label>
+                  <Input
+                    placeholder="Pedido enviado!"
+                    value={form.confirmationTitle}
+                    onChange={(e) => setForm({ ...form, confirmationTitle: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">Título exibido ao cliente após finalizar o pedido</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de Confirmação</label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:border-green-400 transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span>Selecionar imagem</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onloadend = () => {
+                            const img = new window.Image()
+                            img.onload = () => {
+                              const MAX = 600
+                              let w = img.width, h = img.height
+                              if (w > MAX || h > MAX) {
+                                if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+                                else { w = Math.round(w * MAX / h); h = MAX }
+                              }
+                              const canvas = document.createElement("canvas")
+                              canvas.width = w
+                              canvas.height = h
+                              canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
+                              setForm({ ...form, confirmationImage: canvas.toDataURL("image/jpeg", 0.7) })
+                            }
+                            img.src = reader.result as string
+                          }
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
+                    {form.confirmationImage && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, confirmationImage: "" })}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-400">Imagem exibida no card de confirmação. Se vazia, usa a logo.</p>
+                  {form.confirmationImage && (
+                    <img src={form.confirmationImage} alt="Preview" className="mt-2 h-16 w-16 rounded-xl object-cover" />
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Retirada</label>
+                  <Textarea
+                    placeholder="Vai ser um prazer recebê-lo. Estamos lhe aguardando!"
+                    value={form.pickupMessage}
+                    onChange={(e) => setForm({ ...form, pickupMessage: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de retirada</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Entrega</label>
+                  <Textarea
+                    placeholder="Obrigado pelo seu pedido!"
+                    value={form.deliveryMessage}
+                    onChange={(e) => setForm({ ...form, deliveryMessage: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de entrega</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 pt-2">

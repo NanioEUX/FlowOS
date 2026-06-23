@@ -52,7 +52,8 @@ export async function PATCH(
     }
 
     // Auto-assign motoboy with fewest pending orders when status is "ready"
-    if (status === "ready" && !deliveryPersonId && !currentOrder?.deliveryPersonId) {
+    // Skip for presencial and pickup orders - no motoboy needed
+    if (status === "ready" && !deliveryPersonId && !currentOrder?.deliveryPersonId && currentOrder?.orderType !== "presencial" && currentOrder?.orderType !== "pickup") {
       const people = await prisma.deliveryPerson.findMany({
         where: { establishmentId: order.establishmentId, isActive: true },
         include: {

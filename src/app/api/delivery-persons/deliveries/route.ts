@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const orders = await prisma.order.findMany({
     where: {
       deliveryPersonId: person.id,
+      orderType: "delivery",
       status: all ? { not: "cancelled" } : { in: ["ready", "out_for_delivery"] },
     },
     orderBy: { createdAt: "desc" },

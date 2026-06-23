@@ -19,7 +19,6 @@ const mainNavItems = [
 
 const financeiroSubItems = [
   { icon: BarChart3, label: "DRE", href: "/dashboard/financeiro" },
-  { icon: Landmark, label: "Caixa", href: "/dashboard/financeiro/caixa" },
   { icon: DollarSign, label: "Despesas", href: "/dashboard/financeiro/despesas" },
   { icon: BarChart3, label: "Relatórios", href: "/dashboard/relatorios", perm: "relatorios" },
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
@@ -171,36 +170,30 @@ export default function DashboardLayout({
           {/* Caixa */}
           {user?.permissions?.includes("caixa") && (
             <>
-              {user?.role === "admin" ? (
-                <div
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    (pathname === "/caixa" || pathname === "/dashboard/caixa")
-                      ? "bg-green-50 text-green-700"
-                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                  )}
-                >
-                  <DollarSign className="h-5 w-5" />
-                  <Link href="/dashboard/caixa" onClick={() => setSidebarOpen(false)} className="hover:underline">
-                    Caixa
-                  </Link>
-                  <span className="text-zinc-400">/</span>
-                  <Link href="/caixa" className="text-green-600 hover:underline">
-                    (Tela cheia)
-                  </Link>
-                </div>
-              ) : (
+              <Link
+                href="/caixa"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === "/caixa"
+                    ? "bg-green-50 text-green-700"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                )}
+              >
+                <DollarSign className="h-5 w-5" />
+                Frente de Caixa
+              </Link>
+              {user?.role === "admin" && (
                 <Link
-                  href="/caixa"
+                  href="/dashboard/caixa-gerencial"
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    pathname === "/caixa"
+                    pathname === "/dashboard/caixa-gerencial"
                       ? "bg-green-50 text-green-700"
                       : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                   )}
                 >
-                  <DollarSign className="h-5 w-5" />
-                  Caixa
+                  <Landmark className="h-5 w-5" />
+                  Caixa Gerencial
                 </Link>
               )}
             </>

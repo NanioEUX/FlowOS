@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -45,6 +45,10 @@ interface Establishment {
   instagramUrl: string | null
   businessHours: string | null
   loyaltyConfig: string | null
+  pickupMessage: string | null
+  deliveryMessage: string | null
+  confirmationTitle: string | null
+  confirmationImage: string | null
 }
 
 interface CustomerData {
@@ -101,7 +105,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup">("online")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; message?: string; orderId?: string } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; message?: string; orderId?: string; orderType?: string } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
@@ -509,6 +513,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         trackingUrl: data.trackingUrl,
         paymentLink: data.paymentLink,
         orderId: data.order?.id,
+        orderType: orderType,
       })
 
       if (data.order?.id && data.trackingUrl) {
@@ -688,15 +693,26 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-6">
             <div className="mb-4 flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
+              {(establishment.confirmationImage || establishment.logo) ? (
+                <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover shadow-sm" />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              )}
             </div>
-            <h2 className="text-xl font-bold text-zinc-900">Pedido enviado!</h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Seu pedido foi recebido por <strong>{establishment.name}</strong>.
-              Acompanhe o status em tempo real.
-            </p>
+            <h2 className="text-xl font-bold text-zinc-900">{establishment.confirmationTitle || "Pedido enviado!"}</h2>
+
+            {orderResult.orderType === "pickup" && establishment.pickupMessage && (
+              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                <p className="text-sm text-green-700">{establishment.pickupMessage}</p>
+              </div>
+            )}
+            {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
+              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                <p className="text-sm text-green-700">{establishment.deliveryMessage}</p>
+              </div>
+            )}
 
             {parsedLoyalty?.enabled && (
               <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3">
@@ -1085,6 +1101,27 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 </button>
               )}
             </div>
+
+            {orderType === "pickup" && establishment.address && (
+              <div className="mb-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800">Retirada em:</p>
+                    <p className="text-sm text-green-700">{establishment.address}</p>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Ver no mapa
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {orderType === "delivery" && deliveryFee > 0 && (
               <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">

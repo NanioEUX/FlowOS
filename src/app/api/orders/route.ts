@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
     })
     const orderNumber = (lastOrder?.orderNumber || 0) + 1
 
+    // For presencial mesa orders: status=new, no payment at creation
+    const isMesa = orderType === "presencial" && tableNumber
+    const initialStatus = body.status || (isMesa ? "new" : "pending")
+
     // Find or create customer
     let customerId: string | undefined
     if (customerPhone) {
@@ -83,21 +87,21 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.create({
       data: {
-        establishmentId,
-        customerId,
+        establishment: { connect: { id: establishmentId } },
+        ...(customerId ? { customer: { connect: { id: customerId } } } : {}),
         customerName,
         customerPhone,
         customerAddress,
         orderType: orderType || "delivery",
-        paymentMethod: paymentMethod || "online",
+        paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
         deliveryFee: deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0,
         items: typeof items === "string" ? items : JSON.stringify(items),
         total: typeof total === "string" ? parseFloat(total) : total,
         notes,
         method: method || "site",
         trackingToken,
-        status: body.status || "pending",
-        couponId: couponId || null,
+        status: initialStatus,
+        ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
         orderNumber,
         tableNumber: tableNumber || null,
       },

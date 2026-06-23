@@ -27,7 +27,7 @@ export async function GET(
   return NextResponse.json(establishment)
 }
 
-const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover", "description", "deliveryFeeType", "deliveryFeeAmount", "deliveryFreeAbove", "paymentConfig", "primaryColor", "backgroundColor", "textColor", "headerColor", "colorsPublished", "instagramUrl", "businessHours", "loyaltyConfig"]
+const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover", "description", "deliveryFeeType", "deliveryFeeAmount", "deliveryFreeAbove", "paymentConfig", "primaryColor", "backgroundColor", "textColor", "headerColor", "colorsPublished", "instagramUrl", "businessHours", "loyaltyConfig", "pickupMessage", "deliveryMessage", "confirmationTitle", "confirmationImage"]
 
 export async function PATCH(
   req: NextRequest,

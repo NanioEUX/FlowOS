@@ -37,6 +37,12 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
 const ALL_PERMISSIONS_VALUES = ALL_PERMISSIONS.map((p) => p.value)
 
+const ROLES = [
+  { value: "admin", label: "Administrador" },
+  { value: "atendente", label: "Atendente" },
+  { value: "motoboy", label: "Motoboy" },
+]
+
 export default function UsuariosPage() {
   const searchParams = useSearchParams()
   const hookEstablishmentId = useEstablishmentId()
@@ -47,7 +53,7 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "atendente", permissions: ["caixa"] as string[], canCloseRegister: false })
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "atendente", permissions: ["caixa"] as string[], canCloseRegister: false })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -67,7 +73,7 @@ export default function UsuariosPage() {
 
   function openNew() {
     setEditingUser(null)
-    setForm({ name: "", email: "", password: "123456", role: "atendente", permissions: ["caixa"], canCloseRegister: false })
+    setForm({ name: "", email: "", phone: "", password: "123456", role: "atendente", permissions: ["caixa"], canCloseRegister: false })
     setError("")
     setShowForm(true)
   }
@@ -84,9 +90,11 @@ export default function UsuariosPage() {
 
   function openEdit(user: any) {
     setEditingUser(user)
+    const deliveryPerson = user.role === "motoboy" ? deliveryPersons.find((dp) => dp.userId === user.id) : null
     setForm({
       name: user.name,
       email: user.email,
+      phone: deliveryPerson?.phone || "",
       password: "",
       role: user.role,
       permissions: JSON.parse(user.permissions || '["caixa"]'),
@@ -107,8 +115,9 @@ export default function UsuariosPage() {
   }
 
   async function saveUser() {
-    if (!establishmentId || !form.name || !form.email) return
-    if (!editingUser && !form.password) {
+    if (!establishmentId || !form.name) return
+    if (!editingUser && form.role !== "motoboy" && !form.email) return
+    if (!editingUser && form.role !== "motoboy" && !form.password) {
       setError("Senha é obrigatória para novos usuários")
       return
     }
@@ -129,12 +138,36 @@ export default function UsuariosPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
+      } else if (form.role === "motoboy") {
+        // motoboy: delivery-persons API creates both user + deliveryPerson
+        const res = await fetchAuth("/api/delivery-persons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.name,
+            phone: form.phone || "00000000000",
+            email: form.email || undefined,
+            establishmentId,
+            defaultPassword: form.password || "123456",
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.error || "Erro ao criar")
+          setSaving(false)
+          return
+        }
       } else {
         const res = await fetchAuth("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...form,
+            name: form.name,
+            email: form.email,
+            password: form.password,
+            role: form.role,
+            permissions: form.permissions,
+            canCloseRegister: form.canCloseRegister,
             establishmentId,
             mustChangePassword: true,
           }),
@@ -144,19 +177,6 @@ export default function UsuariosPage() {
           setError(data.error || "Erro ao criar")
           setSaving(false)
           return
-        }
-
-        // If motoboy, create delivery person record
-        if (form.role === "motoboy" && data.id) {
-          await fetchAuth("/api/delivery-persons", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: form.name,
-              userId: data.id,
-              establishmentId,
-            }),
-          })
         }
       }
       setShowForm(false)
@@ -212,7 +232,7 @@ export default function UsuariosPage() {
           {users.map((user) => {
             const perms = JSON.parse(user.permissions || '["caixa"]')
             const deliveryPerson = user.role === "motoboy" ? deliveryPersons.find((dp) => dp.userId === user.id) : null
-            const deliveryLink = deliveryPerson ? `${window.location.origin}/${establishmentId}/entregas/${deliveryPerson.token}` : null
+            const deliveryLink = deliveryPerson && deliveryPerson.establishmentSlug ? `${window.location.origin}/${deliveryPerson.establishmentSlug}/entregas/${deliveryPerson.token}` : null
             return (
               <Card key={user.id} className={!user.isActive ? "opacity-50" : ""}>
                 <CardContent className="p-4">
@@ -259,24 +279,19 @@ export default function UsuariosPage() {
                   </div>
                   {deliveryLink && (
                     <div className="mt-2 rounded-lg bg-purple-50 p-2">
-                      <p className="text-[10px] font-medium text-purple-700 mb-1">Link de acesso:</p>
-                      <div className="flex items-center gap-1">
-                        <code className="flex-1 truncate text-[10px] text-purple-600">{deliveryLink}</code>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(deliveryLink)}
-                          className="rounded p-1 text-purple-400 hover:bg-purple-100 hover:text-purple-600"
-                          title="Copiar link"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
+                      <p className="text-[10px] font-medium text-purple-700 mb-1">Acesso do entregador:</p>
+                      <div className="space-y-1 text-[10px] text-purple-600">
+                        <p><strong>Login:</strong> {user.email}</p>
+                        <p><strong>Senha:</strong> 123456 (padrão)</p>
+                      </div>
+                      <div className="mt-2 flex items-center gap-1">
                         <a
                           href={deliveryLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded p-1 text-purple-400 hover:bg-purple-100 hover:text-purple-600"
-                          title="Abrir link"
+                          className="rounded px-2 py-1 text-[10px] font-medium text-purple-600 hover:bg-purple-100"
                         >
-                          <ExternalLink className="h-3 w-3" />
+                          Abrir delivery page
                         </a>
                       </div>
                     </div>
@@ -332,11 +347,11 @@ export default function UsuariosPage() {
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Perfil</label>
                   <div className="flex gap-2">
-                    {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                    {ROLES.map(({ value, label }) => (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => handleRoleChange(value)}
+                        onClick={() => setForm({ ...form, role: value, permissions: value === "motoboy" ? ["entregas"] : form.permissions })}
                         className={`flex-1 rounded-lg border p-2 text-sm font-medium transition-colors ${
                           form.role === value
                             ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
@@ -348,6 +363,24 @@ export default function UsuariosPage() {
                     ))}
                   </div>
                 </div>
+
+                {form.role === "motoboy" && (
+                  <>
+                    <Input
+                      label="Email"
+                      type="email"
+                      placeholder="motoboy@email.com"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    />
+                    <Input
+                      label="WhatsApp (com DDD)"
+                      placeholder="11999999999"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    />
+                  </>
+                )}
 
                 {form.role !== "motoboy" && (
                   <div>

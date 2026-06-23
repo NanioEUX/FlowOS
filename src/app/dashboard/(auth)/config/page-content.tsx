@@ -38,7 +38,6 @@ export default function ConfigPage() {
     phone: "",
     category: "",
     address: "",
-    description: "",
     logo: "",
     cover: "",
     asaasApiKey: "",
@@ -72,7 +71,6 @@ export default function ConfigPage() {
             phone: data.phone || "",
             category: data.category || "",
             address: data.address || "",
-            description: data.description || "",
             logo: data.logo || "",
             cover: data.cover || "",
             asaasApiKey: data.asaasApiKey || "",
@@ -151,7 +149,6 @@ export default function ConfigPage() {
             <Input label="WhatsApp (com DDD)" id="phone" placeholder="11999999999" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             <Select label="Categoria" id="category" options={categories} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             <Input label="Endereço" id="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            <Textarea label="Descrição" id="description" placeholder="Descreva seu estabelecimento..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </CardContent>
         </Card>
 

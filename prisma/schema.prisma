@@ -9,83 +9,84 @@ datasource db {
 }
 
 model Establishment {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  email       String   @unique
-  password    String
-  phone       String
-  logo        String?
-  cover       String?
-  description String?
-  address     String?
-  category    String?
-  instagramUrl String?
-  primaryColor     String  @default("#16a34a")
-  backgroundColor  String  @default("#ffffff")
-  textColor        String  @default("#1a1a2e")
-  headerColor      String  @default("#ffffff")
-  colorsPublished  Boolean @default(false)
-  businessHours    String? @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
-  loyaltyConfig    String? @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10}")
-  isActive      Boolean  @default(true)
-  asaasApiKey   String?
-  asaasWalletId String?
-  paymentConfig    String   @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
-  orderConfig      String   @default("{\"delivery\":true,\"pickup\":true}")
-  deliveryFeeType  String   @default("free")
-  deliveryFeeAmount Float?  @default(0)
-  deliveryFreeAbove Float?  @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  categories      Category[]
-  products        Product[]
-  orders          Order[]
-  customers       Customer[]
-  deliveryPeople  DeliveryPerson[]
-  stockCategories StockCategory[]
-  stockItems      StockItem[]
-  users           User[]
-  deliveryPayments DeliveryPayment[]
-  coupons         Coupon[]
-  cashRegisters   CashRegister[]
-  expenses        Expense[]
+  id                String            @id @default(cuid())
+  name              String
+  slug              String            @unique
+  email             String            @unique
+  password          String
+  phone             String
+  logo              String?
+  cover             String?
+  description       String?
+  address           String?
+  category          String?
+  instagramUrl      String?
+  primaryColor      String            @default("#16a34a")
+  backgroundColor   String            @default("#ffffff")
+  textColor         String            @default("#1a1a2e")
+  headerColor       String            @default("#ffffff")
+  colorsPublished   Boolean           @default(false)
+  businessHours     String?           @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
+  loyaltyConfig     String?           @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10}")
+  isActive          Boolean           @default(true)
+  asaasApiKey       String?
+  asaasWalletId     String?
+  paymentConfig     String            @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
+  orderConfig       String            @default("{\"delivery\":true,\"pickup\":true}")
+  deliveryFeeType   String            @default("free")
+  deliveryFeeAmount Float?            @default(0)
+  deliveryFreeAbove Float?            @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  pickupMessage     String?
+  deliveryMessage   String?
+  confirmationTitle String?
+  confirmationImage String?
+  cashRegisters     CashRegister[]
+  categories        Category[]
+  coupons           Coupon[]
+  customers         Customer[]
+  deliveryPayments  DeliveryPayment[]
+  deliveryPeople    DeliveryPerson[]
+  expenses          Expense[]
+  orders            Order[]
+  products          Product[]
+  stockCategories   StockCategory[]
+  stockItems        StockItem[]
+  users             User[]
 }
 
 model Customer {
-  id             String   @id @default(cuid())
-  name           String?
-  phone          String   @unique
-  address        String?
-  cep            String?
-  totalOrders    Int      @default(0)
-  totalSpent     Float    @default(0)
-  loyaltyPoints  Int      @default(0)
-  lastOrderAt    DateTime?
+  id              String        @id @default(cuid())
+  name            String?
+  phone           String        @unique
+  address         String?
+  cep             String?
+  totalOrders     Int           @default(0)
+  totalSpent      Float         @default(0)
+  loyaltyPoints   Int           @default(0)
+  lastOrderAt     DateTime?
   establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  orders Order[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  orders          Order[]
 }
 
 model DeliveryPerson {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
   phone           String
-  token           String   @unique
+  token           String            @unique
   establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  userId          String?  @unique
-  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  orders   Order[]
-  payments DeliveryPayment[]
+  userId          String?           @unique
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  payments        DeliveryPayment[]
+  establishment   Establishment     @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User?             @relation(fields: [userId], references: [id])
+  orders          Order[]
 }
 
 model Category {
@@ -98,236 +99,231 @@ model Category {
 }
 
 model Product {
-  id              String        @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
   description     String?
   price           Float
   image           String?
-  isAvailable     Boolean       @default(true)
-  order           Int           @default(0)
+  isAvailable     Boolean            @default(true)
+  order           Int                @default(0)
   badge           String?
   categoryId      String
-  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   stockItemId     String?
-  stockItem       StockItem?    @relation(fields: [stockItemId], references: [id], onDelete: SetNull)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  stockLinks ProductStockLink[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  category        Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  stockItem       StockItem?         @relation(fields: [stockItemId], references: [id])
+  stockLinks      ProductStockLink[]
 }
 
 model Order {
-  id               String   @id @default(cuid())
-  orderNumber      Int?
-  establishmentId  String
-  establishment    Establishment @relation(fields: [establishmentId], references: [id])
-  customerId       String?
-  customer         Customer? @relation(fields: [customerId], references: [id])
-  customerName     String
-  customerPhone    String?
-  customerAddress  String?
-  orderType        String   @default("delivery")
-  paymentMethod    String   @default("online")
-  items            String
-  total            Float
-  deliveryFee      Float    @default(0)
-  status           String   @default("pending")
-  paymentId        String?
-  paymentLink      String?
-  paymentStatus    String   @default("pending")
-  notes            String?
-  method           String   @default("site")
-  tableNumber      Int?
-  deliveryPerson   String?
-  deliveryPersonId String?
-  deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
+  id                String          @id @default(cuid())
+  orderNumber       Int?
+  establishmentId   String
+  customerId        String?
+  customerName      String
+  customerPhone     String?
+  customerAddress   String?
+  orderType         String          @default("delivery")
+  paymentMethod     String          @default("online")
+  items             String
+  total             Float
+  deliveryFee       Float           @default(0)
+  status            String          @default("pending")
+  paymentId         String?
+  paymentLink       String?
+  paymentStatus     String          @default("pending")
+  notes             String?
+  method            String          @default("site")
+  tableNumber       Int?
+  deliveryPerson    String?
+  deliveryPersonId  String?
   couponId          String?
-  coupon            Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  trackingToken    String?  @unique
-  assignedAt       DateTime?
-  deliveredAt      DateTime?
-  messages         OrderMessage[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  trackingToken     String?         @unique
+  assignedAt        DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  coupon            Coupon?         @relation(fields: [couponId], references: [id])
+  customer          Customer?       @relation(fields: [customerId], references: [id])
+  deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
+  establishment     Establishment   @relation(fields: [establishmentId], references: [id])
+  messages          OrderMessage[]
 
   @@index([establishmentId, orderNumber])
 }
 
 model StockCategory {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   name            String
-  order           Int      @default(0)
+  order           Int           @default(0)
   establishmentId String
+  createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-
-  items StockItem[]
+  items           StockItem[]
 }
 
 model StockItem {
-  id              String   @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
-  unit            String   @default("un")
-  quantity        Float    @default(0)
-  minQuantity     Float    @default(0)
-  unitCost        Float    @default(0)
+  unit            String             @default("un")
+  quantity        Float              @default(0)
+  minQuantity     Float              @default(0)
+  unitCost        Float              @default(0)
   supplier        String?
   categoryId      String
-  category        StockCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  movements    StockMovement[]
-  productLinks ProductStockLink[]
-  products     Product[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  products        Product[]
+  productLinks    ProductStockLink[]
+  category        StockCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  movements       StockMovement[]
 }
 
 model StockMovement {
-  id              String   @id @default(cuid())
-  type            String
-  quantity        Float
-  unitCost        Float?
-  notes           String?
-  itemId          String
-  item            StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
+  id        String    @id @default(cuid())
+  type      String
+  quantity  Float
+  unitCost  Float?
+  notes     String?
+  itemId    String
+  createdAt DateTime  @default(now())
+  item      StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model ProductStockLink {
-  id              String   @id @default(cuid())
-  productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  stockItemId     String
-  stockItem       StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
-  quantity        Float
+  id          String    @id @default(cuid())
+  productId   String
+  stockItemId String
+  quantity    Float
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 
   @@unique([productId, stockItemId])
 }
 
 model User {
-  id              String   @id @default(cuid())
-  name            String
-  email           String   @unique
-  password        String
-  role            String   @default("atendente")
-  permissions     String   @default("[\"caixa\"]")
-  canCloseRegister Boolean @default(false)
-  isActive        Boolean  @default(true)
-  mustChangePassword Boolean @default(false)
-  establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  deliveryPerson DeliveryPerson?
-  paidDeliveries DeliveryPayment[]
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  password            String
+  role                String               @default("atendente")
+  permissions         String               @default("[\"caixa\"]")
+  canCloseRegister    Boolean              @default(false)
+  isActive            Boolean              @default(true)
+  mustChangePassword  Boolean              @default(false)
+  establishmentId     String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  paidDeliveries      DeliveryPayment[]
+  deliveryPerson      DeliveryPerson?
   passwordResetTokens PasswordResetToken[]
+  establishment       Establishment        @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 }
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DeliveryPayment {
-  id              String   @id @default(cuid())
-  amount          Float
-  period          String   @default("manual")
-  notes           String?
+  id               String         @id @default(cuid())
+  amount           Float
+  period           String         @default("manual")
+  notes            String?
   deliveryPersonId String
-  deliveryPerson  DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
-  paidById        String?
-  paidBy          User?    @relation(fields: [paidById], references: [id], onDelete: SetNull)
-  establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
+  paidById         String?
+  establishmentId  String
+  createdAt        DateTime       @default(now())
+  deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
+  establishment    Establishment  @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  paidBy           User?          @relation(fields: [paidById], references: [id])
 }
 
 model Coupon {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   code            String
-  type            String   @default("percent") // percent | fixed
+  type            String        @default("percent")
   value           Float
-  minOrder        Float    @default(0)
+  minOrder        Float         @default(0)
   maxUses         Int?
-  usedCount       Int      @default(0)
-  active          Boolean  @default(true)
+  usedCount       Int           @default(0)
+  active          Boolean       @default(true)
   expiresAt       DateTime?
   establishmentId String
+  createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   orders          Order[]
-  createdAt       DateTime @default(now())
 
   @@unique([code, establishmentId])
 }
 
 model CashRegister {
-  id              String   @id @default(cuid())
+  id              String         @id @default(cuid())
   openingAmount   Float
   closingAmount   Float?
   expectedAmount  Float?
-  status          String   @default("open") // open | closed
+  status          String         @default("open")
   notes           String?
-  currentUserId   String?  // Current cashier
+  currentUserId   String?
   establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
+  createdAt       DateTime       @default(now())
   closedAt        DateTime?
-
-  movements CashMovement[]
-  transfers CashTransfer[]
+  movements       CashMovement[]
+  establishment   Establishment  @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  transfers       CashTransfer[]
 }
 
 model CashTransfer {
-  id              String   @id @default(cuid())
-  cashRegisterId  String
-  cashRegister    CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
-  fromUserId      String
-  toUserId        String
-  amount          Float    // Cash amount at transfer
-  notes           String?
-  createdAt       DateTime @default(now())
+  id             String       @id @default(cuid())
+  cashRegisterId String
+  fromUserId     String
+  toUserId       String
+  amount         Float
+  notes          String?
+  createdAt      DateTime     @default(now())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
 }
 
 model CashMovement {
-  id              String   @id @default(cuid())
-  type            String   // sale | expense | withdrawal | injection | refund
-  amount          Float
-  description     String?
-  paymentMethod   String?  // cash | card | pix
-  orderId         String?
-  cashRegisterId  String
-  cashRegister    CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
+  id             String       @id @default(cuid())
+  type           String
+  amount         Float
+  description    String?
+  paymentMethod  String?
+  orderId        String?
+  cashRegisterId String
+  createdAt      DateTime     @default(now())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
 }
 
 model Expense {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   description     String
   amount          Float
-  category        String   @default("variavel") // fixa | variavel | motoboy | insumo | outro
-  date            DateTime @default(now())
+  category        String        @default("variavel")
+  date            DateTime      @default(now())
   cashRegisterId  String?
   establishmentId String
+  createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
 }
 
 model OrderMessage {
   id        String   @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sender    String   @default("customer") // customer | establishment
+  sender    String   @default("customer")
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

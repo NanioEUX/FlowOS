@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 
 const statusLabels: Record<string, string> = {
+  new: "Novo",
   pending: "Pendente",
   payment_pending: "Aguard. Pagamento",
   confirmed: "Confirmado",
@@ -23,6 +24,7 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "default"> = {
+  new: "default",
   pending: "info",
   payment_pending: "warning",
   confirmed: "info",
@@ -61,6 +63,7 @@ export default function PedidosPage() {
   const [filterMotoboy, setFilterMotoboy] = useState("")
   const [filterPeriod, setFilterPeriod] = useState("all")
   const [filterType, setFilterType] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
   const [unreadOrders, setUnreadOrders] = useState<Record<string, { count: number; name: string; message: string }>>({})
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
 
@@ -111,6 +114,7 @@ export default function PedidosPage() {
     const matchesName = o.customerName.toLowerCase().includes(filter.toLowerCase())
     const matchesMotoboy = !filterMotoboy || o.deliveryPersonId === filterMotoboy
     const matchesType = filterType === "all" || o.orderType === filterType
+    const matchesStatus = filterStatus === "all" || o.status === filterStatus
     const d = new Date(o.createdAt)
     const now = new Date()
     let matchesPeriod = true
@@ -124,7 +128,7 @@ export default function PedidosPage() {
       const start = new Date(now.getTime() - 30 * 86400000)
       matchesPeriod = d >= start
     }
-    return matchesName && matchesMotoboy && matchesType && matchesPeriod
+    return matchesName && matchesMotoboy && matchesType && matchesPeriod && matchesStatus
   })
 
   function groupOrders(list: any[]) {
@@ -199,7 +203,7 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {/* Period + Type filters */}
+      {/* Period + Type + Status filters */}
       <div className="flex flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-zinc-400" />
@@ -230,6 +234,22 @@ export default function PedidosPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-400">Status:</span>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-lg border border-zinc-200 px-2 py-1 text-xs font-medium focus:border-green-500 focus:outline-none"
+          >
+            <option value="all">Todos</option>
+            <option value="pending">Pendente</option>
+            <option value="preparing">Preparando</option>
+            <option value="ready">Pronto</option>
+            <option value="out_for_delivery">Em entrega</option>
+            <option value="delivered">Entregue</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
         </div>
       </div>
 

@@ -215,7 +215,7 @@ export default function EntregasPage() {
   const { start: dateStart, end: dateEnd } = getDateRange(dateFilter, customStart, customEnd)
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o: any) => isInRange(o.createdAt, dateStart, dateEnd))
+    return orders.filter((o: any) => o.orderType === "delivery" && isInRange(o.createdAt, dateStart, dateEnd))
   }, [orders, dateStart.getTime(), dateEnd.getTime()])
 
   const filteredPeople = selectedMotoboy
