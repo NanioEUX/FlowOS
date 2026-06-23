@@ -3,10 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { slugify } from "@/lib/utils"
 import Link from "next/link"
 
@@ -78,61 +74,79 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFF7F3] to-white py-12">
-      <div className="mx-auto max-w-lg px-4">
-        <Link href="/" className="mb-8 flex justify-center">
-          <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="h-12" />
-        </Link>
+    <div className="relative flex min-h-screen items-center justify-center bg-black px-5 py-12 overflow-hidden">
+      {/* Background orbs */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#FF6B35]/[0.07] blur-[150px]" />
+        <div className="absolute bottom-0 right-0 h-[400px] w-[400px] rounded-full bg-purple-600/[0.05] blur-[130px]" />
+      </div>
 
-        <Card className="border-zinc-200 shadow-lg">
-          <CardHeader className="text-center">
-            <h1 className="text-2xl font-bold text-zinc-900">Criar sua conta</h1>
-            <p className="text-sm text-zinc-500">
-              Seu cardápio online em 2 minutos
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Nome do estabelecimento"
-                id="name"
+      <div className="relative z-10 w-full max-w-[520px]">
+        {/* Logo */}
+        <div className="mb-10 text-center">
+          <Link href="/" className="inline-block">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 rounded-2xl bg-[#FF6B35]/15 blur-[40px]" />
+              <img src="/icons/pedefacil-logo.svg" alt="PedeFácil" className="relative h-16 md:h-20" />
+            </div>
+          </Link>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-8 md:p-10 backdrop-blur-xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-[28px] font-semibold tracking-[-0.8px] text-white">Criar sua conta</h1>
+            <p className="mt-2 text-[15px] text-white/40 font-light">Seu cardápio online em 2 minutos</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">Nome do estabelecimento</label>
+              <input
+                type="text"
                 placeholder="Ex: Pizzaria do João"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+                className="w-full border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white placeholder:text-white/25 focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
               />
-
               {form.name && (
-                <div className="rounded-lg bg-[#FFF7F3] p-3 text-sm text-zinc-600">
-                  Seu link: <span className="font-medium text-[#FF6B35]">{slug}.pedefacil.com</span>
-                </div>
+                <p className="mt-2 text-[12px] text-white/30">
+                  Seu link: <span className="text-[#FF6B35]">{slug}.pedefacil.com</span>
+                </p>
               )}
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="E-mail"
-                  id="email"
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">E-mail</label>
+                <input
                   type="email"
                   placeholder="seu@email.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
+                  className="w-full border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white placeholder:text-white/25 focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
                 />
-                <Input
-                  label="Senha"
-                  id="password"
+              </div>
+              <div>
+                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">Senha</label>
+                <input
                   type="password"
                   placeholder="mín. 6 caracteres"
                   minLength={6}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required
+                  className="w-full border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white placeholder:text-white/25 focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
                 />
               </div>
+            </div>
 
-              <Input
-                label="WhatsApp (com DDD)"
-                id="phone"
+            <div>
+              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">WhatsApp (com DDD)</label>
+              <input
+                type="text"
                 placeholder="(11) 99999-9999"
                 value={form.phone}
                 onChange={(e) => {
@@ -143,50 +157,62 @@ export default function CadastroPage() {
                   setForm({ ...form, phone: formatted })
                 }}
                 required
+                className="w-full border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white placeholder:text-white/25 focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
               />
+            </div>
 
-              <Select
-                label="Categoria"
-                id="category"
-                options={categories}
+            <div>
+              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">Categoria</label>
+              <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 required
-              />
+                className="w-full appearance-none border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
+              >
+                <option value="" className="bg-[#111] text-white/40">Selecione</option>
+                {categories.map((c) => (
+                  <option key={c.value} value={c.value} className="bg-[#111] text-white">{c.label}</option>
+                ))}
+              </select>
+            </div>
 
-              <Input
-                label="Endereço (opcional)"
-                id="address"
+            <div>
+              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-white/30">Endereço (opcional)</label>
+              <input
+                type="text"
                 placeholder="Ex: Rua Augusta, 1500"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full border-0 border-b border-white/[0.12] bg-transparent pb-3 text-[15px] text-white placeholder:text-white/25 focus:border-[#FF6B35]/50 focus:outline-none transition-colors"
               />
+            </div>
 
-              {error && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
-              )}
+            {error && (
+              <div className="rounded-[10px] border border-red-500/20 bg-red-500/[0.06] p-3 text-[13px] text-red-400">
+                {error}
+              </div>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full bg-[#FF6B35] hover:bg-[#E55A2B]"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Criar cardápio grátis
-              </Button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-[52px] w-full items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 shadow-[0_0_30px_rgba(255,107,53,0.25)] disabled:opacity-50 mt-2"
+            >
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? "Criando..." : "Criar cardápio grátis"}
+            </button>
+          </form>
 
-              <p className="text-center text-sm text-zinc-500">
-                Já tem conta?{" "}
-                <Link href="/login" className="font-medium text-[#FF6B35] hover:underline">
-                  Entrar
-                </Link>
-              </p>
-            </form>
-          </CardContent>
-        </Card>
+          <div className="mt-8 text-center text-[14px] text-white/30">
+            Já tem conta?{" "}
+            <Link href="/login" className="font-medium text-[#FF6B35] hover:opacity-80 transition-opacity">
+              Entrar
+            </Link>
+          </div>
+        </div>
 
-        <p className="mt-6 text-center text-xs text-zinc-400">
-          <Link href="/" className="hover:text-[#FF6B35]">
+        <p className="mt-6 text-center text-[13px] text-white/20">
+          <Link href="/" className="hover:text-white/40 transition-colors">
             ← Voltar para o início
           </Link>
         </p>
