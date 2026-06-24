@@ -705,6 +705,9 @@ export default function CaixaPOSPage() {
             <LogOut className="h-4 w-4" />
           </button>
         </div>
+        <div className={`flex items-center justify-center border-t px-4 py-1.5 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+          <span className={`text-[10px] ${darkMode ? "text-zinc-600" : "text-zinc-400"}`}>Powered by <span className={`font-semibold ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>PedeFácil</span></span>
+        </div>
       </div>
 
       {/* Tabs */}

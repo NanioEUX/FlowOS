@@ -438,6 +438,9 @@ export default function HomePage() {
               <Link href="/login" className="hover:text-[#FF6B35] transition-colors">Entrar</Link>
             </div>
           </div>
+          <div className="mt-6 text-center">
+            <span className="text-[11px] text-white/15">Powered by <span className="font-semibold text-white/25">PedeFácil</span></span>
+          </div>
         </div>
       </footer>
     </div>
