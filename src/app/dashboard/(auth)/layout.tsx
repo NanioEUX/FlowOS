@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Clock } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Clock, Megaphone } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -21,6 +21,9 @@ const financeiroSubItems = [
   { icon: BarChart3, label: "DRE", href: "/dashboard/financeiro" },
   { icon: DollarSign, label: "Despesas", href: "/dashboard/financeiro/despesas" },
   { icon: BarChart3, label: "Relatórios", href: "/dashboard/relatorios", perm: "relatorios" },
+]
+
+const marketingSubItems = [
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
 ]
 
@@ -47,6 +50,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [financeiroOpen, setFinanceiroOpen] = useState(false)
+  const [marketingOpen, setMarketingOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [establishment, setEstablishment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -218,7 +222,7 @@ export default function DashboardLayout({
                 onClick={() => setFinanceiroOpen(!financeiroOpen)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  pathname.startsWith("/dashboard/financeiro") || pathname === "/dashboard/relatorios" || pathname === "/dashboard/cupons"
+                  pathname.startsWith("/dashboard/financeiro") || pathname === "/dashboard/relatorios"
                     ? "bg-green-50 text-green-700"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 )}
@@ -230,6 +234,45 @@ export default function DashboardLayout({
               {financeiroOpen && (
                 <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-3">
                   {financeiroSubItems.filter((item) => !item.perm || user?.permissions?.includes(item.perm)).map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
+                        pathname === item.href
+                          ? "bg-green-50 text-green-700"
+                          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Marketing submenu */}
+          {user?.permissions?.includes("config") && (
+            <div>
+              <button
+                onClick={() => setMarketingOpen(!marketingOpen)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === "/dashboard/cupons"
+                    ? "bg-green-50 text-green-700"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                )}
+              >
+                <Megaphone className="h-5 w-5" />
+                Marketing
+                {marketingOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
+              </button>
+              {marketingOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-3">
+                  {marketingSubItems.filter((item) => !item.perm || user?.permissions?.includes(item.perm)).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
@@ -291,10 +334,23 @@ export default function DashboardLayout({
 
         </nav>
 
-        {/* Subscription status */}
+        {/* Subscription status + Planos */}
         {user?.role === "admin" && (
-          <div className="px-4 pb-2">
+          <div className="px-4 pb-2 space-y-2">
             <SubscriptionBadge establishment={establishment} />
+            <Link
+              href="/dashboard/planos"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/dashboard/planos"
+                  ? "bg-green-50 text-green-700"
+                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+              )}
+            >
+              <CreditCard className="h-5 w-5" />
+              Planos
+            </Link>
           </div>
         )}
 
