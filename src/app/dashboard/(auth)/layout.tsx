@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Clock, Megaphone } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Clock, Megaphone, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -25,11 +25,13 @@ const financeiroSubItems = [
 
 const marketingSubItems = [
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
+  { icon: Star, label: "Fidelidade", href: "/dashboard/config?fidelidade", perm: "config" },
 ]
 
 const configSubItems = [
   { icon: Settings, label: "Geral", href: "/dashboard/config", perm: "config" },
   { icon: Users, label: "Usuários", href: "/dashboard/usuarios", perm: "usuarios" },
+  { icon: CreditCard, label: "Planos", href: "/dashboard/planos", perm: "config" },
 ]
 
 interface UserData {
@@ -300,7 +302,7 @@ export default function DashboardLayout({
                 onClick={() => setConfigOpen(!configOpen)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  pathname === "/dashboard/config" || pathname === "/dashboard/usuarios"
+                  pathname === "/dashboard/config" || pathname === "/dashboard/usuarios" || pathname === "/dashboard/planos"
                     ? "bg-green-50 text-green-700"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 )}
@@ -334,23 +336,10 @@ export default function DashboardLayout({
 
         </nav>
 
-        {/* Subscription status + Planos */}
+        {/* Subscription status */}
         {user?.role === "admin" && (
-          <div className="px-4 pb-2 space-y-2">
+          <div className="px-4 pb-2">
             <SubscriptionBadge establishment={establishment} />
-            <Link
-              href="/dashboard/planos"
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname === "/dashboard/planos"
-                  ? "bg-green-50 text-green-700"
-                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-              )}
-            >
-              <CreditCard className="h-5 w-5" />
-              Planos
-            </Link>
           </div>
         )}
 
