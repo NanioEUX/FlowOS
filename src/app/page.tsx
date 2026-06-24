@@ -224,24 +224,16 @@ export default function HomePage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[
-              { title: "Dashboard", desc: "Vendas, pedidos e relatórios em tempo real", bg: "from-green-500/[0.08] to-emerald-500/[0.04]", border: "border-green-500/[0.12]" },
-              { title: "Cardápio", desc: "Categorias, produtos com fotos e preços", bg: "from-[#FF6B35]/[0.08] to-orange-500/[0.04]", border: "border-[#FF6B35]/[0.12]" },
-              { title: "Pedidos", desc: "Acompanhe pedidos em tempo real com status", bg: "from-blue-500/[0.08] to-purple-500/[0.04]", border: "border-blue-500/[0.12]" },
-              { title: "Entregas", desc: "Painel do motoboy com mapa e status", bg: "from-purple-500/[0.08] to-pink-500/[0.04]", border: "border-purple-500/[0.12]" },
-              { title: "Caixa", desc: "Vendas presenciais simplificadas", bg: "from-emerald-500/[0.08] to-teal-500/[0.04]", border: "border-emerald-500/[0.12]" },
-              { title: "Estoque", desc: "Controle de insumos e baixa automática", bg: "from-amber-500/[0.08] to-yellow-500/[0.04]", border: "border-amber-500/[0.12]" },
+              { title: "Dashboard", desc: "Vendas, pedidos e relatórios em tempo real", bg: "from-green-500/[0.08] to-emerald-500/[0.04]", border: "border-green-500/[0.12]", icon: BarChart3, iconColor: "text-green-400" },
+              { title: "Cardápio", desc: "Categorias, produtos com fotos e preços", bg: "from-[#FF6B35]/[0.08] to-orange-500/[0.04]", border: "border-[#FF6B35]/[0.12]", icon: Store, iconColor: "text-[#FF6B35]" },
+              { title: "Pedidos", desc: "Acompanhe pedidos em tempo real com status", bg: "from-blue-500/[0.08] to-purple-500/[0.04]", border: "border-blue-500/[0.12]", icon: ShoppingBag, iconColor: "text-blue-400" },
+              { title: "Entregas", desc: "Painel do motoboy com mapa e status", bg: "from-purple-500/[0.08] to-pink-500/[0.04]", border: "border-purple-500/[0.12]", icon: Smartphone, iconColor: "text-purple-400" },
+              { title: "Caixa", desc: "Vendas presenciais simplificadas", bg: "from-emerald-500/[0.08] to-teal-500/[0.04]", border: "border-emerald-500/[0.12]", icon: CreditCard, iconColor: "text-emerald-400" },
+              { title: "Estoque", desc: "Controle de insumos e baixa automática", bg: "from-amber-500/[0.08] to-yellow-500/[0.04]", border: "border-amber-500/[0.12]", icon: QrCode, iconColor: "text-amber-400" },
             ].map((item) => (
               <div key={item.title} className={`rounded-[16px] border ${item.border} bg-gradient-to-br ${item.bg} p-6 transition-all duration-500 hover:scale-[1.02]`}>
-                <div className="mb-4 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="h-2 w-2 rounded-full bg-[#FF6B35]" />
-                    <div className="h-2 w-16 rounded bg-white/[0.06]" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-1">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="h-6 rounded bg-white/[0.04]" />
-                    ))}
-                  </div>
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[14px] border border-white/[0.08] bg-white/[0.04]">
+                  <item.icon className={`h-7 w-7 ${item.iconColor}`} />
                 </div>
                 <h3 className="text-[17px] font-semibold tracking-[-0.3px] text-white">{item.title}</h3>
                 <p className="mt-1 text-[14px] text-white/35">{item.desc}</p>
