@@ -57,6 +57,11 @@ export default function LoginPage() {
         refreshToken: data.refreshToken,
       }))
 
+      if (data.subscriptionExpired) {
+        router.push("/dashboard/planos")
+        return
+      }
+
       if (data.user.role === "motoboy" && data.user.deliveryPerson) {
         const { slug, token: dpToken } = data.user.deliveryPerson
         router.push(`/${slug}/entregas/${dpToken}`)
@@ -121,6 +126,10 @@ export default function LoginPage() {
       }))
 
       setTimeout(() => {
+        if (loginData.subscriptionExpired) {
+          router.push("/dashboard/planos")
+          return
+        }
         if (loginData.user.role === "motoboy" && loginData.user.deliveryPerson) {
           const { slug, token: dpToken } = loginData.user.deliveryPerson
           router.push(`/${slug}/entregas/${dpToken}`)

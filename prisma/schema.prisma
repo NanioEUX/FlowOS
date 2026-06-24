@@ -45,6 +45,13 @@ model Establishment {
   closedTitle       String?
   closedSub         String?
   defaultTheme      String            @default("dark")
+  trialStartsAt     DateTime?
+  trialEndsAt       DateTime?
+  subscriptionPlan  String?           @default("starter")
+  subscriptionStatus String           @default("trial")
+  nextPaymentAt     DateTime?
+  asaasCustomerId   String?
+  asaasSubscriptionId String?
   cashRegisters     CashRegister[]
   categories        Category[]
   coupons           Coupon[]

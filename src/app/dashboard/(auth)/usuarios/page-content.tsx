@@ -232,7 +232,6 @@ export default function UsuariosPage() {
           {users.map((user) => {
             const perms = JSON.parse(user.permissions || '["caixa"]')
             const deliveryPerson = user.role === "motoboy" ? deliveryPersons.find((dp) => dp.userId === user.id) : null
-            const deliveryLink = deliveryPerson && deliveryPerson.establishmentSlug ? `${window.location.origin}/${deliveryPerson.establishmentSlug}/entregas/${deliveryPerson.token}` : null
             return (
               <Card key={user.id} className={!user.isActive ? "opacity-50" : ""}>
                 <CardContent className="p-4">
@@ -277,25 +276,6 @@ export default function UsuariosPage() {
                       </span>
                     )}
                   </div>
-                  {deliveryLink && (
-                    <div className="mt-2 rounded-lg bg-purple-50 p-2">
-                      <p className="text-[10px] font-medium text-purple-700 mb-1">Acesso do entregador:</p>
-                      <div className="space-y-1 text-[10px] text-purple-600">
-                        <p><strong>Login:</strong> {user.email}</p>
-                        <p><strong>Senha:</strong> 123456 (padrão)</p>
-                      </div>
-                      <div className="mt-2 flex items-center gap-1">
-                        <a
-                          href={deliveryLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded px-2 py-1 text-[10px] font-medium text-purple-600 hover:bg-purple-100"
-                        >
-                          Abrir delivery page
-                        </a>
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )

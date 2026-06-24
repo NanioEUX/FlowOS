@@ -36,7 +36,11 @@ export async function POST(req: NextRequest) {
 
     const establishment = await prisma.establishment.findUnique({
       where: { id: user.establishmentId },
-      select: { id: true, name: true, slug: true, logo: true, defaultTheme: true },
+      select: {
+        id: true, name: true, slug: true, logo: true, defaultTheme: true,
+        subscriptionStatus: true, subscriptionPlan: true,
+        trialStartsAt: true, trialEndsAt: true, nextPaymentAt: true,
+      },
     })
 
     const permissions = JSON.parse(user.permissions || '["caixa"]')
@@ -64,6 +68,17 @@ export async function POST(req: NextRequest) {
       { expiresIn: "7d" }
     )
 
+    // Check subscription status
+    let subscriptionExpired = false
+    if (establishment) {
+      const now = new Date()
+      if (establishment.subscriptionStatus === "trial" && establishment.trialEndsAt && new Date(establishment.trialEndsAt) < now) {
+        subscriptionExpired = true
+      } else if (establishment.subscriptionStatus === "expired") {
+        subscriptionExpired = true
+      }
+    }
+
     return NextResponse.json({
       token,
       refreshToken,
@@ -78,6 +93,7 @@ export async function POST(req: NextRequest) {
         deliveryPerson,
       },
       establishment,
+      subscriptionExpired,
     })
   } catch (error) {
     console.error(error)

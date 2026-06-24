@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -87,10 +87,22 @@ export default function DashboardLayout({
       .then((data) => {
         if (data.error) throw new Error(data.error)
         setEstablishment(data)
+
+        // Check subscription — redirect to planos if expired
+        if (userData.role === "admin" && !pathname.startsWith("/dashboard/planos")) {
+          const now = new Date()
+          const isExpired =
+            data.subscriptionStatus === "expired" ||
+            (data.subscriptionStatus === "trial" && data.trialEndsAt && new Date(data.trialEndsAt) < now)
+          if (isExpired) {
+            router.replace("/dashboard/planos")
+            return
+          }
+        }
       })
       .catch(() => router.replace("/login"))
       .finally(() => setLoading(false))
-  }, [router])
+  }, [router, pathname])
 
   const navItems = mainNavItems.filter((item) => user?.permissions?.includes(item.perm))
   const mobileNavItems = navItems.slice(0, 5)
@@ -279,6 +291,13 @@ export default function DashboardLayout({
 
         </nav>
 
+        {/* Subscription status */}
+        {user?.role === "admin" && (
+          <div className="px-4 pb-2">
+            <SubscriptionBadge establishment={establishment} />
+          </div>
+        )}
+
         <div className="absolute bottom-0 left-0 right-0 border-t border-zinc-200 p-4">
           <button
             onClick={handleLogout}
@@ -351,5 +370,45 @@ export default function DashboardLayout({
         </div>
       </nav>
     </div>
+  )
+}
+
+function SubscriptionBadge({ establishment }: { establishment: any }) {
+  const status = establishment?.subscriptionStatus || "trial"
+  const trialEnds = establishment?.trialEndsAt ? new Date(establishment.trialEndsAt) : null
+  const daysLeft = trialEnds ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0
+
+  if (status === "active") {
+    return null // Don't show badge when active
+  }
+
+  if (status === "trial" && daysLeft > 0) {
+    return (
+      <a
+        href="/dashboard/planos"
+        className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs transition-colors hover:bg-amber-100"
+      >
+        <Clock className="h-4 w-4 text-amber-600" />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-amber-800">Teste: {daysLeft}d restante{daysLeft > 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-amber-600">Ver planos →</p>
+        </div>
+      </a>
+    )
+  }
+
+  return (
+    <a
+      href="/dashboard/planos"
+      className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs transition-colors hover:bg-red-100"
+    >
+      <CreditCard className="h-4 w-4 text-red-600" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-red-800">
+          {status === "expired" ? "Assinatura expirada" : "Pagamento pendente"}
+        </p>
+        <p className="text-[10px] text-red-600">Ativar plano →</p>
+      </div>
+    </a>
   )
 }

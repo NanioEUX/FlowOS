@@ -31,8 +31,17 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    const now = new Date()
+    const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
     const establishment = await prisma.establishment.create({
-      data: { name, slug, email, password: hashedPassword, phone, category, address },
+      data: {
+        name, slug, email, password: hashedPassword, phone, category, address,
+        trialStartsAt: now,
+        trialEndsAt: trialEnds,
+        subscriptionStatus: "trial",
+        subscriptionPlan: "starter",
+      },
     })
 
     const cat = await prisma.category.create({
