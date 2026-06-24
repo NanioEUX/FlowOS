@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Star, Sun, Moon } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Sun, Moon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,8 +58,6 @@ export default function ConfigPage() {
     { day: "Sábado", open: "09:00", close: "23:00", active: true },
     { day: "Domingo", open: "00:00", close: "00:00", active: false },
   ])
-  const [loyaltyConfig, setLoyaltyConfig] = useState({ enabled: false, pointsPerReal: 1, redeemPoints: 100, redeemDiscount: 10, redeemType: "discount", redeemProductId: "" })
-  const [allProducts, setAllProducts] = useState<any[]>([])
 
   useEffect(() => {
     if (!establishmentId) return
@@ -90,19 +88,6 @@ export default function ConfigPage() {
           if (data.businessHours) {
             try { setBusinessHours(JSON.parse(data.businessHours)) } catch {}
           }
-          if (data.loyaltyConfig) {
-            try {
-              const lc = JSON.parse(data.loyaltyConfig)
-              setLoyaltyConfig({ ...loyaltyConfig, ...lc })
-            } catch {}
-          }
-        }
-      })
-    fetchAuth(`/api/categories?establishmentId=${establishmentId}`)
-      .then((r) => r.json())
-      .then((cats) => {
-        if (Array.isArray(cats)) {
-          setAllProducts(cats.flatMap((c: any) => c.products || []))
         }
       })
   }, [establishmentId])
@@ -123,7 +108,6 @@ export default function ConfigPage() {
           paymentConfig: JSON.stringify(paymentConfig),
           orderConfig: JSON.stringify(orderConfig),
           businessHours: JSON.stringify(businessHours),
-          loyaltyConfig: JSON.stringify(loyaltyConfig),
           defaultTheme: form.defaultTheme,
         }),
       })
@@ -371,121 +355,6 @@ export default function ConfigPage() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Fidelidade */}
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
-              <Star className="h-4 w-4" />
-              Programa de Fidelidade
-            </h3>
-            <p className="text-sm text-zinc-500">Clientes acumulam pontos a cada pedido e trocam por desconto ou produto.</p>
-            <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-              <input
-                type="checkbox"
-                checked={loyaltyConfig.enabled}
-                onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, enabled: e.target.checked })}
-                className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-              />
-              <div>
-                <span className="font-medium text-zinc-900">Ativar fidelidade</span>
-                <p className="text-xs text-zinc-500">Clientes ganham pontos a cada R$ 1 gasto</p>
-              </div>
-            </label>
-            {loyaltyConfig.enabled && (
-              <div className="rounded-lg bg-zinc-50 p-4 space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos por R$ 1</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={loyaltyConfig.pointsPerReal}
-                    onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, pointsPerReal: Number(e.target.value) })}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-zinc-700">Tipo de resgate</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "discount" })}
-                      className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType !== "product" ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}
-                    >
-                      Desconto (R$)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "product" })}
-                      className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType === "product" ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}
-                    >
-                      Produto grátis
-                    </button>
-                  </div>
-                </div>
-
-                {loyaltyConfig.redeemType !== "product" ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={loyaltyConfig.redeemPoints}
-                        onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto (R$)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.50"
-                        value={loyaltyConfig.redeemDiscount}
-                        onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemDiscount: Number(e.target.value) })}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={loyaltyConfig.redeemPoints}
-                        onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Produto para resgate</label>
-                      <select
-                        value={loyaltyConfig.redeemProductId || ""}
-                        onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemProductId: e.target.value })}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                      >
-                        <option value="">Selecionar produto...</option>
-                        {allProducts.map((p: any) => (
-                          <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price)})</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-xs text-zinc-400">
-                  {loyaltyConfig.redeemType !== "product"
-                    ? `Ex: ${loyaltyConfig.pointsPerReal} ponto(s) por R$ 1 • ${loyaltyConfig.redeemPoints} pontos = R$ ${loyaltyConfig.redeemDiscount} de desconto`
-                    : `Ex: ${loyaltyConfig.pointsPerReal} ponto(s) por R$ 1 • ${loyaltyConfig.redeemPoints} pontos = produto selecionado`}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 

@@ -25,7 +25,7 @@ const financeiroSubItems = [
 
 const marketingSubItems = [
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
-  { icon: Star, label: "Fidelidade", href: "/dashboard/config?fidelidade", perm: "config" },
+  { icon: Star, label: "Fidelidade", href: "/dashboard/fidelidade", perm: "config" },
 ]
 
 const configSubItems = [
