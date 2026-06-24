@@ -44,6 +44,19 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Create admin user for this establishment
+    const adminUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "admin",
+        permissions: JSON.stringify(["admin"]),
+        mustChangePassword: true,
+        establishmentId: establishment.id,
+      },
+    })
+
     const cat = await prisma.category.create({
       data: { name: "Principais", order: 0, establishmentId: establishment.id },
     })
@@ -56,13 +69,13 @@ export async function POST(req: NextRequest) {
     })
 
     const token = jwt.sign(
-      { userId: establishment.id, email: establishment.email, role: "admin", permissions: ["admin"], establishmentId: establishment.id },
+      { userId: adminUser.id, email: adminUser.email, role: "admin", permissions: ["admin"], establishmentId: establishment.id },
       JWT_SECRET,
       { expiresIn: "24h" }
     )
 
     const refreshToken = jwt.sign(
-      { userId: establishment.id, type: "refresh" },
+      { userId: adminUser.id, type: "refresh" },
       JWT_SECRET + "-refresh",
       { expiresIn: "7d" }
     )
