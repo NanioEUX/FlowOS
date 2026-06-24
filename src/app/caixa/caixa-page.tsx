@@ -106,7 +106,7 @@ export default function CaixaPOSPage() {
   const [openingAmount, setOpeningAmount] = useState("")
   const [closingAmount, setClosingAmount] = useState("")
   const [transferUserId, setTransferUserId] = useState("")
-  const [allUsers, setAllUsers] = useState<any[]>([])
+  const [allUsers, setAllUsers, setAllUsers] = useState<any[]>([])
   const [closingTableModal, setClosingTableModal] = useState(false)
   const [closingTableNumber, setClosingTableNumber] = useState<number | null>(null)
   const [closingTablePayment, setClosingTablePayment] = useState("cash")
@@ -911,7 +911,7 @@ export default function CaixaPOSPage() {
           <div className="mt-3">
             <div className="mb-1.5 flex items-center justify-between">
               <p className={`text-xs font-medium ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Mesas</p>
-              <p className={`text-[10px] ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Duplo clique para fechar</p>
+              <p className={`text-[10px] ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Clique no botão para fechar</p>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {Object.keys(tableCarts).sort((a, b) => Number(a) - Number(b)).map((key) => {
@@ -932,11 +932,6 @@ export default function CaixaPOSPage() {
                         : darkMode ? "border-zinc-600 bg-zinc-700 hover:border-green-500 hover:shadow-md" : "border-zinc-200 bg-white hover:border-green-300 hover:shadow-md"
                     }`}
                     onClick={() => selectTable(num)}
-                    onDoubleClick={() => {
-                      setClosingTableNumber(num)
-                      setClosingTablePayment("cash")
-                      setClosingTableModal(true)
-                    }}
                   >
                     <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
                       <svg viewBox="0 0 64 64" fill="currentColor" className="h-full w-full"><rect x="8" y="22" width="48" height="4" rx="1" opacity="0.6"/><line x1="14" y1="26" x2="14" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="26" x2="50" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="14" y1="50" x2="8" y2="56" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="50" x2="56" y2="56" stroke="currentColor" strokeWidth="3"/></svg>
@@ -947,6 +942,16 @@ export default function CaixaPOSPage() {
                         className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 z-10"
                       >
                         <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    {/* Close Table Button - shows when table has orders/items */}
+                    {total > 0 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); closeTable(num) }}
+                        className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white hover:bg-amber-600 z-10 transition-colors"
+                        title="Fechar mesa"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
                       </button>
                     )}
                     <span className={`text-2xl font-bold z-10 ${isActive ? "text-green-700" : darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{num}</span>
@@ -1149,7 +1154,7 @@ export default function CaixaPOSPage() {
               </p>
               {lastOrder && (
                 <p className="text-sm text-zinc-500 mt-1">
-                  Pedido #{lastOrder.orderNumber || lastOrder.id?.slice(0, 8)}
+                  Pedido #{lastOrder.orderNumber || lastOrder.id?.slice(0, 0, 8)}
                 </p>
               )}
               {activeTable && !sendToPrep && <p className="text-sm text-zinc-500">Pagamento será cobrado no fechamento da mesa</p>}
