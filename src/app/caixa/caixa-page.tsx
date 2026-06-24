@@ -106,7 +106,7 @@ export default function CaixaPOSPage() {
   const [openingAmount, setOpeningAmount] = useState("")
   const [closingAmount, setClosingAmount] = useState("")
   const [transferUserId, setTransferUserId] = useState("")
-  const [allUsers, setAllUsers, setAllUsers] = useState<any[]>([])
+  const [allUsers, setAllUsers] = useState<any[]>([])
   const [closingTableModal, setClosingTableModal] = useState(false)
   const [closingTableNumber, setClosingTableNumber] = useState<number | null>(null)
   const [closingTablePayment, setClosingTablePayment] = useState("cash")
@@ -630,7 +630,6 @@ export default function CaixaPOSPage() {
         }
       }
     })
-    }
   }
 
   function handleLogout() {
