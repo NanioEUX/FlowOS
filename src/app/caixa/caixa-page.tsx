@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon } from "lucide-react"
+import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, Scissors, ArrowRightLeft, RotateCcw, UserPlus, MinusCircle, Edit2, Eye, EyeOff } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
@@ -49,6 +49,20 @@ interface CartItem {
   quantity: number
 }
 
+interface TableParticipant {
+  id: string
+  name: string
+  items: CartItem[]
+  paidAmount: number
+  paymentMethods: { method: string; amount: number }[]
+}
+
+interface TableData {
+  cart: CartItem[]
+  participants: TableParticipant[]
+  name?: string
+}
+
 export default function CaixaPOSPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -63,20 +77,6 @@ export default function CaixaPOSPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 })
   const [currentTime, setCurrentTime] = useState("")
-
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date()
-      setCurrentTime(
-        now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
-        " " +
-        now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-      )
-    }
-    updateClock()
-    const interval = setInterval(updateClock, 10000)
-    return () => clearInterval(interval)
-  }, [])
   const [customName, setCustomName] = useState("")
   const [customPrice, setCustomPrice] = useState("")
   const [loading, setLoading] = useState(true)
@@ -99,7 +99,7 @@ export default function CaixaPOSPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [deliveryPeople, setDeliveryPeople] = useState<any[]>([])
   const [activeTable, setActiveTable] = useState<number | null>(null)
-  const [tableCarts, setTableCarts] = useState<Record<number, CartItem[]>>({})
+  const [tableData, setTableData] = useState<Record<number, TableData>>({})
   const [nextTableNum, setNextTableNum] = useState(1)
   const [showCashRegisterModal, setShowCashRegisterModal] = useState(false)
   const [cashRegisterAction, setCashRegisterAction] = useState<"open" | "close" | "transfer">("open")
@@ -121,6 +121,15 @@ export default function CaixaPOSPage() {
   })
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void }>({ open: false, title: "", message: "", onConfirm: () => {} })
 
+  // Split bill / partial payment states
+  const [splitBillTable, setSplitBillTable] = useState<number | null>(null)
+  const [splitBillMode, setSplitBillMode] = useState<"participants" | "assign" | "partial">("participants")
+  const [editingParticipant, setEditingParticipant] = useState<TableParticipant | null>(null)
+  const [newParticipantName, setNewParticipantName] = useState("")
+  const [partialPaymentParticipant, setPartialPaymentParticipant] = useState<TableParticipant | null>(null)
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState("")
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<"cash" | "card" | "pix">("cash")
+
   useEffect(() => {
     localStorage.setItem("pedefacil-caixa-theme", darkMode ? "dark" : "light")
   }, [darkMode])
@@ -132,7 +141,7 @@ export default function CaixaPOSPage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setTableCarts(parsed.tableCarts || {})
+        setTableData(parsed.tableData || {})
         setNextTableNum(parsed.nextTableNum || 1)
         setActiveTable(parsed.activeTable || null)
         setCart(parsed.activeCart || [])
@@ -145,17 +154,31 @@ export default function CaixaPOSPage() {
   useEffect(() => {
     if (!user?.establishmentId) return
     localStorage.setItem(`pedefacil-tables-${user.establishmentId}`, JSON.stringify({
-      tableCarts,
+      tableData,
       nextTableNum,
       activeTable,
       activeCart: cart,
       tableNames,
     }))
-  }, [tableCarts, nextTableNum, activeTable, cart, user?.establishmentId])
+  }, [tableData, nextTableNum, activeTable, cart, user?.establishmentId])
 
   useEffect(() => {
     localStorage.setItem("pedefacil-caixa-tab", activeTab)
   }, [activeTab])
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date()
+      setCurrentTime(
+        now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
+        " " +
+        now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      )
+    }
+    updateClock()
+    const interval = setInterval(updateClock, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
@@ -171,7 +194,6 @@ export default function CaixaPOSPage() {
     setUser(userData)
     loadData(userData.establishmentId)
 
-    // Cross-tab sync: listen for changes from other tabs
     function handleStorage(e: StorageEvent) {
       if (e.key === "pedefacil-last-action" && e.newValue) {
         loadData(userData.establishmentId)
@@ -268,10 +290,10 @@ export default function CaixaPOSPage() {
 
   function selectTable(num: number) {
     if (activeTable !== null) {
-      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+      setTableData((prev) => ({ ...prev, [activeTable]: { ...prev[activeTable], cart } }))
     }
     setActiveTable(num)
-    setCart(tableCarts[num] || [])
+    setCart(tableData[num]?.cart || [])
   }
 
   function openNewTable() {
@@ -282,9 +304,9 @@ export default function CaixaPOSPage() {
   function confirmNewTable() {
     const num = nextTableNum
     if (activeTable !== null) {
-      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+      setTableData((prev) => ({ ...prev, [activeTable]: { ...prev[activeTable], cart } }))
     }
-    setTableCarts((prev) => ({ ...prev, [num]: [] }))
+    setTableData((prev) => ({ ...prev, [num]: { cart: [], participants: [] } }))
     if (newTableName.trim()) {
       setTableNames((prev) => ({ ...prev, [num]: newTableName.trim() }))
     }
@@ -296,15 +318,23 @@ export default function CaixaPOSPage() {
   }
 
   function closeTable(num: number) {
-    const items = tableCarts[num] || []
+    const data = tableData[num] || { cart: [], participants: [] }
     const tableOrders = orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
-    if (tableOrders.length > 0 || items.length > 0) {
+    
+    // Calculate total from cart + orders
+    const cartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+    const ordersTotal = tableOrders.reduce((s: number, o: any) => s + o.total, 0)
+    const total = cartTotal + ordersTotal
+
+    if (tableOrders.length > 0 || data.cart.length > 0 || data.participants.length > 0) {
       setClosingTableNumber(num)
       setClosingTablePayment("cash")
       setClosingTableModal(true)
       return
     }
-    setTableCarts((prev) => {
+    
+    // Empty table - just remove it
+    setTableData((prev) => {
       const next = { ...prev }
       delete next[num]
       return next
@@ -334,8 +364,7 @@ export default function CaixaPOSPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        // Clear table from localStorage
-        setTableCarts((prev) => {
+        setTableData((prev) => {
           const next = { ...prev }
           delete next[closingTableNumber!]
           return next
@@ -359,10 +388,240 @@ export default function CaixaPOSPage() {
 
   function deselectTable() {
     if (activeTable !== null) {
-      setTableCarts((prev) => ({ ...prev, [activeTable]: cart }))
+      setTableData((prev) => ({ ...prev, [activeTable]: { ...prev[activeTable], cart } }))
     }
     setActiveTable(null)
     setCart([])
+  }
+
+  // ========== SPLIT BILL / PARTIAL PAYMENT FUNCTIONS ==========
+
+  function openSplitBill(tableNum: number) {
+    const data = tableData[tableNum] || { cart: [], participants: [] }
+    // If no participants yet, create from current cart
+    let participants = data.participants
+    if (participants.length === 0 && (data.cart.length > 0 || orders.some(o => o.tableNumber === tableNum && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status)))) {
+      // Create a default participant with all items
+      const allItems = [...data.cart]
+      const tableOrders = orders.filter((o: any) => o.tableNumber === tableNum && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+      for (const order of tableOrders) {
+        const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+        for (const item of items) {
+          allItems.push({ productId: item.id || `order-${order.id}-${item.name}`, name: item.name, price: item.price, quantity: item.quantity })
+        }
+      }
+      if (allItems.length > 0) {
+        participants = [{
+          id: `p-${Date.now()}`,
+          name: "Cliente 1",
+          items: allItems,
+          paidAmount: 0,
+          paymentMethods: []
+        }]
+      }
+    }
+    setSplitBillTable(tableNum)
+    setSplitBillMode("participants")
+    // Update table data with participants if new
+    if (participants.length > 0 && participants !== data.participants) {
+      setTableData(prev => ({ ...prev, [tableNum]: { ...prev[tableNum], participants } }))
+    }
+  }
+
+  function addParticipant() {
+    if (!newParticipantName.trim() || !splitBillTable) return
+    setTableData(prev => {
+      const table = prev[splitBillTable!] || { cart: [], participants: [] }
+      const newParticipant: TableParticipant = {
+        id: `p-${Date.now()}`,
+        name: newParticipantName.trim(),
+        items: [],
+        paidAmount: 0,
+        paymentMethods: []
+      }
+      return {
+        ...prev,
+        [splitBillTable!]: { ...table, participants: [...table.participants, newParticipant] }
+      }
+    })
+    setNewParticipantName("")
+  }
+
+  function removeParticipant(participantId: string) {
+    if (!splitBillTable) return
+    setTableData(prev => {
+      const table = prev[splitBillTable!]
+      if (!table) return prev
+      return {
+        ...prev,
+        [splitBillTable!]: { ...table, participants: table.participants.filter(p => p.id !== participantId) }
+      }
+    })
+  }
+
+  function startAssignItems() {
+    setSplitBillMode("assign")
+  }
+
+  function assignItemToParticipant(participantId: string, item: CartItem, quantity: number = 1) {
+    if (!splitBillTable) return
+    setTableData(prev => {
+      const table = prev[splitBillTable!]
+      if (!table) return prev
+      return {
+        ...prev,
+        [splitBillTable!]: {
+          ...table,
+          participants: table.participants.map(p => {
+            if (p.id !== participantId) return p
+            const existingItem = p.items.find(i => i.productId === item.productId)
+            if (existingItem) {
+              return {
+                ...p,
+                items: p.items.map(i => i.productId === item.productId ? { ...i, quantity: i.quantity + quantity } : i)
+              }
+            }
+            return { ...p, items: [...p.items, { ...item, quantity }] }
+          })
+        }
+      }
+    })
+  }
+
+  function removeItemFromParticipant(participantId: string, productId: string, quantity: number = 1) {
+    if (!splitBillTable) return
+    setTableData(prev => {
+      const table = prev[splitBillTable!]
+      if (!table) return prev
+      return {
+        ...prev,
+        [splitBillTable!]: {
+          ...table,
+          participants: table.participants.map(p => {
+            if (p.id !== participantId) return p
+            return {
+              ...p,
+              items: p.items.map(i => {
+                if (i.productId !== productId) return i
+                const newQty = i.quantity - quantity
+                return newQty > 0 ? { ...i, quantity: newQty } : null
+              }).filter(Boolean) as CartItem[]
+            }
+          })
+        }
+      }
+    })
+  }
+
+  function finishAssignItems() {
+    setSplitBillMode("participants")
+  }
+
+  function openPartialPayment(participant: TableParticipant) {
+    setPartialPaymentParticipant(participant)
+    setPartialPaymentAmount("")
+    setPartialPaymentMethod("cash")
+    setSplitBillMode("partial")
+  }
+
+  function closePartialPayment() {
+    setPartialPaymentParticipant(null)
+    setPartialPaymentAmount("")
+    setSplitBillMode("participants")
+  }
+
+  async function processPartialPayment() {
+    if (!partialPaymentParticipant || !splitBillTable || !user?.establishmentId) return
+    const amount = parseFloat(partialPaymentAmount)
+    if (isNaN(amount) || amount <= 0) return
+    
+    const participant = partialPaymentParticipant
+    const remaining = getParticipantSubtotal(participant) - participant.paidAmount
+    if (amount > remaining) {
+      alert(`Valor excede o restante (${formatCurrency(remaining)})`)
+      return
+    }
+
+    try {
+      // Record the payment movement in cash register
+      if (cashRegister) {
+        await fetchAuth(`/api/cash-register/${cashRegister.id}/movements`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "sale",
+            amount,
+            description: `Pagamento parcial - ${participant.name} (Mesa ${splitBillTable})`,
+            paymentMethod: partialPaymentMethod,
+          }),
+        })
+      }
+
+      // Update participant
+      setTableData(prev => {
+        const table = prev[splitBillTable!]
+        if (!table) return prev
+        return {
+          ...prev,
+          [splitBillTable!]: {
+            ...table,
+            participants: table.participants.map(p => {
+              if (p.id !== participant.id) return p
+              return {
+                ...p,
+                paidAmount: p.paidAmount + amount,
+                paymentMethods: [...p.paymentMethods, { method: partialPaymentMethod, amount }]
+              }
+            })
+          }
+        }
+      })
+
+      // Notify other tabs
+      localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "partial-payment", ts: Date.now() }))
+
+      toast(`Pagamento de ${formatCurrency(amount)} registrado para ${participant.name}`, "success")
+      closePartialPayment()
+      loadData(user.establishmentId!)
+    }
+    } catch (err) {
+      console.error(err)
+      toast("Erro ao processar pagamento parcial", "error")
+    }
+  }
+
+  function getParticipantSubtotal(participant: TableParticipant): number {
+    return participant.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  }
+
+  function getParticipantRemaining(participant: TableParticipant): number {
+    return getParticipantSubtotal(participant) - participant.paidAmount
+  }
+
+  function isTableFullyPaid(tableNum: number): boolean {
+    const data = tableData[tableNum]
+    if (!data || data.participants.length === 0) return false
+    return data.participants.every(p => getParticipantRemaining(p) <= 0.01)
+  }
+
+  function getTableTotal(tableNum: number): number {
+    const data = tableData[tableNum] || { cart: [], participants: [] }
+    const cartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+    const participantsTotal = data.participants.reduce((s, p) => s + getParticipantSubtotal(p), 0)
+    const ordersTotal = orders
+      .filter((o: any) => o.tableNumber === tableNum && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+      .reduce((s: number, o: any) => s + o.total, 0)
+    return cartTotal + participantsTotal + ordersTotal
+  }
+
+  function getTablePaidTotal(tableNum: number): number {
+    const data = tableData[tableNum]
+    if (!data) return 0
+    return data.participants.reduce((s, p) => s + p.paidAmount, 0)
+  }
+
+  function getTableRemaining(tableNum: number): number {
+    return getTableTotal(tableNum) - getTablePaidTotal(tableNum)
   }
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -392,7 +651,6 @@ export default function CaixaPOSPage() {
   async function executeSale(isMesa: boolean, tableLabel: string) {
     setClosing(true)
     try {
-      // Optimistic: create temporary order for instant UI feedback
       const tempId = `temp-${Date.now()}`
       const tempOrder = {
         id: tempId,
@@ -432,13 +690,11 @@ export default function CaixaPOSPage() {
 
       if (!res.ok) {
         console.error("Erro ao criar pedido:", data)
-        // Remove optimistic temp order
         setOrders((prev) => prev.filter((o) => o.id !== tempId))
         alert(data.error || "Erro ao criar pedido")
         return
       }
 
-      // Only record cash movement for balcão (immediate payment)
       if (!isMesa && cashRegister) {
         await fetchAuth(`/api/cash-register/${cashRegister.id}/movements`, {
           method: "POST",
@@ -464,17 +720,13 @@ export default function CaixaPOSPage() {
 
       setLastOrder({ ...orderData, items: cart, establishmentName: user.establishment?.name })
 
-      // Update orders in real time - replace temp with real order
       setOrders((prev) => prev.map((o) => o.id === tempId ? orderData : o))
-      // If temp wasn't added (e.g. balcão without sendToPrep), add it
       if (!sendToPrep && !isMesa) {
         setOrders((prev) => [orderData, ...prev])
       }
 
-      // Notify other tabs
       localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "order-created", ts: Date.now() }))
 
-      // Don't close table for mesa - keep it open for more orders
       setCart([])
       if (!isMesa) {
         setActiveTable(null)
@@ -648,10 +900,8 @@ export default function CaixaPOSPage() {
   const hasPedidos = user?.permissions?.includes("pedidos")
   const showTabs = hasPedidos
 
-  // Count presencial orders for "Pedidos Balcão" badge
   const balcaoOrders = orders.filter((o: any) => o.orderType === "presencial" && ["preparing", "ready"].includes(o.status))
   const balcaoReadyCount = orders.filter((o: any) => o.orderType === "presencial" && o.status === "ready").length
-  // Count external orders for "Pedidos Externos" badge
   const externalOrders = orders.filter((o: any) => o.orderType !== "presencial" && ["preparing", "ready", "out_for_delivery"].includes(o.status))
 
   return (
@@ -676,7 +926,6 @@ export default function CaixaPOSPage() {
           )}
         </div>
 
-        {/* Vendas e Valor - Centralizado */}
         {cashRegister && (
           <div className="hidden items-center gap-3 lg:flex">
             <span className={`text-lg font-bold ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>{todayStats.count} vendas</span>
@@ -735,8 +984,8 @@ export default function CaixaPOSPage() {
           </div>
           <button onClick={handleLogout} className={`rounded-lg p-1.5 ${darkMode ? "text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200" : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"}`}>
             <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -803,332 +1052,369 @@ export default function CaixaPOSPage() {
         <>
           {/* Search + Categories */}
           <div className={`px-4 py-2 shadow-sm ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
-        <div className="mb-2 relative">
-          <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`} />
-          <input
-            type="text"
-            placeholder="Buscar produto..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50"}`}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-          <button
-            onClick={() => setActiveCategory("all")}
-            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              activeCategory === "all" ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
-            }`}
-          >
-            Todos
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                activeCategory === cat.id ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {!cashRegister && (
-            <div className="mb-3 rounded-xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-6 py-8 text-center">
-              <Banknote className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
-              <p className="text-sm font-semibold text-yellow-800">Nenhum caixa aberto</p>
-              <p className="mt-1 text-xs text-yellow-600">Abra o caixa para começar a vender</p>
-              <button
-                onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
-                className="mt-4 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-green-700 shadow-lg shadow-green-600/20"
-              >
-                Abrir Caixa
-              </button>
-            </div>
-          )}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-            {filteredProducts.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => addToCart(product)}
-                className={`flex flex-col items-center rounded-xl border p-3 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}
-              >
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="mb-2 h-14 w-14 rounded-lg object-cover" />
-                ) : (
-                  <div className={`mb-2 flex h-14 w-14 items-center justify-center rounded-lg text-2xl ${darkMode ? "bg-zinc-700" : "bg-zinc-100"}`}>🍕</div>
-                )}
-                <p className={`w-full truncate text-center text-xs font-medium ${darkMode ? "text-zinc-200" : "text-zinc-800"}`}>{product.name}</p>
-                <p className="text-xs font-bold text-green-600">{formatCurrency(product.price)}</p>
-              </button>
-            ))}
-            {filteredProducts.length === 0 && (
-              <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
-                Nenhum produto encontrado
-              </div>
-            )}
-          </div>
-
-          {/* Custom item */}
-          <div className={`mt-3 flex items-center gap-2 rounded-lg border border-dashed p-2 ${darkMode ? "border-zinc-600" : "border-zinc-300"}`}>
-            <input
-              placeholder="Item avulso"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              className={`flex-1 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200"}`}
-            />
-            <input
-              placeholder="R$"
-              type="number"
-              step="0.01"
-              value={customPrice}
-              onChange={(e) => setCustomPrice(e.target.value)}
-              className={`w-20 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200"}`}
-            />
-            <button
-              onClick={addCustomItem}
-              disabled={!customName || !customPrice}
-              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Tables */}
-          <div className="mt-3">
-            <div className="mb-1.5 flex items-center justify-between">
-              <p className={`text-xs font-medium ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Mesas</p>
-              <p className={`text-[10px] ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Clique no botão para fechar</p>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {Object.keys(tableCarts).sort((a, b) => Number(a) - Number(b)).map((key) => {
-                const num = Number(key)
-                const items = tableCarts[num] || []
-                const cartTotal = items.reduce((s, i) => s + i.price * i.quantity, 0)
-                const tableOrdersTotal = orders
-                  .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
-                  .reduce((s: number, o: any) => s + o.total, 0)
-                const total = cartTotal + tableOrdersTotal
-                const isActive = activeTable === num
-                return (
-                  <div
-                    key={num}
-                    className={`relative flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all cursor-pointer overflow-hidden ${
-                      isActive
-                        ? "border-green-500 bg-green-50 shadow-lg"
-                        : darkMode ? "border-zinc-600 bg-zinc-700 hover:border-green-500 hover:shadow-md" : "border-zinc-200 bg-white hover:border-green-300 hover:shadow-md"
-                    }`}
-                    onClick={() => selectTable(num)}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
-                      <svg viewBox="0 0 64 64" fill="currentColor" className="h-full w-full"><rect x="8" y="22" width="48" height="4" rx="1" opacity="0.6"/><line x1="14" y1="26" x2="14" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="26" x2="50" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="14" y1="50" x2="8" y2="56" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="50" x2="56" y2="56" stroke="currentColor" strokeWidth="3"/></svg>
-                    </div>
-                    {total === 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); closeTable(num) }}
-                        className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 z-10"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                    {/* Close Table Button - shows when table has orders/items */}
-                    {total > 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); closeTable(num) }}
-                        className="absolute right-1.5 top-1.5 flex h-6 w-28 items-center justify-center rounded-full bg-amber-500 text-white hover:bg-amber-600 z-10 transition-colors"
-                        title="Fechar mesa"
-                      >
-                        <div className="text-[3px] text-left" />Fechar mesa
-                      </button>
-                    )}
-                    <span className={`text-2xl font-bold z-10 ${isActive ? "text-green-700" : darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{num}</span>
-                    {tableNames[num] && (
-                      <span className={`text-xs font-medium z-10 ${isActive ? "text-green-600" : "text-zinc-500"}`}>{tableNames[num]}</span>
-                    )}
-                    {total > 0 && (
-                      <span className="text-xs font-medium text-green-600 z-10">{formatCurrency(total)}</span>
-                    )}
-                    {items.length === 0 && total === 0 && (
-                      <span className="text-[10px] text-zinc-400 z-10">Vazia</span>
-                    )}
-                  </div>
-                )
-              })}
-              <div
-                className={`flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer ${darkMode ? "border-zinc-600 text-zinc-500" : "border-zinc-300 bg-white text-zinc-400"}`}
-                onClick={openNewTable}
-              >
-                <svg viewBox="0 0 64 64" className={`h-16 w-16 ${darkMode ? "text-zinc-500" : "text-zinc-300"} transition-colors`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="8" y="22" width="48" height="4" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" />
-                  <line x1="14" y1="26" x2="14" y2="50" />
-                  <line x1="50" y1="26" x2="50" y2="50" />
-                  <line x1="14" y1="50" x2="8" y2="56" />
-                  <line x1="50" y1="50" x2="56" y2="56" />
-                  <ellipse cx="24" cy="18" rx="6" ry="4" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5" />
-                  <ellipse cx="40" cy="18" rx="6" ry="4" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="20" cy="32" r="1" fill="currentColor" opacity="0.3" />
-                  <circle cx="32" cy="32" r="1" fill="currentColor" opacity="0.3" />
-                  <circle cx="44" cy="32" r="1" fill="currentColor" opacity="0.3" />
-                </svg>
-                <span className="mt-1 text-xs font-medium">Nova mesa</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cart + Summary */}
-        <div className={`flex w-80 flex-col border-l ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
-          {/* Cart Header */}
-          <div className={`border-b px-4 py-2 ${darkMode ? "border-zinc-700" : "border-zinc-100"}`}>
-            <div className="flex items-center justify-between">
-              <h2 className={`text-sm font-semibold ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>
-                {activeTable ? `Mesa ${activeTable}` : "Venda Atual"}
-              </h2>
-              {activeTable !== null && (
-                <button
-                  onClick={deselectTable}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-                >
-                  <X className="h-3 w-3" />
-                  Balcão
+            <div className="mb-2 relative">
+              <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`} />
+              <input
+                type="text"
+                placeholder="Buscar produto..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50"}`}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
-          </div>
-
-          {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-4 py-2">
-            {cart.length === 0 ? (
-              <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
-                <ShoppingBag className="mb-2 h-8 w-8" />
-                <p className="text-xs">Toque nos produtos para adicionar</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {cart.map((item) => (
-                  <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-zinc-700" : "bg-zinc-50"}`}>
-                    <div className="flex-1 min-w-0">
-                      <p className={`truncate text-xs font-medium ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.name}</p>
-                      <p className={`text-[10px] ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => updateQuantity(item.productId, -1)}
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
-                      >
-                        <Minus className="h-2.5 w-2.5" />
-                      </button>
-                      <span className={`w-5 text-center text-xs font-medium ${darkMode ? "text-zinc-200" : ""}`}>{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.productId, 1)}
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
-                      >
-                        <Plus className="h-2.5 w-2.5" />
-                      </button>
-                      <button
-                        onClick={() => removeItem(item.productId)}
-                        className="ml-1 text-red-400 hover:text-red-600"
-                      >
-                        <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Summary */}
-          <div className={`border-t px-4 py-3 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <span className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Total</span>
-              <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
-            </div>
-
-            {/* Send to preparation */}
-            <label className={`mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-amber-800 bg-amber-900/20" : "border-amber-200 bg-amber-50"}`}>
-              <input
-                type="checkbox"
-                checked={sendToPrep}
-                onChange={(e) => setSendToPrep(e.target.checked)}
-                className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-              />
-              <div className="flex-1">
-                <p className={`text-xs font-medium ${darkMode ? "text-amber-400" : "text-amber-800"}`}>Enviar para preparo</p>
-                <p className={`text-[10px] ${darkMode ? "text-amber-500" : "text-amber-600"}`}>Aparece no módulo Pedidos</p>
-              </div>
-            </label>
-
-            {/* Print receipt */}
-            <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-blue-800 bg-blue-900/20" : "border-blue-200 bg-blue-50"}`}>
-              <input
-                type="checkbox"
-                checked={printReceipt}
-                onChange={(e) => {
-                  setPrintReceipt(e.target.checked)
-                  localStorage.setItem("pedefacil-print-receipt", String(e.target.checked))
-                }}
-                className="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div className="flex-1">
-                <p className={`text-xs font-medium ${darkMode ? "text-blue-400" : "text-blue-800"}`}>Gerar cupom</p>
-                <p className={`text-[10px] ${darkMode ? "text-blue-500" : "text-blue-600"}`}>Imprimir após venda</p>
-              </div>
-            </label>
-
-            {/* Payment */}
-            <div className="mb-3 flex gap-1.5">
-              {[
-                { value: "cash", icon: Banknote, label: "Dinheiro", activeColor: "border-green-500 bg-green-50 text-green-700" },
-                { value: "card", icon: CreditCard, label: "Cartão", activeColor: "border-blue-500 bg-blue-50 text-blue-700" },
-                { value: "pix", icon: DollarSign, label: "Pix", activeColor: "border-purple-500 bg-purple-50 text-purple-700" },
-              ].map((p) => (
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+              <button
+                onClick={() => setActiveCategory("all")}
+                className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  activeCategory === "all" ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
+                }`}
+              >
+                Todos
+              </button>
+              {categories.map((cat) => (
                 <button
-                  key={p.value}
-                  onClick={() => setPayment(p.value)}
-                  className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
-                    payment === p.value
-                      ? p.activeColor
-                      : darkMode ? "border-zinc-600 text-zinc-400" : "border-zinc-200 text-zinc-500"
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    activeCategory === cat.id ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-600"
                   }`}
                 >
-                  <p.icon className="h-3 w-3" />
-                  {p.label}
+                  {cat.name}
                 </button>
               ))}
             </div>
-
-            <button
-              onClick={finalizeSale}
-              disabled={closing || cart.length === 0 || (!cashRegister && !activeTable)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
-            >
-              {closing ? (
-                "Registrando..."
-              ) : !cashRegister && !activeTable ? (
-                "Abra o caixa no financeiro antes de vender"
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5" />
-                  {activeTable ? `ADICIONAR À MESA ${activeTable}` : "FINALIZAR VENDA"}
-                </>
-              )}
-            </button>
           </div>
-        </div>
-      </div>
+
+          {/* Main Content */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Products Grid */}
+            <div className="flex-1 overflow-y-auto p-3">
+              {!cashRegister && (
+                <div className="mb-3 rounded-xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-6 py-8 text-center">
+                  <Banknote className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
+                  <p className="text-sm font-semibold text-yellow-800">Nenhum caixa aberto</p>
+                  <p className="mt-1 text-xs text-yellow-600">Abra o caixa para começar a vender</p>
+                  <button
+                    onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
+                    className="mt-4 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-green-700 shadow-lg shadow-green-600/20"
+                  >
+                    Abrir Caixa
+                  </button>
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                {filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className={`flex flex-col items-center rounded-xl border p-3 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}
+                  >
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="mb-2 h-14 w-14 rounded-lg object-cover" />
+                    ) : (
+                      <div className={`mb-2 flex h-14 w-14 items-center justify-center rounded-lg text-2xl ${darkMode ? "bg-zinc-700" : "bg-zinc-100"}`}>🍕</div>
+                    )}
+                    <p className={`w-full truncate text-center text-xs font-medium ${darkMode ? "text-zinc-200" : "text-zinc-800"}`}>{product.name}</p>
+                    <p className="text-xs font-bold text-green-600">{formatCurrency(product.price)}</p>
+                  </button>
+                ))}
+                {filteredProducts.length === 0 && (
+                  <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
+                    Nenhum produto encontrado
+                  </div>
+                )}
+              </div>
+
+              {/* Custom item */}
+              <div className={`mt-3 flex items-center gap-2 rounded-lg border border-dashed p-2 ${darkMode ? "border-zinc-600" : "border-zinc-300"}`}>
+                <input
+                  placeholder="Item avulso"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  className={`flex-1 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200"}`}
+                />
+                <input
+                  placeholder="R$"
+                  type="number"
+                  step="0.01"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                  className={`w-20 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200"}`}
+                />
+                <button
+                  onClick={addCustomItem}
+                  disabled={!customName || !customPrice}
+                  className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+
+              {/* Tables */}
+              <div className="mt-3">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className={`text-xs font-medium ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Mesas</p>
+                  <p className={`text-[10px] ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Clique no botão para fechar | Dividir conta</p>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {Object.keys(tableData).sort((a, b) => Number(a) - Number(b)).map((key) => {
+                    const num = Number(key)
+                    const data = tableData[num] || { cart: [], participants: [] }
+                    const cartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+                    const participantsTotal = data.participants.reduce((s, p) => s + getParticipantSubtotal(p), 0)
+                    const tableOrdersTotal = orders
+                      .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                      .reduce((s: number, o: any) => s + o.total, 0)
+                    const total = cartTotal + participantsTotal + tableOrdersTotal
+                    const paidTotal = data.participants.reduce((s, p) => s + p.paidAmount, 0)
+                    const remaining = total - paidTotal
+                    const isActive = activeTable === num
+                    const isFullyPaid = data.participants.length > 0 && data.participants.every(p => getParticipantRemaining(p) <= 0.01)
+
+                    return (
+                      <div
+                        key={num}
+                        className={`relative flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all cursor-pointer overflow-hidden ${
+                          isActive
+                            ? "border-green-500 bg-green-50 shadow-lg"
+                            : isFullyPaid
+                            ? "border-green-300 bg-green-50"
+                            : darkMode ? "border-zinc-600 bg-zinc-700 hover:border-green-500 hover:shadow-md" : "border-zinc-200 bg-white hover:border-green-300 hover:shadow-md"
+                        }`}
+                        onClick={() => selectTable(num)}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
+                          <svg viewBox="0 0 64 64" fill="currentColor" className="h-full w-full"><rect x="8" y="22" width="48" height="4" rx="1" opacity="0.6"/><line x1="14" y1="26" x2="14" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="26" x2="50" y2="50" stroke="currentColor" strokeWidth="3"/><line x1="14" y1="50" x2="8" y2="56" stroke="currentColor" strokeWidth="3"/><line x1="50" y1="50" x2="56" y2="56" stroke="currentColor" strokeWidth="3"/></svg>
+                        </div>
+                        
+                        {/* Close/Action buttons */}
+                        <div className="absolute top-1.5 right-1.5 flex gap-1 z-10">
+                          {total === 0 && data.participants.length === 0 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); closeTable(num) }}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                              title="Excluir mesa vazia"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {total > 0 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); closeTable(num) }}
+                              className="flex h-6 w-24 items-center justify-center rounded-full bg-amber-500 text-white hover:bg-amber-600 text-[10px] font-medium"
+                              title="Fechar mesa"
+                            >
+                              Fechar mesa
+                            </button>
+                          )}
+                          {(data.participants.length > 0 || total > 0) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openSplitBill(num) }}
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600"
+                              title="Dividir conta / Pagamento parcial"
+                            >
+                              <Users className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        <span className={`text-2xl font-bold z-10 ${isActive ? "text-green-700" : darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{num}</span>
+                        {tableNames[num] && (
+                          <span className={`text-xs font-medium z-10 ${isActive ? "text-green-600" : "text-zinc-500"}`}>{tableNames[num]}</span>
+                        )}
+                        
+                        {/* Status indicators */}
+                        <div className="flex flex-col items-center gap-0.5 z-10">
+                          {total > 0 && (
+                            <span className="text-xs font-medium text-green-600">Total: {formatCurrency(total)}</span>
+                          )}
+                          {paidTotal > 0 && (
+                            <span className="text-xs font-medium text-blue-600">Pago: {formatCurrency(paidTotal)}</span>
+                          )}
+                          {remaining > 0 && paidTotal > 0 && (
+                            <span className="text-xs font-medium text-amber-600">Restante: {formatCurrency(remaining)}</span>
+                          )}
+                          {isFullyPaid && (
+                            <span className="text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">Pago</span>
+                          )}
+                          {data.participants.length > 0 && !isFullyPaid && (
+                            <span className="text-[10px] text-zinc-400">{data.participants.length} pessoa(s)</span>
+                          )}
+                          {data.cart.length === 0 && data.participants.length === 0 && tableOrdersTotal === 0 && (
+                            <span className="text-[10px] text-zinc-400">Vazia</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div
+                    className={`flex h-40 min-w-[8rem] flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors hover:border-green-400 hover:text-green-600 cursor-pointer ${darkMode ? "border-zinc-600 text-zinc-500" : "border-zinc-300 bg-white text-zinc-400"}`}
+                    onClick={openNewTable}
+                  >
+                    <svg viewBox="0 0 64 64" className={`h-16 w-16 ${darkMode ? "text-zinc-500" : "text-zinc-300"} transition-colors`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="8" y="22" width="48" height="4" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" />
+                      <line x1="14" y1="26" x2="14" y2="50" />
+                      <line x1="50" y1="26" x2="50" y2="50" />
+                      <line x1="14" y1="50" x2="8" y2="56" />
+                      <line x1="50" y1="50" x2="56" y2="56" />
+                      <ellipse cx="24" cy="18" rx="6" ry="4" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5" />
+                      <ellipse cx="40" cy="18" rx="6" ry="4" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5" />
+                      <circle cx="20" cy="32" r="1" fill="currentColor" opacity="0.3" />
+                      <circle cx="32" cy="32" r="1" fill="currentColor" opacity="0.3" />
+                      <circle cx="44" cy="32" r="1" fill="currentColor" opacity="0.3" />
+                    </svg>
+                    <span className="mt-1 text-xs font-medium">Nova mesa</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cart + Summary */}
+            <div className={`flex w-80 flex-col border-l ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+              {/* Cart Header */}
+              <div className={`border-b px-4 py-2 ${darkMode ? "border-zinc-700" : "border-zinc-100"}`}>
+                <div className="flex items-center justify-between">
+                  <h2 className={`text-sm font-semibold ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>
+                    {activeTable ? `Mesa ${activeTable}` : "Venda Atual"}
+                  </h2>
+                  {activeTable !== null && (
+                    <button
+                      onClick={deselectTable}
+                      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                    >
+                      <X className="h-3 w-3" />
+                      Balcão
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto px-4 py-2">
+                {cart.length === 0 ? (
+                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
+                    <ShoppingBag className="mb-2 h-8 w-8" />
+                    <p className="text-xs">Toque nos produtos para adicionar</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {cart.map((item) => (
+                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-zinc-700" : "bg-zinc-50"}`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`truncate text-xs font-medium ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.name}</p>
+                          <p className={`text-[10px] ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQuantity(item.productId, -1)}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
+                          <span className={`w-5 text-center text-xs font-medium ${darkMode ? "text-zinc-200" : ""}`}>{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, 1)}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                          <button
+                            onClick={() => removeItem(item.productId)}
+                            className="ml-1 text-red-400 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary */}
+              <div className={`border-t px-4 py-3 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"}`}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Total</span>
+                  <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
+                </div>
+
+                {/* Send to preparation */}
+                <label className={`mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-amber-800 bg-amber-900/20" : "border-amber-200 bg-amber-50"}`}>
+                  <input
+                    type="checkbox"
+                    checked={sendToPrep}
+                    onChange={(e) => setSendToPrep(e.target.checked)}
+                    className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div className="flex-1">
+                    <p className={`text-xs font-medium ${darkMode ? "text-amber-400" : "text-amber-800"}`}>Enviar para preparo</p>
+                    <p className={`text-[10px] ${darkMode ? "text-amber-500" : "text-amber-600"}`}>Aparece no módulo Pedidos</p>
+                  </div>
+                </label>
+
+                {/* Print receipt */}
+                <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-blue-800 bg-blue-900/20" : "border-blue-200 bg-blue-50"}`}>
+                  <input
+                    type="checkbox"
+                    checked={printReceipt}
+                    onChange={(e) => {
+                      setPrintReceipt(e.target.checked)
+                      localStorage.setItem("pedefacil-print-receipt", String(e.target.checked))
+                    }}
+                    className="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <p className={`text-xs font-medium ${darkMode ? "text-blue-400" : "text-blue-800"}`}>Gerar cupom</p>
+                    <p className={`text-[10px] ${darkMode ? "text-blue-500" : "text-blue-600"}`}>Imprimir após venda</p>
+                  </div>
+                </label>
+
+                {/* Payment */}
+                <div className="mb-3 flex gap-1.5">
+                  {[
+                    { value: "cash", icon: Banknote, label: "Dinheiro", activeColor: "border-green-500 bg-green-50 text-green-700" },
+                    { value: "card", icon: CreditCard, label: "Cartão", activeColor: "border-blue-500 bg-blue-50 text-blue-700" },
+                    { value: "pix", icon: DollarSign, label: "Pix", activeColor: "border-purple-500 bg-purple-50 text-purple-700" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setPayment(p.value)}
+                      className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
+                        payment === p.value
+                          ? p.activeColor
+                          : darkMode ? "border-zinc-600 text-zinc-400" : "border-zinc-200 text-zinc-500"
+                      }`}
+                    >
+                      <p.icon className="h-3 w-3" />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={finalizeSale}
+                  disabled={closing || cart.length === 0 || (!cashRegister && !activeTable)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {closing ? (
+                    "Registrando..."
+                  ) : !cashRegister && !activeTable ? (
+                    "Abra o caixa no financeiro antes de vender"
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5" />
+                      {activeTable ? `ADICIONAR À MESA ${activeTable}` : "FINALIZAR VENDA"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -1153,7 +1439,7 @@ export default function CaixaPOSPage() {
               </p>
               {lastOrder && (
                 <p className="text-sm text-zinc-500 mt-1">
-                  Pedido #{lastOrder.orderNumber || lastOrder.id?.slice(0, 0, 8)}
+                  Pedido #{lastOrder.orderNumber || lastOrder.id?.slice(0, 8)}
                 </p>
               )}
               {activeTable && !sendToPrep && <p className="text-sm text-zinc-500">Pagamento será cobrado no fechamento da mesa</p>}
@@ -1293,12 +1579,59 @@ export default function CaixaPOSPage() {
               const pendingOrders = tableOrders.filter((o: any) => o.status !== "delivered")
               const deliveredOrders = tableOrders.filter((o: any) => o.status === "delivered")
               const total = tableOrders.reduce((s: number, o: any) => s + o.total, 0)
+              const tableData = tableData[closingTableNumber!] || { cart: [], participants: [] }
+              const cartTotal = tableData.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+              const participantsTotal = tableData.participants.reduce((s, p) => s + getParticipantSubtotal(p), 0)
+              const grandTotal = total + cartTotal + participantsTotal
+              const paidTotal = tableData.participants.reduce((s, p) => s + p.paidAmount, 0)
+              const remaining = grandTotal - paidTotal
+
               return (
                 <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-                  {tableOrders.length === 0 ? (
+                  {grandTotal === 0 && tableData.participants.length === 0 ? (
                     <p className="text-sm text-zinc-400 text-center py-4">Nenhum pedido para esta mesa</p>
                   ) : (
                     <>
+                      {/* Show participants if any */}
+                      {tableData.participants.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-zinc-600 mb-2">Divisão da conta ({tableData.participants.length} pessoas)</p>
+                          <div className="space-y-2 mb-3">
+                            {tableData.participants.map((p) => {
+                              const subtotal = getParticipantSubtotal(p)
+                              const remaining = subtotal - p.paidAmount
+                              return (
+                                <div key={p.id} className={`rounded-lg p-3 text-sm ${remaining <= 0.01 ? "bg-green-50 border border-green-200" : "bg-amber-50 border border-amber-200"}`}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-medium text-zinc-700">{p.name}</span>
+                                    {remaining > 0.01 && (
+                                      <button
+                                        onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); openSplitBill(closingTableNumber!); setTimeout(() => openPartialPayment(p), 100) }}
+                                        className="text-[10px] text-blue-600 hover:underline"
+                                      >
+                                        Abater
+                                      </button>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-zinc-500">{p.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}</p>
+                                  <div className="flex justify-between text-xs mt-1">
+                                    <span className={remaining <= 0.01 ? "text-green-600" : "text-zinc-600"}>Subtotal: {formatCurrency(subtotal)}</span>
+                                    <span className={remaining <= 0.01 ? "text-green-600" : "text-amber-600"}>
+                                      {remaining <= 0.01 ? "Pago" : `Restante: ${formatCurrency(remaining)}`}
+                                    </span>
+                                  </div>
+                                  {p.paymentMethods.length > 0 && (
+                                    <div className="mt-1 text-[10px] text-zinc-500">
+                                      Pagamentos: {p.paymentMethods.map((pm: any) => `${pm.method}: ${formatCurrency(pm.amount)}`).join(", ")}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Pending orders */}
                       {pendingOrders.length > 0 && (
                         <div>
@@ -1357,17 +1690,47 @@ export default function CaixaPOSPage() {
                         </div>
                       )}
 
+                      {/* Cart items (not yet sent to kitchen) */}
+                      {tableData.cart.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-blue-600 mb-2">Itens no carrinho (não enviados)</p>
+                          <div className="space-y-2">
+                            {tableData.cart.map((item: any) => (
+                              <div key={item.productId} className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="font-medium text-zinc-700">{item.name}</span>
+                                  <span className="text-xs text-zinc-500">{item.quantity}x {formatCurrency(item.price)}</span>
+                                </div>
+                                <p className="text-xs font-medium text-green-600 mt-1">{formatCurrency(item.price * item.quantity)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Total */}
                       <div className="rounded-lg bg-green-50 p-3 text-sm border border-green-200 sticky bottom-0">
                         <div className="flex justify-between items-center">
-                          <span className="text-green-700 font-medium">Total</span>
-                          <span className="text-lg font-bold text-green-700">{formatCurrency(total)}</span>
+                          <span className="text-green-700 font-medium">Total da mesa</span>
+                          <span className="text-lg font-bold text-green-700">{formatCurrency(grandTotal)}</span>
                         </div>
+                        {paidTotal > 0 && (
+                          <div className="flex justify-between items-center mt-1 text-xs">
+                            <span className="text-blue-600">Já pago</span>
+                            <span className="font-bold text-blue-600">{formatCurrency(paidTotal)}</span>
+                          </div>
+                        )}
+                        {remaining > 0.01 && (
+                          <div className="flex justify-between items-center mt-1 text-xs">
+                            <span className="text-amber-600">Restante a pagar</span>
+                            <span className="font-bold text-amber-600">{formatCurrency(remaining)}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Payment */}
                       <div>
-                        <label className="text-xs text-zinc-500">Forma de pagamento</label>
+                        <label className="text-xs text-zinc-500">Forma de pagamento do restante</label>
                         <div className="flex gap-2 mt-1">
                           {[
                             { value: "cash", label: "Dinheiro" },
@@ -1390,13 +1753,332 @@ export default function CaixaPOSPage() {
                       </div>
 
                       <button onClick={handleCloseTable} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
-                        Fechar Mesa e Cobrar
+                        Fechar Mesa e Cobrar Restante
                       </button>
                     </>
                   )}
                 </div>
               )
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Split Bill Modal */}
+      {splitBillTable !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className={`text-lg font-bold ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>
+                Mesa {splitBillTable}{tableNames[splitBillTable] ? ` - ${tableNames[splitBillTable]}` : ""}
+              </h3>
+              <button onClick={() => { setSplitBillTable(null); setSplitBillMode("participants"); setEditingParticipant(null) }} className="text-zinc-400 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Mode: Participants List */}
+            {splitBillMode === "participants" && (
+              <div className="flex-1 overflow-y-auto space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <p className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Participantes</p>
+                  <button
+                    onClick={() => setEditingParticipant({ id: `p-${Date.now()}`, name: "", items: [], paidAmount: 0, paymentMethods: [] })}
+                    className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    Adicionar
+                  </button>
+                </div>
+
+                {tableData[splitBillTable]?.participants.length === 0 ? (
+                  <div className={`text-center py-8 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
+                    <Users className="mx-auto mb-2 h-8 w-8" />
+                    <p className="text-sm">Nenhum participante</p>
+                    <p className="text-xs mt-1">Adicione pessoas para dividir a conta</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {tableData[splitBillTable]?.participants.map((participant) => {
+                      const subtotal = getParticipantSubtotal(participant)
+                      const remaining = subtotal - participant.paidAmount
+                      const isPaid = remaining <= 0.01
+                      return (
+                        <div key={participant.id} className={`flex items-center justify-between rounded-lg p-3 ${isPaid ? "bg-green-50 border border-green-200" : darkMode ? "bg-zinc-700 border border-zinc-600" : "bg-zinc-50 border border-zinc-200"}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>{participant.name}</span>
+                              {isPaid && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Pago</span>}
+                            </div>
+                            <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>
+                              {participant.items.length} item(s) • Subtotal: {formatCurrency(subtotal)}
+                            </p>
+                            {participant.paidAmount > 0 && (
+                              <p className="text-xs text-blue-600">Pago: {formatCurrency(participant.paidAmount)}</p>
+                            )}
+                            {remaining > 0.01 && (
+                              <p className="text-xs text-amber-600">Restante: {formatCurrency(remaining)}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isPaid && (
+                              <button
+                                onClick={() => openPartialPayment(participant)}
+                                className="flex items-center gap-1 rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
+                              >
+                                <DollarSign className="h-3 w-3" />
+                                Abater
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setEditingParticipant(participant)}
+                              className={`p-1.5 rounded ${darkMode ? "text-zinc-400 hover:bg-zinc-700" : "text-zinc-500 hover:bg-zinc-200"}`}
+                              title="Editar nome"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => removeParticipant(participant.id)}
+                              className={`p-1.5 rounded text-red-400 hover:bg-red-500/10 ${darkMode ? "text-red-400" : ""}`}
+                              title="Remover"
+                            >
+                              <MinusCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="mt-4 flex gap-2">
+                  {tableData[splitBillTable]?.participants.length > 0 && (
+                    <button
+                      onClick={startAssignItems}
+                      className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
+                    >
+                      <Scissors className="h-4 w-4" />
+                      Dividir Itens
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setSplitBillTable(null); setSplitBillMode("participants") }}
+                    className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700"
+                  >
+                    Concluído
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Mode: Assign Items */}
+            {splitBillMode === "assign" && (
+              <div className="flex-1 overflow-y-auto flex flex-col">
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-xs font-medium text-amber-800">Arraste itens para os participantes ou clique para atribuir</p>
+                  <p className="text-[10px] text-amber-600 mt-1">Itens do carrinho atual da mesa + pedidos já feitos</p>
+                </div>
+
+                {/* All items available to assign */}
+                <div className="mb-3">
+                  <p className={`text-xs font-medium mb-2 ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Itens disponíveis</p>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                    {(() => {
+                      const data = tableData[splitBillTable!] || { cart: [], participants: [] }
+                      const allItems: CartItem[] = [...data.cart]
+                      const tableOrders = orders.filter((o: any) => o.tableNumber === splitBillTable && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                      for (const order of tableOrders) {
+                        const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+                        for (const item of items) {
+                          allItems.push({ productId: item.id || `order-${order.id}-${item.name}`, name: item.name, price: item.price, quantity: item.quantity })
+                        }
+                      }
+                      // Remove items already assigned
+                      const assignedIds = new Set(data.participants.flatMap(p => p.items.map(i => i.productId)))
+                      return allItems.filter(item => !assignedIds.has(item.productId))
+                    })().map((item) => (
+                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 cursor-grab ${darkMode ? "bg-zinc-700 border border-zinc-600" : "bg-zinc-100 border border-zinc-200"}`}>
+                        <span className={`text-xs font-medium ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>{item.name}</span>
+                        <span className="text-xs text-green-600">{item.quantity}x {formatCurrency(item.price)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Participants to assign to */}
+                <div className="flex-1 overflow-y-auto">
+                  <p className={`text-xs font-medium mb-2 ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Participantes</p>
+                  <div className="space-y-2">
+                    {tableData[splitBillTable]?.participants.map((participant) => (
+                      <div key={participant.id} className={`rounded-lg p-3 ${darkMode ? "bg-zinc-700 border border-zinc-600" : "bg-zinc-50 border border-zinc-200"}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`font-medium ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>{participant.name}</span>
+                          <span className="text-xs text-green-600">{participant.items.length} itens</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {participant.items.map((item) => (
+                            <span key={item.productId} className="flex items-center gap-1 rounded bg-white px-2 py-1 text-xs border border-zinc-200">
+                              {item.name} ({item.quantity}x)
+                              <button onClick={() => removeItemFromParticipant(participant.id, item.productId, 1)} className="text-red-500 hover:text-red-700">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                          {participant.items.length === 0 && (
+                            <span className={`text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Nenhum item</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={finishAssignItems}
+                    className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700"
+                  >
+                    Concluir Divisão
+                  </button>
+                  <button
+                    onClick={() => setSplitBillMode("participants")}
+                    className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Mode: Partial Payment */}
+            {splitBillMode === "partial" && partialPaymentParticipant && (
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className={`rounded-lg p-4 ${darkMode ? "bg-zinc-700" : "bg-zinc-50"}`}>
+                  <p className={`text-sm font-medium ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}>{partialPaymentParticipant.name}</p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Subtotal: {formatCurrency(getParticipantSubtotal(partialPaymentParticipant))} •
+                    Pago: {formatCurrency(partialPaymentParticipant.paidAmount)} •
+                    Restante: {formatCurrency(getParticipantRemaining(partialPaymentParticipant))}
+                  </p>
+                  <div className="mt-2 text-[10px] text-zinc-400">
+                    Itens: {partialPaymentParticipant.items.map(i => `${i.quantity}x ${i.name}`).join(", ")}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Valor a abater (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={partialPaymentAmount}
+                    onChange={(e) => setPartialPaymentAmount(e.target.value)}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700 text-zinc-100 placeholder:text-zinc-500" : "border-zinc-200"}`}
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Forma de pagamento</label>
+                  <div className="flex gap-2 mt-1">
+                    {[
+                      { value: "cash", icon: Banknote, label: "Dinheiro" },
+                      { value: "card", icon: CreditCard, label: "Cartão" },
+                      { value: "pix", icon: DollarSign, label: "Pix" },
+                    ].map((p) => (
+                      <button
+                        key={p.value}
+                        onClick={() => setPartialPaymentMethod(p.value as "cash" | "card" | "pix")}
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg border p-2 text-xs font-medium transition-colors ${
+                          partialPaymentMethod === p.value
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : darkMode ? "border-zinc-600 text-zinc-400" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                        }`}
+                      >
+                        <p.icon className="h-3 w-3" />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={closePartialPayment}
+                    className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={processPartialPayment}
+                    disabled={!partialPaymentAmount || parseFloat(partialPaymentAmount) <= 0}
+                    className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Confirmar Abatimento
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Edit Participant Name Modal */}
+            {editingParticipant && splitBillMode === "participants" && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="rounded-2xl bg-white p-6 shadow-2xl w-full max-w-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-zinc-900">Editar Participante</h3>
+                    <button onClick={() => setEditingParticipant(null)} className="text-zinc-400 hover:text-zinc-600">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Nome do participante"
+                      value={editingParticipant.name}
+                      onChange={(e) => setEditingParticipant({ ...editingParticipant, name: e.target.value })}
+                      className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (editingParticipant.name.trim()) {
+                            if (editingParticipant.id.startsWith("p-") && Date.now() - parseInt(editingParticipant.id.split("-")[1]) < 10000) {
+                              // New participant
+                              addParticipant()
+                            } else {
+                              // Update existing
+                              setTableData(prev => {
+                                const table = prev[splitBillTable!]
+                                if (!table) return prev
+                                return {
+                                  ...prev,
+                                  [splitBillTable!]: {
+                                    ...table,
+                                    participants: table.participants.map(p => p.id === editingParticipant.id ? { ...p, name: editingParticipant.name } : p)
+                                  }
+                                }
+                              })
+                            }
+                          }
+                          setEditingParticipant(null)
+                        }}
+                        className="flex-1 rounded-xl bg-green-600 py-2 text-sm font-bold text-white hover:bg-green-700"
+                      >
+                        Salvar
+                      </button>
+                      <button
+                        onClick={() => setEditingParticipant(null)}
+                        className="flex-1 rounded-xl border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1432,6 +2114,17 @@ export default function CaixaPOSPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel="Confirmar"
+        cancelLabel="Cancelar"
+        variant="warning"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} })}
+      />
     </div>
   )
 }
@@ -1472,7 +2165,6 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
   })
 
   async function updateStatus(orderId: string, status: string) {
-    // Optimistic: notify and refresh
     localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "status-changed", ts: Date.now() }))
     await fetchAuth(`/api/orders/${orderId}`, {
       method: "PATCH",
@@ -1610,7 +2302,6 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                     )}
                   </div>
 
-                  {/* Buttons - "Prontos" tab, pickup orders only */}
                   {filter === "ready" && order.status === "ready" && isPickup && (
                     <div className="flex flex-col gap-2">
                       {(order.paymentMethod === "online" || order.paymentMethod === "asaas") ? (
@@ -1637,7 +2328,6 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
         </div>
       )}
 
-      {/* Payment Modal for Pickup Orders */}
       {payModalOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="rounded-2xl bg-white p-6 shadow-2xl w-full max-w-sm">
@@ -1799,17 +2489,6 @@ function BalcaoTab({ orders, tableNames, establishmentId, onRefresh, darkMode }:
           })}
         </div>
       )}
-
-      <ConfirmDialog
-        open={confirmDialog.open}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel="Confirmar"
-        cancelLabel="Cancelar"
-        variant="warning"
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} })}
-      />
     </div>
   )
 }
