@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, Scissors, ArrowRightLeft, RotateCcw, UserPlus, MinusCircle, Edit2, Eye, EyeOff } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -322,7 +322,7 @@ export default function CaixaPOSPage() {
     const tableOrders = orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
     
     // Calculate total from cart + orders
-    const cartTotal = data.cart.reduce((s, i) => s + i.price * i.price * i.quantity, 0)
+    const cartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
     const ordersTotal = tableOrders.reduce((s: number, o: any) => s + o.total, 0)
     const total = cartTotal + ordersTotal
 
@@ -562,6 +562,7 @@ export default function CaixaPOSPage() {
         const table = prev[splitBillTable!]
         if (!table) return prev
         return {
+          return {
           ...prev,
           [splitBillTable!]: {
             ...table,
@@ -1131,7 +1132,6 @@ export default function CaixaPOSPage() {
 
               {/* Custom item */}
               <div className={`mt-3 flex items-center gap-2 rounded-lg border border-dashed p-2 ${darkMode ? "border-zinc-600" : "border-zinc-300"}`}>
-                <input
                 <input
                   placeholder="Item avulso"
                   value={customName}
@@ -2410,7 +2410,7 @@ function BalcaoTab({ orders, tableNames, establishmentId, onRefresh, darkMode }:
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f.value ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-30000 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              filter === f.value ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
             }`}
           >
             {f.label}
