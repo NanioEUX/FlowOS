@@ -562,7 +562,6 @@ export default function CaixaPOSPage() {
         const table = prev[splitBillTable!]
         if (!table) return prev
         return {
-          return {
           ...prev,
           [splitBillTable!]: {
             ...table,
@@ -957,6 +956,7 @@ export default function CaixaPOSPage() {
               )}
             </>
           ) : (
+            ) : (
             <button
               onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
               className="rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-green-700"
