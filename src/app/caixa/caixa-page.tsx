@@ -106,7 +106,7 @@ export default function CaixaPOSPage() {
   const [openingAmount, setOpeningAmount] = useState("")
   const [closingAmount, setClosingAmount] = useState("")
   const [transferUserId, setTransferUserId] = useState("")
-  const [allUsers, setAllUsers] = useState<any[]()
+  const [allUsers, setAllUsers] = useState<any[]>([])
   const [closingTableModal, setClosingTableModal] = useState(false)
   const [closingTableNumber, setClosingTableNumber] = useState<number | null>(null)
   const [closingTablePayment, setClosingTablePayment] = useState("cash")
@@ -413,6 +413,7 @@ export default function CaixaPOSPage() {
       if (allItems.length > 0) {
         participants = [{
           id: `p-${Date.now()}`,
+          name:}`,
           name: "Cliente 1",
           items: allItems,
           paidAmount: 0,
@@ -894,6 +895,7 @@ export default function CaixaPOSPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
       </div>
     )
+  )
   }
 
   const hasPedidos = user?.permissions?.includes("pedidos")
@@ -2126,6 +2128,7 @@ export default function CaixaPOSPage() {
       />
     </div>
   )
+  )
 }
 
 const statusLabels: Record<string, string> = {
@@ -2310,142 +2313,3 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                         >
                           Entregar Pedido
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => { setPayModalOrder(order); setPayMethod("cash") }}
-                          className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
-                        >
-                          Pagar
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {payModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-2xl bg-white p-6 shadow-2xl w-full max-w-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-zinc-900">Pagar Pedido #{payModalOrder.orderNumber}</h3>
-              <button onClick={() => setPayModalOrder(null)} className="text-zinc-400 hover:text-zinc-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="rounded-lg bg-zinc-50 p-3 text-sm">
-                <p className="text-zinc-500">{payModalOrder.customerName}</p>
-                <p className="text-lg font-bold text-green-600">{formatCurrency(payModalOrder.total)}</p>
-              </div>
-              <div>
-                <label className="text-xs text-zinc-500">Forma de pagamento</label>
-                <div className="flex gap-2 mt-1">
-                  {[
-                    { value: "cash", label: "Dinheiro" },
-                    { value: "card", label: "Cartão" },
-                    { value: "pix", label: "Pix" },
-                  ].map((p) => (
-                    <button
-                      key={p.value}
-                      onClick={() => setPayMethod(p.value)}
-                      className={`flex-1 rounded-lg border p-2 text-xs font-medium transition-colors ${
-                        payMethod === p.value
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={handlePayOrder} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
-                Pagar e Entregar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function BalcaoTab({ orders, tableNames, establishmentId, onRefresh, darkMode }: { orders: any[]; tableNames: Record<number, string>; establishmentId: string; onRefresh: () => void; darkMode: boolean }) {
-  const [filter, setFilter] = useState("all")
-  const allBalcao = orders.filter((o: any) => o.orderType === "presencial")
-  const activeBalcao = allBalcao.filter((o: any) => ["preparing", "ready"].includes(o.status))
-  const deliveredBalcao = allBalcao.filter((o: any) => o.status === "delivered" && new Date(o.deliveredAt || o.createdAt).toDateString() === new Date().toDateString())
-  const balcaoOrders = filter === "delivered" ? deliveredBalcao : activeBalcao.filter((o: any) => {
-    if (filter === "all") return true
-    if (filter === "preparing") return o.status === "preparing"
-    if (filter === "ready") return o.status === "ready"
-    return true
-  })
-
-  async function updateStatus(orderId: string, status: string) {
-    localStorage.setItem("pedefacil-last-action", JSON.stringify({ type: "status-changed", ts: Date.now() }))
-    await fetchAuth(`/api/orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    })
-    onRefresh()
-  }
-
-  return (
-    <div className="flex-1 overflow-y-auto p-4">
-      <div className="mb-4 flex gap-2">
-        {[
-          { value: "all", label: "Todos", count: activeBalcao.length },
-          { value: "preparing", label: "Preparando", count: activeBalcao.filter((o: any) => o.status === "preparing").length },
-          { value: "ready", label: "Prontos", count: activeBalcao.filter((o: any) => o.status === "ready").length },
-          { value: "delivered", label: "Entregue", count: deliveredBalcao.length },
-        ].map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f.value ? "bg-green-600 text-white" : darkMode ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-            }`}
-          >
-            {f.label}
-            {f.count > 0 && (
-              <span className={`ml-1 rounded-full px-1 py-0.5 text-[9px] font-bold ${
-                filter === f.value ? "bg-white/20" : darkMode ? "bg-zinc-600" : "bg-zinc-200"
-              }`}>
-                {f.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {balcaoOrders.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>
-          <Store className="mb-2 h-8 w-8" />
-          <p className="text-sm">
-            {filter === "delivered" ? "Nenhum pedido entregue hoje" :
-             filter === "preparing" ? "Nenhum em preparo" :
-             filter === "ready" ? "Nenhum pedido pronto" :
-             "Nenhum pedido de balcão"}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {balcaoOrders.map((order) => {
-            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            const isTable = order.tableNumber !== null
-            const tableLabel = isTable ? (tableNames[order.tableNumber] ? `Mesa ${order.tableNumber} - ${tableNames[order.tableNumber]}` : `Mesa ${order.tableNumber}`) : null
-
-            return (
-              <div key={order.id} className={`rounded-xl border p-3 ${
-                order.status === "ready" && !isTable ? "border-amber-400 shadow-md" : darkMode ? "border-zinc-600 bg-zinc-800" : "border-zinc-200 bg-white"
-              }`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {order.orderNumber && (
