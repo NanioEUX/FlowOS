@@ -271,13 +271,20 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
     <div className={`flex h-screen flex-col ${darkMode ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4" style={{ backgroundColor: headerBg }}>
-        <div className="flex items-center gap-4">
-          {est.logo ? <img src={est.logo} alt={est.name} className="h-14 w-14 rounded-2xl object-cover shadow-md" /> : <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-500 text-xl font-bold text-white shadow-md">{est.name.charAt(0)}</div>}
-          <div>
-            <h1 className={`text-xl font-extrabold leading-tight ${headerTextColor}`}>{est.name}</h1>
-            <p className={`text-sm font-semibold ${headerSubtext}`}>Mesa {tableNumber}</p>
+        {/* Left: logo + establishment */}
+        <div className="flex items-center gap-3">
+          {est.logo ? <img src={est.logo} alt={est.name} className="h-11 w-11 rounded-xl object-cover shadow-sm" /> : <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-green-500 text-sm font-bold text-white shadow-sm`}>{est.name.charAt(0)}</div>}
+          <span className={`text-sm font-semibold ${headerSubtext}`}>{est.name}</span>
+        </div>
+
+        {/* Center: table number */}
+        <div className="flex items-center gap-2">
+          <div className={`rounded-2xl px-6 py-2 shadow-sm ${est.colorsPublished && isLightColor(est.headerColor) ? "bg-zinc-900 text-white" : darkMode ? "bg-white/10 text-white" : "bg-zinc-900 text-white"}`}>
+            <span className="text-2xl font-extrabold tracking-tight">Mesa {tableNumber}</span>
           </div>
         </div>
+
+        {/* Right: actions */}
         <div className="flex items-center gap-3">
           {tableStatus && tableStatus.totalPending > 0 && (
             <span className="rounded-full bg-green-100 px-4 py-1.5 text-sm font-bold text-green-700 dark:bg-green-950 dark:text-green-400">
