@@ -68,7 +68,6 @@ export default function CaixaPOSPage() {
   const [stagingCart, setStagingCart] = useState<CartItem[]>([])
   const [payment, setPayment] = useState("cash")
   const [closing, setClosing] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 })
   const [currentTime, setCurrentTime] = useState("")
   const [customName, setCustomName] = useState("")
@@ -109,7 +108,7 @@ export default function CaixaPOSPage() {
     }
     return true
   })
-  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void }>({ open: false, title: "", message: "", onConfirm: () => {} })
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void; status: "idle" | "loading" | "success"; successTitle: string; successMessage: string }>({ open: false, title: "", message: "", onConfirm: () => {}, status: "idle", successTitle: "", successMessage: "" })
   const [tableCount, setTableCount] = useState(10)
   const [lastClosedOrder, setLastClosedOrder] = useState<{ cart: any[]; tableLabel: string; total: number; orderNumber?: number; createdAt?: string } | null>(null)
 
@@ -535,14 +534,20 @@ export default function CaixaPOSPage() {
         open: true,
         title: `Adicionar pedido à ${tableLabel}`,
         message: `${mergedCart.length} itens — ${formatCurrency(total)}`,
-        onConfirm: () => { setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} }); executeSale(isMesa, tableLabel, mergedCart, total) }
+        onConfirm: () => { setConfirmDialog((prev) => ({ ...prev, status: "loading" })); executeSale(isMesa, tableLabel, mergedCart, total) },
+        status: "idle",
+        successTitle: "",
+        successMessage: "",
       })
     } else {
       setConfirmDialog({
         open: true,
         title: `Finalizar venda ${tableLabel}`,
         message: `Total: ${formatCurrency(total)}`,
-        onConfirm: () => { setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} }); executeSale(isMesa, tableLabel, mergedCart, total) }
+        onConfirm: () => { setConfirmDialog((prev) => ({ ...prev, status: "loading" })); executeSale(isMesa, tableLabel, mergedCart, total) },
+        status: "idle",
+        successTitle: "",
+        successMessage: "",
       })
     }
   }
@@ -659,16 +664,25 @@ export default function CaixaPOSPage() {
         setActiveTable(null)
       }
 
-      if (!isMesa && printReceipt && orderData) {
-        setShowSuccess(true)
-        setTimeout(() => {
-          setShowSuccess(false)
+      const successMsg = isMesa
+        ? (savedNeedsPrep ? "Pedido adicionado e enviado para preparo!" : "Pedido adicionado à mesa!")
+        : (savedNeedsPrep ? "Pedido enviado para preparo!" : "Venda registrada!")
+      const successSub = isMesa && savedNeedsPrep ? "Acompanhe no módulo Pedidos" : ""
+
+      setConfirmDialog((prev) => ({
+        ...prev,
+        status: "success",
+        successTitle: successMsg,
+        successMessage: successSub || `Pedido #${orderData.orderNumber || orderData.id?.slice(0, 8)}`,
+      }))
+
+      setTimeout(() => {
+        setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, status: "idle", successTitle: "", successMessage: "" })
+        if (!isMesa && printReceipt && orderData) {
           setShowReceipt(true)
-        }, 1500)
-      } else {
-        setShowSuccess(true)
-        setTimeout(() => setShowSuccess(false), 2000)
-      }
+        }
+      }, 2500)
+
       loadData(establishmentId)
     } catch (err) {
       console.error(err)
@@ -786,8 +800,11 @@ export default function CaixaPOSPage() {
       open: true,
       title: "Transferir caixa",
       message: `Transferir caixa para ${toUser?.name || "outro atendente"}? Você será desconectado.`,
+      status: "idle",
+      successTitle: "",
+      successMessage: "",
       onConfirm: async () => {
-        setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} })
+        setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, status: "idle", successTitle: "", successMessage: "" })
         try {
           await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
             method: "POST",
@@ -1351,26 +1368,6 @@ export default function CaixaPOSPage() {
         <PedidosTab orders={orders} deliveryPeople={deliveryPeople} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} darkMode={darkMode} />
       )}
 
-      {/* Success overlay */}
-      {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="rounded-2xl bg-white p-8 shadow-2xl animate-bounce">
-            <div className="flex flex-col items-center">
-              <CheckCircle className="mb-3 h-16 w-16 text-green-500" />
-              <p className="text-lg font-bold text-zinc-900">
-                {activeTable ? (needsPrep ? "Pedido adicionado e enviado para preparo!" : "Pedido adicionado à mesa!") : needsPrep ? "Pedido enviado para preparo!" : "Venda registrada!"}
-              </p>
-              {lastOrder && (
-                <p className="text-sm text-zinc-500 mt-1">
-                  Pedido #{lastOrder.orderNumber || lastOrder.id?.slice(0, 8)}
-                </p>
-              )}
-              {activeTable && needsPrep && <p className="text-sm text-zinc-500">Acompanhe no módulo Pedidos</p>}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Receipt popup */}
       {showReceipt && lastOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -1384,7 +1381,6 @@ export default function CaixaPOSPage() {
                 onClick={() => {
                   printReceiptPopup(lastOrder)
                   setShowReceipt(false)
-                  setShowSuccess(false)
                 }}
                 className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700"
               >
@@ -1393,7 +1389,6 @@ export default function CaixaPOSPage() {
               <button
                 onClick={() => {
                   setShowReceipt(false)
-                  setShowSuccess(false)
                 }}
                 className="flex-1 rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
               >
@@ -1752,7 +1747,10 @@ export default function CaixaPOSPage() {
                       open: true,
                       title: `Fechar Mesa ${closingTableNumber}?`,
                       message: `Total: ${formatCurrency(remaining)}\nPagamento: ${paymentLabels[selectedPayment] || selectedPayment}`,
-                      onConfirm: () => { setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} }); handleCloseTable() }
+                      onConfirm: () => { setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, status: "idle", successTitle: "", successMessage: "" }); handleCloseTable() },
+                      status: "idle",
+                      successTitle: "",
+                      successMessage: "",
                     })
                   }}
                   disabled={closeTableMode === "split" && (!splitCount || parseInt(splitCount) < 2)}
@@ -1853,8 +1851,11 @@ export default function CaixaPOSPage() {
         confirmLabel="Confirmar"
         cancelLabel="Cancelar"
         variant="warning"
+        status={confirmDialog.status}
+        successTitle={confirmDialog.successTitle}
+        successMessage={confirmDialog.successMessage}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, status: "idle", successTitle: "", successMessage: "" })}
       />
     </div>
   )
