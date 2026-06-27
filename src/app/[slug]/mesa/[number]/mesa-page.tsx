@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Minus, Plus, X, ShoppingBag, CheckCircle, Loader2, Sun, Moon, Banknote, QrCode, Users, MinusCircle, Clock, UtensilsCrossed, ChevronDown, MessageSquare } from "lucide-react"
+import { Minus, Plus, X, ShoppingBag, CheckCircle, Loader2, Sun, Moon, Banknote, QrCode, Users, MinusCircle, Clock, UtensilsCrossed, ChevronDown, MessageSquare, CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import type { CartItem } from "@/types"
 import QRCode from "qrcode"
@@ -62,7 +62,6 @@ interface TableStatus {
 }
 
 type RightTab = "cart" | "orders"
-type PaymentMode = "menu" | "unique" | "split" | "each" | "discount"
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   new: { label: "Novo", color: "text-blue-500 bg-blue-50 dark:bg-blue-950", icon: Clock },
@@ -86,8 +85,10 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   const [sending, setSending] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [rightTab, setRightTab] = useState<RightTab>("cart")
-  const [showPaymentMenu, setShowPaymentMenu] = useState(false)
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>("menu")
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [chargeMethod, setChargeMethod] = useState<"unique" | "split" | "each" | "abater">("unique")
+  const [payMethod, setPayMethod] = useState<"cash" | "card" | "pix">("cash")
+  const [showDetails, setShowDetails] = useState(false)
   const [pixQrCode, setPixQrCode] = useState<string | null>(null)
   const [pixLoading, setPixLoading] = useState(false)
   const [splitCount, setSplitCount] = useState("2")
@@ -232,12 +233,14 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   }
 
   function resetPayment() {
-    setShowPaymentMenu(false)
-    setPaymentMode("menu")
+    setShowPaymentModal(false)
+    setChargeMethod("unique")
+    setPayMethod("cash")
     setPixQrCode(null)
     setSelectedItems(new Set())
     setDiscountAmount("")
     setSplitCount("2")
+    setShowDetails(false)
   }
 
   function getSelectedTotal(): number {
@@ -291,7 +294,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               Aberto — {formatCurrency(tableStatus.totalPending)}
             </span>
           )}
-          <button onClick={() => { setShowPaymentMenu(true); setPaymentMode("menu") }} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 active:scale-95">
+          <button onClick={() => setShowPaymentModal(true)} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 active:scale-95">
             <Banknote className="h-4 w-4" />
             Pedir a Conta
           </button>
@@ -312,234 +315,192 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
         </div>
       )}
 
-      {/* Payment modal */}
-      {paymentMode !== "menu" && (
+      {/* Payment modal - new unified design */}
+      {showPaymentModal && tableStatus && tableStatus.totalPending > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetPayment() }}>
           <div className={`w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
-            <div className="flex items-center justify-between border-b px-6 py-4 dark:border-zinc-700">
-              <h2 className="text-lg font-bold">
-                {paymentMode === "unique" && "Pagamento Único"}
-                {paymentMode === "split" && "Dividir Igual"}
-                {paymentMode === "each" && "Cada Um Paga"}
-                {paymentMode === "discount" && "Abater"}
-              </h2>
-              <button onClick={resetPayment} className="rounded-lg p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700"><X className="h-5 w-5" /></button>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b dark:border-zinc-700">
+              <div>
+                <h2 className="text-lg font-bold">Fechar Mesa {tableNumber}</h2>
+                <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-400"}`}>Confirme os itens e a forma de pagamento</p>
+              </div>
+              <button onClick={resetPayment} className="rounded-lg p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700">
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <div className="p-6">
+
+            <div className="p-6 space-y-5">
               {/* Total info */}
-              {tableStatus && (
-                <div className={`mb-5 rounded-xl border p-4 ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
-                  <div className="flex justify-between text-sm">
-                    <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Total da mesa</span>
-                    <span className="font-bold text-green-600">{formatCurrency(tableStatus.totalPending)}</span>
+              <div className={`rounded-xl border p-4 ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
+                <div className="flex justify-between text-sm">
+                  <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Total da mesa</span>
+                  <span className="font-bold">{formatCurrency(tableStatus.totalPending)}</span>
+                </div>
+                <div className={`mt-2 pt-2 border-t flex justify-between text-sm ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
+                  <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Restante a cobrar</span>
+                  <span className="text-lg font-extrabold text-green-600">{formatCurrency(chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : chargeMethod === "split" ? tableStatus.totalPending : tableStatus.totalPending)}</span>
+                </div>
+              </div>
+
+              {/* FORMA DE COBRANÇA */}
+              <div>
+                <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Forma de Cobrança</p>
+                <div className="grid grid-cols-4 gap-2">
+                  <button onClick={() => { setChargeMethod("unique"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "unique" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                    <CreditCard className={`h-5 w-5 ${chargeMethod === "unique" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "unique" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Pagamento único</span>
+                  </button>
+                  <button onClick={() => { setChargeMethod("split"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "split" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                    <div className={`h-5 w-5 flex items-center justify-center ${chargeMethod === "split" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`}>÷</div>
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "split" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Dividir igual</span>
+                  </button>
+                  <button onClick={() => { setChargeMethod("each"); setPixQrCode(null); setSelectedItems(new Set()) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "each" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                    <Users className={`h-5 w-5 ${chargeMethod === "each" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "each" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Cada um paga</span>
+                  </button>
+                  <button onClick={() => { setChargeMethod("abater"); setPixQrCode(null); setDiscountAmount("") }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "abater" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                    <MinusCircle className={`h-5 w-5 ${chargeMethod === "abater" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "abater" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Abater</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SPLIT:人数 */}
+              {chargeMethod === "split" && !pixQrCode && (
+                <div>
+                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Quantas pessoas?</p>
+                  <div className="flex items-center justify-center gap-4">
+                    <button onClick={() => setSplitCount(String(Math.max(2, parseInt(splitCount) - 1)))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className={`w-12 text-center text-2xl font-bold`}>{splitCount}</span>
+                    <button onClick={() => setSplitCount(String(parseInt(splitCount) + 1))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
-                  <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>{tableStatus.ordersCount} pedido(s)</p>
-                </div>
-              )}
-
-              {/* UNIQUE */}
-              {paymentMode === "unique" && (
-                <div className="text-center">
-                  {pixQrCode ? (
-                    <div>
-                      <p className={`mb-3 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Escaneie o QR Code com o app do banco</p>
-                      <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-                      <p className="mt-4 text-2xl font-bold text-green-600">{formatCurrency(tableStatus?.totalPending || 0)}</p>
-                      <button onClick={() => setPixQrCode(null)} className={`mt-4 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>Voltar</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className={`text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Pagar o valor total da mesa</p>
-                      <p className="text-3xl font-bold text-green-600">{formatCurrency(tableStatus?.totalPending || 0)}</p>
-                      <button onClick={() => generatePix(tableStatus?.totalPending || 0, "Pagamento Único")} disabled={pixLoading} className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-green-500 bg-green-50 p-4 text-green-700 hover:bg-green-100 disabled:opacity-50">
-                        {pixLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                        <span className="font-bold">Gerar QR Code Pix</span>
-                      </button>
-                      <button onClick={() => { const msg = encodeURIComponent(`Gostaria de pagar a Mesa ${tableNumber}. Total: ${formatCurrency(tableStatus?.totalPending || 0)}`); window.open(`https://wa.me/${est.phone?.replace(/\D/g, "")}?text=${msg}`, "_blank") }} className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-zinc-200 p-4 hover:bg-zinc-50">
-                        <Banknote className="h-5 w-5" />
-                        <span className="font-bold">Cartão ou Dinheiro</span>
-                      </button>
-                      <p className={`text-center text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Cartão e dinheiro: dirija-se ao caixa</p>
+                  {parseInt(splitCount) >= 2 && (
+                    <div className={`mt-2 text-center text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>
+                      <span className="font-bold text-green-600">{formatCurrency(tableStatus.totalPending / parseInt(splitCount))}</span> por pessoa
                     </div>
                   )}
                 </div>
               )}
 
-              {/* SPLIT */}
-              {paymentMode === "split" && (
-                <div className="text-center">
-                  {pixQrCode ? (
-                    <div>
-                      <p className={`mb-2 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Escaneie o QR Code — valor por pessoa</p>
-                      <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-                      <p className="mt-4 text-2xl font-bold text-green-600">
-                        {formatCurrency((tableStatus?.totalPending || 0) / Math.max(parseInt(splitCount) || 1, 1))}
-                      </p>
-                      <p className={`text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>por pessoa ({splitCount} pessoas)</p>
-                      <button onClick={() => setPixQrCode(null)} className={`mt-4 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>Voltar</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className={`text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Quantas pessoas?</p>
-                      <div className="flex items-center justify-center gap-4">
-                        <button onClick={() => setSplitCount(String(Math.max(2, parseInt(splitCount) - 1)))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <input type="number" min="2" max="20" value={splitCount} onChange={(e) => setSplitCount(e.target.value)} className={`w-16 text-center text-3xl font-bold ${darkMode ? "bg-transparent" : ""}`} />
-                        <button onClick={() => setSplitCount(String(parseInt(splitCount) + 1))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {parseInt(splitCount) >= 2 && (
-                        <>
-                          <div className={`rounded-xl border p-3 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                            <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Por pessoa</p>
-                            <p className="text-2xl font-bold text-green-600">
-                              {formatCurrency((tableStatus?.totalPending || 0) / parseInt(splitCount))}
-                            </p>
-                          </div>
-                          <button onClick={() => generatePix((tableStatus?.totalPending || 0) / parseInt(splitCount), `Dividir igual - ${splitCount} pessoas`)} disabled={pixLoading} className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-green-500 bg-green-50 p-4 text-green-700 hover:bg-green-100 disabled:opacity-50">
-                            {pixLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                            <span className="font-bold">Gerar QR Code Pix</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* EACH */}
-              {paymentMode === "each" && (
+              {/* EACH: itens */}
+              {chargeMethod === "each" && !pixQrCode && (
                 <div>
-                  {pixQrCode ? (
-                    <div className="text-center">
-                      <p className={`mb-3 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Escaneie o QR Code com o app do banco</p>
-                      <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-                      <p className="mt-4 text-2xl font-bold text-green-600">{formatCurrency(getSelectedTotal())}</p>
-                      <button onClick={() => setPixQrCode(null)} className={`mt-4 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>Voltar</button>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className={`mb-3 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Selecione os itens que deseja pagar:</p>
-                      <div className="space-y-2">
-                        {tableItems.map((item, idx) => (
-                          <button key={idx} onClick={() => toggleItemSelection(idx)} className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${selectedItems.has(idx) ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                            <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${selectedItems.has(idx) ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
-                              {selectedItems.has(idx) && <CheckCircle className="h-3 w-3 text-white" />}
-                            </div>
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
-                            </div>
-                            <span className={`text-sm font-bold ${darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
-                          </button>
-                        ))}
-                      </div>
-                      {selectedItems.size > 0 && (
-                        <div className="mt-4">
-                          <div className="flex justify-between rounded-xl border-2 border-green-500 bg-green-50 p-3 dark:bg-green-950">
-                            <span className="font-medium text-green-700 dark:text-green-400">Seu total</span>
-                            <span className="text-lg font-bold text-green-600">{formatCurrency(getSelectedTotal())}</span>
-                          </div>
-                          <button onClick={() => generatePix(getSelectedTotal(), "Cada um paga")} disabled={pixLoading} className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 p-4 text-white hover:bg-green-700 disabled:opacity-50">
-                            {pixLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                            <span className="font-bold">Gerar QR Code Pix</span>
-                          </button>
+                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Selecione os itens que deseja pagar:</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {tableItems.map((item, idx) => (
+                      <button key={idx} onClick={() => toggleItemSelection(idx)} className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${selectedItems.has(idx) ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                        <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${selectedItems.has(idx) ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
+                          {selectedItems.has(idx) && <CheckCircle className="h-3 w-3 text-white" />}
                         </div>
-                      )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
+                        </div>
+                        <span className={`text-sm font-bold ${darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedItems.size > 0 && (
+                    <div className={`mt-2 text-center text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>
+                      <span className="font-bold text-green-600">{formatCurrency(getSelectedTotal())}</span> selecionado(s)
                     </div>
                   )}
                 </div>
               )}
 
-              {/* DISCOUNT */}
-              {paymentMode === "discount" && (
+              {/* ABATER: valor */}
+              {chargeMethod === "abater" && !pixQrCode && (
                 <div>
-                  {pixQrCode ? (
-                    <div className="text-center">
-                      <p className={`mb-3 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Escaneie o QR Code com o app do banco</p>
-                      <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-                      <p className="mt-4 text-2xl font-bold text-green-600">{formatCurrency(parseFloat(discountAmount) || 0)}</p>
-                      <button onClick={() => setPixQrCode(null)} className={`mt-4 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>Voltar</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {tableStatus && (
-                        <div className={`rounded-xl border p-3 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                          <div className="flex justify-between text-sm">
-                            <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Total da mesa</span>
-                            <span className="font-bold">{formatCurrency(tableStatus.totalPending)}</span>
-                          </div>
-                        </div>
-                      )}
-                      <p className={`text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Quanto deseja pagar?</p>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-600">R$</span>
-                        <input type="number" step="0.01" min="0" placeholder="0,00" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} className={`w-full rounded-xl border-2 py-4 pl-12 pr-4 text-center text-2xl font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700" : "border-zinc-200"}`} />
-                      </div>
-                      {parseFloat(discountAmount) > 0 && (
-                        <button onClick={() => generatePix(parseFloat(discountAmount) || 0, "Abater")} disabled={pixLoading} className="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 p-4 text-white hover:bg-green-700 disabled:opacity-50">
-                          {pixLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                          <span className="font-bold">Gerar QR Code Pix — {formatCurrency(parseFloat(discountAmount) || 0)}</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Quanto deseja pagar?</p>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-600">R$</span>
+                    <input type="number" step="0.01" min="0" placeholder="0,00" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} className={`w-full rounded-xl border-2 py-3.5 pl-12 pr-4 text-center text-xl font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700" : "border-zinc-200"}`} />
+                  </div>
                 </div>
               )}
 
-              {/* Back to menu button */}
+              {/* FORMA DE PAGAMENTO */}
+              {!pixQrCode && (
+                <div>
+                  <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Forma de Pagamento</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setPayMethod("cash")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "cash" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                      <Banknote className={`h-5 w-5 ${payMethod === "cash" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "cash" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Dinheiro</span>
+                    </button>
+                    <button onClick={() => setPayMethod("card")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "card" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                      <CreditCard className={`h-5 w-5 ${payMethod === "card" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "card" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Cartão</span>
+                    </button>
+                    <button onClick={() => setPayMethod("pix")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "pix" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                      <QrCode className={`h-5 w-5 ${payMethod === "pix" ? "text-green-600" : darkMode ? "text-zinc-400" : "text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "pix" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Pix</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* QR Code display */}
               {pixQrCode && (
-                <button onClick={resetPayment} className={`mt-4 w-full rounded-xl border p-3 text-center text-sm font-medium transition-colors ${darkMode ? "border-zinc-600 hover:bg-zinc-700" : "border-zinc-200 hover:bg-zinc-50"}`}>
-                  ← Voltar ao cardápio
+                <div className="text-center">
+                  <p className={`mb-3 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Escaneie o QR Code com o app do banco</p>
+                  <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
+                  <p className="mt-4 text-2xl font-bold text-green-600">
+                    {formatCurrency(chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "split" ? (tableStatus.totalPending / Math.max(parseInt(splitCount) || 1, 1)) : parseFloat(discountAmount) || tableStatus.totalPending)}
+                  </p>
+                  <button onClick={() => setPixQrCode(null)} className={`mt-3 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                    Voltar
+                  </button>
+                </div>
+              )}
+
+              {/* Cash/Card message */}
+              {!pixQrCode && (payMethod === "cash" || payMethod === "card") && (
+                <div className={`rounded-xl border p-4 text-center ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
+                  <p className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Dirija-se ao caixa para pagar</p>
+                  <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>{payMethod === "cash" ? "Dinheiro" : "Cartão de crédito/débito"}</p>
+                </div>
+              )}
+
+              {/* VER DETALHES */}
+              <button onClick={() => setShowDetails(!showDetails)} className={`flex w-full items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold uppercase tracking-wider transition-colors ${showDetails ? "border-green-500 text-green-600" : darkMode ? "border-zinc-600 text-zinc-400 hover:border-zinc-500" : "border-zinc-200 text-zinc-400 hover:border-zinc-300"}`}>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+                Ver detalhes ({tableItems.length} {tableItems.length === 1 ? "item" : "itens"})
+              </button>
+              {showDetails && (
+                <div className="space-y-2">
+                  {tableItems.map((item, idx) => (
+                    <div key={idx} className={`flex items-center justify-between rounded-xl px-3 py-2 ${darkMode ? "bg-zinc-700/50" : "bg-zinc-50"}`}>
+                      <span className={`text-xs ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>{item.quantity}x {item.name}</span>
+                      <span className={`text-xs font-bold ${darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* CTA */}
+              {!pixQrCode && (
+                <button
+                  onClick={() => {
+                    const amount = chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : chargeMethod === "split" ? (tableStatus.totalPending / Math.max(parseInt(splitCount) || 1, 1)) : tableStatus.totalPending
+                    if (payMethod === "pix" && amount > 0) {
+                      generatePix(amount, `Mesa ${tableNumber} - ${chargeMethod === "unique" ? "Pagamento Único" : chargeMethod === "split" ? `Dividir ${splitCount} pessoas` : chargeMethod === "each" ? "Cada um paga" : "Abater"}`)
+                    } else {
+                      const msg = encodeURIComponent(`Gostaria de pagar a Mesa ${tableNumber}. Total: ${formatCurrency(amount)}`)
+                      window.open(`https://wa.me/${est.phone?.replace(/\D/g, "")}?text=${msg}`, "_blank")
+                    }
+                  }}
+                  disabled={pixLoading || (chargeMethod === "each" && selectedItems.size === 0) || (chargeMethod === "abater" && (!discountAmount || parseFloat(discountAmount) <= 0))}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {pixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Fechar Mesa · {formatCurrency(chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : chargeMethod === "split" ? (tableStatus.totalPending / Math.max(parseInt(splitCount) || 1, 1)) : tableStatus.totalPending)}
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payment menu */}
-      {showPaymentMenu && tableStatus && tableStatus.totalPending > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetPayment() }}>
-          <div className={`w-full max-w-sm rounded-2xl shadow-2xl ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
-            <div className="flex items-center justify-between border-b px-6 py-4 dark:border-zinc-700">
-              <h2 className="text-lg font-bold">Pedir a Conta</h2>
-              <button onClick={resetPayment} className="rounded-lg p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="p-4 space-y-2">
-              <div className={`mb-3 rounded-xl border p-3 text-center ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
-                <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Total da mesa</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(tableStatus.totalPending)}</p>
-              </div>
-              <button onClick={() => { setShowPaymentMenu(false); setPaymentMode("unique") }} className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors hover:border-green-500 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                <QrCode className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-bold">Pagamento Único</p>
-                  <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Pagar o valor total</p>
-                </div>
-              </button>
-              <button onClick={() => { setShowPaymentMenu(false); setPaymentMode("split") }} className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors hover:border-green-500 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                <Users className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-bold">Dividir Igual</p>
-                  <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Dividir entre N pessoas</p>
-                </div>
-              </button>
-              <button onClick={() => { setShowPaymentMenu(false); setPaymentMode("each") }} className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors hover:border-green-500 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                <ShoppingBag className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-bold">Cada Um Paga</p>
-                  <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Selecionar itens individualmente</p>
-                </div>
-              </button>
-              <button onClick={() => { setShowPaymentMenu(false); setPaymentMode("discount") }} className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors hover:border-green-500 ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                <MinusCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-bold">Abater</p>
-                  <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Pagar um valor parcial</p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
