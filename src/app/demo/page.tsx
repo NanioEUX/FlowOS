@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { LayoutDashboard, ShoppingBag, Bike, ClipboardList, Monitor, ChevronRight, ExternalLink, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FlowOSLogo } from "@/components/flowos-logo"
 import Link from "next/link"
 
 const modules = [
