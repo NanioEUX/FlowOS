@@ -15,13 +15,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
+          "inline-flex items-center justify-center rounded-btn font-medium transition-all focus:outline-none disabled:opacity-50 disabled:pointer-events-none",
           {
-            "bg-green-600 text-white hover:bg-green-700": variant === "primary",
-            "bg-zinc-100 text-zinc-900 hover:bg-zinc-200": variant === "secondary",
-            "hover:bg-zinc-100 text-zinc-700": variant === "ghost",
+            "bg-gradient-flow text-white hover:brightness-110 shadow-glow-blue": variant === "primary",
+            "bg-white/[.05] text-zinc-300 hover:bg-white/[.08]": variant === "secondary",
+            "hover:bg-white/[.05] text-zinc-400 hover:text-zinc-200": variant === "ghost",
             "bg-red-600 text-white hover:bg-red-700": variant === "danger",
-            "border border-zinc-300 bg-white hover:bg-zinc-50": variant === "outline",
+            "border border-white/[.06] bg-transparent hover:bg-white/[.05] text-zinc-300": variant === "outline",
           },
           {
             "h-8 px-3 text-sm": size === "sm",
