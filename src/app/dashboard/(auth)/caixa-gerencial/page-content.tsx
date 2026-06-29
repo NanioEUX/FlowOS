@@ -20,7 +20,7 @@ type DateFilter = "today" | "7days" | "30days" | "all" | "custom"
 const paymentLabels: Record<string, string> = { cash: "Dinheiro", card: "Cartão", pix: "Pix", online: "Online" }
 const paymentIcons: Record<string, any> = { cash: Banknote, card: CreditCard, pix: Wallet, online: DollarSign }
 const typeLabels: Record<string, string> = { sale: "Venda", expense: "Despesa", withdrawal: "Sangria", injection: "Suprimento", refund: "Estorno" }
-const typeColors: Record<string, string> = { sale: "text-green-600", expense: "text-red-600", withdrawal: "text-red-600", injection: "text-blue-600", refund: "text-amber-600" }
+const typeColors: Record<string, string> = { sale: "text-flow-blue", expense: "text-red-400", withdrawal: "text-red-400", injection: "text-flow-blue", refund: "text-amber-400" }
 
 function getDateRange(filter: DateFilter, customStart: string, customEnd: string): { start: Date; end: Date } {
   const now = new Date()
@@ -193,14 +193,14 @@ export default function CaixaGerencialPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
     </div>
   )
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Caixa</h2>
+        <h2 className="text-2xl font-bold text-flow-white">Caixa</h2>
         <p className="text-sm text-zinc-500">Vendas são feitas na Frente de Caixa</p>
       </div>
 
@@ -214,7 +214,7 @@ export default function CaixaGerencialPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
           >
             <t.icon className="h-4 w-4" />
             {t.label}
@@ -228,14 +228,14 @@ export default function CaixaGerencialPage() {
           <button
             key={f}
             onClick={() => setDateFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === f ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === f ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
           >
             {f === "today" ? "Hoje" : f === "7days" ? "7 dias" : f === "30days" ? "30 dias" : "Tudo"}
           </button>
         ))}
         <button
           onClick={() => { setDateFilter(dateFilter === "custom" ? "today" : "custom") }}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === "custom" ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
         >
           <Filter className="h-3 w-3" />
         </button>
@@ -253,28 +253,28 @@ export default function CaixaGerencialPage() {
         <>
           {/* Balance summary */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Card className="border-green-200 bg-green-50">
+            <Card className="border-flow-blue/20 bg-flow-blue/10">
               <CardContent className="p-4 text-center">
-                <p className="text-xs text-green-600 mb-1">Saldo Atual</p>
-                <p className="text-xl font-bold text-green-700">{formatCurrency(currentBalance)}</p>
+                <p className="text-xs text-flow-blue mb-1">Saldo Atual</p>
+                <p className="text-xl font-bold text-flow-blue">{formatCurrency(currentBalance)}</p>
               </CardContent>
             </Card>
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="border-flow-blue/20 bg-flow-blue/10">
               <CardContent className="p-4 text-center">
-                <p className="text-xs text-blue-600 mb-1">Suprimentos</p>
-                <p className="text-xl font-bold text-blue-700">{formatCurrency(totalInjection)}</p>
+                <p className="text-xs text-flow-blue mb-1">Suprimentos</p>
+                <p className="text-xl font-bold text-flow-blue">{formatCurrency(totalInjection)}</p>
               </CardContent>
             </Card>
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-red-500/20 bg-red-500/10">
               <CardContent className="p-4 text-center">
-                <p className="text-xs text-red-600 mb-1">Sangrias</p>
-                <p className="text-xl font-bold text-red-700">{formatCurrency(totalWithdrawal)}</p>
+                <p className="text-xs text-red-400 mb-1">Sangrias</p>
+                <p className="text-xl font-bold text-red-400">{formatCurrency(totalWithdrawal)}</p>
               </CardContent>
             </Card>
-            <Card className="border-amber-200 bg-amber-50">
+            <Card className="border-amber-500/20 bg-amber-500/10">
               <CardContent className="p-4 text-center">
-                <p className="text-xs text-amber-600 mb-1">Despesas</p>
-                <p className="text-xl font-bold text-amber-700">{formatCurrency(totalExpense)}</p>
+                <p className="text-xs text-amber-400 mb-1">Despesas</p>
+                <p className="text-xl font-bold text-amber-400">{formatCurrency(totalExpense)}</p>
               </CardContent>
             </Card>
           </div>
@@ -282,13 +282,13 @@ export default function CaixaGerencialPage() {
           {/* Action buttons */}
           {cashRegister && (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={() => { setMovAmount(""); setSangriaModal(true) }}>
+              <Button variant="outline" className="gap-1.5 text-red-400 border-red-500/20 hover:bg-red-500/10" onClick={() => { setMovAmount(""); setSangriaModal(true) }}>
                 <Minus className="h-4 w-4" /> Sangria
               </Button>
-              <Button variant="outline" className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => { setMovAmount(""); setSuprimentoModal(true) }}>
+              <Button variant="outline" className="gap-1.5 text-flow-blue border-flow-blue/20 hover:bg-flow-blue/10" onClick={() => { setMovAmount(""); setSuprimentoModal(true) }}>
                 <Plus className="h-4 w-4" /> Suprimento
               </Button>
-              <Button variant="outline" className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => { setMovAmount(""); setDespesaDesc(""); setDespesaModal(true) }}>
+              <Button variant="outline" className="gap-1.5 text-amber-400 border-amber-500/20 hover:bg-amber-500/10" onClick={() => { setMovAmount(""); setDespesaDesc(""); setDespesaModal(true) }}>
                 <Trash2 className="h-4 w-4" /> Despesa
               </Button>
             </div>
@@ -312,17 +312,17 @@ export default function CaixaGerencialPage() {
                 return (
                   <Card key={type}>
                     <CardContent className="p-4">
-                      <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-2">
-                        {type === "sale" ? <TrendingUp className="h-4 w-4 text-green-600" /> :
-                         type === "injection" ? <Plus className="h-4 w-4 text-blue-600" /> :
-                         <Minus className="h-4 w-4 text-red-600" />}
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-2">
+                        {type === "sale" ? <TrendingUp className="h-4 w-4 text-flow-blue" /> :
+                         type === "injection" ? <Plus className="h-4 w-4 text-flow-blue" /> :
+                         <Minus className="h-4 w-4 text-red-400" />}
                         {typeLabels[type]} ({items.length})
                       </h4>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {items.map((m: any) => (
-                          <div key={m.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
+                          <div key={m.id} className="flex items-center justify-between rounded-lg bg-white/[.03] px-3 py-2 text-sm">
                             <div>
-                              <p className="text-zinc-700">{m.description || typeLabels[m.type]}</p>
+                              <p className="text-zinc-300">{m.description || typeLabels[m.type]}</p>
                               <p className="text-xs text-zinc-400">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}{m.paymentMethod && ` • ${paymentLabels[m.paymentMethod] || m.paymentMethod}`}</p>
                             </div>
                             <span className={`font-semibold ${typeColors[m.type]}`}>
@@ -342,32 +342,32 @@ export default function CaixaGerencialPage() {
           {todayOrders.length > 0 && (
             <Card>
               <CardContent className="p-4">
-                <h4 className="text-sm font-semibold text-zinc-700 mb-3">Vendas Presenciais do Dia ({todayOrders.length})</h4>
+                <h4 className="text-sm font-semibold text-zinc-300 mb-3">Vendas Presenciais do Dia ({todayOrders.length})</h4>
                 <div className="grid grid-cols-3 gap-3 mb-3">
-                  <div className="rounded-lg bg-zinc-50 p-3 text-center">
-                    <p className="text-lg font-bold text-green-600">{formatCurrency(cashSales)}</p>
+                  <div className="rounded-lg bg-white/[.03] p-3 text-center">
+                    <p className="text-lg font-bold text-flow-blue">{formatCurrency(cashSales)}</p>
                     <p className="text-xs text-zinc-500">Dinheiro</p>
                   </div>
-                  <div className="rounded-lg bg-zinc-50 p-3 text-center">
-                    <p className="text-lg font-bold text-blue-600">{formatCurrency(cardSales)}</p>
+                  <div className="rounded-lg bg-white/[.03] p-3 text-center">
+                    <p className="text-lg font-bold text-flow-blue">{formatCurrency(cardSales)}</p>
                     <p className="text-xs text-zinc-500">Cartão</p>
                   </div>
-                  <div className="rounded-lg bg-zinc-50 p-3 text-center">
+                  <div className="rounded-lg bg-white/[.03] p-3 text-center">
                     <p className="text-lg font-bold text-purple-600">{formatCurrency(pixSales)}</p>
                     <p className="text-xs text-zinc-500">Pix</p>
                   </div>
                 </div>
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {todayOrders.map((o: any) => (
-                    <div key={o.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
+                    <div key={o.id} className="flex items-center justify-between rounded-lg bg-white/[.03] px-3 py-2 text-sm">
                       <div>
-                        <p className="font-medium text-zinc-900">{o.customerName || "Cliente"}</p>
+                        <p className="font-medium text-flow-white">{o.customerName || "Cliente"}</p>
                         <p className="text-xs text-zinc-400">
                           {new Date(o.createdAt).toLocaleTimeString("pt-BR")} • {paymentLabels[o.paymentMethod] || "Pendente"}
                           {o.tableNumber && ` • Mesa ${o.tableNumber}`}
                         </p>
                       </div>
-                      <span className="font-semibold text-green-600">{formatCurrency(o.total)}</span>
+                      <span className="font-semibold text-flow-blue">{formatCurrency(o.total)}</span>
                     </div>
                   ))}
                 </div>
@@ -382,7 +382,7 @@ export default function CaixaGerencialPage() {
         <>
           {historyLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
             </div>
           ) : historyRegisters.length === 0 ? (
             <Card>
@@ -395,25 +395,25 @@ export default function CaixaGerencialPage() {
             <>
               <div className="space-y-3">
                 {historyRegisters.map((reg: any) => (
-                  <Card key={reg.id} className={reg.status === "open" ? "border-green-200" : ""}>
+                  <Card key={reg.id} className={reg.status === "open" ? "border-flow-blue/20" : ""}>
                     <CardContent className="p-4">
                       <button
                         onClick={() => loadRegisterDetails(reg.id)}
                         className="w-full flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${reg.status === "open" ? "bg-green-100" : "bg-zinc-100"}`}>
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${reg.status === "open" ? "bg-flow-blue/10" : "bg-white/[.05]"}`}>
                             {reg.status === "open"
-                              ? <DollarSign className="h-5 w-5 text-green-600" />
+                              ? <DollarSign className="h-5 w-5 text-flow-blue" />
                               : <CheckCircle className="h-5 w-5 text-zinc-500" />
                             }
                           </div>
                           <div className="text-left">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-zinc-900">
+                              <p className="text-sm font-semibold text-flow-white">
                                 {new Date(reg.createdAt).toLocaleDateString("pt-BR")}
                               </p>
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${reg.status === "open" ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"}`}>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${reg.status === "open" ? "bg-flow-blue/10 text-flow-blue" : "bg-white/[.05] text-zinc-500"}`}>
                                 {reg.status === "open" ? "Aberto" : "Fechado"}
                               </span>
                             </div>
@@ -434,18 +434,18 @@ export default function CaixaGerencialPage() {
 
                       {/* Expanded details */}
                       {expandedRegister === reg.id && (
-                        <div className="mt-4 border-t border-zinc-100 pt-4 space-y-3">
+                        <div className="mt-4 border-t border-white/[.04] pt-4 space-y-3">
                           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div className="rounded-lg bg-zinc-50 p-2">
-                              <p className="font-bold text-zinc-900">{formatCurrency(reg.openingAmount)}</p>
+                            <div className="rounded-lg bg-white/[.03] p-2">
+                              <p className="font-bold text-flow-white">{formatCurrency(reg.openingAmount)}</p>
                               <p className="text-zinc-400">Abertura</p>
                             </div>
-                            <div className="rounded-lg bg-zinc-50 p-2">
-                              <p className="font-bold text-zinc-900">{formatCurrency(reg.expectedAmount || 0)}</p>
+                            <div className="rounded-lg bg-white/[.03] p-2">
+                              <p className="font-bold text-flow-white">{formatCurrency(reg.expectedAmount || 0)}</p>
                               <p className="text-zinc-400">Esperado</p>
                             </div>
-                            <div className="rounded-lg bg-zinc-50 p-2">
-                              <p className={`font-bold ${(reg.closingAmount || 0) >= (reg.expectedAmount || 0) ? "text-green-600" : "text-red-600"}`}>
+                            <div className="rounded-lg bg-white/[.03] p-2">
+                              <p className={`font-bold ${(reg.closingAmount || 0) >= (reg.expectedAmount || 0) ? "text-flow-blue" : "text-red-400"}`}>
                                 {formatCurrency((reg.closingAmount || 0) - (reg.expectedAmount || 0))}
                               </p>
                               <p className="text-zinc-400">Sobra/Falta</p>
@@ -454,15 +454,15 @@ export default function CaixaGerencialPage() {
                           {expandedMovements[reg.id] && expandedMovements[reg.id].length > 0 && (
                             <div className="space-y-1.5 max-h-60 overflow-y-auto">
                               {expandedMovements[reg.id].map((m: any) => (
-                                <div key={m.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
+                                <div key={m.id} className="flex items-center justify-between rounded-lg bg-white/[.03] px-3 py-2 text-sm">
                                   <div>
-                                    <p className="text-zinc-700">{m.description || typeLabels[m.type]}</p>
+                                    <p className="text-zinc-300">{m.description || typeLabels[m.type]}</p>
                                     <p className="text-xs text-zinc-400">
                                       {new Date(m.createdAt).toLocaleTimeString("pt-BR")}
                                       {m.paymentMethod && ` • ${paymentLabels[m.paymentMethod] || m.paymentMethod}`}
                                     </p>
                                   </div>
-                                  <span className={`font-semibold ${m.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  <span className={`font-semibold ${m.amount >= 0 ? "text-flow-blue" : "text-red-400"}`}>
                                     {m.amount >= 0 ? "+" : ""}{formatCurrency(m.amount)}
                                   </span>
                                 </div>
@@ -513,34 +513,34 @@ export default function CaixaGerencialPage() {
         <>
           {summaryLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
             </div>
           ) : summary ? (
             <>
               {/* Overview cards */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Card className="border-green-200 bg-green-50">
+                <Card className="border-flow-blue/20 bg-flow-blue/10">
                   <CardContent className="p-4 text-center">
-                    <p className="text-xs text-green-600 mb-1">Total Vendas</p>
-                    <p className="text-xl font-bold text-green-700">{formatCurrency(summary.totalSales)}</p>
+                    <p className="text-xs text-flow-blue mb-1">Total Vendas</p>
+                    <p className="text-xl font-bold text-flow-blue">{formatCurrency(summary.totalSales)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-red-200 bg-red-50">
+                <Card className="border-red-500/20 bg-red-500/10">
                   <CardContent className="p-4 text-center">
-                    <p className="text-xs text-red-600 mb-1">Total Despesas</p>
-                    <p className="text-xl font-bold text-red-700">{formatCurrency(summary.totalExpenses)}</p>
+                    <p className="text-xs text-red-400 mb-1">Total Despesas</p>
+                    <p className="text-xl font-bold text-red-400">{formatCurrency(summary.totalExpenses)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-blue-200 bg-blue-50">
+                <Card className="border-flow-blue/20 bg-flow-blue/10">
                   <CardContent className="p-4 text-center">
-                    <p className="text-xs text-blue-600 mb-1">Suprimentos</p>
-                    <p className="text-xl font-bold text-blue-700">{formatCurrency(summary.totalInjections)}</p>
+                    <p className="text-xs text-flow-blue mb-1">Suprimentos</p>
+                    <p className="text-xl font-bold text-flow-blue">{formatCurrency(summary.totalInjections)}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-amber-200 bg-amber-50">
+                <Card className="border-amber-500/20 bg-amber-500/10">
                   <CardContent className="p-4 text-center">
-                    <p className="text-xs text-amber-600 mb-1">Líquido</p>
-                    <p className={`text-xl font-bold ${summary.netResult >= 0 ? "text-green-700" : "text-red-700"}`}>{formatCurrency(summary.netResult)}</p>
+                    <p className="text-xs text-amber-400 mb-1">Líquido</p>
+                    <p className={`text-xl font-bold ${summary.netResult >= 0 ? "text-flow-blue" : "text-red-400"}`}>{formatCurrency(summary.netResult)}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -548,23 +548,23 @@ export default function CaixaGerencialPage() {
               {/* Sales by payment */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Vendas por Forma de Pagamento</h4>
+                  <h4 className="text-sm font-semibold text-zinc-300 mb-3">Vendas por Forma de Pagamento</h4>
                   <div className="space-y-2">
                     {(Object.entries(summary.salesByPayment) as [string, number][]).filter(([, v]) => v > 0).map(([method, amount]) => {
                       const Icon = paymentIcons[method] || DollarSign
                       const pct = summary.totalSales > 0 ? ((amount as number) / summary.totalSales * 100).toFixed(1) : 0
                       return (
                         <div key={method} className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100">
-                            <Icon className="h-4 w-4 text-zinc-600" />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[.05]">
+                            <Icon className="h-4 w-4 text-zinc-400" />
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-zinc-700">{paymentLabels[method] || method}</span>
-                              <span className="font-semibold text-zinc-900">{formatCurrency(amount as number)}</span>
+                              <span className="text-zinc-300">{paymentLabels[method] || method}</span>
+                              <span className="font-semibold text-flow-white">{formatCurrency(amount as number)}</span>
                             </div>
-                            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                              <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
+                            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/[.05]">
+                              <div className="h-full rounded-full bg-flow-green" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                           <span className="text-xs text-zinc-400 w-12 text-right">{pct}%</span>
@@ -582,12 +582,12 @@ export default function CaixaGerencialPage() {
               {Object.keys(summary.expensesByCategory).length > 0 && (
                 <Card>
                   <CardContent className="p-4">
-                    <h4 className="text-sm font-semibold text-zinc-700 mb-3">Despesas por Categoria</h4>
+                    <h4 className="text-sm font-semibold text-zinc-300 mb-3">Despesas por Categoria</h4>
                     <div className="space-y-2">
                       {(Object.entries(summary.expensesByCategory) as [string, number][]).sort(([, a], [, b]) => b - a).map(([cat, amount]) => (
-                        <div key={cat} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
-                          <span className="text-sm text-zinc-700 capitalize">{cat}</span>
-                          <span className="text-sm font-semibold text-red-600">{formatCurrency(amount as number)}</span>
+                        <div key={cat} className="flex items-center justify-between rounded-lg bg-white/[.03] px-3 py-2">
+                          <span className="text-sm text-zinc-300 capitalize">{cat}</span>
+                          <span className="text-sm font-semibold text-red-400">{formatCurrency(amount as number)}</span>
                         </div>
                       ))}
                     </div>
@@ -598,23 +598,23 @@ export default function CaixaGerencialPage() {
               {/* Register info */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Informações dos Caixas</h4>
+                  <h4 className="text-sm font-semibold text-zinc-300 mb-3">Informações dos Caixas</h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg bg-zinc-50 p-3">
+                    <div className="rounded-lg bg-white/[.03] p-3">
                       <p className="text-zinc-500">Total de caixas</p>
-                      <p className="font-bold text-zinc-900">{summary.registerCount}</p>
+                      <p className="font-bold text-flow-white">{summary.registerCount}</p>
                     </div>
-                    <div className="rounded-lg bg-zinc-50 p-3">
+                    <div className="rounded-lg bg-white/[.03] p-3">
                       <p className="text-zinc-500">Abertos agora</p>
-                      <p className="font-bold text-green-600">{summary.openRegisters}</p>
+                      <p className="font-bold text-flow-blue">{summary.openRegisters}</p>
                     </div>
-                    <div className="rounded-lg bg-zinc-50 p-3">
+                    <div className="rounded-lg bg-white/[.03] p-3">
                       <p className="text-zinc-500">Total abertura</p>
-                      <p className="font-bold text-zinc-900">{formatCurrency(summary.totalOpening)}</p>
+                      <p className="font-bold text-flow-white">{formatCurrency(summary.totalOpening)}</p>
                     </div>
-                    <div className="rounded-lg bg-zinc-50 p-3">
+                    <div className="rounded-lg bg-white/[.03] p-3">
                       <p className="text-zinc-500">Total fechamento</p>
-                      <p className="font-bold text-zinc-900">{formatCurrency(summary.totalClosing)}</p>
+                      <p className="font-bold text-flow-white">{formatCurrency(summary.totalClosing)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -635,8 +635,8 @@ export default function CaixaGerencialPage() {
       {/* Sangria Modal */}
       {sangriaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Sangria</h3>
+          <div className="w-full max-w-sm rounded-xl bg-flow-card p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-flow-white mb-4">Sangria</h3>
             <Input
               type="number"
               placeholder="Valor"
@@ -658,8 +658,8 @@ export default function CaixaGerencialPage() {
       {/* Suprimento Modal */}
       {suprimentoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Suprimento</h3>
+          <div className="w-full max-w-sm rounded-xl bg-flow-card p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-flow-white mb-4">Suprimento</h3>
             <Input
               type="number"
               placeholder="Valor"
@@ -681,8 +681,8 @@ export default function CaixaGerencialPage() {
       {/* Despesa Modal */}
       {despesaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Despesa</h3>
+          <div className="w-full max-w-sm rounded-xl bg-flow-card p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-flow-white mb-4">Despesa</h3>
             <Input
               placeholder="Descrição"
               value={despesaDesc}

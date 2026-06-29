@@ -58,33 +58,33 @@ export default function CaixaPage() {
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" /></div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Caixa - Gerenciamento</h2>
+        <h2 className="text-2xl font-bold text-flow-white">Caixa - Gerenciamento</h2>
         <p className="text-sm text-zinc-500">Vendas são feitas na Frente de Caixa</p>
       </div>
 
       {/* Resumo do dia */}
-      <Card className="border-green-200 bg-green-50">
+      <Card className="border-flow-blue/20 bg-flow-blue/10">
         <CardContent className="p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-green-800 mb-3">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-flow-blue mb-3">
             <TrendingUp className="h-4 w-4" />
             Resumo do Dia
           </h3>
           <div className="grid grid-cols-4 gap-3 text-center">
             <div>
-              <p className="text-lg font-bold text-green-700">{formatCurrency(todayTotal)}</p>
-              <p className="text-xs text-green-600">Total</p>
+              <p className="text-lg font-bold text-flow-blue">{formatCurrency(todayTotal)}</p>
+              <p className="text-xs text-flow-blue">Total</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-green-600">{formatCurrency(todayCash)}</p>
-              <p className="text-xs text-green-500">Dinheiro</p>
+              <p className="text-lg font-bold text-flow-blue">{formatCurrency(todayCash)}</p>
+              <p className="text-xs text-flow-green">Dinheiro</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-blue-600">{formatCurrency(todayCard)}</p>
+              <p className="text-lg font-bold text-flow-blue">{formatCurrency(todayCard)}</p>
               <p className="text-xs text-blue-500">Cartão</p>
             </div>
             <div>
@@ -92,20 +92,20 @@ export default function CaixaPage() {
               <p className="text-xs text-purple-500">Pix</p>
             </div>
           </div>
-          <p className="mt-2 text-xs text-green-600 text-center">{todayOrders.length} vendas hoje</p>
+          <p className="mt-2 text-xs text-flow-blue text-center">{todayOrders.length} vendas hoje</p>
         </CardContent>
       </Card>
 
       {/* Caixa status */}
       {cashRegister ? (
-        <Card className="border-green-200">
+        <Card className="border-flow-blue/20">
           <CardContent className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-green-800 mb-2">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-flow-blue mb-2">
               <DollarSign className="h-4 w-4" />
               Caixa Aberto
             </h3>
-            <p className="text-xs text-zinc-500">Valor em caixa: <span className="font-bold text-zinc-900">{formatCurrency(cashRegister.openingAmount)}</span></p>
-            <p className="text-xs text-zinc-500">Movimentações: <span className="font-bold text-zinc-900">{cashRegister.movements?.length || 0}</span></p>
+            <p className="text-xs text-zinc-500">Valor em caixa: <span className="font-bold text-flow-white">{formatCurrency(cashRegister.openingAmount)}</span></p>
+            <p className="text-xs text-zinc-500">Movimentações: <span className="font-bold text-flow-white">{cashRegister.movements?.length || 0}</span></p>
           </CardContent>
         </Card>
       ) : (
@@ -120,7 +120,7 @@ export default function CaixaPage() {
       {Object.keys(mesaGroups).length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 mb-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-flow-white mb-3">
               <Store className="h-4 w-4" />
               Mesas Ativas ({Object.keys(mesaGroups).length})
             </h3>
@@ -128,12 +128,12 @@ export default function CaixaPage() {
               {Object.entries(mesaGroups).sort(([a], [b]) => Number(a) - Number(b)).map(([num, mesaOrders]) => {
                 const total = mesaOrders.reduce((s: number, o: any) => s + o.total, 0)
                 return (
-                  <div key={num} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                  <div key={num} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
                     <div>
-                      <p className="text-sm font-medium text-zinc-900">Mesa {num}</p>
+                      <p className="text-sm font-medium text-flow-white">Mesa {num}</p>
                       <p className="text-xs text-zinc-500">{mesaOrders.length} pedido(s)</p>
                     </div>
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(total)}</p>
+                    <p className="text-sm font-bold text-flow-blue">{formatCurrency(total)}</p>
                   </div>
                 )
               })}
@@ -146,21 +146,21 @@ export default function CaixaPage() {
       {todayOrders.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold text-zinc-900 mb-3">Vendas de Hoje ({todayOrders.length})</h3>
+            <h3 className="font-semibold text-flow-white mb-3">Vendas de Hoje ({todayOrders.length})</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {todayOrders.map((o) => (
-                <div key={o.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                <div key={o.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">{o.customerName}</p>
+                    <p className="text-sm font-medium text-flow-white">{o.customerName}</p>
                     <p className="text-xs text-zinc-400">{new Date(o.createdAt).toLocaleTimeString("pt-BR")} • {paymentLabels[o.paymentMethod] || o.paymentMethod || "Pendente"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(o.total)}</p>
+                    <p className="text-sm font-bold text-flow-blue">{formatCurrency(o.total)}</p>
                     <p className={`text-[10px] font-medium ${
-                      o.status === "delivered" ? "text-green-600" :
+                      o.status === "delivered" ? "text-flow-blue" :
                       o.status === "new" ? "text-zinc-500" :
-                      o.status === "preparing" ? "text-amber-600" :
-                      o.status === "ready" ? "text-green-600" : "text-zinc-500"
+                      o.status === "preparing" ? "text-amber-400" :
+                      o.status === "ready" ? "text-flow-blue" : "text-zinc-500"
                     }`}>
                       {o.status === "new" ? "Aguardando" : o.status === "preparing" ? "Preparando" : o.status === "ready" ? "Pronto" : o.status === "delivered" ? "Finalizado" : o.status}
                     </p>

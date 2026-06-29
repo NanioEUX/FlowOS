@@ -128,18 +128,18 @@ export default function ConfigPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold text-zinc-900">Configurações</h2>
+      <h2 className="text-2xl font-bold text-flow-white">Configurações</h2>
 
       <form onSubmit={handleSave} className="space-y-4">
         {/* Dados do Estabelecimento */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Dados do Estabelecimento</h3>
+            <h3 className="font-semibold text-flow-white">Dados do Estabelecimento</h3>
             <Input label="Nome" id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Input label="WhatsApp (com DDD)" id="phone" placeholder="11999999999" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-zinc-700">Categoria</label>
-              <div className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700">
+              <label className="block text-sm font-medium text-zinc-300">Categoria</label>
+              <div className="flex h-10 w-full items-center rounded-lg border border-white/[.06] bg-white/[.03] px-3 text-sm text-zinc-300">
                 {categories.find((c) => c.value === form.category)?.label || form.category || "—"}
               </div>
             </div>
@@ -150,13 +150,13 @@ export default function ConfigPage() {
         {/* Asaas */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Asaas (Pagamentos Online)</h3>
+            <h3 className="font-semibold text-flow-white">Asaas (Pagamentos Online)</h3>
             <p className="text-sm text-zinc-500">
              
             </p>
             <div className="relative">
               <Input label="API Key" id="asaasApiKey" type={showKey ? "text" : "password"} placeholder="asaas_api_key_..." value={form.asaasApiKey} onChange={(e) => setForm({ ...form, asaasApiKey: e.target.value })} />
-              <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-600">
+              <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-400">
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -166,25 +166,25 @@ export default function ConfigPage() {
         {/* Tipos de Pedido */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Tipos de Pedido</h3>
+            <h3 className="font-semibold text-flow-white">Tipos de Pedido</h3>
             <p className="text-sm text-zinc-500">Habilite ou desabilite os tipos de pedido disponíveis no cardápio.</p>
             <div className="space-y-3">
-              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-                <input type="checkbox" checked={orderConfig.delivery} onChange={(e) => setOrderConfig({ ...orderConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500" />
+              <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+                <input type="checkbox" checked={orderConfig.delivery} onChange={(e) => setOrderConfig({ ...orderConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Bike className="h-4 w-4 text-zinc-600" />
-                    <span className="font-medium text-zinc-900">Entrega</span>
+                    <Bike className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-flow-white">Entrega</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente recebe em casa</p>
                 </div>
               </label>
-              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-                <input type="checkbox" checked={orderConfig.pickup} onChange={(e) => setOrderConfig({ ...orderConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500" />
+              <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+                <input type="checkbox" checked={orderConfig.pickup} onChange={(e) => setOrderConfig({ ...orderConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Store className="h-4 w-4 text-zinc-600" />
-                    <span className="font-medium text-zinc-900">Retirada</span>
+                    <Store className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-flow-white">Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente busca no local</p>
                 </div>
@@ -196,17 +196,17 @@ export default function ConfigPage() {
         {/* Configuração de Mesas */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Mesas</h3>
+            <h3 className="font-semibold text-flow-white">Mesas</h3>
             <p className="text-sm text-zinc-500">Quantidade de mesas fixas disponíveis no caixa. As mesas são numeradas de 1 a N.</p>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Número de Mesas</label>
+              <label className="text-sm font-medium text-zinc-300">Número de Mesas</label>
               <input
                 type="number"
                 min="1"
                 max="100"
                 value={form.tableCount}
                 onChange={(e) => setForm({ ...form, tableCount: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm focus:border-flow-blue focus:outline-none"
               />
             </div>
           </CardContent>
@@ -215,7 +215,7 @@ export default function ConfigPage() {
         {/* Taxa de Entrega */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Taxa de Entrega</h3>
+            <h3 className="font-semibold text-flow-white">Taxa de Entrega</h3>
             <p className="text-sm text-zinc-500">Configure como a taxa de entrega é calculada.</p>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -224,17 +224,17 @@ export default function ConfigPage() {
                   { value: "fixed", label: "Taxa fixa", desc: "Valor único por pedido" },
                   { value: "free_above", label: "Grátis acima de R$ X", desc: "Cobra taxa só em pedidos abaixo de um valor" },
                 ].map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
+                  <label key={opt.value} className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
                     <input
                       type="radio"
                       name="deliveryFeeType"
                       value={opt.value}
                       checked={form.deliveryFeeType === opt.value}
                       onChange={(e) => setForm({ ...form, deliveryFeeType: e.target.value })}
-                      className="h-4 w-4 border-zinc-300 text-green-600 focus:ring-green-500"
+                      className="h-4 w-4 border-white/[.08] text-flow-blue focus:ring-green-500"
                     />
                     <div className="flex-1">
-                      <span className="font-medium text-zinc-900">{opt.label}</span>
+                      <span className="font-medium text-flow-white">{opt.label}</span>
                       <p className="text-xs text-zinc-500">{opt.desc}</p>
                     </div>
                   </label>
@@ -242,7 +242,7 @@ export default function ConfigPage() {
               </div>
 
               {form.deliveryFeeType !== "free" && (
-                <div className="rounded-lg bg-zinc-50 p-4 space-y-3">
+                <div className="rounded-lg bg-white/[.03] p-4 space-y-3">
                   <Input label="Valor da taxa (R$)" id="deliveryFeeAmount" type="number" step="0.01" min="0" placeholder="5,00" value={form.deliveryFeeAmount} onChange={(e) => setForm({ ...form, deliveryFeeAmount: e.target.value })} />
                   {form.deliveryFeeType === "free_above" && (
                     <Input label="Grátis a partir de (R$)" id="deliveryFreeAbove" type="number" step="0.01" min="0" placeholder="50,00" value={form.deliveryFreeAbove} onChange={(e) => setForm({ ...form, deliveryFreeAbove: e.target.value })} />
@@ -256,35 +256,35 @@ export default function ConfigPage() {
         {/* Formas de Pagamento */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Formas de Pagamento</h3>
+            <h3 className="font-semibold text-flow-white">Formas de Pagamento</h3>
             <p className="text-sm text-zinc-500">Quais formas de pagamento o cliente vê na hora de fechar o pedido.</p>
             <div className="space-y-3">
-              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-                <input type="checkbox" checked={paymentConfig.online} onChange={(e) => setPaymentConfig({ ...paymentConfig, online: e.target.checked })} className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500" />
+              <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+                <input type="checkbox" checked={paymentConfig.online} onChange={(e) => setPaymentConfig({ ...paymentConfig, online: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-zinc-600" />
-                    <span className="font-medium text-zinc-900">Online (Pix / Cartão)</span>
+                    <CreditCard className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-flow-white">Online (Pix / Cartão)</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente paga na hora via Asaas</p>
                 </div>
               </label>
-              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-                <input type="checkbox" checked={paymentConfig.delivery} onChange={(e) => setPaymentConfig({ ...paymentConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500" />
+              <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+                <input type="checkbox" checked={paymentConfig.delivery} onChange={(e) => setPaymentConfig({ ...paymentConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-zinc-600" />
-                    <span className="font-medium text-zinc-900">Pagar na Entrega</span>
+                    <Banknote className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-flow-white">Pagar na Entrega</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente paga em dinheiro/cartão na entrega</p>
                 </div>
               </label>
-              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-50">
-                <input type="checkbox" checked={paymentConfig.pickup} onChange={(e) => setPaymentConfig({ ...paymentConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-500" />
+              <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+                <input type="checkbox" checked={paymentConfig.pickup} onChange={(e) => setPaymentConfig({ ...paymentConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-zinc-600" />
-                    <span className="font-medium text-zinc-900">Pagar na Retirada</span>
+                    <Banknote className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-flow-white">Pagar na Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente paga ao buscar</p>
                 </div>
@@ -296,14 +296,14 @@ export default function ConfigPage() {
         {/* Horário de Funcionamento */}
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <h3 className="flex items-center gap-2 font-semibold text-flow-white">
               <Clock className="h-4 w-4" />
               Horário de Funcionamento
             </h3>
             <p className="text-sm text-zinc-500">Configure os horários. Fora desse horário, o cardápio informa que está fechado.</p>
             <div className="space-y-2">
               {businessHours.map((h, i) => (
-                <div key={h.day} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                <div key={h.day} className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-white/[.03] p-3">
                   <label className="flex items-center gap-2 min-w-[120px]">
                     <input
                       type="checkbox"
@@ -313,9 +313,9 @@ export default function ConfigPage() {
                         updated[i] = { ...updated[i], active: e.target.checked }
                         setBusinessHours(updated)
                       }}
-                      className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                      className="h-4 w-4 rounded border-white/[.08] text-flow-blue focus:ring-green-500"
                     />
-                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day?.trim()}</span>
+                    <span className={`text-sm font-medium ${h.active ? "text-flow-white" : "text-zinc-400"}`}>{h.day?.trim()}</span>
                   </label>
                   {h.active ? (
                     <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export default function ConfigPage() {
                           updated[i] = { ...updated[i], open: e.target.value }
                           setBusinessHours(updated)
                         }}
-                        className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        className="rounded-lg border border-white/[.06] bg-flow-card px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                       />
                       <span className="text-xs text-zinc-400">até</span>
                       <input
@@ -338,7 +338,7 @@ export default function ConfigPage() {
                           updated[i] = { ...updated[i], close: e.target.value }
                           setBusinessHours(updated)
                         }}
-                        className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                        className="rounded-lg border border-white/[.06] bg-flow-card px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                       />
                     </div>
                   ) : (
@@ -355,7 +355,7 @@ export default function ConfigPage() {
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Salvar alterações
           </Button>
-          {saved && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
+          {saved && <span className="flex items-center gap-1 text-sm text-flow-blue"><Save className="h-4 w-4" />Salvo!</span>}
         </div>
       </form>
     </div>

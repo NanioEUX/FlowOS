@@ -224,7 +224,7 @@ export default function UsuariosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
       </div>
     )
   }
@@ -232,7 +232,7 @@ export default function UsuariosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Usuários</h2>
+        <h2 className="text-2xl font-bold text-flow-white">Usuários</h2>
         <Button onClick={openNew}>
           <Plus className="mr-1 h-4 w-4" />
           Novo Usuário
@@ -240,7 +240,7 @@ export default function UsuariosPage() {
       </div>
 
       {users.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center">
+        <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
           <Users className="mx-auto h-8 w-8 text-zinc-300" />
           <p className="mt-2 text-sm text-zinc-500">Nenhum usuário cadastrado</p>
           <p className="text-xs text-zinc-400">Crie o primeiro atendente para começar</p>
@@ -256,9 +256,9 @@ export default function UsuariosPage() {
                   <div className="mb-3 flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-zinc-900">{user.name}</p>
+                        <p className="font-semibold text-flow-white">{user.name}</p>
                         {user.role === "admin" && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
                             Admin
                           </span>
                         )}
@@ -271,25 +271,25 @@ export default function UsuariosPage() {
                       <p className="text-xs text-zinc-500">{user.email}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-green-500 hover:text-green-700" : "text-zinc-400 hover:text-zinc-600"}`}>
+                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-flow-green hover:text-flow-blue" : "text-zinc-400 hover:text-zinc-400"}`}>
                         <Check className="h-4 w-4" />
                       </button>
-                      <button onClick={() => openEdit(user)} className="rounded p-1 text-zinc-400 hover:text-zinc-600">
+                      <button onClick={() => openEdit(user)} className="rounded p-1 text-zinc-400 hover:text-zinc-400">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDeleteUser(user)} className="rounded p-1 text-red-400 hover:text-red-600">
+                      <button onClick={() => handleDeleteUser(user)} className="rounded p-1 text-red-400 hover:text-red-400">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {perms.map((p: string) => (
-                      <span key={p} className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                      <span key={p} className="rounded-full bg-flow-blue/10 px-2 py-0.5 text-[10px] font-medium text-flow-blue">
                         {ALL_PERMISSIONS.find((ap) => ap.value === p)?.label || p}
                       </span>
                     ))}
                     {user.canCloseRegister && (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
                         Fecha Caixa
                       </span>
                     )}
@@ -328,7 +328,7 @@ export default function UsuariosPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Senha</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Senha</label>
                   <Input
                     type="password"
                     placeholder={editingUser ? "Deixe vazio para manter" : "123456 (padrão)"}
@@ -343,7 +343,7 @@ export default function UsuariosPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Perfil</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">Perfil</label>
                   <div className="flex gap-2">
                     {ROLES.map(({ value, label }) => (
                       <button
@@ -353,7 +353,7 @@ export default function UsuariosPage() {
                         className={`flex-1 rounded-lg border p-2 text-sm font-medium transition-colors ${
                           form.role === value
                             ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                            : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                            : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
                         }`}
                       >
                         {label}
@@ -382,7 +382,7 @@ export default function UsuariosPage() {
 
                 {form.role !== "motoboy" && (
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-zinc-700">Permissões</label>
+                    <label className="mb-2 block text-sm font-medium text-zinc-300">Permissões</label>
                     <div className="grid grid-cols-2 gap-2">
                       {ALL_PERMISSIONS.map((perm) => (
                         <button
@@ -392,13 +392,13 @@ export default function UsuariosPage() {
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.permissions.includes(perm.value)
                               ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                              : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${
                             form.permissions.includes(perm.value)
                               ? "border-[#FF6B35] bg-[#FF6B35]"
-                              : "border-zinc-300"
+                              : "border-white/[.08]"
                           }`}>
                             {form.permissions.includes(perm.value) && <Check className="h-3 w-3 text-white" />}
                           </div>
@@ -414,14 +414,14 @@ export default function UsuariosPage() {
                           onClick={() => setForm({ ...form, canCloseRegister: !form.canCloseRegister })}
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.canCloseRegister
-                              ? "border-amber-400 bg-amber-50 text-amber-700"
-                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                              ? "border-amber-400 bg-amber-500/10 text-amber-400"
+                              : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${
                             form.canCloseRegister
-                              ? "border-amber-500 bg-amber-500"
-                              : "border-zinc-300"
+                              ? "border-amber-500 bg-amber-500/100"
+                              : "border-white/[.08]"
                           }`}>
                             {form.canCloseRegister && <Check className="h-3 w-3 text-white" />}
                           </div>

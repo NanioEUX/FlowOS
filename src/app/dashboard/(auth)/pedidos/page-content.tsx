@@ -163,12 +163,12 @@ export default function PedidosPage() {
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" /></div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Pedidos</h2>
+        <h2 className="text-2xl font-bold text-flow-white">Pedidos</h2>
         
       </div>
 
@@ -182,7 +182,7 @@ export default function PedidosPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div
             onClick={() => setFilterMotoboy("")}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!filterMotoboy ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!filterMotoboy ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
           >
             Todos
           </div>
@@ -192,11 +192,11 @@ export default function PedidosPage() {
               <button
                 key={p.id}
                 onClick={() => setFilterMotoboy(p.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterMotoboy === p.id ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
               >
                 <Bike className="h-3 w-3" />
                 {p.name}
-                {count > 0 && <span className="ml-0.5 rounded-full bg-white/20 px-1.5 text-[10px]">{count}</span>}
+                {count > 0 && <span className="ml-0.5 rounded-full bg-flow-card/20 px-1.5 text-[10px]">{count}</span>}
               </button>
             )
           })}
@@ -214,7 +214,7 @@ export default function PedidosPage() {
               { value: "7days", label: "7 dias" },
               { value: "30days", label: "30 dias" },
             ].map((p) => (
-              <button key={p.value} onClick={() => setFilterPeriod(p.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${filterPeriod === p.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
+              <button key={p.value} onClick={() => setFilterPeriod(p.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${filterPeriod === p.value ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-500 hover:bg-white/[.08]"}`}>
                 {p.label}
               </button>
             ))}
@@ -229,7 +229,7 @@ export default function PedidosPage() {
               { value: "pickup", label: "Retirada" },
               { value: "presencial", label: "Caixa" },
             ].map((t) => (
-              <button key={t.value} onClick={() => setFilterType(t.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${filterType === t.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
+              <button key={t.value} onClick={() => setFilterType(t.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${filterType === t.value ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-500 hover:bg-white/[.08]"}`}>
                 {t.label}
               </button>
             ))}
@@ -240,7 +240,7 @@ export default function PedidosPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-zinc-200 px-2 py-1 text-xs font-medium focus:border-green-500 focus:outline-none"
+            className="rounded-lg border border-white/[.06] px-2 py-1 text-xs font-medium focus:border-flow-blue focus:outline-none"
           >
             <option value="all">Todos</option>
             <option value="pending">Pendente</option>
@@ -255,24 +255,24 @@ export default function PedidosPage() {
 
       {/* Global message notification bar */}
       {Object.keys(unreadOrders).length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <p className="mb-2 text-xs font-semibold text-amber-700 uppercase tracking-wider">Mensagens não lidas</p>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+          <p className="mb-2 text-xs font-semibold text-amber-400 uppercase tracking-wider">Mensagens não lidas</p>
           <div className="space-y-1.5">
             {Object.entries(unreadOrders).map(([orderId, data]) => (
               <button
                 key={orderId}
                 onClick={() => scrollToOrder(orderId)}
-                className="flex w-full items-center gap-3 rounded-lg bg-white border border-amber-200 px-3 py-2 text-left hover:bg-amber-50 transition-colors"
+                className="flex w-full items-center gap-3 rounded-lg bg-flow-card border border-amber-500/20 px-3 py-2 text-left hover:bg-amber-500/10 transition-colors"
               >
                 <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500/100" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900">{data.name}</p>
+                  <p className="text-sm font-medium text-flow-white">{data.name}</p>
                   <p className="text-xs text-zinc-500 truncate">{data.message}</p>
                 </div>
-                <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+                <span className="flex-shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-400">
                   {data.count}
                 </span>
               </button>
@@ -282,7 +282,7 @@ export default function PedidosPage() {
       )}
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center">
+        <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
           <ShoppingBag className="mx-auto h-8 w-8 text-zinc-300" />
           <p className="mt-2 text-sm text-zinc-500">Nenhum pedido ainda</p>
         </div>
@@ -291,13 +291,13 @@ export default function PedidosPage() {
           {grouped.active.length > 0 && <OrderSection title="Em Andamento" orders={grouped.active} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} />}
           {grouped.completed.length > 0 && (
             <details className="group">
-              <summary className="cursor-pointer text-sm font-semibold text-zinc-400 hover:text-zinc-600">Entregues ({grouped.completed.length})</summary>
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-400 hover:text-zinc-400">Entregues ({grouped.completed.length})</summary>
               <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.completed} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} /></div>
             </details>
           )}
           {grouped.cancelled.length > 0 && (
             <details className="group">
-              <summary className="cursor-pointer text-sm font-semibold text-red-400 hover:text-red-600">Cancelados ({grouped.cancelled.length})</summary>
+              <summary className="cursor-pointer text-sm font-semibold text-red-400 hover:text-red-400">Cancelados ({grouped.cancelled.length})</summary>
               <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.cancelled} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} /></div>
             </details>
           )}
@@ -311,7 +311,7 @@ export default function PedidosPage() {
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-green-600" />
+                  <MessageCircle className="h-5 w-5 text-flow-blue" />
                   Pedido via WhatsApp
                 </h3>
                 <button onClick={() => setShowNewOrder(false)}><X className="h-5 w-5" /></button>
@@ -515,12 +515,12 @@ win.close()
     <Card id={`order-${order.id}`} className={`${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
       <CardContent className="p-4">
         {unreadCount > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+          <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500/100" />
             </span>
-            <p className="text-sm font-semibold text-red-700">
+            <p className="text-sm font-semibold text-red-400">
               {unreadCount} {unreadCount === 1 ? "nova mensagem" : "novas mensagens"} do cliente
             </p>
             <MessageCircle className="h-4 w-4 text-red-500 ml-auto" />
@@ -530,13 +530,13 @@ win.close()
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               {order.orderNumber && (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                <span className="inline-flex items-center rounded-full bg-flow-blue/10 px-2 py-0.5 text-xs font-bold text-flow-blue">
                   #{order.orderNumber}
                 </span>
               )}
-              <p className="font-semibold text-zinc-900">{order.customerName}</p>
+              <p className="font-semibold text-flow-white">{order.customerName}</p>
               {["pending", "payment_pending", "confirmed"].includes(order.status) ? (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Novo pedido</span>
+                <span className="inline-flex items-center rounded-full bg-flow-blue/10 px-2 py-0.5 text-xs font-semibold text-flow-blue">Novo pedido</span>
               ) : (
                 <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
               )}
@@ -566,24 +566,24 @@ win.close()
 
             <div className="mt-1 flex flex-wrap gap-2 text-sm">
               {order.customerPhone && (
-                <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
+                <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-flow-blue hover:underline">
                   <MessageCircle className="h-3 w-3" />{order.customerPhone}
                 </a>
               )}
               {order.trackingToken && (
-                <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-flow-blue hover:underline">
                   <ExternalLink className="h-3 w-3" />Rastrear
                 </a>
               )}
               {order.paymentLink && (
-                <a href={order.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 underline">Link pgto</a>
+                <a href={order.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-flow-blue underline">Link pgto</a>
               )}
             </div>
 
             {!isPresencial && order.customerAddress && <p className="mt-1 text-sm text-zinc-500">📍 {order.customerAddress}</p>}
 
             {items.length > 0 && (
-              <div className="mt-2 space-y-0.5 text-sm text-zinc-600">
+              <div className="mt-2 space-y-0.5 text-sm text-zinc-400">
                 {items.map((item: any, i: number) => (
                   <p key={i}>{item.quantity}x {item.name} — {formatCurrency(item.price * item.quantity)}</p>
                 ))}
@@ -596,13 +596,13 @@ win.close()
             {order.notes && <p className="mt-1 text-sm text-zinc-400 italic">Obs: {order.notes}</p>}
 
             {lastCustomerMsg && (
-              <div className={`mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${unreadCount > 0 ? "bg-red-50 border border-red-200" : "bg-zinc-50 border border-zinc-200"}`}>
+              <div className={`mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${unreadCount > 0 ? "bg-red-500/10 border border-red-500/20" : "bg-white/[.03] border border-white/[.06]"}`}>
                 <MessageCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${unreadCount > 0 ? "text-red-500" : "text-zinc-400"}`} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-medium ${unreadCount > 0 ? "text-red-600" : "text-zinc-500"}`}>
+                  <p className={`text-xs font-medium ${unreadCount > 0 ? "text-red-400" : "text-zinc-500"}`}>
                     {unreadCount > 0 ? "Última mensagem do cliente:" : "Mensagem do cliente:"}
                   </p>
-                  <p className={`truncate ${unreadCount > 0 ? "text-red-700 font-medium" : "text-zinc-600"}`}>{lastCustomerMsg.message}</p>
+                  <p className={`truncate ${unreadCount > 0 ? "text-red-400 font-medium" : "text-zinc-400"}`}>{lastCustomerMsg.message}</p>
                   <p className="text-[10px] text-zinc-400 mt-0.5">{new Date(lastCustomerMsg.createdAt).toLocaleString("pt-BR")}</p>
                 </div>
               </div>
@@ -620,7 +620,7 @@ win.close()
                     onUpdateDelivery(order.id, id, person?.name || "")
                 }}
                 disabled={isLocked}
-                className="rounded-lg border border-zinc-200 bg-white px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-white/[.06] bg-flow-card px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value=""></option>
                 {deliveryPeople.map((p: any) => (
@@ -632,18 +632,18 @@ win.close()
           </div>
 
           <div className="flex items-center gap-3 lg:flex-col lg:items-end">
-            <p className="text-lg font-bold text-green-600">{formatCurrency(order.total)}</p>
+            <p className="text-lg font-bold text-flow-blue">{formatCurrency(order.total)}</p>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={printReceipt} className="gap-1">
                 <Printer className="h-3 w-3" />
               </Button>
               <button
                 onClick={() => setChatOpen(!chatOpen)}
-                className={`relative rounded-lg border p-1.5 transition-colors ${chatOpen ? "border-green-500 bg-green-50 text-green-600" : unreadCount > 0 ? "border-red-300 bg-red-50 text-red-600 animate-pulse" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}
+                className={`relative rounded-lg border p-1.5 transition-colors ${chatOpen ? "border-flow-blue bg-flow-blue/10 text-flow-blue" : unreadCount > 0 ? "border-red-300 bg-red-500/10 text-red-400 animate-pulse" : "border-white/[.06] text-zinc-500 hover:bg-white/[.05]"}`}
               >
                 <MessageCircle className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500/100 text-[10px] font-bold text-white">
                     {unreadCount}
                   </span>
                 )}
@@ -652,7 +652,7 @@ win.close()
                 value={isNewOrder ? "" : order.status}
                 onChange={(e) => onUpdateStatus(order.id, e.target.value)}
                 disabled={isLocked}
-                className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-white/[.08] bg-flow-card px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isNewOrder && <option value="" disabled>Selecionar status...</option>}
                 {selectableStatuses.map((key) => (
@@ -671,14 +671,14 @@ win.close()
 
         {/* Chat panel */}
         {chatOpen && (
-          <div className="mt-4 border-t border-zinc-200 pt-4">
+          <div className="mt-4 border-t border-white/[.06] pt-4">
             <div ref={chatContainerRef} className="max-h-60 overflow-y-auto space-y-2 mb-3">
               {messages.length === 0 && (
                 <p className="text-center text-sm text-zinc-400 py-3">Nenhuma mensagem ainda</p>
               )}
               {messages.map((msg: any) => (
                 <div key={msg.id} className={`flex ${msg.sender === "establishment" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.sender === "establishment" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-800"}`}>
+                  <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.sender === "establishment" ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-200"}`}>
                     <p>{msg.message}</p>
                     <p className={`text-[10px] mt-1 ${msg.sender === "establishment" ? "text-green-200" : "text-zinc-400"}`}>
                       {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -693,7 +693,7 @@ win.close()
                 onChange={(e) => setNewMessage(e.target.value.slice(0, 500))}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder="Responder mensagem..."
-                className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-white/[.06] px-3 py-2 text-sm focus:border-flow-blue focus:outline-none"
               />
               <Button size="sm" onClick={sendMessage} disabled={!newMessage.trim() || sending} className="gap-1">
                 <Send className="h-3 w-3" />

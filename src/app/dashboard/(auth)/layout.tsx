@@ -303,7 +303,7 @@ export default function DashboardLayout({
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/[.06] p-3">
           <button
             onClick={handleLogout}
-            className="sidebar-item w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="sidebar-item w-full text-red-400 hover:text-red-300 hover:bg-red-500/100/10"
           >
             <LogOut className="h-[18px] w-[18px]" />
             Sair
@@ -378,7 +378,7 @@ function SubscriptionBadge({ establishment }: { establishment: any }) {
 
   if (status === "trial" && daysLeft > 0) {
     return (
-      <a href="/dashboard/planos" className="flex items-center gap-2 rounded-btn border border-amber-500/20 bg-amber-500/[.06] px-3 py-2 text-xs transition-colors hover:bg-amber-500/10">
+      <a href="/dashboard/planos" className="flex items-center gap-2 rounded-btn border border-amber-500/20 bg-amber-500/100/[.06] px-3 py-2 text-xs transition-colors hover:bg-amber-500/100/10">
         <Clock className="h-4 w-4 text-amber-400" />
         <div className="min-w-0 flex-1">
           <p className="font-medium text-amber-300">Teste: {daysLeft}d restante{daysLeft > 1 ? "s" : ""}</p>
@@ -389,7 +389,7 @@ function SubscriptionBadge({ establishment }: { establishment: any }) {
   }
 
   return (
-    <a href="/dashboard/planos" className="flex items-center gap-2 rounded-btn border border-red-500/20 bg-red-500/[.06] px-3 py-2 text-xs transition-colors hover:bg-red-500/10">
+    <a href="/dashboard/planos" className="flex items-center gap-2 rounded-btn border border-red-500/20 bg-red-500/100/[.06] px-3 py-2 text-xs transition-colors hover:bg-red-500/100/10">
       <CreditCard className="h-4 w-4 text-red-400" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-red-300">

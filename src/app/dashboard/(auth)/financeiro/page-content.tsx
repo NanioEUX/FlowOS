@@ -46,7 +46,7 @@ export default function FinanceiroPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
       </div>
     )
   }
@@ -59,7 +59,7 @@ export default function FinanceiroPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-zinc-900">DRE — Demonstrativo</h1>
+        <h1 className="text-xl font-bold text-flow-white">DRE — Demonstrativo</h1>
         <div className="flex gap-1">
           {([
             { value: "today", label: "Hoje" },
@@ -67,7 +67,7 @@ export default function FinanceiroPage() {
             { value: "30days", label: "30 dias" },
             { value: "all", label: "Tudo" },
           ] as const).map((p) => (
-            <button key={p.value} onClick={() => setPeriod(p.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${period === p.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
+            <button key={p.value} onClick={() => setPeriod(p.value)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${period === p.value ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-500 hover:bg-white/[.08]"}`}>
               {p.label}
             </button>
           ))}
@@ -77,18 +77,18 @@ export default function FinanceiroPage() {
       {/* DRE Table */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Demonstração do Resultado</h3>
+          <h3 className="mb-3 font-semibold text-sm text-flow-white">Demonstração do Resultado</h3>
           <div className="space-y-1 text-sm">
-            <Row label={`(+) Receita Bruta (${counts.orders} pedidos)`} value={s.receitaBruta} color="text-zinc-900" bold />
+            <Row label={`(+) Receita Bruta (${counts.orders} pedidos)`} value={s.receitaBruta} color="text-flow-white" bold />
             <Row label="(-) Descontos (cupons)" value={-s.descontos} color="text-red-500" />
-            <Row label="(=) Receita Líquida" value={s.receitaLiquida} color="text-zinc-900" bold />
-            <div className="border-t border-zinc-100 my-2" />
+            <Row label="(=) Receita Líquida" value={s.receitaLiquida} color="text-flow-white" bold />
+            <div className="border-t border-white/[.04] my-2" />
             <Row label="(-) Custo Entregas (motoboys)" value={-s.custoEntregas} color="text-orange-600" />
-            <Row label="(=) Lucro Bruto" value={s.lucroBruto} color={s.lucroBruto >= 0 ? "text-green-600" : "text-red-600"} bold />
-            <div className="border-t border-zinc-100 my-2" />
+            <Row label="(=) Lucro Bruto" value={s.lucroBruto} color={s.lucroBruto >= 0 ? "text-flow-blue" : "text-red-400"} bold />
+            <div className="border-t border-white/[.04] my-2" />
             <Row label="(-) Despesas Operacionais" value={-s.despesasOperacionais} color="text-red-500" />
-            <div className="border-t border-zinc-200 my-2" />
-            <Row label="(=) LUCRO LÍQUIDO" value={s.lucroLiquido} color={isPositive ? "text-green-700" : "text-red-700"} bold large />
+            <div className="border-t border-white/[.06] my-2" />
+            <Row label="(=) LUCRO LÍQUIDO" value={s.lucroLiquido} color={isPositive ? "text-flow-blue" : "text-red-400"} bold large />
           </div>
         </CardContent>
       </Card>
@@ -97,7 +97,7 @@ export default function FinanceiroPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h3>
+            <h3 className="mb-3 font-semibold text-sm text-flow-white">Receita por Tipo</h3>
             <div className="space-y-2">
               {[
                 { label: "Entrega", value: b.byType.delivery, icon: Bike, color: "blue" },
@@ -118,7 +118,7 @@ export default function FinanceiroPage() {
 
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h3>
+            <h3 className="mb-3 font-semibold text-sm text-flow-white">Despesas por Categoria</h3>
             <div className="space-y-2">
               {[
                 { label: "Fixas", value: b.expensesByCategory.fixa },
@@ -129,7 +129,7 @@ export default function FinanceiroPage() {
               ].filter((c) => c.value > 0).map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <span className="text-sm">{item.label}</span>
-                  <span className="text-sm font-bold text-red-600">{formatCurrency(item.value)}</span>
+                  <span className="text-sm font-bold text-red-400">{formatCurrency(item.value)}</span>
                 </div>
               ))}
               {Object.values(b.expensesByCategory).every((v) => v === 0) && (
@@ -143,7 +143,7 @@ export default function FinanceiroPage() {
       {/* Revenue by payment method */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h3>
+          <h3 className="mb-3 font-semibold text-sm text-flow-white">Receita por Pagamento</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: "Dinheiro", value: b.byPayment.money },
@@ -151,7 +151,7 @@ export default function FinanceiroPage() {
               { label: "Pix", value: b.byPayment.pix },
               { label: "Online", value: b.byPayment.online },
             ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-zinc-100 p-2 text-center">
+              <div key={item.label} className="rounded-lg border border-white/[.04] p-2 text-center">
                 <p className="text-[10px] text-zinc-500">{item.label}</p>
                 <p className="text-sm font-bold">{formatCurrency(item.value)}</p>
               </div>
@@ -166,7 +166,7 @@ export default function FinanceiroPage() {
 function Row({ label, value, color, bold, large }: { label: string; value: number; color: string; bold?: boolean; large?: boolean }) {
   return (
     <div className={`flex items-center justify-between ${bold ? "font-semibold" : ""} ${large ? "text-base" : ""}`}>
-      <span className="text-zinc-600">{label}</span>
+      <span className="text-zinc-400">{label}</span>
       <span className={color}>{formatCurrency(value)}</span>
     </div>
   )

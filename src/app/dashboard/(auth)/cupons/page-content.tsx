@@ -120,7 +120,7 @@ export default function CuponsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-flow-blue" />
       </div>
     )
   }
@@ -129,10 +129,10 @@ export default function CuponsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900">Cupons de Desconto</h1>
+          <h1 className="text-xl font-bold text-flow-white">Cupons de Desconto</h1>
           <p className="text-sm text-zinc-500">{coupons.length} cupons</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={() => setShowForm(true)} className="bg-flow-blue hover:bg-green-700">
           <Plus className="mr-2 h-4 w-4" />
           Novo cupom
         </Button>
@@ -163,7 +163,7 @@ export default function CuponsPage() {
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm"
                 >
                   <option value="percent">Percentual (%)</option>
                   <option value="fixed">Fixo (R$)</option>
@@ -205,7 +205,7 @@ export default function CuponsPage() {
                 />
               </div>
             </div>
-            <Button onClick={handleCreate} disabled={saving} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleCreate} disabled={saving} className="bg-flow-blue hover:bg-green-700">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               Criar cupom
             </Button>
@@ -226,12 +226,12 @@ export default function CuponsPage() {
         {coupons.map((coupon) => (
           <Card key={coupon.id} className={!coupon.active ? "opacity-50" : ""}>
             <CardContent className="p-3 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700 font-bold text-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-flow-blue/10 text-flow-blue font-bold text-sm">
                 {coupon.type === "percent" ? `${coupon.value}%` : `R$${coupon.value}`}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-mono font-bold text-sm text-zinc-900">{coupon.code}</p>
+                  <p className="font-mono font-bold text-sm text-flow-white">{coupon.code}</p>
                   {coupon.minOrder > 0 && (
                     <Badge variant="info" className="text-[10px]">
                       min R${coupon.minOrder}
@@ -246,12 +246,12 @@ export default function CuponsPage() {
               </div>
               <button onClick={() => toggleActive(coupon)}>
                 {coupon.active ? (
-                  <ToggleRight className="h-7 w-7 text-green-600" />
+                  <ToggleRight className="h-7 w-7 text-flow-blue" />
                 ) : (
                   <ToggleLeft className="h-7 w-7 text-zinc-300" />
                 )}
               </button>
-              <button onClick={() => handleDeleteClick(coupon.id)} className="text-red-400 hover:text-red-600">
+              <button onClick={() => handleDeleteClick(coupon.id)} className="text-red-400 hover:text-red-400">
                 <Trash2 className="h-4 w-4" />
               </button>
             </CardContent>
