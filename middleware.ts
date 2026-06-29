@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 
-const JWT_SECRET = process.env.JWT_SECRET || "pedefacil-secret-key-change-in-production"
+const JWT_SECRET = process.env.JWT_SECRET || "flowos-secret-key-change-in-production"
 const secret = new TextEncoder().encode(JWT_SECRET)
 
 const PUBLIC_ROUTES = [

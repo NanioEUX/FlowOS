@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const password = defaultPassword || "123456"
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const email = customEmail || `motoboy-${phone}@pedefacil.local`
+    const email = customEmail || `motoboy-${phone}@flowos.local`
 
     const user = await prisma.user.create({
       data: {

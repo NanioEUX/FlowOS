@@ -17,7 +17,7 @@ export async function generateMetadata({
     return { title: "Estabelecimento não encontrado" }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://pedefacil.com.br"
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://flowos.fs.app"
   const imageUrl = establishment.cover || establishment.logo || `${baseUrl}/og-default.png`
 
   return {
