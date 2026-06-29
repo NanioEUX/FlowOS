@@ -19,7 +19,7 @@
 
 @layer base {
   body {
-    @apply bg-flow-bg text-flow-white antialiased;
+    @apply bg-white text-zinc-900 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
