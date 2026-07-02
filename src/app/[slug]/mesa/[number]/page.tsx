@@ -29,6 +29,7 @@ export default async function MesaServerPage({
     slug: establishment.slug,
     phone: establishment.phone,
     logo: establishment.logo,
+    description: establishment.description,
     cover: establishment.cover,
     primaryColor: establishment.primaryColor,
     backgroundColor: establishment.backgroundColor,

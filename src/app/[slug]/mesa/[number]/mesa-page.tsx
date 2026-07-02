@@ -98,6 +98,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   const [showNotes, setShowNotes] = useState(false)
   const [paymentRequested, setPaymentRequested] = useState(false)
   const [requestingPayment, setRequestingPayment] = useState(false)
+  const [partialPaid, setPartialPaid] = useState(0)
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
 
@@ -121,8 +122,17 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
         setTableStatus(data)
       }
     } catch {}
+    // Fetch partial payments for this table
+    try {
+      const ppRes = await fetch(`/api/partial-payment?establishmentId=${est.id}&tableNumber=${tableNumber}`)
+      if (ppRes.ok) {
+        const ppData = await ppRes.json()
+        const total = ppData.reduce((s: number, pp: any) => s + pp.amount, 0)
+        setPartialPaid(total)
+      }
+    } catch {}
     setLoading(false)
-  }, [est.slug, tableNumber])
+  }, [est.slug, est.id, tableNumber])
 
   useEffect(() => {
     checkTable()
@@ -292,7 +302,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
         {/* Left: logo + establishment */}
         <div className="flex items-center gap-3">
           {est.logo ? <img src={est.logo} alt={est.name} className="h-11 w-11 rounded-xl object-cover shadow-sm" /> : <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-green-500 text-sm font-bold text-white shadow-sm`}>{est.name.charAt(0)}</div>}
-          <span className={`text-sm font-semibold ${headerSubtext}`}>{est.name}</span>
+          <div>
+            <span className={`text-sm font-semibold ${headerSubtext}`}>{est.name}</span>
+            {est.description && (
+              <p className={`text-[10px] leading-tight ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>{est.description}</p>
+            )}
+          </div>
         </div>
 
         {/* Center: table number */}
@@ -365,9 +380,15 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                   <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Total da mesa</span>
                   <span className="font-bold">{formatCurrency(tableStatus.totalPending)}</span>
                 </div>
+                {partialPaid > 0 && (
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-blue-600">Já abatido</span>
+                    <span className="font-bold text-blue-600">− {formatCurrency(partialPaid)}</span>
+                  </div>
+                )}
                 <div className={`mt-2 pt-2 border-t flex justify-between text-sm ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
                   <span className={darkMode ? "text-zinc-400" : "text-zinc-500"}>Restante a cobrar</span>
-                  <span className="text-lg font-extrabold text-green-600">{formatCurrency(chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : chargeMethod === "split" ? tableStatus.totalPending : tableStatus.totalPending)}</span>
+                  <span className="text-lg font-extrabold text-green-600">{formatCurrency(Math.max(0, (chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : tableStatus.totalPending) - partialPaid))}</span>
                 </div>
               </div>
 
@@ -558,6 +579,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               </button>
             ))}
           </div>
+          <p className={`text-center text-[10px] py-4 ${darkMode ? "text-zinc-600" : "text-zinc-400"}`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
         </div>
 
         {/* Right panel - Cart + Orders */}
@@ -586,7 +608,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                     <ShoppingBag className="h-8 w-8 text-zinc-400" />
                   </div>
                   <p className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Seu carrinho está vazio</p>
-                  <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Toque nos produtos para adicionar</p>
+                    <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Toque nos produtos para adicionar</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -655,41 +677,45 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
             )}
           </div>
 
-          {/* Bottom bar - fixed */}
-          {rightTab === "cart" && cart.length > 0 && (
-            <div className={`border-t px-4 py-3 ${darkMode ? "border-zinc-700" : "border-zinc-200"}`}>
-              {/* Notes */}
-              {showNotes ? (
-                <div className="mb-3">
-                  <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-wide ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Observações</p>
-                  <textarea
-                    value={orderNotes}
-                    onChange={(e) => setOrderNotes(e.target.value)}
-                    onBlur={() => { if (!orderNotes) setShowNotes(false) }}
-                    placeholder="Ex: sem cebola, bem passado..."
-                    maxLength={200}
-                    autoFocus
-                    rows={2}
-                    className={`w-full resize-none rounded-xl border px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-400"}`}
-                  />
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowNotes(true)}
-                  className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2.5 text-xs font-medium transition-colors ${orderNotes ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400" : darkMode ? "border-zinc-600 text-zinc-400 hover:border-zinc-500" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  {orderNotes ? `Observação: ${orderNotes.slice(0, 40)}${orderNotes.length > 40 ? "..." : ""}` : "Adicionar observação"}
-                </button>
-              )}
+          {/* Bottom bar - FIXED */}
+          {true && (
+            <div className={`shrink-0 border-t px-4 py-3 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+              {cart.length > 0 ? (
+                <>
+                  {showNotes ? (
+                    <div className="mb-3">
+                      <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-wide ${darkMode ? "text-zinc-500" : "text-zinc-400"}`}>Observações</p>
+                      <textarea
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                        onBlur={() => { if (!orderNotes) setShowNotes(false) }}
+                        placeholder="Ex: sem cebola, bem passado..."
+                        maxLength={200}
+                        autoFocus
+                        rows={2}
+                        className={`w-full resize-none rounded-xl border px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-400"}`}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowNotes(true)}
+                      className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2.5 text-xs font-medium transition-colors ${orderNotes ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400" : darkMode ? "border-zinc-600 text-zinc-400 hover:border-zinc-500" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      {orderNotes ? `Observação: ${orderNotes.slice(0, 40)}${orderNotes.length > 40 ? "..." : ""}` : "Adicionar observação"}
+                    </button>
+                  )}
 
-              <div className="mb-3 flex items-center justify-between">
-                <span className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Total</span>
-                <span className="text-xl font-bold text-green-600">{formatCurrency(cartTotal)}</span>
-              </div>
-              <button onClick={sendOrder} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]">
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4" /> Enviar Pedido</>}
-              </button>
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Total</span>
+                    <span className="text-xl font-bold text-green-600">{formatCurrency(cartTotal)}</span>
+                  </div>
+                  <button onClick={sendOrder} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]">
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4" /> Enviar Pedido</>}
+                  </button>
+                </>
+              ) : null}
+              <p className={`text-center text-[10px] ${cart.length > 0 ? "pt-3" : ""} ${darkMode ? "text-zinc-600" : "text-zinc-400"}`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
             </div>
           )}
         </div>

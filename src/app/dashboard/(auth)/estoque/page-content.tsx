@@ -7,7 +7,7 @@ import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
@@ -159,12 +159,12 @@ export default function EstoquePage() {
     loadAll()
   }
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" /></div>
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-flow-white">Estoque</h2>
+        <h2 className="text-2xl font-bold text-zinc-900">Estoque</h2>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Item
@@ -198,13 +198,13 @@ export default function EstoquePage() {
       <div className="grid grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-flow-white">{items.length}</p>
+            <p className="text-lg font-bold text-zinc-900">{items.length}</p>
             <p className="text-xs text-zinc-500">Itens cadastrados</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-flow-blue">{formatCurrency(totalStockValue)}</p>
+            <p className="text-lg font-bold text-green-600">{formatCurrency(totalStockValue)}</p>
             <p className="text-xs text-zinc-500">Valor em estoque</p>
           </CardContent>
         </Card>
@@ -217,11 +217,11 @@ export default function EstoquePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-white/[.06]">
-        <button onClick={() => setTab("items")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "items" ? "border-flow-blue text-flow-blue" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}>
+      <div className="flex gap-1 border-b border-zinc-200">
+        <button onClick={() => setTab("items")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "items" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
           Itens
         </button>
-        <button onClick={() => setTab("movements")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "movements" ? "border-flow-blue text-flow-blue" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}>
+        <button onClick={() => setTab("movements")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "movements" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
           Movimentações
         </button>
       </div>
@@ -232,7 +232,7 @@ export default function EstoquePage() {
           {categories.length === 0 && (
             <p className="text-sm text-zinc-400 text-center py-4">
               Crie categorias primeiro para organizar seus insumos.
-              <button onClick={() => setShowCategoryForm(true)} className="ml-2 text-flow-blue underline">Criar categoria</button>
+              <button onClick={() => setShowCategoryForm(true)} className="ml-2 text-green-600 underline">Criar categoria</button>
             </p>
           )}
           {categories.map((cat) => {
@@ -241,7 +241,7 @@ export default function EstoquePage() {
               <Card key={cat.id}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-flow-white flex items-center gap-2">
+                    <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
                       <Tag className="h-4 w-4 text-zinc-400" />
                       {cat.name}
                     </h3>
@@ -252,10 +252,10 @@ export default function EstoquePage() {
                   ) : (
                     <div className="space-y-2">
                       {catItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
+                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-flow-white">{item.name}</p>
+                              <p className="font-medium text-zinc-900">{item.name}</p>
                               {item.minQuantity > 0 && item.quantity <= item.minQuantity && (
                                 <Badge variant="warning">Estoque baixo</Badge>
                               )}
@@ -285,7 +285,7 @@ export default function EstoquePage() {
               </Card>
             )
           })}
-          <button onClick={() => setShowCategoryForm(true)} className="w-full rounded-lg border border-dashed border-white/[.08] p-3 text-sm text-zinc-500 hover:bg-white/[.05]">
+          <button onClick={() => setShowCategoryForm(true)} className="w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-500 hover:bg-zinc-100">
             + Adicionar categoria
           </button>
         </div>
@@ -298,15 +298,15 @@ export default function EstoquePage() {
             <p className="text-sm text-zinc-400 text-center py-8">Nenhuma movimentação registrada</p>
           ) : (
             movements.map((m) => (
-              <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-flow-card p-3">
+              <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white p-3">
                 <div className="flex items-center gap-3">
                   {m.type === "entry" ? (
-                    <ArrowUpCircle className="h-5 w-5 text-flow-green" />
+                    <ArrowUpCircle className="h-5 w-5 text-green-600" />
                   ) : (
                     <ArrowDownCircle className="h-5 w-5 text-red-500" />
                   )}
                   <div>
-                    <p className="font-medium text-flow-white">{m.item.name}</p>
+                    <p className="font-medium text-zinc-900">{m.item.name}</p>
                     <p className="text-xs text-zinc-500">
                       {m.type === "entry" ? "Entrada" : "Saída"} • {m.quantity} {m.item.unit}
                       {m.unitCost ? ` • ${formatCurrency(m.unitCost)}` : ""}
@@ -330,7 +330,14 @@ export default function EstoquePage() {
                 <h3 className="font-semibold">Nova Categoria</h3>
                 <button onClick={() => setShowCategoryForm(false)}><X className="h-5 w-5" /></button>
               </div>
-              <Input placeholder="Ex: Insumos, Embalagens..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} autoFocus />
+              <input
+                type="text"
+                placeholder="Ex: Insumos, Embalagens..."
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                autoFocus
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1" onClick={() => setShowCategoryForm(false)}>Cancelar</Button>
                 <Button className="flex-1" onClick={addCategory}>Criar</Button>
@@ -350,29 +357,77 @@ export default function EstoquePage() {
                 <button onClick={() => { setShowItemForm(false); setEditingItem(null) }}><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
-                <Input label="Nome" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Nome</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Farinha de trigo"
+                    value={itemForm.name}
+                    onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Unidade</label>
-                    <select value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} className="w-full rounded-lg border border-white/[.08] px-3 py-2 text-sm">
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Unidade</label>
+                    <select value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm">
                       {units.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Categoria</label>
-                    <select value={itemForm.categoryId} onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })} className="w-full rounded-lg border border-white/[.08] px-3 py-2 text-sm">
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Categoria</label>
+                    <select value={itemForm.categoryId} onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })} className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm">
                       <option value="">Selecionar...</option>
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Quantidade" type="number" step="0.01" min="0" value={itemForm.quantity} onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })} />
-                  <Input label="Estoque mínimo" type="number" step="0.01" min="0" value={itemForm.minQuantity} onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })} />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Quantidade</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.quantity}
+                      onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Estoque mínimo</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.minQuantity}
+                      onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Custo unitário (R$)" type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} />
-                  <Input label="Fornecedor" placeholder="Opcional" value={itemForm.supplier} onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })} />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Custo unitário (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.unitCost}
+                      onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Fornecedor</label>
+                    <input
+                      type="text"
+                      placeholder="Opcional"
+                      value={itemForm.supplier}
+                      onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => { setShowItemForm(false); setEditingItem(null) }}>Cancelar</Button>
@@ -395,25 +450,54 @@ export default function EstoquePage() {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Item</label>
-                  <select value={movementForm.itemId} onChange={(e) => setMovementForm({ ...movementForm, itemId: e.target.value })} className="w-full rounded-lg border border-white/[.08] px-3 py-2 text-sm">
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Item</label>
+                  <select value={movementForm.itemId} onChange={(e) => setMovementForm({ ...movementForm, itemId: e.target.value })} className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm">
                     <option value="">Selecionar item...</option>
                     {items.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit})</option>)}
                   </select>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "entry" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "entry" ? "border-flow-blue bg-flow-blue/10 text-flow-blue" : "border-white/[.06] text-zinc-400"}`}>
+                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "entry" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "entry" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400"}`}>
                     <ArrowUpCircle className="h-4 w-4" /> Entrada
                   </button>
-                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "exit" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "exit" ? "border-red-500 bg-red-500/10 text-red-400" : "border-white/[.06] text-zinc-400"}`}>
+                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "exit" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "exit" ? "border-red-500 bg-red-500/10 text-red-400" : "border-zinc-200 text-zinc-400"}`}>
                     <ArrowDownCircle className="h-4 w-4" /> Saída
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Quantidade" type="number" step="0.01" min="0.01" value={movementForm.quantity} onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })} />
-                  <Input label="Custo unitário (R$)" type="number" step="0.01" min="0" value={movementForm.unitCost} onChange={(e) => setMovementForm({ ...movementForm, unitCost: e.target.value })} />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Quantidade</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={movementForm.quantity}
+                      onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Custo unitário (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={movementForm.unitCost}
+                      onChange={(e) => setMovementForm({ ...movementForm, unitCost: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
                 </div>
-                <Input label="Observação" placeholder="Ex: Compra no atacado" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Observação</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Compra no atacado"
+                    value={movementForm.notes}
+                    onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
                 {movementError && <p className="text-sm text-red-500">{movementError}</p>}
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowMovementForm(false)}>Cancelar</Button>

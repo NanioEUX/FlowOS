@@ -61,7 +61,8 @@ model Establishment {
   deliveryPeople      DeliveryPerson[]
   expenses            Expense[]
   orders              Order[]
-  paymentRequests     PaymentRequest[]
+   paymentRequests     PaymentRequest[]
+   partialPayments     PartialPayment[]
   products            Product[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
@@ -352,4 +353,16 @@ model PaymentRequest {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, status])
+}
+
+model PartialPayment {
+  id              String   @id @default(cuid())
+  tableNumber     Int
+  establishmentId String
+  amount          Float
+  paymentMethod   String
+  createdAt       DateTime @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, tableNumber])
 }

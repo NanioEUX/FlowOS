@@ -7,7 +7,6 @@ import { Tag, Plus, Trash2, ToggleLeft, ToggleRight, Percent, DollarSign, Loader
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -120,7 +119,7 @@ export default function CuponsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-flow-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
       </div>
     )
   }
@@ -129,10 +128,10 @@ export default function CuponsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-flow-white">Cupons de Desconto</h1>
+          <h1 className="text-xl font-bold text-zinc-900">Cupons de Desconto</h1>
           <p className="text-sm text-zinc-500">{coupons.length} cupons</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-flow-blue hover:bg-green-700">
+        <Button onClick={() => setShowForm(true)} className="bg-green-600 hover:bg-green-700">
           <Plus className="mr-2 h-4 w-4" />
           Novo cupom
         </Button>
@@ -150,11 +149,11 @@ export default function CuponsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-zinc-500">Código</label>
-                <Input
+                <input
                   placeholder="DESCONTO10"
                   value={form.code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  className="uppercase"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none uppercase"
                 />
                 {codeError && <p className="mt-1 text-xs text-red-500">{codeError}</p>}
               </div>
@@ -163,7 +162,7 @@ export default function CuponsPage() {
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
                 >
                   <option value="percent">Percentual (%)</option>
                   <option value="fixed">Fixo (R$)</option>
@@ -171,41 +170,45 @@ export default function CuponsPage() {
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Valor</label>
-                <Input
+                <input
                   type="number"
                   placeholder={form.type === "percent" ? "10" : "5.00"}
                   value={form.value}
                   onChange={(e) => setForm({ ...form, value: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Pedido mínimo (R$)</label>
-                <Input
+                <input
                   type="number"
                   placeholder="0"
                   value={form.minOrder}
                   onChange={(e) => setForm({ ...form, minOrder: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Máx. usos</label>
-                <Input
+                <input
                   type="number"
                   placeholder="Ilimitado"
                   value={form.maxUses}
                   onChange={(e) => setForm({ ...form, maxUses: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Expira em</label>
-                <Input
+                <input
                   type="date"
                   value={form.expiresAt}
                   onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                 />
               </div>
             </div>
-            <Button onClick={handleCreate} disabled={saving} className="bg-flow-blue hover:bg-green-700">
+            <Button onClick={handleCreate} disabled={saving} className="bg-green-600 hover:bg-green-700">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               Criar cupom
             </Button>
@@ -226,12 +229,12 @@ export default function CuponsPage() {
         {coupons.map((coupon) => (
           <Card key={coupon.id} className={!coupon.active ? "opacity-50" : ""}>
             <CardContent className="p-3 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-flow-blue/10 text-flow-blue font-bold text-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10 text-green-600 font-bold text-sm">
                 {coupon.type === "percent" ? `${coupon.value}%` : `R$${coupon.value}`}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-mono font-bold text-sm text-flow-white">{coupon.code}</p>
+                  <p className="font-mono font-bold text-sm text-zinc-900">{coupon.code}</p>
                   {coupon.minOrder > 0 && (
                     <Badge variant="info" className="text-[10px]">
                       min R${coupon.minOrder}
@@ -246,7 +249,7 @@ export default function CuponsPage() {
               </div>
               <button onClick={() => toggleActive(coupon)}>
                 {coupon.active ? (
-                  <ToggleRight className="h-7 w-7 text-flow-blue" />
+                  <ToggleRight className="h-7 w-7 text-green-600" />
                 ) : (
                   <ToggleLeft className="h-7 w-7 text-zinc-300" />
                 )}

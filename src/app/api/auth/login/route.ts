@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const establishment = await prisma.establishment.findUnique({
       where: { id: user.establishmentId },
       select: {
-        id: true, name: true, slug: true, logo: true, defaultTheme: true,
+        id: true, name: true, slug: true, logo: true, description: true, defaultTheme: true,
         subscriptionStatus: true, subscriptionPlan: true,
         trialStartsAt: true, trialEndsAt: true, nextPaymentAt: true,
       },
@@ -95,8 +95,8 @@ export async function POST(req: NextRequest) {
       establishment,
       subscriptionExpired,
     })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Erro ao fazer login" }, { status: 500 })
+  } catch (error: any) {
+    console.error("LOGIN ERROR:", error?.message, error?.code, error?.meta)
+    return NextResponse.json({ error: "Erro ao fazer login", detail: error?.message }, { status: 500 })
   }
 }

@@ -67,7 +67,7 @@ export default function ClientesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-flow-blue" />
+        <Loader2 className="h-6 w-6 animate-spin text-green-600" />
       </div>
     )
   }
@@ -75,7 +75,7 @@ export default function ClientesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-flow-white">Clientes</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">Clientes</h1>
         <p className="text-sm text-zinc-500">Gerencie e acompanhe seus clientes</p>
       </div>
 
@@ -84,11 +84,11 @@ export default function ClientesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-flow-blue/15 p-2">
-                <Users className="h-5 w-5 text-flow-blue" />
+              <div className="rounded-lg bg-green-600/15 p-2">
+                <Users className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-flow-white">{totalCustomers}</p>
+                <p className="text-2xl font-bold text-zinc-900">{totalCustomers}</p>
                 <p className="text-xs text-zinc-500">Clientes cadastrados</p>
               </div>
             </div>
@@ -97,11 +97,11 @@ export default function ClientesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-flow-blue/10 p-2">
-                <ShoppingBag className="h-5 w-5 text-flow-blue" />
+              <div className="rounded-lg bg-green-600/10 p-2">
+                <ShoppingBag className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-flow-white">{totalOrders}</p>
+                <p className="text-2xl font-bold text-zinc-900">{totalOrders}</p>
                 <p className="text-xs text-zinc-500">Total de pedidos</p>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function ClientesPage() {
                 <DollarSign className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-flow-white">{formatCurrency(totalSpent)}</p>
+                <p className="text-2xl font-bold text-zinc-900">{formatCurrency(totalSpent)}</p>
                 <p className="text-xs text-zinc-500">Receita total</p>
               </div>
             </div>
@@ -126,7 +126,7 @@ export default function ClientesPage() {
       {topCustomers.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold text-zinc-300 mb-3">Top 5 Clientes</h2>
+            <h2 className="text-sm font-semibold text-zinc-700 mb-3">Top 5 Clientes</h2>
             <div className="space-y-2">
               {topCustomers.map((c, i) => (
                 <div key={c.id} className="flex items-center justify-between text-sm">
@@ -136,7 +136,7 @@ export default function ClientesPage() {
                   </div>
                   <div className="flex items-center gap-4 text-zinc-500">
                     <span>{c.totalOrders} pedidos</span>
-                    <span className="font-semibold text-flow-blue">{formatCurrency(c.totalSpent)}</span>
+                    <span className="font-semibold text-green-600">{formatCurrency(c.totalSpent)}</span>
                   </div>
                 </div>
               ))}
@@ -152,7 +152,7 @@ export default function ClientesPage() {
           placeholder="Buscar por nome ou telefone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-white/[.06] pl-10 pr-4 py-2.5 text-sm focus:border-flow-blue focus:outline-none"
+          className="w-full rounded-lg border border-zinc-300 bg-zinc-50 pl-10 pr-4 py-2.5 text-sm focus:border-green-600 focus:outline-none"
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -173,20 +173,20 @@ export default function ClientesPage() {
             <button
               key={customer.id}
               onClick={() => setSelectedCustomer(selectedCustomer?.id === customer.id ? null : customer)}
-              className="w-full text-left rounded-lg border border-white/[.06] p-4 hover:border-flow-green/30 hover:bg-flow-blue/10/50 transition-colors"
+              className="w-full text-left rounded-lg border border-zinc-200 p-4 hover:border-green-600/30 hover:bg-green-600/10/50 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-flow-blue/10 text-sm font-bold text-flow-blue">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600/10 text-sm font-bold text-green-600">
                     {customer.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div>
-                    <p className="font-medium text-flow-white">{customer.name || "Sem nome"}</p>
+                    <p className="font-medium text-zinc-900">{customer.name || "Sem nome"}</p>
                     <p className="text-xs text-zinc-500">{formatPhone(customer.phone)}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-flow-blue">{formatCurrency(customer.totalSpent)}</p>
+                  <p className="text-sm font-semibold text-green-600">{formatCurrency(customer.totalSpent)}</p>
                   <p className="text-xs text-zinc-400">{customer.totalOrders} pedidos</p>
                 </div>
               </div>
@@ -210,7 +210,7 @@ export default function ClientesPage() {
                       href={`https://wa.me/55${customer.phone.replace(/\D/g, "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-flow-blue hover:underline"
+                      className="text-green-600 hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       Abrir WhatsApp

@@ -6,7 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Lock, Unlock, DollarSign, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle, Loader2, X, Plus, ArrowRightLeft } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 
@@ -199,7 +199,7 @@ export default function CaixaFinanceiroPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-flow-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
       </div>
     )
   }
@@ -207,20 +207,20 @@ export default function CaixaFinanceiroPage() {
   if (!register) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold text-flow-white">Caixa</h1>
+        <h1 className="text-xl font-bold text-zinc-900">Caixa</h1>
         <Card>
           <CardContent className="flex flex-col items-center py-10 gap-4">
             <Lock className="h-12 w-12 text-zinc-300" />
             <p className="text-zinc-500">Nenhum caixa aberto</p>
             <div className="flex items-center gap-2">
-              <Input
+              <input
                 type="number"
                 placeholder="Valor inicial (R$)"
                 value={openingAmount}
                 onChange={(e) => setOpeningAmount(e.target.value)}
-                className="w-40"
+                className="flex h-10 w-40 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
               />
-              <Button onClick={openRegister} disabled={saving} className="bg-flow-blue hover:bg-green-700">
+              <Button onClick={openRegister} disabled={saving} className="bg-green-600 hover:bg-green-700">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlock className="h-4 w-4 mr-2" />}
                 Abrir Caixa
               </Button>
@@ -235,7 +235,7 @@ export default function CaixaFinanceiroPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-flow-white">Caixa Aberto</h1>
+          <h1 className="text-xl font-bold text-zinc-900">Caixa Aberto</h1>
           <p className="text-xs text-zinc-500">Aberto às {new Date(register.createdAt).toLocaleTimeString("pt-BR")}</p>
         </div>
         <Button onClick={() => addMovement("injection")} variant="outline" size="sm">
@@ -244,11 +244,11 @@ export default function CaixaFinanceiroPage() {
       </div>
 
       {/* Balance */}
-      <Card className="border-flow-blue/20 bg-flow-blue/10">
+      <Card className="border-green-600/20 bg-green-600/10">
         <CardContent className="p-4 text-center">
-          <p className="text-xs text-flow-blue">Saldo do Caixa</p>
-          <p className="text-3xl font-bold text-flow-blue">{formatCurrency(currentBalance)}</p>
-          <div className="flex justify-center gap-4 mt-2 text-xs text-flow-blue">
+          <p className="text-xs text-green-600">Saldo do Caixa</p>
+          <p className="text-3xl font-bold text-green-600">{formatCurrency(currentBalance)}</p>
+          <div className="flex justify-center gap-4 mt-2 text-xs text-green-600">
             <span>Abertura: {formatCurrency(register.openingAmount)}</span>
             <span>Entradas: +{formatCurrency(totalIn)}</span>
             <span>Saídas: -{formatCurrency(totalOut)}</span>
@@ -264,7 +264,7 @@ export default function CaixaFinanceiroPage() {
         <Button onClick={() => setShowExpenseForm(true)} variant="outline" size="sm" className="text-red-400">
           <Plus className="h-4 w-4 mr-1" /> Despesa
         </Button>
-        <Button onClick={() => { setTransferAmount(currentBalance.toString()); setShowTransferModal(true) }} variant="outline" size="sm" className="text-flow-blue">
+        <Button onClick={() => { setTransferAmount(currentBalance.toString()); setShowTransferModal(true) }} variant="outline" size="sm" className="text-green-600">
           <ArrowRightLeft className="h-4 w-4 mr-1" /> Transferir
         </Button>
         <div className="flex-1" />
@@ -274,22 +274,23 @@ export default function CaixaFinanceiroPage() {
       </div>
 
       {/* Close form */}
-      <Card className="border-white/[.06]">
+      <Card className="border-zinc-200">
         <CardContent className="p-3">
           <p className="text-xs text-zinc-500 mb-2">Fechar caixa — informe o valor contado:</p>
           <div className="flex gap-2">
-            <Input
+            <input
               type="number"
               placeholder={`Esperado: ${formatCurrency(currentBalance)}`}
               value={closingAmount}
               onChange={(e) => setClosingAmount(e.target.value)}
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
             />
             <Button onClick={closeRegister} disabled={saving} variant="danger">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
             </Button>
           </div>
           {closingAmount && parseFloat(closingAmount) !== currentBalance && (
-            <p className={`text-xs mt-1 ${parseFloat(closingAmount) > currentBalance ? "text-flow-blue" : "text-red-400"}`}>
+            <p className={`text-xs mt-1 ${parseFloat(closingAmount) > currentBalance ? "text-green-600" : "text-red-400"}`}>
               {parseFloat(closingAmount) > currentBalance ? "Sobra" : "Falta"}: {formatCurrency(Math.abs(parseFloat(closingAmount) - currentBalance))}
             </p>
           )}
@@ -304,9 +305,9 @@ export default function CaixaFinanceiroPage() {
               <h3 className="font-semibold text-sm">Registrar Despesa no Caixa</h3>
               <button onClick={() => setShowExpenseForm(false)}><X className="h-4 w-4 text-zinc-400" /></button>
             </div>
-            <Input placeholder="Descrição" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
-            <Input type="number" placeholder="Valor (R$)" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
-            <select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} className="w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm">
+            <input placeholder="Descrição" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+            <input type="number" placeholder="Valor (R$)" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+            <select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm">
               <option value="fixa">Fixa</option>
               <option value="variavel">Variável</option>
               <option value="motoboy">Motoboy</option>
@@ -322,7 +323,7 @@ export default function CaixaFinanceiroPage() {
 
       {/* Transfer modal */}
       {showTransferModal && (
-        <Card className="border-flow-blue/20">
+        <Card className="border-green-600/20">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm">Transferir Caixa</h3>
@@ -331,29 +332,31 @@ export default function CaixaFinanceiroPage() {
             <p className="text-xs text-zinc-500">
               Informe o valor em espécie no caixa e selecione o atendente que vai assumir.
             </p>
-            <div className="rounded-lg bg-flow-blue/10 p-3">
-              <p className="text-xs text-flow-blue">Saldo atual: {formatCurrency(currentBalance)}</p>
+            <div className="rounded-lg bg-green-600/10 p-3">
+              <p className="text-xs text-green-600">Saldo atual: {formatCurrency(currentBalance)}</p>
             </div>
-            <Input
+            <input
               type="number"
               placeholder="Valor em espécie (R$)"
               value={transferAmount}
               onChange={(e) => setTransferAmount(e.target.value)}
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
             />
             <select
               value={transferToUser}
               onChange={(e) => setTransferToUser(e.target.value)}
-              className="w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
             >
               <option value="">Selecione o atendente</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
-            <Input
+            <input
               placeholder="Observações (opcional)"
               value={transferNotes}
               onChange={(e) => setTransferNotes(e.target.value)}
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
             />
             <Button
               onClick={transferCashRegister}
@@ -369,7 +372,7 @@ export default function CaixaFinanceiroPage() {
       {/* Movements */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-flow-white">Movimentações ({register.movements.length})</h3>
+          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Movimentações ({register.movements.length})</h3>
           {register.movements.length === 0 ? (
             <p className="text-xs text-zinc-400 text-center py-4">Nenhuma movimentação</p>
           ) : (
@@ -378,7 +381,7 @@ export default function CaixaFinanceiroPage() {
                 <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/[.04] p-2">
                   <div className="flex items-center gap-2">
                     {m.amount >= 0 ? (
-                      <ArrowDownCircle className="h-4 w-4 text-flow-green" />
+                      <ArrowDownCircle className="h-4 w-4 text-green-600" />
                     ) : (
                       <ArrowUpCircle className="h-4 w-4 text-red-500" />
                     )}
@@ -387,7 +390,7 @@ export default function CaixaFinanceiroPage() {
                       <p className="text-[10px] text-zinc-400">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-bold ${m.amount >= 0 ? "text-flow-blue" : "text-red-400"}`}>
+                  <span className={`text-sm font-bold ${m.amount >= 0 ? "text-green-600" : "text-red-400"}`}>
                     {m.amount >= 0 ? "+" : ""}{formatCurrency(m.amount)}
                   </span>
                 </div>

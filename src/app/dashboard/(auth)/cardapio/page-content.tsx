@@ -6,7 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -38,7 +38,7 @@ interface Category {
 const BADGE_OPTIONS = [
   { value: "", label: "Nenhum", icon: null },
   { value: "mais_vendido", label: "Mais Vendido", icon: Star, color: "text-amber-500 bg-amber-500/10" },
-  { value: "novo", label: "Novo", icon: Sparkles, color: "text-blue-500 bg-flow-blue/10" },
+  { value: "novo", label: "Novo", icon: Sparkles, color: "text-blue-500 bg-green-600/10" },
   { value: "promocao", label: "Promoção", icon: Tag, color: "text-red-500 bg-red-500/10" },
 ]
 
@@ -413,23 +413,23 @@ export default function CardapioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-flow-white">Cardápio</h2>
+      <h2 className="text-2xl font-bold text-zinc-900">Cardápio</h2>
 
       {/* Tabs */}
-      <div className="flex gap-2 rounded-lg border border-white/[.06] bg-white/[.05] p-1">
+      <div className="flex gap-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
         <button
           onClick={() => setActiveTab("produtos")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "produtos"
-              ? "bg-flow-card text-flow-white shadow-sm"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
           <UtensilsCrossed className="h-4 w-4" />
@@ -439,8 +439,8 @@ export default function CardapioPage() {
           onClick={() => setActiveTab("aparencia")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "aparencia"
-              ? "bg-flow-card text-flow-white shadow-sm"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
           <ImageIcon className="h-4 w-4" />
@@ -450,8 +450,8 @@ export default function CardapioPage() {
           onClick={() => setActiveTab("cores")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "cores"
-              ? "bg-flow-card text-flow-white shadow-sm"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
           <Palette className="h-4 w-4" />
@@ -476,7 +476,7 @@ export default function CardapioPage() {
               <Card key={cat.id}>
                 <CardContent className="p-4">
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-flow-white">{cat.name}</h3>
+                    <h3 className="text-lg font-semibold text-zinc-900">{cat.name}</h3>
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
@@ -500,20 +500,20 @@ export default function CardapioPage() {
                       {sorted.map((product, idx) => (
                         <div
                           key={product.id}
-                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-white/[.03] p-3"
+                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-zinc-50 p-3"
                         >
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={() => moveProduct(product.id, cat.id, "up")}
                               disabled={idx === 0}
-                              className="text-zinc-300 hover:text-zinc-400 disabled:opacity-30"
+                              className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
                             >
                               <GripVertical className="h-3 w-3 -rotate-90" />
                             </button>
                             <button
                               onClick={() => moveProduct(product.id, cat.id, "down")}
                               disabled={idx === sorted.length - 1}
-                              className="text-zinc-300 hover:text-zinc-400 disabled:opacity-30"
+                              className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
                             >
                               <GripVertical className="h-3 w-3 rotate-90" />
                             </button>
@@ -533,7 +533,7 @@ export default function CardapioPage() {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-flow-white">{product.name}</p>
+                              <p className="font-medium text-zinc-900">{product.name}</p>
                               {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
                               {product.stockItemId && <Badge variant="success">Vendável</Badge>}
                               {getBadgeDisplay(product.badge)}
@@ -544,7 +544,7 @@ export default function CardapioPage() {
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="font-bold text-flow-blue">
+                            <span className="font-bold text-green-600">
                               {formatCurrency(product.price)}
                             </span>
                             <button
@@ -553,14 +553,14 @@ export default function CardapioPage() {
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 product.sendToPrep
                                   ? "bg-orange-100 text-orange-700"
-                                  : "bg-white/[.05] text-zinc-400"
+                                  : "bg-zinc-100 text-zinc-400"
                               }`}
                               title={product.sendToPrep ? "Entra no preparo (clique para desativar)" : "Não vai para preparo (clique para ativar)"}
                             >
                               <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                                 product.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
                               }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-flow-card shadow-sm transition-transform ${
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
                                   product.sendToPrep ? "translate-x-3.5" : "translate-x-0.5"
                                 }`} />
                               </span>
@@ -590,7 +590,7 @@ export default function CardapioPage() {
 
           {categories.length === 0 && (
             <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
-              <UtensilsCrossed className="mx-auto h-8 w-8 text-zinc-300" />
+              <UtensilsCrossed className="mx-auto h-8 w-8 text-zinc-700" />
               <p className="mt-2 text-sm text-zinc-500">Crie uma categoria para começar</p>
             </div>
           )}
@@ -601,22 +601,22 @@ export default function CardapioPage() {
       {activeTab === "aparencia" && (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-flow-white">Aparência do Cardápio</h3>
+            <h3 className="font-semibold text-zinc-900">Aparência do Cardápio</h3>
             <p className="text-sm text-zinc-500">Personalize a visualização do seu cardápio público.</p>
             
             {/* Preview do cardápio */}
-            <div className="rounded-lg border border-white/[.06] bg-white/[.03] p-4">
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
               <p className="text-xs text-zinc-400 mb-3">Pré-visualização</p>
-              <div className="flex items-center gap-3 rounded-lg bg-flow-card p-3 shadow-sm border border-white/[.04]">
+              <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm border border-white/[.04]">
                 {form.logo ? (
                   <img src={form.logo} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-flow-blue/10">
-                    <ImageIcon className="h-5 w-5 text-flow-blue" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
+                    <ImageIcon className="h-5 w-5 text-green-600" />
                   </div>
                 )}
                 <div>
-                  <p className="font-bold text-flow-white">{form.name || "Nome do Estabelecimento"}</p>
+                  <p className="font-bold text-zinc-900">{form.name || "Nome do Estabelecimento"}</p>
                   <p className="text-xs text-zinc-500">{form.phone || "Telefone"}</p>
                 </div>
               </div>
@@ -624,9 +624,9 @@ export default function CardapioPage() {
 
             {/* Upload da Logo */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">Logo do Estabelecimento</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Logo do Estabelecimento</label>
               <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-flow-card px-4 py-3 text-sm text-zinc-400 hover:bg-white/[.05] hover:border-flow-blue/50 transition-colors">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                   <Upload className="h-4 w-4" />
                   <span>Selecionar imagem</span>
                   <input
@@ -654,36 +654,45 @@ export default function CardapioPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
-              <Input label="" id="logo" placeholder="https://..." value={form.logo.startsWith("data:") ? "" : form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} />
+              <input
+                type="text"
+                placeholder="https://..."
+                value={form.logo.startsWith("data:") ? "" : form.logo}
+                onChange={(e) => setForm({ ...form, logo: e.target.value })}
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">Link do Instagram</label>
-              <Input
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Link do Instagram</label>
+              <input
+                type="text"
                 id="instagramUrl"
                 placeholder="https://instagram.com/seuperfil"
                 value={form.instagramUrl}
                 onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
               />
               <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
             </div>
 
             <div className="border-t border-white/[.04] pt-4">
-              <h4 className="text-sm font-semibold text-flow-white mb-3">Mensagens de Pedido</h4>
+              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Mensagens de Pedido</h4>
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Título de Confirmação</label>
-                  <Input
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título de Confirmação</label>
+                  <input
                     placeholder="Pedido enviado!"
                     value={form.confirmationTitle}
                     onChange={(e) => setForm({ ...form, confirmationTitle: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                   <p className="mt-1 text-xs text-zinc-400">Título exibido ao cliente após finalizar o pedido</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Imagem de Confirmação</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de Confirmação</label>
                   <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-flow-card px-4 py-3 text-sm text-zinc-400 hover:bg-white/[.05] hover:border-flow-blue/50 transition-colors">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                       <Upload className="h-4 w-4" />
                       <span>Selecionar imagem</span>
                       <input
@@ -731,7 +740,7 @@ export default function CardapioPage() {
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Mensagem de Retirada</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Retirada</label>
                   <Textarea
                     placeholder="Vai ser um prazer recebê-lo. Estamos lhe aguardando!"
                     value={form.pickupMessage}
@@ -740,7 +749,7 @@ export default function CardapioPage() {
                   <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de retirada</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Mensagem de Entrega</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Entrega</label>
                   <Textarea
                     placeholder="Obrigado pelo seu pedido!"
                     value={form.deliveryMessage}
@@ -758,23 +767,25 @@ export default function CardapioPage() {
                 </div>
                 <p className="text-xs text-amber-400">Personalize a mensagem exibida quando o estabelecimento estiver fechado. Use {'{day}'} e {'{time}'} para preencher automaticamente.</p>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Título</label>
-                  <Input
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título</label>
+                  <input
                     placeholder="Encerramos por hoje, mas {day} às {time} retornamos"
                     value={form.closedTitle}
                     onChange={(e) => setForm({ ...form, closedTitle: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Submensagem</label>
-                  <Input
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Submensagem</label>
+                  <input
                     placeholder="Aguarde, estaremos de volta!"
                     value={form.closedSub}
                     onChange={(e) => setForm({ ...form, closedSub: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 {/* Preview */}
-                <div className="rounded-lg border border-amber-500/20 bg-flow-card p-3">
+                <div className="rounded-lg border border-amber-500/20 bg-white p-3">
                   <p className="mb-2 text-[10px] font-medium text-zinc-400 uppercase">Preview (simula terça às 14:00)</p>
                   <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-center">
                     <p className="text-sm font-medium text-amber-800">
@@ -796,7 +807,7 @@ export default function CardapioPage() {
                 {savingAppearance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Salvar aparência
               </Button>
-              {savedAppearance && <span className="flex items-center gap-1 text-sm text-flow-blue"><Save className="h-4 w-4" />Salvo!</span>}
+              {savedAppearance && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
             </div>
           </CardContent>
         </Card>
@@ -808,7 +819,7 @@ export default function CardapioPage() {
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-flow-white flex items-center gap-2">
+                <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
                   <Palette className="h-5 w-5 text-[#FF6B35]" />
                   Personalização de Cores
                 </h3>
@@ -816,12 +827,12 @@ export default function CardapioPage() {
               </div>
               <div className="flex items-center gap-2">
                 {colorsPublished ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-flow-blue/10 px-2 py-1 text-xs font-medium text-flow-blue">
-                    <div className="h-1.5 w-1.5 rounded-full bg-flow-green"></div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-600/10 px-2 py-1 text-xs font-medium text-green-600">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-600"></div>
                     Publicado
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/[.05] px-2 py-1 text-xs font-medium text-zinc-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-zinc-400"></div>
                     Rascunho
                   </span>
@@ -834,7 +845,7 @@ export default function CardapioPage() {
               {/* Color Pickers */}
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Cor primária (botões, destaques)</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor primária (botões, destaques)</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -846,12 +857,12 @@ export default function CardapioPage() {
                       type="text"
                       value={colors.primaryColor}
                       onChange={(e) => setColors({ ...colors, primaryColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Cor de fundo</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor de fundo</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -863,12 +874,12 @@ export default function CardapioPage() {
                       type="text"
                       value={colors.backgroundColor}
                       onChange={(e) => setColors({ ...colors, backgroundColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Cor do texto</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor do texto</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -880,12 +891,12 @@ export default function CardapioPage() {
                       type="text"
                       value={colors.textColor}
                       onChange={(e) => setColors({ ...colors, textColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Cor do header</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor do header</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -897,14 +908,14 @@ export default function CardapioPage() {
                       type="text"
                       value={colors.headerColor}
                       onChange={(e) => setColors({ ...colors, headerColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-white/[.06] px-3 py-2 text-sm"
+                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Live Preview */}
-              <div className="rounded-lg border border-white/[.06] bg-white/[.03] p-4">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                 <p className="text-xs text-zinc-400 mb-3">Pré-visualização ao vivo</p>
                 <div
                   className="rounded-lg overflow-hidden shadow-sm"
@@ -994,11 +1005,12 @@ export default function CardapioPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <Input
+              <input
                 placeholder="Ex: Bebidas, Sobremesas..."
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 autoFocus
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
               />
               <div className="mt-4 flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setShowCategoryForm(false)}>
@@ -1027,35 +1039,41 @@ export default function CardapioPage() {
                 </button>
               </div>
               <div className="space-y-4">
-                <Input
-                  label="Nome"
-                  placeholder="Ex: Pizza Calabresa"
-                  value={productForm.name}
-                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Nome</label>
+                  <input
+                    placeholder="Ex: Pizza Calabresa"
+                    value={productForm.name}
+                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
                 <Textarea
                   label="Descrição"
                   placeholder="Ex: Molho, mussarela, calabresa..."
                   value={productForm.description}
                   onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                 />
-                <Input
-                  label="Preço"
-                  type="number"
-                  step="0.01"
-                  placeholder="29.90"
-                  value={productForm.price}
-                  onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Preço</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="29.90"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
 
                 {/* Image */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">
                     <ImageIcon className="mr-1 inline h-3 w-3" />
                     Imagem do Produto
                   </label>
                   <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-flow-card px-4 py-3 text-sm text-zinc-400 hover:bg-white/[.05] hover:border-flow-blue/50 transition-colors">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                       <Upload className="h-4 w-4" />
                       <span>Selecionar foto</span>
                       <input
@@ -1099,10 +1117,11 @@ export default function CardapioPage() {
                     )}
                   </div>
                   <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
-                  <Input
+                  <input
                     placeholder="https://exemplo.com/foto.jpg"
                     value={productForm.image.startsWith("data:") ? "" : productForm.image}
                     onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                   {productForm.image && (
                     <img
@@ -1116,7 +1135,7 @@ export default function CardapioPage() {
 
                 {/* Badge */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Destaque</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
                   <div className="flex flex-wrap gap-2">
                     {BADGE_OPTIONS.map((opt) => (
                       <button
@@ -1125,8 +1144,8 @@ export default function CardapioPage() {
                         onClick={() => setProductForm({ ...productForm, badge: opt.value })}
                         className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                           productForm.badge === opt.value
-                            ? "border-flow-blue bg-flow-blue/10 text-flow-blue"
-                            : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
+                            ? "border-green-600 bg-green-600/10 text-green-600"
+                            : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
                         }`}
                       >
                         {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
@@ -1138,13 +1157,13 @@ export default function CardapioPage() {
 
                 {/* Stock Item Link (direct sale) */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">
                     Vincular ao Estoque (venda direta)
                   </label>
                   <select
                     value={productForm.stockItemId}
                     onChange={(e) => setProductForm({ ...productForm, stockItemId: e.target.value })}
-                    className="w-full rounded-lg border border-white/[.06] px-3 py-2 text-sm text-zinc-300 focus:border-flow-blue focus:outline-none"
+                    className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                   >
                     <option value="">Nenhum (sem controle de estoque)</option>
                     {stockItems.map((item) => (
@@ -1160,7 +1179,7 @@ export default function CardapioPage() {
 
                 {/* BOM Links */}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">
                     Vincular Insumos (receita)
                   </label>
                   {stockItems.length === 0 ? (
@@ -1171,7 +1190,7 @@ export default function CardapioPage() {
                         const link = productLinks.find((l) => l.stockItemId === item.id)
                         return (
                           <div key={item.id} className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 flex-1 text-sm text-zinc-300">
+                            <label className="flex items-center gap-2 flex-1 text-sm text-zinc-700">
                               <input
                                 type="checkbox"
                                 checked={!!link}
@@ -1187,7 +1206,7 @@ export default function CardapioPage() {
                               {item.name}
                             </label>
                             {link && (
-                              <Input
+                              <input
                                 type="number"
                                 min="0.01"
                                 step="0.01"
@@ -1199,7 +1218,7 @@ export default function CardapioPage() {
                                     )
                                   )
                                 }
-                                className="w-20"
+                                className="flex h-10 w-20 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                                 placeholder="Qtd"
                               />
                             )}
@@ -1214,12 +1233,12 @@ export default function CardapioPage() {
                 <div className={`flex items-center justify-between rounded-lg border px-4 py-3 ${
                   productForm.sendToPrep
                     ? "border-orange-300 bg-orange-50"
-                    : "border-white/[.06]"
+                    : "border-zinc-200"
                 }`}>
                   <div className="flex items-center gap-3">
                     <span className="text-xl">👨‍🍳</span>
                     <div>
-                      <p className="text-sm font-medium text-flow-white">Enviar para preparo</p>
+                      <p className="text-sm font-medium text-zinc-900">Enviar para preparo</p>
                       <p className="text-xs text-zinc-500">Aparece no módulo Pedidos para a cozinha</p>
                     </div>
                   </div>
@@ -1230,7 +1249,7 @@ export default function CardapioPage() {
                       productForm.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
                     }`}
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-flow-card transition-transform ${
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       productForm.sendToPrep ? "translate-x-6" : "translate-x-1"
                     }`} />
                   </button>

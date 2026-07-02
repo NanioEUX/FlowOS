@@ -6,7 +6,6 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Users, Plus, Pencil, Trash2, X, Loader2, Shield, Eye, EyeOff, Check, Copy, ExternalLink } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -224,7 +223,7 @@ export default function UsuariosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
       </div>
     )
   }
@@ -232,7 +231,7 @@ export default function UsuariosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-flow-white">Usuários</h2>
+        <h2 className="text-2xl font-bold text-zinc-900">Usuários</h2>
         <Button onClick={openNew}>
           <Plus className="mr-1 h-4 w-4" />
           Novo Usuário
@@ -241,7 +240,7 @@ export default function UsuariosPage() {
 
       {users.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
-          <Users className="mx-auto h-8 w-8 text-zinc-300" />
+          <Users className="mx-auto h-8 w-8 text-zinc-700" />
           <p className="mt-2 text-sm text-zinc-500">Nenhum usuário cadastrado</p>
           <p className="text-xs text-zinc-400">Crie o primeiro atendente para começar</p>
         </div>
@@ -256,7 +255,7 @@ export default function UsuariosPage() {
                   <div className="mb-3 flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-flow-white">{user.name}</p>
+                        <p className="font-semibold text-zinc-900">{user.name}</p>
                         {user.role === "admin" && (
                           <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
                             Admin
@@ -271,7 +270,7 @@ export default function UsuariosPage() {
                       <p className="text-xs text-zinc-500">{user.email}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-flow-green hover:text-flow-blue" : "text-zinc-400 hover:text-zinc-400"}`}>
+                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-green-600 hover:text-green-600" : "text-zinc-400 hover:text-zinc-400"}`}>
                         <Check className="h-4 w-4" />
                       </button>
                       <button onClick={() => openEdit(user)} className="rounded p-1 text-zinc-400 hover:text-zinc-400">
@@ -284,7 +283,7 @@ export default function UsuariosPage() {
                   </div>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {perms.map((p: string) => (
-                      <span key={p} className="rounded-full bg-flow-blue/10 px-2 py-0.5 text-[10px] font-medium text-flow-blue">
+                      <span key={p} className="rounded-full bg-green-600/10 px-2 py-0.5 text-[10px] font-medium text-green-600">
                         {ALL_PERMISSIONS.find((ap) => ap.value === p)?.label || p}
                       </span>
                     ))}
@@ -314,26 +313,33 @@ export default function UsuariosPage() {
               </div>
 
               <div className="space-y-4">
-                <Input
-                  label="Nome"
-                  placeholder="Nome do usuário"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <Input
-                  label="Email"
-                  type="email"
-                  placeholder="email@exemplo.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Nome</label>
+                  <input
+                    placeholder="Nome do usuário"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Email</label>
+                  <input
+                    type="email"
+                    placeholder="email@exemplo.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Senha</label>
-                  <Input
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Senha</label>
+                  <input
                     type="password"
                     placeholder={editingUser ? "Deixe vazio para manter" : "123456 (padrão)"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                   {!editingUser && (
                     <p className="mt-1 text-xs text-zinc-400">
@@ -343,7 +349,7 @@ export default function UsuariosPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Perfil</label>
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Perfil</label>
                   <div className="flex gap-2">
                     {ROLES.map(({ value, label }) => (
                       <button
@@ -353,7 +359,7 @@ export default function UsuariosPage() {
                         className={`flex-1 rounded-lg border p-2 text-sm font-medium transition-colors ${
                           form.role === value
                             ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                            : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
+                            : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
                         }`}
                       >
                         {label}
@@ -364,25 +370,31 @@ export default function UsuariosPage() {
 
                 {form.role === "motoboy" && (
                   <>
-                    <Input
-                      label="Email"
-                      type="email"
-                      placeholder="motoboy@email.com"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
-                    <Input
-                      label="WhatsApp (com DDD)"
-                      placeholder="11999999999"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-zinc-700">Email</label>
+                      <input
+                        type="email"
+                        placeholder="motoboy@email.com"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-zinc-700">WhatsApp (com DDD)</label>
+                      <input
+                        placeholder="11999999999"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                    </div>
                   </>
                 )}
 
                 {form.role !== "motoboy" && (
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-zinc-300">Permissões</label>
+                    <label className="mb-2 block text-sm font-medium text-zinc-700">Permissões</label>
                     <div className="grid grid-cols-2 gap-2">
                       {ALL_PERMISSIONS.map((perm) => (
                         <button
@@ -392,7 +404,7 @@ export default function UsuariosPage() {
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.permissions.includes(perm.value)
                               ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                              : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
+                              : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${
@@ -415,7 +427,7 @@ export default function UsuariosPage() {
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.canCloseRegister
                               ? "border-amber-400 bg-amber-500/10 text-amber-400"
-                              : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"
+                              : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${

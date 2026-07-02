@@ -12,7 +12,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={id} className="block text-sm font-medium text-zinc-400">
+          <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-400">
             {label}
           </label>
         )}
@@ -20,7 +20,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={id}
           className={cn(
-            "input-flow w-full",
+            "flex h-10 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:opacity-50",
+            "dark:border-white/[.06] dark:bg-white/[.03] dark:text-flow-white dark:focus:ring-flow-blue dark:focus:border-flow-blue",
             error && "border-red-500",
             className
           )}
@@ -28,12 +29,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         >
           <option value="">Selecione...</option>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-flow-card text-flow-white">
+            <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
       </div>
     )
   }

@@ -7,7 +7,6 @@ import { Bike, Phone, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
@@ -96,31 +95,31 @@ function DateFilters({ active, onChange, customStart, customEnd, onCustomStartCh
         <button
           key={f.key}
           onClick={() => onChange(f.key)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === f.key ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === f.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
         >
           {f.label}
         </button>
       ))}
       <button
         onClick={() => onChange(active === "custom" ? "all" : "custom")}
-        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === "custom" ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
       >
         Personalizado
       </button>
       {active === "custom" && (
         <div className="flex items-center gap-2">
-          <Input
+          <input
             type="date"
             value={customStart}
             onChange={(e) => onCustomStartChange(e.target.value)}
-            className="w-36 text-xs"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none w-36 text-xs"
           />
           <span className="text-xs text-zinc-400">até</span>
-          <Input
+          <input
             type="date"
             value={customEnd}
             onChange={(e) => onCustomEndChange(e.target.value)}
-            className="w-36 text-xs"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none w-36 text-xs"
           />
         </div>
       )}
@@ -241,12 +240,12 @@ export default function EntregasPage() {
     ? deliveryPeople.filter((p: any) => p.id === selectedMotoboy)
     : deliveryPeople
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-flow-blue border-t-transparent" /></div>
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-flow-white">Entregas</h2>
+        <h2 className="text-2xl font-bold text-zinc-900">Entregas</h2>
         <p className="text-sm text-zinc-500">
           Motoboys são cadastrados na aba{" "}
           <a href="/dashboard/usuarios" className="font-medium text-[#FF6B35] hover:underline">
@@ -259,14 +258,14 @@ export default function EntregasPage() {
       <div className="flex gap-2">
         <button
           onClick={() => setTab("entregas")}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "entregas" ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "entregas" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
         >
           <Bike className="h-4 w-4" />
           Entregas
         </button>
         <button
           onClick={() => setTab("financeiro")}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "financeiro" ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "financeiro" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
         >
           <DollarSign className="h-4 w-4" />
           Financeiro
@@ -275,7 +274,7 @@ export default function EntregasPage() {
 
       {/* Created password banner */}
       {createdPassword && (
-        <div className="rounded-lg bg-flow-blue/10 border border-flow-blue/20 p-3 text-sm text-flow-blue">
+        <div className="rounded-lg bg-green-600/10 border border-green-600/20 p-3 text-sm text-green-600">
           {createdPassword}
         </div>
       )}
@@ -297,7 +296,7 @@ export default function EntregasPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setSelectedMotoboy("")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
             >
               Todos
             </button>
@@ -307,11 +306,11 @@ export default function EntregasPage() {
                 <button
                   key={p.id}
                   onClick={() => setSelectedMotoboy(p.id)}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-400 hover:bg-white/[.08]"}`}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
                 >
                   <Bike className="h-3 w-3" />
                   {p.name}
-                  {pendings > 0 && <span className="rounded-full bg-flow-card/20 px-1.5 text-[10px]">{pendings}</span>}
+                  {pendings > 0 && <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{pendings}</span>}
                 </button>
               )
             })}
@@ -327,17 +326,17 @@ export default function EntregasPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-flow-blue/10">
-                        <Bike className="h-5 w-5 text-flow-blue" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
+                        <Bike className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
-                        <p className="font-semibold text-flow-white">{person.name}</p>
+                        <p className="font-semibold text-zinc-900">{person.name}</p>
                         <p className="text-xs text-zinc-500">{person.phone}</p>
                       </div>
                     </div>
                     <button
                       onClick={() => navigator.clipboard.writeText(`${window.location.origin}/${person.establishmentSlug}/entregas/${person.token}`)}
-                      className="rounded p-1.5 text-zinc-400 hover:bg-white/[.05] hover:text-zinc-400"
+                      className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-400"
                       title="Copiar link"
                     >
                       <Copy className="h-4 w-4" />
@@ -349,13 +348,13 @@ export default function EntregasPage() {
                       <p className="text-lg font-bold text-amber-400">{activeOrders.filter((o: any) => o.status === "ready").length}</p>
                       <p className="text-xs text-amber-500">Entregas</p>
                     </div>
-                    <div className="rounded-lg bg-flow-blue/10 p-3 text-center">
-                      <p className="text-lg font-bold text-flow-blue">{activeOrders.filter((o: any) => o.status === "out_for_delivery").length}</p>
+                    <div className="rounded-lg bg-green-600/10 p-3 text-center">
+                      <p className="text-lg font-bold text-green-600">{activeOrders.filter((o: any) => o.status === "out_for_delivery").length}</p>
                       <p className="text-xs text-blue-500">Em rota</p>
                     </div>
-                    <div className="rounded-lg bg-flow-blue/10 p-3 text-center">
-                      <p className="text-lg font-bold text-flow-blue">{completedOrders.length}</p>
-                      <p className="text-xs text-flow-green">Entregues</p>
+                    <div className="rounded-lg bg-green-600/10 p-3 text-center">
+                      <p className="text-lg font-bold text-green-600">{completedOrders.length}</p>
+                      <p className="text-xs text-green-600">Entregues</p>
                     </div>
                   </div>
 
@@ -398,7 +397,7 @@ export default function EntregasPage() {
           {/* Pending amounts */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-3">
                 <Wallet className="h-4 w-4" />
                 Saldo Pendente por Motoboy
               </h3>
@@ -410,18 +409,18 @@ export default function EntregasPage() {
                     (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)
                   ).length
                   return (
-                    <div key={person.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
+                    <div key={person.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-flow-blue/10">
-                          <Bike className="h-5 w-5 text-flow-blue" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600/10">
+                          <Bike className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-flow-white">{person.name}</p>
+                          <p className="font-medium text-zinc-900">{person.name}</p>
                           <p className="text-xs text-zinc-500">{completedCount} entregas • Taxa recebida: {formatCurrency(orders.filter((o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)).reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0))}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`text-lg font-bold ${pending > 0 ? "text-amber-400" : "text-flow-blue"}`}>
+                        <span className={`text-lg font-bold ${pending > 0 ? "text-amber-400" : "text-green-600"}`}>
                           {formatCurrency(pending)}
                         </span>
                         {pending > 0 && (
@@ -449,7 +448,7 @@ export default function EntregasPage() {
           {/* Payment history */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-3">
                 <History className="h-4 w-4" />
                 Histórico de Pagamentos
               </h3>
@@ -461,20 +460,20 @@ export default function EntregasPage() {
                     return <p className="text-sm text-zinc-400 text-center py-4">Nenhum pagamento neste período</p>
                   }
                   return filtered.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
+                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-flow-blue/10">
-                          <CheckCircle className="h-4 w-4 text-flow-blue" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600/10">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-flow-white">{p.deliveryPerson?.name}</p>
+                          <p className="text-sm font-medium text-zinc-900">{p.deliveryPerson?.name}</p>
                           <p className="text-xs text-zinc-400">
                             {new Date(p.createdAt).toLocaleString("pt-BR")}
                             {p.notes && ` • ${p.notes}`}
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm font-bold text-flow-blue">{formatCurrency(p.amount)}</span>
+                      <span className="text-sm font-bold text-green-600">{formatCurrency(p.amount)}</span>
                     </div>
                   ))
                 })()}
@@ -500,21 +499,21 @@ export default function EntregasPage() {
 function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void }) {
   const isLocked = ["out_for_delivery", "delivered", "cancelled"].includes(order.status)
   return (
-    <div className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white/[.03] p-3">
+    <div className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {order.orderNumber && (
-            <span className="inline-flex items-center rounded-full bg-flow-blue/10 px-2 py-0.5 text-xs font-bold text-flow-blue">
+            <span className="inline-flex items-center rounded-full bg-green-600/10 px-2 py-0.5 text-xs font-bold text-green-600">
               #{order.orderNumber}
             </span>
           )}
-          <p className="font-medium text-flow-white">{order.customerName}</p>
+          <p className="font-medium text-zinc-900">{order.customerName}</p>
           <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
         </div>
         <p className="text-xs text-zinc-400">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
         {order.customerAddress && <p className="flex items-center gap-1 text-xs text-zinc-500 mt-0.5"><MapPin className="h-3 w-3" />{order.customerAddress}</p>}
         {order.customerPhone && (
-          <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" className="flex items-center gap-1 text-xs text-flow-blue hover:underline mt-0.5">
+          <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" className="flex items-center gap-1 text-xs text-green-600 hover:underline mt-0.5">
             <MessageCircle className="h-3 w-3" />{order.customerPhone}
           </a>
         )}
@@ -525,7 +524,7 @@ function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any;
           value={order.deliveryPersonId || ""}
           onChange={(e) => onReassign(order.id, e.target.value)}
           disabled={isLocked}
-          className="rounded-lg border border-white/[.06] bg-flow-card px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">Sem motoboy</option>
           {deliveryPeople.map((p: any) => (

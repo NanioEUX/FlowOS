@@ -1099,6 +1099,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 <p className="text-xs" style={{ color: theme.textMuted }}>{totalItems} {totalItems === 1 ? "item" : "itens"}</p>
                 <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(total)}</p>
               </div>
+              <span className="text-[9px] flex items-center gap-0.5 mt-0.5" style={{ color: theme.textMutedMore }}>
+                Powered by <span className="font-semibold" style={{ color: theme.primary }}>FlowOS</span>
+              </span>
             </div>
             <button onClick={() => setShowCart(true)} className="flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 shrink-0" style={{ backgroundColor: theme.primary, boxShadow: `0 0 30px ${theme.shadowPrimary}` }} disabled={!isOpen}>
               <ShoppingBag className="h-4 w-4" />

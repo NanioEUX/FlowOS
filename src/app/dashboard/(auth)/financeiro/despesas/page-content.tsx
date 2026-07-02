@@ -6,7 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Plus, Trash2, Loader2, X, Filter } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -29,11 +29,11 @@ const categoryLabels: Record<string, string> = {
 }
 
 const categoryColors: Record<string, string> = {
-  fixa: "bg-flow-blue/15 text-flow-blue",
+  fixa: "bg-green-600/15 text-green-600",
   variavel: "bg-yellow-100 text-yellow-700",
   motoboy: "bg-orange-100 text-orange-700",
   insumo: "bg-purple-100 text-purple-700",
-  outro: "bg-white/[.05] text-zinc-300",
+  outro: "bg-zinc-100 text-zinc-700",
 }
 
 export default function DespesasPage() {
@@ -95,7 +95,7 @@ export default function DespesasPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-flow-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
       </div>
     )
   }
@@ -104,10 +104,10 @@ export default function DespesasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-flow-white">Despesas</h1>
+          <h1 className="text-xl font-bold text-zinc-900">Despesas</h1>
           <p className="text-sm text-zinc-500">{filtered.length} despesas • {formatCurrency(totalFiltered)}</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-flow-blue hover:bg-green-700">
+        <Button onClick={() => setShowForm(true)} className="bg-green-600 hover:bg-green-700">
           <Plus className="mr-2 h-4 w-4" />
           Nova despesa
         </Button>
@@ -116,7 +116,7 @@ export default function DespesasPage() {
       {/* Category filter */}
       <div className="flex gap-1 overflow-x-auto pb-1">
         {["all", "fixa", "variavel", "motoboy", "insumo", "outro"].map((cat) => (
-          <button key={cat} onClick={() => setFilterCategory(cat)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${filterCategory === cat ? "bg-flow-blue text-white" : "bg-white/[.05] text-zinc-500 hover:bg-white/[.08]"}`}>
+          <button key={cat} onClick={() => setFilterCategory(cat)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${filterCategory === cat ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}>
             {cat === "all" ? "Todas" : categoryLabels[cat]}
           </button>
         ))}
@@ -130,19 +130,19 @@ export default function DespesasPage() {
               <h3 className="font-semibold text-sm">Nova Despesa</h3>
               <button onClick={() => setShowForm(false)}><X className="h-4 w-4 text-zinc-400" /></button>
             </div>
-            <Input placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <Input type="number" placeholder="Valor (R$)" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            <input placeholder="Descrição" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+            <input type="number" placeholder="Valor (R$)" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
             <div className="grid grid-cols-2 gap-3">
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border border-white/[.06] px-3 py-2 text-sm">
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border border-zinc-200 px-3 py-2 text-sm">
                 <option value="fixa">Fixa</option>
                 <option value="variavel">Variável</option>
                 <option value="motoboy">Motoboy</option>
                 <option value="insumo">Insumo</option>
                 <option value="outro">Outro</option>
               </select>
-              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
             </div>
-            <Button onClick={handleCreate} disabled={saving} className="bg-flow-blue hover:bg-green-700">
+            <Button onClick={handleCreate} disabled={saving} className="bg-green-600 hover:bg-green-700">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               Criar despesa
             </Button>
@@ -165,7 +165,7 @@ export default function DespesasPage() {
             <CardContent className="p-3 flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-flow-white truncate">{expense.description}</p>
+                  <p className="text-sm font-medium text-zinc-900 truncate">{expense.description}</p>
                   <Badge className={`text-[10px] ${categoryColors[expense.category] || categoryColors.outro}`}>
                     {categoryLabels[expense.category] || expense.category}
                   </Badge>
@@ -176,7 +176,7 @@ export default function DespesasPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-red-400">-{formatCurrency(expense.amount)}</span>
-                <button onClick={() => handleDelete(expense.id)} className="text-zinc-300 hover:text-red-500">
+                <button onClick={() => handleDelete(expense.id)} className="text-zinc-700 hover:text-red-500">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

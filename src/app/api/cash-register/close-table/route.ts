@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { tableNumber, establishmentId, paymentMethod, cartItems, customerName } = await req.json()
+    const { tableNumber, establishmentId, paymentMethod, cartItems, customerName, serviceTax } = await req.json()
 
     if (!tableNumber || !establishmentId || !paymentMethod) {
       return NextResponse.json({ error: "Dados incompletos (tableNumber, establishmentId, paymentMethod)" }, { status: 400 })
@@ -63,7 +63,13 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const totalAmount = pendingOrders.reduce((sum, o) => sum + o.total, 0)
+    const totalAmount = pendingOrders.reduce((sum, o) => sum + o.total, 0) + (serviceTax || 0)
+
+    // Query partial payments for this table
+    const partialPayments = await prisma.partialPayment.findMany({
+      where: { establishmentId, tableNumber: parseInt(tableNumber) },
+    })
+    const partialPaidTotal = partialPayments.reduce((sum, pp) => sum + pp.amount, 0)
 
     // Mark all pending orders as delivered
     const orderIds = pendingOrders.map((o) => o.id)
@@ -76,7 +82,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Record cash register movement
+    // Delete partial payments for this table
+    await prisma.partialPayment.deleteMany({
+      where: { establishmentId, tableNumber: parseInt(tableNumber) },
+    })
+
+    // Record cash register movement for the remaining amount (after partial payments)
+    const remainingAmount = Math.max(0, totalAmount - partialPaidTotal)
     const cashRegister = await prisma.cashRegister.findFirst({
       where: { establishmentId, status: "open" },
     })
@@ -90,8 +102,8 @@ export async function POST(req: NextRequest) {
       await prisma.cashMovement.create({
         data: {
           type: "sale",
-          amount: totalAmount,
-          description: `Fechamento Mesa ${tableNumber} - ${pendingOrders.length} pedido(s) - ${paymentLabels[paymentMethod] || paymentMethod}`,
+          amount: remainingAmount,
+          description: `Fechamento Mesa ${tableNumber} - ${pendingOrders.length} pedido(s) - ${paymentLabels[paymentMethod] || paymentMethod}${partialPaidTotal > 0 ? ` (abate: ${partialPaidTotal.toFixed(2)})` : ""}`,
           paymentMethod,
           cashRegisterId: cashRegister.id,
         },
@@ -101,7 +113,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ordersClosed: pendingOrders.length,
-      total: totalAmount,
+      total: remainingAmount,
+      partialPaid: partialPaidTotal,
     })
   } catch (error) {
     console.error("Error closing table:", error)

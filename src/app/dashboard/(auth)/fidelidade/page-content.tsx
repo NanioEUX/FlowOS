@@ -70,54 +70,54 @@ export default function FidelidadePageContent() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold text-flow-white">Fidelidade</h2>
+      <h2 className="text-2xl font-bold text-zinc-900">Fidelidade</h2>
 
       <Card>
         <CardContent className="p-6 space-y-4">
-          <h3 className="flex items-center gap-2 font-semibold text-flow-white">
+          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Star className="h-4 w-4" />
             Programa de Fidelidade
           </h3>
           <p className="text-sm text-zinc-500">Clientes acumulam pontos a cada pedido e trocam por desconto ou produto.</p>
-          <label className="flex items-center gap-3 rounded-lg border border-white/[.06] p-4 cursor-pointer hover:bg-white/[.05]">
+          <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
               type="checkbox"
               checked={loyaltyConfig.enabled}
               onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, enabled: e.target.checked })}
-              className="h-5 w-5 rounded border-white/[.08] text-flow-blue focus:ring-green-500"
+              className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
             />
             <div>
-              <span className="font-medium text-flow-white">Ativar fidelidade</span>
+              <span className="font-medium text-zinc-900">Ativar fidelidade</span>
               <p className="text-xs text-zinc-500">Clientes ganham pontos a cada R$ 1 gasto</p>
             </div>
           </label>
           {loyaltyConfig.enabled && (
-            <div className="rounded-lg bg-white/[.03] p-4 space-y-4">
+            <div className="rounded-lg bg-zinc-50 p-4 space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-300">Pontos por R$ 1</label>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos por R$ 1</label>
                 <input
                   type="number"
                   min="1"
                   value={loyaltyConfig.pointsPerReal}
                   onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, pointsPerReal: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-white/[.06] bg-flow-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-300">Tipo de resgate</label>
+                <label className="mb-2 block text-sm font-medium text-zinc-700">Tipo de resgate</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "discount" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType !== "product" ? "border-flow-blue bg-flow-blue/10 text-flow-blue" : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"}`}
+                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType !== "product" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
                   >
                     Desconto (R$)
                   </button>
                   <button
                     type="button"
                     onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "product" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType === "product" ? "border-flow-blue bg-flow-blue/10 text-flow-blue" : "border-white/[.06] text-zinc-400 hover:bg-white/[.05]"}`}
+                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType === "product" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
                   >
                     Produto grátis
                   </button>
@@ -127,45 +127,45 @@ export default function FidelidadePageContent() {
               {loyaltyConfig.redeemType !== "product" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Pontos para resgatar</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
                     <input
                       type="number"
                       min="1"
                       value={loyaltyConfig.redeemPoints}
                       onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-white/[.06] bg-flow-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Desconto (R$)</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto (R$)</label>
                     <input
                       type="number"
                       min="1"
                       step="0.50"
                       value={loyaltyConfig.redeemDiscount}
                       onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemDiscount: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-white/[.06] bg-flow-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Pontos para resgatar</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
                     <input
                       type="number"
                       min="1"
                       value={loyaltyConfig.redeemPoints}
                       onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-white/[.06] bg-flow-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-300">Produto para resgate</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Produto para resgate</label>
                     <select
                       value={loyaltyConfig.redeemProductId || ""}
                       onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemProductId: e.target.value })}
-                      className="w-full rounded-lg border border-white/[.06] bg-flow-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                     >
                       <option value="">Selecionar produto...</option>
                       {allProducts.map((p: any) => (
@@ -191,7 +191,7 @@ export default function FidelidadePageContent() {
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Salvar alterações
         </Button>
-        {saved && <span className="flex items-center gap-1 text-sm text-flow-blue"><Save className="h-4 w-4" />Salvo!</span>}
+        {saved && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
       </div>
     </div>
   )
