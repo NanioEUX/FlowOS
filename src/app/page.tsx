@@ -398,16 +398,13 @@ export default function HomePage() {
         <div className="mx-auto max-w-[1440px] px-5 md:px-[60px]">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-3">
-              <FlowOSLogo size={40} className="h-10 opacity-40" />
-              <span className="text-[14px] text-white/25">FlowOS © {new Date().getFullYear()}</span>
+              <FlowOSLogo size={40} variant="icon" className="h-10 opacity-40" />
+              <span className="text-[14px] text-white/25">© {new Date().getFullYear()}</span>
             </div>
             <div className="flex items-center gap-6 text-[13px] text-white/25">
               <Link href="/cadastro" className="hover:text-[#1E7BFF] transition-colors">Criar conta</Link>
               <Link href="/login" className="hover:text-[#1E7BFF] transition-colors">Entrar</Link>
             </div>
-          </div>
-          <div className="mt-6 text-center">
-            <span className="text-[11px] text-white/15">Powered by <span className="font-semibold text-white/25">FlowOS</span></span>
           </div>
         </div>
       </footer>
