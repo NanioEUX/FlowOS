@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const paymentMethod = req.nextUrl.searchParams.get("paymentMethod")
   const status = req.nextUrl.searchParams.get("status")
   const search = req.nextUrl.searchParams.get("search")
+  const type = req.nextUrl.searchParams.get("type")
 
   if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
 
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
   }
   if (category && category !== "all") where.category = category
   if (paymentMethod && paymentMethod !== "all") where.paymentMethod = paymentMethod
+  if (type && type !== "all") where.type = type
 
   if (search) {
     where.OR = [
@@ -37,12 +39,20 @@ export async function GET(req: NextRequest) {
   const today = new Date().toISOString().split("T")[0]
   const enriched = expenses.map((e) => {
     let computedStatus = "pago"
-    if (e.isRecurring) {
+    if (e.type === "lancamento") {
+      computedStatus = "pago"
+    } else if (e.type === "agendada") {
       computedStatus = "pendente"
-    }
-    if (e.dueDate && computedStatus === "pendente") {
-      const due = new Date(e.dueDate).toISOString().split("T")[0]
-      if (due < today) computedStatus = "atrasada"
+      if (e.dueDate) {
+        const due = new Date(e.dueDate).toISOString().split("T")[0]
+        if (due < today) computedStatus = "atrasada"
+      }
+    } else if (e.type === "recorrente") {
+      computedStatus = "pendente"
+      if (e.recurrenceStart) {
+        const start = new Date(e.recurrenceStart).toISOString().split("T")[0]
+        if (start < today) computedStatus = "atrasada"
+      }
     }
     return { ...e, computedStatus }
   })
@@ -56,23 +66,103 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { description, amount, category, date, dueDate, paymentMethod, isRecurring, recurrenceFreq, receiptUrl, cashRegisterId, establishmentId } = await req.json()
+  const {
+    description, amount, category, date, dueDate, type,
+    paymentMethod, isRecurring, recurrenceFreq,
+    recurrenceStart, recurrenceEnd,
+    receiptUrl, cashRegisterId, establishmentId,
+  } = await req.json()
 
   if (!description || !amount || !establishmentId) {
     return NextResponse.json({ error: "description, amount, establishmentId required" }, { status: 400 })
   }
+
+  const expenseType = type || "lancamento"
+  const today = new Date()
+  const todayISO = today.toISOString().split("T")[0]
+
+  // For recorrente type without explicit recurrenceStart, use date
+  const recStart = recurrenceStart || (expenseType === "recorrente" ? (date || todayISO) : null)
+  const recEnd = recurrenceEnd || null
+
+  // Compute initial status
+  let initialStatus = "pago"
+  if (expenseType === "agendada") {
+    initialStatus = "pendente"
+    if (dueDate && dueDate < todayISO) initialStatus = "atrasada"
+  } else if (expenseType === "recorrente") {
+    initialStatus = "pendente"
+    if (recStart && recStart < todayISO) initialStatus = "atrasada"
+  }
+
+  // For recorrente: generate monthly entries
+  if (expenseType === "recorrente" && recStart) {
+    const entries: any[] = []
+    const start = new Date(recStart + "T00:00:00")
+    const end = recEnd ? new Date(recEnd + "T00:00:00") : new Date(start.getFullYear(), start.getMonth() + 1, start.getDate())
+    const maxIter = 120
+    let i = 0
+    const d = new Date(start)
+
+    while (i < maxIter) {
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      const entryStatus = iso < todayISO ? "atrasada" : "pendente"
+      entries.push({
+        description,
+        amount,
+        category: category || "variavel",
+        type: "recorrente",
+        paymentMethod: paymentMethod || "dinheiro",
+        isRecurring: true,
+        recurrenceFreq: recurrenceFreq || "mensal",
+        recurrenceStart: new Date(recStart),
+        recurrenceEnd: recEnd ? new Date(recEnd) : null,
+        receiptUrl: receiptUrl || null,
+        date: new Date(iso),
+        dueDate: new Date(iso),
+        cashRegisterId: cashRegisterId || null,
+        establishmentId,
+      })
+      if (d >= end) break
+      d.setMonth(d.getMonth() + 1)
+      i++
+    }
+
+    const created = await prisma.expense.createMany({ data: entries })
+
+    if (cashRegisterId) {
+      await prisma.cashMovement.createMany({
+        data: entries
+          .filter((e) => e.date <= today)
+          .map((e) => ({
+            type: "expense",
+            amount: e.amount,
+            description: e.description,
+            cashRegisterId,
+          })),
+      })
+    }
+
+    return NextResponse.json({ count: created.count })
+  }
+
+  // For agendada: set dueDate
+  const finalDueDate = expenseType === "agendada" && dueDate ? new Date(dueDate) : null
 
   const expense = await prisma.expense.create({
     data: {
       description,
       amount,
       category: category || "variavel",
+      type: expenseType,
       paymentMethod: paymentMethod || "dinheiro",
-      isRecurring: isRecurring || false,
-      recurrenceFreq: recurrenceFreq || null,
+      isRecurring: expenseType === "recorrente",
+      recurrenceFreq: expenseType === "recorrente" ? (recurrenceFreq || "mensal") : null,
+      recurrenceStart: recStart ? new Date(recStart) : null,
+      recurrenceEnd: recEnd ? new Date(recEnd) : null,
       receiptUrl: receiptUrl || null,
       date: date ? new Date(date) : new Date(),
-      dueDate: dueDate ? new Date(dueDate) : null,
+      dueDate: finalDueDate,
       cashRegisterId: cashRegisterId || null,
       establishmentId,
     },

@@ -325,9 +325,12 @@ model Expense {
   description     String
   amount          Float
   category        String        @default("variavel")
+  type            String        @default("lancamento")
   paymentMethod   String        @default("dinheiro")
   isRecurring     Boolean       @default(false)
   recurrenceFreq  String?
+  recurrenceStart DateTime?
+  recurrenceEnd   DateTime?
   receiptUrl      String?
   date            DateTime      @default(now())
   dueDate         DateTime?

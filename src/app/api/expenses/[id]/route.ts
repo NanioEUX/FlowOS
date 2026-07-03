@@ -17,7 +17,7 @@ export async function PATCH(
   }
 
   const body = await req.json()
-  const { description, amount, category, date, dueDate, paymentMethod, isRecurring, recurrenceFreq, receiptUrl } = body
+  const { description, amount, category, date, dueDate, type, paymentMethod, isRecurring, recurrenceFreq, recurrenceStart, recurrenceEnd, receiptUrl } = body
 
   const updated = await prisma.expense.update({
     where: { id: params.id },
@@ -27,9 +27,12 @@ export async function PATCH(
       ...(category !== undefined && { category }),
       ...(date !== undefined && { date: new Date(date) }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
+      ...(type !== undefined && { type }),
       ...(paymentMethod !== undefined && { paymentMethod }),
       ...(isRecurring !== undefined && { isRecurring }),
       ...(recurrenceFreq !== undefined && { recurrenceFreq }),
+      ...(recurrenceStart !== undefined && { recurrenceStart: recurrenceStart ? new Date(recurrenceStart) : null }),
+      ...(recurrenceEnd !== undefined && { recurrenceEnd: recurrenceEnd ? new Date(recurrenceEnd) : null }),
       ...(receiptUrl !== undefined && { receiptUrl }),
     },
   })
