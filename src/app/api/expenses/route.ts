@@ -42,16 +42,22 @@ export async function GET(req: NextRequest) {
     if (e.type === "lancamento") {
       computedStatus = "pago"
     } else if (e.type === "agendada") {
-      computedStatus = "pendente"
       if (e.dueDate) {
         const due = new Date(e.dueDate).toISOString().split("T")[0]
         if (due < today) computedStatus = "atrasada"
+        else if (due === today) computedStatus = "vence_hoje"
+        else computedStatus = "a_vencer"
+      } else {
+        computedStatus = "pendente"
       }
     } else if (e.type === "recorrente") {
-      computedStatus = "pendente"
       if (e.recurrenceStart) {
         const start = new Date(e.recurrenceStart).toISOString().split("T")[0]
         if (start < today) computedStatus = "atrasada"
+        else if (start === today) computedStatus = "vence_hoje"
+        else computedStatus = "a_vencer"
+      } else {
+        computedStatus = "pendente"
       }
     }
     return { ...e, computedStatus }
@@ -115,7 +121,7 @@ export async function POST(req: NextRequest) {
         paymentMethod: paymentMethod || "dinheiro",
         isRecurring: true,
         recurrenceFreq: recurrenceFreq || "mensal",
-        recurrenceStart: new Date(recStart),
+        recurrenceStart: new Date(d),
         recurrenceEnd: recEnd ? new Date(recEnd) : null,
         receiptUrl: receiptUrl || null,
         date: new Date(iso),

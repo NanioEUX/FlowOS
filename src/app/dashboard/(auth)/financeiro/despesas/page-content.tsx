@@ -31,8 +31,8 @@ interface Expense {
   createdAt: string
 }
 
-type Period = "today" | "7days" | "30days" | "month" | "all"
-type StatusFilter = "all" | "pago" | "pendente" | "atrasada"
+type Period = "today" | "7days" | "30days" | "month" | "currentMonth" | "custom" | "all"
+type StatusFilter = "all" | "pago" | "pendente" | "a_vencer" | "vence_hoje" | "atrasada"
 type ExpenseType = "lancamento" | "agendada" | "recorrente"
 
 const categoryLabels: Record<string, string> = {
@@ -46,11 +46,11 @@ const paymentLabels: Record<string, string> = {
   dinheiro: "Dinheiro", cartao: "Cartão", pix: "Pix", transferencia: "Transferência", boleto: "Boleto",
 }
 const paymentIcons: Record<string, string> = { dinheiro: "💵", cartao: "💳", pix: "📱", transferencia: "🏦", boleto: "📄" }
-const periodLabels: Record<Period, string> = { today: "Hoje", "7days": "7 dias", "30days": "30 dias", month: "Mês", all: "Tudo" }
-const statusLabels: Record<StatusFilter, string> = { all: "Todos", pago: "Pago", pendente: "Pendente", atrasada: "Atrasada" }
-const statusColors: Record<string, string> = { pago: "bg-green-100 text-green-700", pendente: "bg-amber-100 text-amber-700", atrasada: "bg-red-100 text-red-700" }
+const periodLabels: Record<Period, string> = { today: "Hoje", "7days": "7 dias", "30days": "30 dias", month: "Mês", currentMonth: "Mês atual", custom: "Período", all: "Tudo" }
+const statusLabels: Record<StatusFilter, string> = { all: "Todos", pago: "Pago", pendente: "Pendente", a_vencer: "A vencer", vence_hoje: "Vence hoje", atrasada: "Atrasada" }
+const statusColors: Record<string, string> = { pago: "bg-green-100 text-green-800 border-green-200", pendente: "bg-amber-100 text-amber-800 border-amber-200", a_vencer: "bg-blue-100 text-blue-800 border-blue-200", vence_hoje: "bg-orange-100 text-orange-800 border-orange-200", atrasada: "bg-red-100 text-red-800 border-red-200" }
 const typeLabels: Record<ExpenseType, string> = { lancamento: "Lançamento", agendada: "Agendada", recorrente: "Recorrente" }
-const typeColors: Record<ExpenseType, string> = { lancamento: "bg-green-100 text-green-700", agendada: "bg-blue-100 text-blue-700", recorrente: "bg-purple-100 text-purple-700" }
+const typeColors: Record<ExpenseType, string> = { lancamento: "bg-green-100 text-green-800 border-green-200", agendada: "bg-blue-100 text-blue-800 border-blue-200", recorrente: "bg-purple-100 text-purple-800 border-purple-200" }
 
 const DEFAULT_CATEGORIES = ["fixa","variavel","motoboy","insumo","salario","aluguel","energia","agua","internet","imposto","manutencao","marketing","outro"]
 
@@ -85,6 +85,8 @@ export default function DespesasPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const [period, setPeriod] = useState<Period>("month")
+  const [customDateFrom, setCustomDateFrom] = useState("")
+  const [customDateTo, setCustomDateTo] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterPayment, setFilterPayment] = useState("all")
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all")
@@ -119,6 +121,8 @@ export default function DespesasPage() {
     else if (period === "7days") { const d = new Date(now.getTime() - 7 * 86400000); from = d.toISOString().split("T")[0] }
     else if (period === "30days") { const d = new Date(now.getTime() - 30 * 86400000); from = d.toISOString().split("T")[0] }
     else if (period === "month") { from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0] }
+    else if (period === "currentMonth") { from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]; to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0] }
+    else if (period === "custom") { from = customDateFrom; to = customDateTo || now.toISOString().split("T")[0] }
     else { from = ""; to = "" }
 
     const params = new URLSearchParams({ establishmentId })
@@ -144,7 +148,7 @@ export default function DespesasPage() {
       })
       .catch(() => { setExpenses([]) })
       .finally(() => setLoading(false))
-  }, [establishmentId, period, filterCategory, filterPayment, filterStatus, filterType, search])
+  }, [establishmentId, period, customDateFrom, customDateTo, filterCategory, filterPayment, filterStatus, filterType, search])
 
   async function saveCategories(cats: string[]) {
     setCategories(cats)
@@ -257,7 +261,7 @@ export default function DespesasPage() {
 
   function exportCSV() {
     const header = "Data,Descrição,Tipo,Categoria,Método Pgto,Status,Vencimento\n"
-    const rows = expenses.map((e) => `${new Date(e.createdAt).toLocaleDateString("pt-BR")},"${e.description}",${typeLabels[e.type as ExpenseType] || e.type},${e.category},${paymentLabels[e.paymentMethod] || e.paymentMethod},${e.computedStatus === "pago" ? "Pago" : e.computedStatus === "atrasada" ? "Atrasada" : "Pendente"},${e.dueDate ? new Date(e.dueDate).toLocaleDateString("pt-BR") : ""}`).join("\n")
+    const rows = expenses.map((e) => `${new Date(e.createdAt).toLocaleDateString("pt-BR")},"${e.description}",${typeLabels[e.type as ExpenseType] || e.type},${e.category},${paymentLabels[e.paymentMethod] || e.paymentMethod},${e.computedStatus === "pago" ? "Pago" : e.computedStatus === "atrasada" ? "Atrasada" : e.computedStatus === "a_vencer" ? "A vencer" : e.computedStatus === "vence_hoje" ? "Vence hoje" : "Pendente"},${e.dueDate ? new Date(e.dueDate).toLocaleDateString("pt-BR") : ""}`).join("\n")
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `despesas-${new Date().toISOString().split("T")[0]}.csv`; a.click(); URL.revokeObjectURL(url)
     toast("CSV exportado", "success")
@@ -267,7 +271,7 @@ export default function DespesasPage() {
   const daysInPeriod = period === "today" ? 1 : period === "7days" ? 7 : period === "30days" ? 30 : period === "month" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() : 30
   const dailyAvg = expenses.length > 0 ? totalExpenses / daysInPeriod : 0
   const overdueCount = expenses.filter((e) => e.computedStatus === "atrasada").length
-  const pendingCount = expenses.filter((e) => e.computedStatus === "pendente").length
+  const pendingCount = expenses.filter((e) => e.computedStatus === "pendente" || e.computedStatus === "a_vencer" || e.computedStatus === "vence_hoje").length
   const categoryTotals: Record<string, number> = {}
   expenses.forEach((e) => { categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount })
   const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])
@@ -294,9 +298,6 @@ export default function DespesasPage() {
         </div>
       </div>
 
-      {/* Period */}
-      <div className="flex gap-1 overflow-x-auto pb-1">{(["today", "7days", "30days", "month", "all"] as Period[]).map((p) => (<button key={p} onClick={() => setPeriod(p)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${period === p ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{periodLabels[p]}</button>))}</div>
-
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-3"><p className="text-[10px] text-zinc-500 mb-1">Total</p><p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p></CardContent></Card>
@@ -305,20 +306,27 @@ export default function DespesasPage() {
         {pendingCount > 0 && <Card className="border-amber-200 bg-amber-50"><CardContent className="p-3"><p className="text-[10px] text-amber-600 font-medium mb-1">Pendentes</p><p className="text-lg font-bold text-amber-600">{pendingCount}</p></CardContent></Card>}
       </div>
 
+      {/* Period */}
+      <div className="flex gap-1 overflow-x-auto pb-1">{(["today", "7days", "30days", "month", "currentMonth", "custom", "all"] as Period[]).map((p) => (<button key={p} onClick={() => setPeriod(p)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${period === p ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{periodLabels[p]}</button>))}</div>
+      {period === "custom" && (
+        <div className="flex items-center gap-2">
+          <input type="date" value={customDateFrom} onChange={(e) => setCustomDateFrom(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none" />
+          <span className="text-xs text-zinc-400">até</span>
+          <input type="date" value={customDateTo} onChange={(e) => setCustomDateTo(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none" />
+        </div>
+      )}
+
       {/* Category breakdown */}
       {sortedCategories.length > 0 && <Card><CardContent className="p-4"><h3 className="text-xs font-semibold text-zinc-700 mb-3">Por Categoria</h3><div className="space-y-2">{sortedCategories.map(([cat, total]) => (<div key={cat} className="flex items-center gap-3"><span className="text-xs text-zinc-500 w-20 truncate">{cat}</span><div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden"><div className="h-full rounded-full bg-green-500/70" style={{ width: `${(total / maxCatValue) * 100}%` }} /></div><span className="text-xs font-bold text-zinc-700 w-20 text-right">{formatCurrency(total)}</span></div>))}</div></CardContent></Card>}
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar despesa..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />{search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2"><X className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-600" /></button>}</div>
-        <div className="flex gap-1">{(["all", "lancamento", "agendada", "recorrente"] as const).map((t) => (<button key={t} onClick={() => setFilterType(t)} className={`rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${filterType === t ? (t === "recorrente" ? "bg-purple-600 text-white" : t === "agendada" ? "bg-blue-600 text-white" : t === "lancamento" ? "bg-green-600 text-white" : "bg-zinc-700 text-white") : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{t === "all" ? "Todos" : typeLabels[t]}</button>))}</div>
-        <div className="flex gap-1">{(["all", "pago", "pendente", "atrasada"] as StatusFilter[]).map((s) => (<button key={s} onClick={() => setFilterStatus(s)} className={`rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${filterStatus === s ? (s === "atrasada" ? "bg-red-600 text-white" : s === "pendente" ? "bg-amber-500 text-white" : "bg-green-600 text-white") : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{statusLabels[s]}</button>))}</div>
-      </div>
-
-      <div className="flex items-center gap-2">
+        <CustomSelect value={filterType} onChange={setFilterType} options={[{ value: "all", label: "Todos tipos" }, ...Object.entries(typeLabels).map(([k, v]) => ({ value: k, label: v }))]} />
+        <CustomSelect value={filterStatus} onChange={(v) => setFilterStatus(v as StatusFilter)} options={[{ value: "all", label: "Todos status" }, ...Object.entries(statusLabels).filter(([k]) => k !== "all").map(([k, v]) => ({ value: k, label: v }))]} />
         <CustomSelect value={filterCategory} onChange={setFilterCategory} options={[{ value: "all", label: "Todas categorias" }, ...categories.map((c) => ({ value: c, label: categoryLabels[c] || c }))]} />
         <CustomSelect value={filterPayment} onChange={setFilterPayment} options={[{ value: "all", label: "Todos pagamentos" }, ...Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))]} />
-        {(filterCategory !== "all" || filterPayment !== "all") && <button onClick={() => { setFilterCategory("all"); setFilterPayment("all") }} className="text-xs text-zinc-400 hover:text-zinc-600">Limpar</button>}
+        {(filterType !== "all" || filterStatus !== "all" || filterCategory !== "all" || filterPayment !== "all" || search) && <button onClick={() => { setFilterType("all"); setFilterStatus("all"); setFilterCategory("all"); setFilterPayment("all"); setSearch("") }} className="text-xs text-zinc-400 hover:text-zinc-600">Limpar</button>}
       </div>
 
       {/* Table */}
@@ -345,17 +353,17 @@ export default function DespesasPage() {
               <tr key={expense.id} className="hover:bg-zinc-50 transition-colors">
                 <td className="px-3 py-2.5 text-xs text-zinc-500">{new Date(expense.createdAt).toLocaleDateString("pt-BR")}</td>
                 <td className="px-3 py-2.5 font-medium text-zinc-900 max-w-[200px] truncate">{expense.description}</td>
-                <td className="px-3 py-2.5"><Badge className="text-[10px] bg-zinc-100 text-zinc-600">{expense.category}</Badge></td>
-                <td className="px-3 py-2.5"><Badge className={`text-[10px] ${typeColors[expense.type as ExpenseType] || "bg-zinc-100 text-zinc-600"}`}>{typeLabels[expense.type as ExpenseType] || expense.type}</Badge></td>
+                <td className="px-3 py-2.5"><Badge className="text-xs font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">{expense.category}</Badge></td>
+                <td className="px-3 py-2.5"><Badge className={`text-xs font-medium border ${typeColors[expense.type as ExpenseType] || "bg-zinc-100 text-zinc-700 border-zinc-200"}`}>{typeLabels[expense.type as ExpenseType] || expense.type}</Badge></td>
                 <td className="px-3 py-2.5 text-xs text-zinc-500">
                   {expense.type === "agendada" && expense.dueDate ? (
                     <span className={expense.computedStatus === "atrasada" ? "font-medium text-red-500" : ""}>{new Date(expense.dueDate).toLocaleDateString("pt-BR")}</span>
                   ) : expense.type === "recorrente" && expense.recurrenceStart ? (
-                    <span className="text-purple-600">{expense.recurrenceFreq || "mensal"}</span>
+                    <span className="text-purple-600">{new Date(expense.recurrenceStart).toLocaleDateString("pt-BR")}</span>
                   ) : "—"}
                 </td>
                 <td className="px-3 py-2.5 text-xs text-zinc-500">{paymentIcons[expense.paymentMethod] || ""} {paymentLabels[expense.paymentMethod] || expense.paymentMethod}</td>
-                <td className="px-3 py-2.5"><Badge className={`text-[10px] ${statusColors[expense.computedStatus] || "bg-zinc-100 text-zinc-600"}`}>{expense.computedStatus === "pago" ? "Pago" : expense.computedStatus === "atrasada" ? "Atrasada" : "Pendente"}</Badge></td>
+                <td className="px-3 py-2.5"><Badge className={`text-xs font-medium border ${statusColors[expense.computedStatus] || "bg-zinc-100 text-zinc-700 border-zinc-200"}`}>{expense.computedStatus === "pago" ? "Pago" : expense.computedStatus === "atrasada" ? "Atrasada" : expense.computedStatus === "a_vencer" ? "A vencer" : expense.computedStatus === "vence_hoje" ? "Vence hoje" : "Pendente"}</Badge></td>
                 <td className="px-3 py-2.5 text-right text-sm font-bold text-red-500">-{formatCurrency(expense.amount)}</td>
                 <td className="px-3 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -382,7 +390,7 @@ export default function DespesasPage() {
               <div><label className="mb-1 block text-xs font-medium text-zinc-600">Descrição</label><input placeholder="Ex: Compra de gás" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" /></div>
               <div><label className="mb-1 block text-xs font-medium text-zinc-600">Valor (R$)</label><input inputMode="numeric" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: maskMoneyInput(e.target.value) })} onBlur={() => { if (form.amount) setForm({ ...form, amount: formatMoneyInput(parseMoneyInput(form.amount)) }) }} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" /></div>
               {formType === "lancamento" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data</label><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div>}
-              {formType === "agendada" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data de vencimento *</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /><p className="mt-0.5 text-[10px] text-zinc-400">Se não pagar até esta data, fica "Atrasada"</p></div>}
+              {formType === "agendada" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data de vencimento *</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /><p className="mt-0.5 text-[10px] text-zinc-400">Se não pagar até esta data, fica &quot;Atrasada&quot;</p></div>}
               {formType === "recorrente" && (<><div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Início *</label><input type="date" value={form.recurrenceStart} onChange={(e) => setForm({ ...form, recurrenceStart: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Fim (opcional)</label><input type="date" value={form.recurrenceEnd} onChange={(e) => setForm({ ...form, recurrenceEnd: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div></div>{getRecurrencePreview() && <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-[11px] text-purple-700">{getRecurrencePreview()}</div>}</>)}
               <div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Categoria</label><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">{categories.map((c) => <option key={c} value={c}>{categoryLabels[c] || c}</option>)}</select></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Pagamento</label><select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">{Object.entries(paymentLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div></div>
               {cashRegister && <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-amber-200 bg-amber-50 p-2"><input type="checkbox" checked={linkToCash} onChange={(e) => setLinkToCash(e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500" /><div><span className="text-xs font-medium text-zinc-700">Vincular ao caixa aberto</span><p className="text-[10px] text-zinc-500">Aparece no fechamento do dia</p></div></label>}
@@ -421,7 +429,7 @@ export default function DespesasPage() {
           <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-2 text-amber-600"><AlertTriangle className="h-5 w-5" /><h3 className="font-semibold text-sm">Categoria com despesas</h3></div>
-              <p className="text-xs text-zinc-600">"{deleteCat.cat}" tem <strong>{deleteCat.count}</strong> despesa(s) vinculada(s). O que deseja fazer?</p>
+              <p className="text-xs text-zinc-600">&quot;{deleteCat.cat}&quot; tem <strong>{deleteCat.count}</strong> despesa(s) vinculada(s). O que deseja fazer?</p>
               {!deleteCatAction && (
                 <div className="flex gap-2">
                   <button onClick={() => { setDeleteCatAction("rename"); setRenameValue(categoryLabels[deleteCat.cat] || deleteCat.cat) }} className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"><Pencil className="mr-1.5 h-3.5 w-3.5 inline" />Renomear</button>
