@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon } from "lucide-react"
+import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon, ChevronDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -341,14 +341,16 @@ export default function DespesasPage() {
 
       {/* Compact filter bar */}
       <div className="flex items-center gap-2">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-600 focus:outline-none">
-          <option value="all">Todas categorias</option>
-          {Object.entries(categoryLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={filterPayment} onChange={(e) => setFilterPayment(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-600 focus:outline-none">
-          <option value="all">Todos pagamentos</option>
-          {Object.entries(paymentLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
+        <CustomSelect
+          value={filterCategory}
+          onChange={setFilterCategory}
+          options={[{ value: "all", label: "Todas categorias" }, ...Object.entries(categoryLabels).map(([k, v]) => ({ value: k, label: v }))]}
+        />
+        <CustomSelect
+          value={filterPayment}
+          onChange={setFilterPayment}
+          options={[{ value: "all", label: "Todos pagamentos" }, ...Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))]}
+        />
         {(filterCategory !== "all" || filterPayment !== "all") && (
           <button onClick={() => { setFilterCategory("all"); setFilterPayment("all") }} className="text-xs text-zinc-400 hover:text-zinc-600">
             Limpar
@@ -500,6 +502,39 @@ export default function DespesasPage() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete({ open: false, id: "", description: "" })}
       />
+    </div>
+  )
+}
+
+function CustomSelect({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find((o) => o.value === value)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex h-8 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
+      >
+        <span className="truncate max-w-[120px]">{selected?.label}</span>
+        <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-zinc-200 bg-white shadow-lg py-1">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false) }}
+                className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${opt.value === value ? "bg-green-50 text-green-700 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
