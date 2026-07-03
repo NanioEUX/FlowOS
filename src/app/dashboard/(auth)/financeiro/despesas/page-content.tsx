@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Trash2, Loader2, X, Filter, Pencil, Download, RotateCcw, Calendar, DollarSign, Tag, CreditCard, Image as ImageIcon } from "lucide-react"
+import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -298,41 +298,23 @@ export default function DespesasPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="h-4 w-4 text-red-500" />
-              <span className="text-[10px] text-zinc-500">Total</span>
-            </div>
+            <p className="text-[10px] text-zinc-500 mb-1">Total</p>
             <p className="text-lg font-bold text-red-600">{formatCurrency(totalFiltered)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar className="h-4 w-4 text-blue-500" />
-              <span className="text-[10px] text-zinc-500">Média/dia</span>
-            </div>
+            <p className="text-[10px] text-zinc-500 mb-1">Média/dia</p>
             <p className="text-lg font-bold text-zinc-900">{formatCurrency(dailyAvg)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Tag className="h-4 w-4 text-purple-500" />
-              <span className="text-[10px] text-zinc-500">Categorias</span>
-            </div>
-            <p className="text-lg font-bold text-zinc-900">{sortedCategories.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <RotateCcw className="h-4 w-4 text-amber-500" />
-              <span className="text-[10px] text-zinc-500">Recorrentes</span>
-            </div>
-            <p className="text-lg font-bold text-zinc-900">{filtered.filter((e) => e.isRecurring).length}</p>
+            <p className="text-[10px] text-zinc-500 mb-1">Registros</p>
+            <p className="text-lg font-bold text-zinc-900">{filtered.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -357,40 +339,21 @@ export default function DespesasPage() {
         </Card>
       )}
 
-      {/* Payment method breakdown */}
-      {Object.keys(paymentTotals).length > 1 && (
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="text-xs font-semibold text-zinc-700 mb-3">Por Pagamento</h3>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(paymentTotals).sort((a, b) => b[1] - a[1]).map(([method, total]) => (
-                <div key={method} className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs">
-                  <span>{paymentIcons[method] || "💰"}</span>
-                  <span className="text-zinc-600">{paymentLabels[method] || method}</span>
-                  <span className="font-bold text-zinc-900">{formatCurrency(total)}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filters */}
-      <div className="space-y-2">
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {["all", "fixa", "variavel", "motoboy", "insumo", "salario", "aluguel", "energia", "agua", "internet", "imposto", "manutencao", "marketing", "outro"].map((cat) => (
-            <button key={cat} onClick={() => setFilterCategory(cat)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${filterCategory === cat ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
-              {cat === "all" ? "Todas" : categoryLabels[cat]}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {["all", "dinheiro", "cartao", "pix", "transferencia", "boleto"].map((pm) => (
-            <button key={pm} onClick={() => setFilterPayment(pm)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${filterPayment === pm ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
-              {pm === "all" ? "Todos" : `${paymentIcons[pm] || ""} ${paymentLabels[pm]}`}
-            </button>
-          ))}
-        </div>
+      {/* Compact filter bar */}
+      <div className="flex items-center gap-2">
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-600 focus:outline-none">
+          <option value="all">Todas categorias</option>
+          {Object.entries(categoryLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select value={filterPayment} onChange={(e) => setFilterPayment(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-600 focus:outline-none">
+          <option value="all">Todos pagamentos</option>
+          {Object.entries(paymentLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        {(filterCategory !== "all" || filterPayment !== "all") && (
+          <button onClick={() => { setFilterCategory("all"); setFilterPayment("all") }} className="text-xs text-zinc-400 hover:text-zinc-600">
+            Limpar
+          </button>
+        )}
       </div>
 
       {/* Form modal */}
