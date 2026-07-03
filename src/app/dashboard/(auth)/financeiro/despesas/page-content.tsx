@@ -257,7 +257,7 @@ export default function DespesasPage() {
 
   function exportCSV() {
     const header = "Data,Descrição,Tipo,Categoria,Método Pgto,Status,Vencimento\n"
-    const rows = expenses.map((e) => `${new Date(e.date).toLocaleDateString("pt-BR")},"${e.description}",${typeLabels[e.type as ExpenseType] || e.type},${e.category},${paymentLabels[e.paymentMethod] || e.paymentMethod},${e.computedStatus === "pago" ? "Pago" : e.computedStatus === "atrasada" ? "Atrasada" : "Pendente"},${e.dueDate ? new Date(e.dueDate).toLocaleDateString("pt-BR") : ""}`).join("\n")
+    const rows = expenses.map((e) => `${new Date(e.createdAt).toLocaleDateString("pt-BR")},"${e.description}",${typeLabels[e.type as ExpenseType] || e.type},${e.category},${paymentLabels[e.paymentMethod] || e.paymentMethod},${e.computedStatus === "pago" ? "Pago" : e.computedStatus === "atrasada" ? "Atrasada" : "Pendente"},${e.dueDate ? new Date(e.dueDate).toLocaleDateString("pt-BR") : ""}`).join("\n")
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `despesas-${new Date().toISOString().split("T")[0]}.csv`; a.click(); URL.revokeObjectURL(url)
     toast("CSV exportado", "success")
@@ -343,7 +343,7 @@ export default function DespesasPage() {
             )}
             {expenses.map((expense) => (
               <tr key={expense.id} className="hover:bg-zinc-50 transition-colors">
-                <td className="px-3 py-2.5 text-xs text-zinc-500">{new Date(expense.date).toLocaleDateString("pt-BR")}</td>
+                <td className="px-3 py-2.5 text-xs text-zinc-500">{new Date(expense.createdAt).toLocaleDateString("pt-BR")}</td>
                 <td className="px-3 py-2.5 font-medium text-zinc-900 max-w-[200px] truncate">{expense.description}</td>
                 <td className="px-3 py-2.5"><Badge className="text-[10px] bg-zinc-100 text-zinc-600">{expense.category}</Badge></td>
                 <td className="px-3 py-2.5"><Badge className={`text-[10px] ${typeColors[expense.type as ExpenseType] || "bg-zinc-100 text-zinc-600"}`}>{typeLabels[expense.type as ExpenseType] || expense.type}</Badge></td>
