@@ -31,7 +31,7 @@ interface Expense {
   createdAt: string
 }
 
-type Period = "today" | "7days" | "30days" | "month" | "currentMonth" | "custom" | "all"
+type Period = "today" | "7days" | "30days" | "currentMonth" | "custom" | "all"
 type StatusFilter = "all" | "pago" | "pendente" | "a_vencer" | "vence_hoje" | "atrasada"
 type ExpenseType = "lancamento" | "agendada" | "recorrente"
 
@@ -46,7 +46,7 @@ const paymentLabels: Record<string, string> = {
   dinheiro: "Dinheiro", cartao: "Cartão", pix: "Pix", transferencia: "Transferência", boleto: "Boleto",
 }
 const paymentIcons: Record<string, string> = { dinheiro: "💵", cartao: "💳", pix: "📱", transferencia: "🏦", boleto: "📄" }
-const periodLabels: Record<Period, string> = { today: "Hoje", "7days": "7 dias", "30days": "30 dias", month: "Mês", currentMonth: "Mês atual", custom: "Período", all: "Tudo" }
+const periodLabels: Record<Period, string> = { today: "Hoje", "7days": "7 dias", "30days": "30 dias", currentMonth: "Mês atual", custom: "Período", all: "Tudo" }
 const statusLabels: Record<StatusFilter, string> = { all: "Todos", pago: "Pago", pendente: "Pendente", a_vencer: "A vencer", vence_hoje: "Vence hoje", atrasada: "Atrasada" }
 const statusColors: Record<string, string> = { pago: "bg-green-100 text-green-800 border-green-200", pendente: "bg-amber-100 text-amber-800 border-amber-200", a_vencer: "bg-blue-100 text-blue-800 border-blue-200", vence_hoje: "bg-orange-100 text-orange-800 border-orange-200", atrasada: "bg-red-100 text-red-800 border-red-200" }
 const typeLabels: Record<ExpenseType, string> = { lancamento: "Lançamento", agendada: "Agendada", recorrente: "Recorrente" }
@@ -84,7 +84,7 @@ export default function DespesasPage() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const [period, setPeriod] = useState<Period>("month")
+  const [period, setPeriod] = useState<Period>("currentMonth")
   const [customDateFrom, setCustomDateFrom] = useState("")
   const [customDateTo, setCustomDateTo] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
@@ -120,7 +120,6 @@ export default function DespesasPage() {
     if (period === "today") from = now.toISOString().split("T")[0]
     else if (period === "7days") { const d = new Date(now.getTime() - 7 * 86400000); from = d.toISOString().split("T")[0] }
     else if (period === "30days") { const d = new Date(now.getTime() - 30 * 86400000); from = d.toISOString().split("T")[0] }
-    else if (period === "month") { from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0] }
     else if (period === "currentMonth") { from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]; to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0] }
     else if (period === "custom") { from = customDateFrom; to = customDateTo || now.toISOString().split("T")[0] }
     else { from = ""; to = "" }
@@ -268,7 +267,7 @@ export default function DespesasPage() {
   }
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
-  const daysInPeriod = period === "today" ? 1 : period === "7days" ? 7 : period === "30days" ? 30 : period === "month" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() : 30
+  const daysInPeriod = period === "today" ? 1 : period === "7days" ? 7 : period === "30days" ? 30 : period === "currentMonth" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() : 30
   const dailyAvg = expenses.length > 0 ? totalExpenses / daysInPeriod : 0
   const overdueCount = expenses.filter((e) => e.computedStatus === "atrasada").length
   const pendingCount = expenses.filter((e) => e.computedStatus === "pendente" || e.computedStatus === "a_vencer" || e.computedStatus === "vence_hoje").length
@@ -307,7 +306,7 @@ export default function DespesasPage() {
       </div>
 
       {/* Period */}
-      <div className="flex gap-1 overflow-x-auto pb-1">{(["today", "7days", "30days", "month", "currentMonth", "custom", "all"] as Period[]).map((p) => (<button key={p} onClick={() => setPeriod(p)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${period === p ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{periodLabels[p]}</button>))}</div>
+      <div className="flex gap-1 overflow-x-auto pb-1">{(["today", "7days", "30days", "currentMonth", "custom", "all"] as Period[]).map((p) => (<button key={p} onClick={() => setPeriod(p)} className={`rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors ${period === p ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>{periodLabels[p]}</button>))}</div>
       {period === "custom" && (
         <div className="flex items-center gap-2">
           <input type="date" value={customDateFrom} onChange={(e) => setCustomDateFrom(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none" />
