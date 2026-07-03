@@ -1,23 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="48" height="48" rx="12" fill="#07101D" />
   <defs>
-    <linearGradient id="bagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FF8C5A"/>
-      <stop offset="100%" style="stop-color:#FF6B35"/>
+    <linearGradient id="ft" x1="4" y1="18" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E7BFF" />
+      <stop offset="60%" stop-color="#17D7FF" />
+    </linearGradient>
+    <linearGradient id="fm" x1="4" y1="26" x2="38" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#17D7FF" />
+      <stop offset="100%" stop-color="#00D98B" />
+    </linearGradient>
+    <linearGradient id="fb" x1="4" y1="34" x2="32" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00D98B" />
+      <stop offset="100%" stop-color="#00D98B" />
     </linearGradient>
   </defs>
-  
-  <!-- Background -->
-  <rect width="32" height="32" rx="6" fill="#FF6B35"/>
-  
-  <!-- Shopping Bag (simplified) -->
-  <g transform="translate(4, 4)">
-    <!-- Bag Body -->
-    <path d="M4 10 L4 24 Q4 26 6 26 L20 26 Q22 26 22 24 L22 10 Z" fill="white" rx="2"/>
-    
-    <!-- Bag Handle -->
-    <path d="M9 10 L9 6 Q9 2 14 2 Q19 2 19 6 L19 10" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    
-    <!-- Checkmark -->
-    <path d="M10 16 L13 19 L18 13" fill="none" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+  <path d="M6 21C6 18 8 13 14 10C20 7 30 6 38 8C42 9 44 11 43 14C42 17 36 18 28 17C20 16 12 18 8 21L6 21Z" fill="url(#ft)" />
+  <path d="M6 29C6 26 9 21 15 18C21 15 30 14 36 16C40 17 41 20 40 22C39 25 32 26 25 25C18 24 11 26 8 29L6 29Z" fill="url(#fm)" />
+  <path d="M6 37C6 34 10 29 16 27C22 25 28 25 31 27C33 28 33 31 31 33C29 35 24 36 19 35C14 34 9 36 7 37L6 37Z" fill="url(#fb)" />
 </svg>

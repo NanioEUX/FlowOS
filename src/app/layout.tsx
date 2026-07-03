@@ -9,6 +9,16 @@ export const metadata: Metadata = {
   title: "FlowOS - Cardápio Digital",
   description: "Sistema de pedidos online para seu estabelecimento",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "FlowOS" },
 }
 
@@ -23,10 +33,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-      </head>
       <body className={inter.className}><Providers>{children}</Providers></body>
     </html>
   )
