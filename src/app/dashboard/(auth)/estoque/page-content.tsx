@@ -44,6 +44,9 @@ export default function EstoquePage() {
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [itemForm, setItemForm] = useState({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", categoryId: "" })
+  const [products, setProducts] = useState<any[]>([])
+  const [linkProductId, setLinkProductId] = useState("")
+  const [linkQuantity, setLinkQuantity] = useState("1")
 
   const [showMovementForm, setShowMovementForm] = useState(false)
   const [movementForm, setMovementForm] = useState({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "" })
@@ -110,7 +113,43 @@ export default function EstoquePage() {
       supplier: item.supplier || "",
       categoryId: item.categoryId,
     })
+    setLinkProductId("")
+    setLinkQuantity("1")
     setShowItemForm(true)
+    if (establishmentId) {
+      fetchAuth(`/api/products?establishmentId=${establishmentId}`).then((r) => r.json()).then((data) => setProducts(Array.isArray(data) ? data : [])).catch(() => setProducts([]))
+    }
+  }
+
+  async function linkProduct() {
+    if (!editingItem || !linkProductId || !linkQuantity) return
+    const res = await fetchAuth("/api/stock/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stockItemId: editingItem.id, productId: linkProductId, quantity: parseFloat(linkQuantity) }),
+    })
+    if (res.ok) {
+      toast("Produto vinculado", "success")
+      setLinkProductId("")
+      setLinkQuantity("1")
+      loadAll()
+    } else {
+      const data = await res.json()
+      toast(data.error || "Erro ao vincular", "error")
+    }
+  }
+
+  async function unlinkProduct(productId: string) {
+    if (!editingItem) return
+    const res = await fetchAuth("/api/stock/links", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stockItemId: editingItem.id, productId }),
+    })
+    if (res.ok) {
+      toast("Produto desvinculado", "success")
+      loadAll()
+    }
   }
 
   function handleDeleteItem(id: string, name: string) {
@@ -430,6 +469,32 @@ export default function EstoquePage() {
                     />
                   </div>
                 </div>
+                {editingItem && (
+                  <div className="border-t border-zinc-200 pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-zinc-500 uppercase">Vincular ao Cardápio</p>
+                    {editingItem.productLinks && editingItem.productLinks.length > 0 && (
+                      <div className="space-y-1">
+                        {editingItem.productLinks.map((link: any) => (
+                          <div key={link.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
+                            <span className="text-xs text-zinc-700">{link.product.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-zinc-400">x{link.quantity} {editingItem.unit}</span>
+                              <button onClick={() => unlinkProduct(link.productId)} className="text-zinc-400 hover:text-red-500"><X className="h-3 w-3" /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <select value={linkProductId} onChange={(e) => setLinkProductId(e.target.value)} className="flex-1 h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none">
+                        <option value="">Selecionar produto...</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <input type="number" min="0.01" step="0.01" value={linkQuantity} onChange={(e) => setLinkQuantity(e.target.value)} className="w-16 h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 text-center focus:border-green-600 focus:outline-none" />
+                      <Button size="sm" onClick={linkProduct} disabled={!linkProductId || !linkQuantity} className="h-8 bg-green-600 hover:bg-green-700"><Plus className="h-3 w-3" /></Button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => { setShowItemForm(false); setEditingItem(null) }}>Cancelar</Button>
                   <Button className="flex-1" onClick={saveItem}>{editingItem ? "Salvar" : "Adicionar"}</Button>

@@ -5,63 +5,46 @@ import { verifyAuth } from "@/lib/auth"
 export async function POST(req: NextRequest) {
   try {
     const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-    const establishmentId = authUser.establishmentId
-    const { productId, stockItemId, quantity } = await req.json()
-    if (!productId || !stockItemId || !quantity) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
-    }
+    if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
-    const product = await prisma.product.findUnique({ where: { id: productId } })
-    if (!product || product.establishmentId !== establishmentId) {
-      return NextResponse.json({ error: "Produto não pertence a este estabelecimento" }, { status: 403 })
+    const { stockItemId, productId, quantity } = await req.json()
+    if (!stockItemId || !productId || !quantity) {
+      return NextResponse.json({ error: "stockItemId, productId e quantity obrigatórios" }, { status: 400 })
     }
 
     const stockItem = await prisma.stockItem.findUnique({ where: { id: stockItemId } })
-    if (!stockItem || stockItem.establishmentId !== establishmentId) {
-      return NextResponse.json({ error: "Item de estoque não pertence a este estabelecimento" }, { status: 403 })
+    if (!stockItem || stockItem.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
     }
 
-    const existing = await prisma.productStockLink.findUnique({
+    const link = await prisma.productStockLink.upsert({
       where: { productId_stockItemId: { productId, stockItemId } },
+      update: { quantity: parseFloat(quantity) },
+      create: { productId, stockItemId, quantity: parseFloat(quantity) },
     })
 
-    if (existing) {
-      const updated = await prisma.productStockLink.update({
-        where: { id: existing.id },
-        data: { quantity },
-      })
-      return NextResponse.json(updated)
-    }
-
-    const link = await prisma.productStockLink.create({
-      data: { productId, stockItemId, quantity },
-    })
     return NextResponse.json(link)
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Erro ao salvar" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao vincular" }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get("id")
-    if (!id) {
-      return NextResponse.json({ error: "ID necessário" }, { status: 400 })
+    const authUser = await verifyAuth(req)
+    if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    const { stockItemId, productId } = await req.json()
+    if (!stockItemId || !productId) {
+      return NextResponse.json({ error: "stockItemId e productId obrigatórios" }, { status: 400 })
     }
 
-    const link = await prisma.productStockLink.findUnique({ where: { id } })
-    if (!link) {
-      return NextResponse.json({ error: "Link não encontrado" }, { status: 404 })
-    }
+    await prisma.productStockLink.deleteMany({
+      where: { stockItemId, productId },
+    })
 
-    await prisma.productStockLink.delete({ where: { id } })
     return NextResponse.json({ deleted: true })
   } catch (error) {
-    return NextResponse.json({ error: "Erro ao deletar" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao desvincular" }, { status: 500 })
   }
 }
