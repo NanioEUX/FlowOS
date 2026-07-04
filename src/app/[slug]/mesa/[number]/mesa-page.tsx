@@ -658,9 +658,9 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                       <div key={order.id} className={`rounded-xl border p-3 ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-white"}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-zinc-500">#{order.orderNumber || "—"}</span>
-                          <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${st.color}`}>
-                            <st.icon className="h-3 w-3" />
-                            {st.label}
+                          <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${darkMode ? "text-zinc-400 bg-zinc-700" : "text-zinc-500 bg-zinc-100"}`}>
+                            <Clock className="h-3 w-3" />
+                            {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
                         {parsedItems.map((item, idx) => (
