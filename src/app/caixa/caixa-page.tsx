@@ -1190,20 +1190,20 @@ export default function CaixaPOSPage() {
                   </button>
                 </div>
               )}
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">
+              <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-6">
                 {filteredProducts.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => addToCart(product)}
-                  className={`flex flex-col items-center rounded-xl border p-3 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}
+                  className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}
                 >
                   {product.image ? (
-                    <img src={product.image} alt={product.name} className="mb-2 h-16 w-16 rounded-lg object-cover" />
+                    <img src={product.image} alt={product.name} className="mb-2 h-20 w-20 rounded-xl object-cover" />
                   ) : (
-                    <div className={`mb-2 flex h-16 w-16 items-center justify-center rounded-lg text-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
+                    <div className={`mb-2 flex h-20 w-20 items-center justify-center rounded-xl text-3xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
                     )}
-                    <p className={`w-full truncate text-center text-xs font-medium ${darkMode ? "text-white/90" : "text-zinc-800"}`}>{product.name}</p>
-                    <p className="text-xs font-bold text-green-600">{formatCurrency(product.price)}</p>
+                    <p className={`w-full truncate text-center text-sm font-medium ${darkMode ? "text-white/90" : "text-zinc-800"}`}>{product.name}</p>
+                    <p className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</p>
                   </button>
                 ))}
                 {filteredProducts.length === 0 && (
