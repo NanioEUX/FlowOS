@@ -67,6 +67,7 @@ model Establishment {
   products            Product[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
+  suppliers           Supplier[]
   users               User[]
 }
 
@@ -188,6 +189,7 @@ model StockItem {
   minQuantity     Float              @default(0)
   unitCost        Float              @default(0)
   supplier        String?
+  supplierId      String?
   categoryId      String
   establishmentId String
   createdAt       DateTime           @default(now())
@@ -196,7 +198,22 @@ model StockItem {
   productLinks    ProductStockLink[]
   category        StockCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  supplierRef     Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   movements       StockMovement[]
+}
+
+model Supplier {
+  id              String             @id @default(cuid())
+  name            String
+  phone           String?
+  cnpj            String?
+  email           String?
+  notes           String?
+  establishmentId String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  stockItems      StockItem[]
 }
 
 model StockMovement {

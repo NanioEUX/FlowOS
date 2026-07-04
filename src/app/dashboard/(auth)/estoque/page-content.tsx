@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag } from "lucide-react"
+import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,16 +35,22 @@ export default function EstoquePage() {
   const [items, setItems] = useState<any[]>([])
   const [movements, setMovements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<"items" | "movements">("items")
+  const [tab, setTab] = useState<"items" | "movements" | "suppliers">("items")
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
   const [movementError, setMovementError] = useState("")
+
+  const [suppliers, setSuppliers] = useState<any[]>([])
+  const [showSupplierForm, setShowSupplierForm] = useState(false)
+  const [editingSupplier, setEditingSupplier] = useState<any>(null)
+  const [supplierForm, setSupplierForm] = useState({ name: "", phone: "", cnpj: "", email: "", notes: "" })
+  const [deleteSupplierConfirm, setDeleteSupplierConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
 
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCatName, setNewCatName] = useState("")
 
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
-  const [itemForm, setItemForm] = useState({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", categoryId: "" })
+  const [itemForm, setItemForm] = useState({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: "" })
   const [products, setProducts] = useState<any[]>([])
   const [linkProductId, setLinkProductId] = useState("")
   const [linkQuantity, setLinkQuantity] = useState("1")
@@ -62,6 +68,10 @@ export default function EstoquePage() {
       setCategories(data.categories)
       setItems(data.items)
       setMovements(data.movements)
+    }
+    const resSuppliers = await fetchAuth(`/api/suppliers?establishmentId=${establishmentId}`)
+    if (resSuppliers.ok) {
+      setSuppliers(await resSuppliers.json())
     }
     setLoading(false)
   }
@@ -98,7 +108,7 @@ export default function EstoquePage() {
     } else {
       await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
     }
-    setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", categoryId: "" })
+    setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: "" })
     setEditingItem(null)
     setShowItemForm(false)
     loadAll()
@@ -114,6 +124,7 @@ export default function EstoquePage() {
       minQuantity: String(item.minQuantity),
       unitCost: String(item.unitCost),
       supplier: item.supplier || "",
+      supplierId: item.supplierId || "",
       categoryId: item.categoryId,
     })
     setLinkProductId("")
@@ -204,6 +215,27 @@ export default function EstoquePage() {
     loadAll()
   }
 
+  async function saveSupplier() {
+    if (!establishmentId || !supplierForm.name.trim()) return
+    const body = { ...supplierForm, establishmentId }
+    if (editingSupplier) {
+      await fetchAuth(`/api/suppliers`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, id: editingSupplier.id }) })
+    } else {
+      await fetchAuth("/api/suppliers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    }
+    setSupplierForm({ name: "", phone: "", cnpj: "", email: "", notes: "" })
+    setEditingSupplier(null)
+    setShowSupplierForm(false)
+    loadAll()
+  }
+
+  async function confirmDeleteSupplier() {
+    await fetchAuth(`/api/suppliers?id=${deleteSupplierConfirm.id}`, { method: "DELETE" })
+    setDeleteSupplierConfirm({ open: false, id: "", name: "" })
+    window.dispatchEvent(new Event("stock-updated"))
+    loadAll()
+  }
+
   if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
 
   return (
@@ -211,7 +243,7 @@ export default function EstoquePage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-zinc-900">Estoque</h2>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
+          <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Item
           </Button>
           <Button size="sm" variant="outline" onClick={() => setShowMovementForm(true)} className="gap-2">
@@ -269,6 +301,9 @@ export default function EstoquePage() {
         <button onClick={() => setTab("movements")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "movements" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
           Movimentações
         </button>
+        <button onClick={() => setTab("suppliers")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "suppliers" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
+          Fornecedores
+        </button>
       </div>
 
       {/* Items Tab */}
@@ -310,7 +345,7 @@ export default function EstoquePage() {
                             </div>
                             <p className="text-xs text-zinc-500">
                               {item.quantity} {item.unit} • {formatCurrency(item.unitCost)}/{item.unit}
-                              {item.supplier && ` • ${item.supplier}`}
+                              {item.supplierRef ? ` • ${item.supplierRef.name}` : item.supplier ? ` • ${item.supplier}` : ""}
                             </p>
                             {item.productLinks.length > 0 && (
                               <p className="text-xs text-blue-500 mt-0.5">
@@ -362,6 +397,49 @@ export default function EstoquePage() {
                 <p className="text-xs text-zinc-400">{new Date(m.createdAt).toLocaleString("pt-BR")}</p>
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {/* Suppliers Tab */}
+      {tab === "suppliers" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">{suppliers.length} fornecedor(es) cadastrado(s)</p>
+            <Button size="sm" onClick={() => { setEditingSupplier(null); setSupplierForm({ name: "", phone: "", cnpj: "", email: "", notes: "" }); setShowSupplierForm(true) }} className="gap-2">
+              <Plus className="h-4 w-4" /> Novo Fornecedor
+            </Button>
+          </div>
+          {suppliers.length === 0 ? (
+            <p className="text-sm text-zinc-400 text-center py-8">Nenhum fornecedor cadastrado</p>
+          ) : (
+            <div className="space-y-2">
+              {suppliers.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-white p-3">
+                  <div className="flex items-center gap-3">
+                    <Truck className="h-5 w-5 text-zinc-400" />
+                    <div>
+                      <p className="font-medium text-zinc-900">{s.name}</p>
+                      <p className="text-xs text-zinc-500">
+                        {s.phone && `${s.phone}`}
+                        {s.phone && s.cnpj && " • "}
+                        {s.cnpj && `CNPJ: ${s.cnpj}`}
+                        {!s.phone && !s.cnpj && s.email && s.email}
+                      </p>
+                      {s.stockItems && s.stockItems.length > 0 && (
+                        <p className="text-xs text-blue-500 mt-0.5">
+                          Fornece: {s.stockItems.map((i: any) => i.name).join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setEditingSupplier(s); setSupplierForm({ name: s.name, phone: s.phone || "", cnpj: s.cnpj || "", email: s.email || "", notes: s.notes || "" }); setShowSupplierForm(true) }} className="text-zinc-400 hover:text-zinc-600 text-xs">Editar</button>
+                    <button onClick={() => setDeleteSupplierConfirm({ open: true, id: s.id, name: s.name })} className="text-red-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -460,12 +538,14 @@ export default function EstoquePage() {
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Fornecedor</label>
-                    <input
-                      type="text"
-                      placeholder="Opcional"
-                      value={itemForm.supplier}
-                      onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    <SearchableSelect
+                      value={itemForm.supplierId || ""}
+                      onChange={(v) => {
+                        const supp = suppliers.find((s) => s.id === v)
+                        setItemForm({ ...itemForm, supplierId: v, supplier: supp?.name || "" })
+                      }}
+                      options={[{ value: "", label: "Nenhum" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+                      placeholder="Selecionar..."
                     />
                   </div>
                 </div>
@@ -584,6 +664,88 @@ export default function EstoquePage() {
         variant="danger"
         onConfirm={confirmDeleteItem}
         onCancel={() => setDeleteConfirm({ open: false, id: "", name: "" })}
+      />
+
+      {/* Supplier Modal */}
+      {showSupplierForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">{editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}</h3>
+                <button onClick={() => { setShowSupplierForm(false); setEditingSupplier(null) }}><X className="h-5 w-5" /></button>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Nome *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Distribuidora ABC"
+                    value={supplierForm.name}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Telefone</label>
+                    <input
+                      type="text"
+                      placeholder="(11) 99999-0000"
+                      value={supplierForm.phone}
+                      onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">CNPJ</label>
+                    <input
+                      type="text"
+                      placeholder="00.000.000/0000-00"
+                      value={supplierForm.cnpj}
+                      onChange={(e) => setSupplierForm({ ...supplierForm, cnpj: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">E-mail</label>
+                  <input
+                    type="email"
+                    placeholder="contato@fornecedor.com"
+                    value={supplierForm.email}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Observações</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Entrega todo dia útil"
+                    value={supplierForm.notes}
+                    onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={() => { setShowSupplierForm(false); setEditingSupplier(null) }}>Cancelar</Button>
+                  <Button className="flex-1" onClick={saveSupplier}>{editingSupplier ? "Salvar" : "Adicionar"}</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={deleteSupplierConfirm.open}
+        title="Remover fornecedor"
+        message={`Tem certeza que deseja remover o fornecedor "${deleteSupplierConfirm.name}"? O vínculo com itens de estoque será removido.`}
+        confirmLabel="Remover"
+        variant="danger"
+        onConfirm={confirmDeleteSupplier}
+        onCancel={() => setDeleteSupplierConfirm({ open: false, id: "", name: "" })}
       />
     </div>
   )
