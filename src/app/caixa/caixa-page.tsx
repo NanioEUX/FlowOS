@@ -1657,32 +1657,64 @@ export default function CaixaPOSPage() {
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Selecione uma mesa para ver os itens</p>
                   </div>
-                ) : (cart.length === 0 && stagingCart.length === 0) ? (
-                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
-                    <ShoppingBag className="mb-2 h-8 w-8" />
-                    <p className="text-xs">Nenhum item nesta mesa</p>
-                    <p className={`mt-1 text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicione itens pelo card da mesa</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...cart, ...stagingCart].map((item) => (
-                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
-                        <div className="flex-1 min-w-0">
-                          <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.name}</p>
-                          <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
+                ) : (() => {
+                  const localItems = [...cart, ...stagingCart]
+                  const tableOrders = orders.filter((o: any) => o.tableNumber === activeTable && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                  const orderItems: any[] = []
+                  for (const o of tableOrders) {
+                    try {
+                      const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items
+                      for (const item of items) orderItems.push({ ...item, orderId: o.id, fromOrder: true })
+                    } catch {}
+                  }
+                  const allItems = [...orderItems, ...localItems]
+                  if (allItems.length === 0) return (
+                    <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                      <ShoppingBag className="mb-2 h-8 w-8" />
+                      <p className="text-xs">Nenhum item nesta mesa</p>
+                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicione itens pelo card da mesa</p>
+                    </div>
+                  )
+                  return (
+                    <div className="space-y-2">
+                      {orderItems.length > 0 && (
+                        <p className={`text-[10px] font-medium uppercase tracking-wide ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Pedidos enviados</p>
+                      )}
+                      {orderItems.map((item, idx) => (
+                        <div key={`order-${idx}`} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]/60" : "bg-zinc-50/60"}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className={`truncate text-xs font-medium ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{item.quantity}x {item.name}</p>
+                            <p className={`text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>{formatCurrency(item.price)}</p>
+                          </div>
+                          <span className={`text-xs font-bold ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
-                        <span className={`text-xs font-bold ${darkMode ? "text-white/90" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                      {localItems.length > 0 && orderItems.length > 0 && (
+                        <p className={`text-[10px] font-medium uppercase tracking-wide pt-1 ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicionados agora</p>
+                      )}
+                      {localItems.map((item) => (
+                        <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
+                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price)}</p>
+                          </div>
+                          <span className={`text-xs font-bold ${darkMode ? "text-white/90" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
 
-              {activeTable && (
+              {activeTable && (() => {
+                const tableOrders = orders.filter((o: any) => o.tableNumber === activeTable && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                const ordersTotal = tableOrders.reduce((s: number, o: any) => s + o.total, 0)
+                const fullTotal = cartTotal + ordersTotal
+                return (
                 <div className={`border-t px-4 py-3 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
                   <div className="mb-3 flex items-center justify-between">
                     <span className={`text-sm font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Total</span>
-                    <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
+                    <span className="text-xl font-bold text-green-500">{formatCurrency(fullTotal)}</span>
                   </div>
                   {(() => { const pp = activeTable ? (tablePartialPaid[activeTable] || 0) : 0; const rem = cartTotal - pp; return pp > 0 && rem > 0.01 ? (
                     <div className="mb-2 flex items-center justify-between">
@@ -1703,7 +1735,8 @@ export default function CaixaPOSPage() {
                     )}
                   </button>
                 </div>
-              )}
+                )
+              })()}
             </div>
           </div>
         </>
