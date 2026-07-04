@@ -135,7 +135,7 @@ export default function CaixaPOSPage() {
   const [staffQrImage, setStaffQrImage] = useState<string | null>(null)
   // "Cada um paga" states
   const [eachPersonStep, setEachPersonStep] = useState(0)
-  const [eachPersonSelections, setEachPersonSelections] = useState<number[][]>([[]])
+  const [eachPersonSelections, setEachPersonSelections] = useState<Record<number, Record<number, number>>>({})
   const [eachPersonPixUrl, setEachPersonPixUrl] = useState<string | null>(null)
   const [eachPersonGenerating, setEachPersonGenerating] = useState(false)
   // "Dividir" sequential states
@@ -1786,7 +1786,7 @@ export default function CaixaPOSPage() {
                   </h3>
                   <p className={`text-xs mt-0.5 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Confirme os itens e a forma de pagamento</p>
                 </div>
-                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections([[]]); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"} rounded-lg p-1`}>
+                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"} rounded-lg p-1`}>
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -1827,7 +1827,7 @@ export default function CaixaPOSPage() {
                     ].map((m) => (
                       <button
                         key={m.id}
-                        onClick={() => { setCloseTableMode(m.id as any); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections([[]]); setEachPersonPixUrl(null); setSplitPersonStep(0) }}
+                        onClick={() => { setCloseTableMode(m.id as any); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }}
                         className={`flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
                           closeTableMode === m.id
                             ? "border-green-500 bg-green-50 text-green-700"
@@ -1963,48 +1963,100 @@ export default function CaixaPOSPage() {
                   <div className="space-y-3">
                     {/* Step indicator */}
                     <div className={`flex items-center justify-center gap-2 text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
-                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= eachPersonSelections.length ? "text-green-600" : "text-white/30"}`}>
+                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= Object.keys(eachPersonSelections).length ? "text-green-600" : "text-white/30"}`}>
                         Pessoa {eachPersonStep + 1}
                       </span>
                       <span>·</span>
-                      <span>{eachPersonSelections.length} pessoa(s) configurada(s)</span>
+                      <span>{Object.keys(eachPersonSelections).length} pessoa(s) configurada(s)</span>
                     </div>
 
-                    {/* Item checkboxes */}
+                    {/* Item quantity selectors */}
                     <div className="space-y-1.5 max-h-40 overflow-y-auto">
                       {allTableItems.map((item, idx) => {
-                        const isSelected = eachPersonSelections[eachPersonStep]?.includes(idx)
+                        const selectedQty = eachPersonSelections[eachPersonStep]?.[idx] || 0
+                        const isSelected = selectedQty > 0
+                        const maxQty = item.quantity || 1
                         return (
-                          <label
+                          <div
                             key={idx}
-                            className={`flex items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                            className={`flex items-center gap-2 rounded-xl border-2 p-2.5 transition-all ${
                               isSelected
                                 ? "border-green-500 bg-green-50"
                                 : darkMode ? "border-white/10 hover:border-white/20" : "border-zinc-200 hover:border-zinc-300"
                             }`}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                setEachPersonSelections(prev => {
-                                  const next = [...prev]
-                                  const current = [...(next[eachPersonStep] || [])]
-                                  if (isSelected) {
-                                    next[eachPersonStep] = current.filter(i => i !== idx)
-                                  } else {
-                                    next[eachPersonStep] = [...current, idx]
-                                  }
-                                  return next
-                                })
-                              }}
-                              className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
-                            />
+                            {maxQty > 1 ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEachPersonSelections(prev => {
+                                      const next = { ...prev }
+                                      const personSel = { ...(next[eachPersonStep] || {}) }
+                                      const newQty = Math.max(0, (personSel[idx] || 0) - 1)
+                                      if (newQty === 0) delete personSel[idx]
+                                      else personSel[idx] = newQty
+                                      next[eachPersonStep] = personSel
+                                      return next
+                                    })
+                                  }}
+                                  className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                                    isSelected
+                                      ? "bg-green-600 text-white hover:bg-green-700"
+                                      : darkMode ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
+                                  }`}
+                                >
+                                  -
+                                </button>
+                                <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : darkMode ? "text-white/60" : "text-zinc-400"}`}>
+                                  {selectedQty}/{maxQty}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setEachPersonSelections(prev => {
+                                      const next = { ...prev }
+                                      const personSel = { ...(next[eachPersonStep] || {}) }
+                                      const newQty = Math.min(maxQty, (personSel[idx] || 0) + 1)
+                                      personSel[idx] = newQty
+                                      next[eachPersonStep] = personSel
+                                      return next
+                                    })
+                                  }}
+                                  disabled={selectedQty >= maxQty}
+                                  className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold transition-colors disabled:opacity-30 ${
+                                    isSelected
+                                      ? "bg-green-600 text-white hover:bg-green-700"
+                                      : darkMode ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
+                                  }`}
+                                >
+                                  +
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEachPersonSelections(prev => {
+                                    const next = { ...prev }
+                                    const personSel = { ...(next[eachPersonStep] || {}) }
+                                    if (isSelected) delete personSel[idx]
+                                    else personSel[idx] = 1
+                                    next[eachPersonStep] = personSel
+                                    return next
+                                  })
+                                }}
+                                className={`flex h-7 w-7 items-center justify-center rounded-lg border-2 text-xs font-bold transition-all ${
+                                  isSelected
+                                    ? "border-green-500 bg-green-600 text-white"
+                                    : darkMode ? "border-white/20 text-white/40" : "border-zinc-300 text-zinc-400"
+                                }`}
+                              >
+                                {isSelected ? "✓" : ""}
+                              </button>
+                            )}
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{item.quantity}x {item.name}</span>
                             </div>
-                            <span className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
-                          </label>
+                            <span className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(item.price * (isSelected ? selectedQty : item.quantity))}</span>
+                          </div>
                         )
                       })}
                     </div>
@@ -2014,8 +2066,8 @@ export default function CaixaPOSPage() {
                       <p className="text-xs text-zinc-500">Pessoa {eachPersonStep + 1} — subtotal</p>
                       <p className="text-2xl font-extrabold text-green-600">
                         {formatCurrency(
-                          (eachPersonSelections[eachPersonStep] || []).reduce(
-                            (s, idx) => s + (allTableItems[idx]?.price || 0) * (allTableItems[idx]?.quantity || 1), 0
+                          Object.entries(eachPersonSelections[eachPersonStep] || {}).reduce(
+                            (s, [idx, qty]) => s + (allTableItems[parseInt(idx)]?.price || 0) * qty, 0
                           )
                         )}
                       </p>
@@ -2053,8 +2105,8 @@ export default function CaixaPOSPage() {
                       </button>
                       <button
                         onClick={async () => {
-                          const selected = eachPersonSelections[eachPersonStep] || []
-                          const personTotal = selected.reduce((s, idx) => s + (allTableItems[idx]?.price || 0) * (allTableItems[idx]?.quantity || 1), 0)
+                          const selected = eachPersonSelections[eachPersonStep] || {}
+                          const personTotal = Object.entries(selected).reduce((s, [idx, qty]) => s + (allTableItems[parseInt(idx)]?.price || 0) * qty, 0)
                           if (personTotal <= 0) return
                           setEachPersonGenerating(true)
                           try {
@@ -2077,14 +2129,14 @@ export default function CaixaPOSPage() {
                             setEachPersonGenerating(false)
                           }
                         }}
-                        disabled={(eachPersonSelections[eachPersonStep] || []).length === 0 || eachPersonGenerating}
+                        disabled={Object.keys(eachPersonSelections[eachPersonStep] || {}).length === 0 || eachPersonGenerating}
                         className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
                       >
                         {eachPersonGenerating ? "Gerando..." : "Gerar Pix"}
                       </button>
                       <button
                         onClick={() => {
-                          setEachPersonSelections(prev => [...prev, []])
+                          setEachPersonSelections(prev => ({ ...prev, [(eachPersonStep + 1)]: {} }))
                           setEachPersonStep(prev => prev + 1)
                           setEachPersonPixUrl(null)
                         }}
