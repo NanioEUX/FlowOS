@@ -78,6 +78,7 @@ export default function CaixaPOSPage() {
   const [currentTime, setCurrentTime] = useState("")
   const [customName, setCustomName] = useState("")
   const [customPrice, setCustomPrice] = useState("")
+  const [showCustomItemModal, setShowCustomItemModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [cashRegister, setCashRegister] = useState<any>(null)
   const [printReceipt, setPrintReceipt] = useState(() => {
@@ -1123,20 +1124,31 @@ export default function CaixaPOSPage() {
         <>
           {/* Search + Categories */}
           <div className={`px-4 py-2 shadow-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
-            <div className="mb-2 relative">
-              <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-white/50"}`} />
-              <input
-                type="text"
-                placeholder="Buscar produto..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-white/50"}`}>
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+            <div className="mb-2 flex items-center gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`} />
+                <input
+                  type="text"
+                  placeholder="Buscar produto..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => setShowCustomItemModal(true)}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                  darkMode ? "border-white/[.08] bg-[#0f2942] text-white/70 hover:bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                <Plus className="h-4 w-4" />
+                Avulso
+              </button>
             </div>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
               <button
@@ -1199,31 +1211,6 @@ export default function CaixaPOSPage() {
                     Nenhum produto encontrado
                   </div>
                 )}
-              </div>
-
-              {/* Custom item */}
-              <div className={`mt-3 flex items-center gap-2 rounded-lg border border-dashed p-2 ${darkMode ? "border-white/[.08]" : "border-zinc-300"}`}>
-                <input
-                  placeholder="Item avulso"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  className={`flex-1 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
-                />
-                <input
-                  placeholder="R$"
-                  type="number"
-                  step="0.01"
-                  value={customPrice}
-                  onChange={(e) => setCustomPrice(e.target.value)}
-                  className={`w-20 rounded border px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
-                />
-                <button
-                  onClick={addCustomItem}
-                  disabled={!customName || !customPrice}
-                  className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
               </div>
 
             </div>
@@ -1510,6 +1497,43 @@ export default function CaixaPOSPage() {
       {/* Pedidos Externos Tab */}
       {activeTab === "pedidos" && (
         <PedidosTab orders={orders} deliveryPeople={deliveryPeople} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} darkMode={darkMode} />
+      )}
+
+      {/* Custom Item Modal */}
+      {showCustomItemModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setShowCustomItemModal(false) }}>
+          <div className={`w-full max-w-sm rounded-2xl p-5 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Item Avulso</h3>
+              <button onClick={() => setShowCustomItemModal(false)}><X className="h-4 w-4 text-zinc-400" /></button>
+            </div>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Nome do item"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                autoFocus
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+              />
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Preço (R$)"
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+              />
+              <button
+                onClick={() => { addCustomItem(); setShowCustomItemModal(false) }}
+                disabled={!customName || !customPrice}
+                className="w-full rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Receipt popup */}
