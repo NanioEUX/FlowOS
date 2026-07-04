@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -170,6 +170,117 @@ export default function CaixaPOSPage() {
       } catch {}
     }
   }, [user?.establishmentId])
+
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Keyboard shortcuts
+  const handleKeyboard = useCallback((e: KeyboardEvent) => {
+    const tag = (e.target as HTMLElement).tagName
+    const isInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT"
+
+    // Escape: close modals / clear search
+    if (e.key === "Escape") {
+      if (showCashRegisterModal) { setShowCashRegisterModal(false); return }
+      if (closingTableModal) { setClosingTableModal(false); return }
+      if (showCustomItemModal) { setShowCustomItemModal(false); return }
+      if (searchQuery) { setSearchQuery(""); return }
+      return
+    }
+
+    // Don't trigger shortcuts when typing in inputs (except Escape above)
+    if (isInput) return
+
+    // F1: toggle cash register modal
+    if (e.key === "F1") {
+      e.preventDefault()
+      if (!cashRegister) { setCashRegisterAction("open"); setShowCashRegisterModal(true) }
+      else { setCashRegisterAction("close"); setShowCashRegisterModal(true) }
+      return
+    }
+
+    // F2: focus search
+    if (e.key === "F2") {
+      e.preventDefault()
+      setActiveTab("caixa")
+      setTimeout(() => searchInputRef.current?.focus(), 50)
+      return
+    }
+
+    // F3: mesas tab
+    if (e.key === "F3") {
+      e.preventDefault()
+      setActiveTab("mesas")
+      return
+    }
+
+    // F4: balcão tab
+    if (e.key === "F4") {
+      e.preventDefault()
+      setActiveTab("balcao")
+      return
+    }
+
+    // F5: pedidos externos tab
+    if (e.key === "F5") {
+      e.preventDefault()
+      setActiveTab("pedidos")
+      return
+    }
+
+    // Ctrl+1-9: select table
+    if (e.ctrlKey && e.key >= "1" && e.key <= "9") {
+      e.preventDefault()
+      const num = parseInt(e.key)
+      if (num <= tableCount) {
+        setActiveTable(num)
+        setActiveTab("caixa")
+      }
+      return
+    }
+
+    // +/-: adjust last cart item quantity
+    if (e.key === "+" || e.key === "=") {
+      e.preventDefault()
+      if (stagingCart.length > 0) {
+        const last = stagingCart[stagingCart.length - 1]
+        updateQuantity(last.productId, 1)
+      } else if (cart.length > 0) {
+        const last = cart[cart.length - 1]
+        setCart(prev => prev.map(i => i.productId === last.productId ? { ...i, quantity: i.quantity + 1 } : i))
+      }
+      return
+    }
+
+    if (e.key === "-") {
+      e.preventDefault()
+      if (stagingCart.length > 0) {
+        const last = stagingCart[stagingCart.length - 1]
+        if (last.quantity <= 1) removeItem(last.productId)
+        else updateQuantity(last.productId, -1)
+      } else if (cart.length > 0) {
+        const last = cart[cart.length - 1]
+        if (last.quantity <= 1) setCart(prev => prev.filter(i => i.productId !== last.productId))
+        else setCart(prev => prev.map(i => i.productId === last.productId ? { ...i, quantity: i.quantity - 1 } : i))
+      }
+      return
+    }
+
+    // Delete/Backspace: remove last cart item
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault()
+      if (stagingCart.length > 0) {
+        removeItem(stagingCart[stagingCart.length - 1].productId)
+      } else if (cart.length > 0) {
+        setCart(prev => prev.filter(i => i.productId !== cart[cart.length - 1].productId))
+      }
+      return
+    }
+  }, [showCashRegisterModal, closingTableModal, showCustomItemModal, searchQuery, cashRegister, activeTab, stagingCart, cart, tableCount])
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyboard)
+    return () => window.removeEventListener("keydown", handleKeyboard)
+  }, [handleKeyboard])
 
   // Save table state to localStorage
   useEffect(() => {
@@ -1128,8 +1239,9 @@ export default function CaixaPOSPage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`} />
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Buscar produto..."
+                  placeholder="Buscar produto... (F2)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
