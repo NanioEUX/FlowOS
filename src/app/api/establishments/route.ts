@@ -6,6 +6,9 @@ import jwt from "jsonwebtoken"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
+// Menu cache: 60s revalidation (menu rarely changes)
+export const revalidate = 60
+
 export async function POST(req: NextRequest) {
   try {
     const { name, ownerName, email, password, phone, category, address } = await req.json()

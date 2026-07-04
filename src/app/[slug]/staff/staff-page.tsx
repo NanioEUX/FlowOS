@@ -37,7 +37,7 @@ export function StaffPage({ establishment }: { establishment: Establishment }) {
 
   useEffect(() => {
     fetchTables()
-    const interval = setInterval(fetchTables, 5000)
+    const interval = setInterval(fetchTables, 10000)
     return () => clearInterval(interval)
   }, [fetchTables])
 

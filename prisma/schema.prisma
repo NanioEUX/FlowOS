@@ -62,8 +62,8 @@ model Establishment {
   deliveryPeople      DeliveryPerson[]
   expenses            Expense[]
   orders              Order[]
-   paymentRequests     PaymentRequest[]
-   partialPayments     PartialPayment[]
+  paymentRequests     PaymentRequest[]
+  partialPayments     PartialPayment[]
   products            Product[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
@@ -86,6 +86,8 @@ model Customer {
   updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   orders          Order[]
+
+  @@index([establishmentId, phone])
 }
 
 model DeliveryPerson {
@@ -159,7 +161,7 @@ model Order {
   couponId          String?
   trackingToken     String?         @unique
   assignedAt        DateTime?
-  deliveredAt        DateTime?
+  deliveredAt       DateTime?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   coupon            Coupon?         @relation(fields: [couponId], references: [id])
@@ -169,7 +171,12 @@ model Order {
   messages          OrderMessage[]
 
   @@unique([establishmentId, orderNumber])
-  @@index([establishmentId, orderNumber])
+  @@index([establishmentId, createdAt])
+  @@index([establishmentId, status])
+  @@index([establishmentId, tableNumber, orderType])
+  @@index([establishmentId, orderType, status])
+  @@index([establishmentId, deliveryPersonId])
+  @@index([paymentId])
 }
 
 model StockCategory {
@@ -204,16 +211,16 @@ model StockItem {
 }
 
 model Supplier {
-  id              String             @id @default(cuid())
+  id              String        @id @default(cuid())
   name            String
   phone           String?
   cnpj            String?
   email           String?
   notes           String?
   establishmentId String
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   stockItems      StockItem[]
 }
 
@@ -226,6 +233,8 @@ model StockMovement {
   itemId    String
   createdAt DateTime  @default(now())
   item      StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, createdAt])
 }
 
 model ProductStockLink {
@@ -280,6 +289,8 @@ model DeliveryPayment {
   deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
   establishment    Establishment  @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   paidBy           User?          @relation(fields: [paidById], references: [id])
+
+  @@index([establishmentId, createdAt])
 }
 
 model Coupon {
@@ -314,6 +325,9 @@ model CashRegister {
   movements       CashMovement[]
   establishment   Establishment  @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   transfers       CashTransfer[]
+
+  @@index([establishmentId, status])
+  @@index([establishmentId, createdAt])
 }
 
 model CashTransfer {
@@ -357,6 +371,10 @@ model Expense {
   establishmentId String
   createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, createdAt])
+  @@index([establishmentId, type])
+  @@index([establishmentId, dueDate])
 }
 
 model OrderMessage {
@@ -370,12 +388,12 @@ model OrderMessage {
 }
 
 model PaymentRequest {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   tableNumber     Int
   establishmentId String
-  status          String   @default("pending")
+  status          String        @default("pending")
   paymentMethod   String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime      @default(now())
   resolvedAt      DateTime?
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
@@ -383,12 +401,12 @@ model PaymentRequest {
 }
 
 model PartialPayment {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   tableNumber     Int
   establishmentId String
   amount          Float
   paymentMethod   String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, tableNumber])

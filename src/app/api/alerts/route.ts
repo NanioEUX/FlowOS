@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+// Alerts: 30s cache (stock/expenses don't change every second)
+export const revalidate = 30
+
 export async function GET(req: NextRequest) {
   const establishmentId = req.headers.get("x-establishment-id") || req.nextUrl.searchParams.get("establishmentId")
   if (!establishmentId) return NextResponse.json({ expenseAlert: "none", stockAlert: "none" })

@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { createPaymentLink } from "@/lib/integrations/asaas"
 import crypto from "crypto"
 
+// Orders GET: 5s cache (frequent updates but reduces DB load)
+export const revalidate = 5
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()

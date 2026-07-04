@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+// Short cache: 5s (table status changes frequently but doesn't need real-time)
+export const revalidate = 5
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)

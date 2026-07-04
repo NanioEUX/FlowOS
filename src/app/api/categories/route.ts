@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+// Categories + products: 30s cache
+export const revalidate = 30
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const establishmentId = searchParams.get("establishmentId")
