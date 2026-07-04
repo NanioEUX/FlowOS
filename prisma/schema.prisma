@@ -65,6 +65,7 @@ model Establishment {
   paymentRequests     PaymentRequest[]
   partialPayments     PartialPayment[]
   products            Product[]
+  reviews             Review[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
   suppliers           Supplier[]
@@ -86,6 +87,7 @@ model Customer {
   updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   orders          Order[]
+  reviews         Review[]
 
   @@index([establishmentId, phone])
 }
@@ -410,4 +412,20 @@ model PartialPayment {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, tableNumber])
+}
+
+model Review {
+  id              String        @id @default(cuid())
+  rating          Int
+  comment         String?
+  customerId      String?
+  tableNumber     Int?
+  orderId         String?
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, createdAt])
+  @@index([establishmentId, rating])
 }

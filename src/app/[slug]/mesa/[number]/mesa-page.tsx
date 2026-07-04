@@ -102,6 +102,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   const [requestingPayment, setRequestingPayment] = useState(false)
   const [showConfirmBill, setShowConfirmBill] = useState(false)
   const [partialPaid, setPartialPaid] = useState(0)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState("")
+  const [reviewPhone, setReviewPhone] = useState("")
+  const [reviewSending, setReviewSending] = useState(false)
+  const [reviewSent, setReviewSent] = useState(false)
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
 
@@ -216,6 +222,26 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       if (res.ok) setPaymentRequested(true)
     } catch {}
     setRequestingPayment(false)
+  }
+
+  async function submitReview() {
+    if (reviewRating === 0) return
+    setReviewSending(true)
+    try {
+      await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: reviewRating,
+          comment: reviewComment || null,
+          phone: reviewPhone || null,
+          tableNumber,
+          establishmentId: est.id,
+        }),
+      })
+      setReviewSent(true)
+    } catch {}
+    setReviewSending(false)
   }
 
   async function generatePix(amount: number, description: string) {
@@ -544,7 +570,10 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                     } else {
                       setShowPaymentModal(false)
                       setShowSuccess(true)
-                      setTimeout(() => setShowSuccess(false), 2500)
+                      setTimeout(() => {
+                        setShowSuccess(false)
+                        setShowReviewModal(true)
+                      }, 2500)
                     }
                   }}
                   disabled={pixLoading || (chargeMethod === "each" && selectedItems.size === 0) || (chargeMethod === "abater" && (!discountAmount || parseFloat(discountAmount) <= 0))}
@@ -733,6 +762,78 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
         onConfirm={() => { setShowConfirmBill(false); requestPayment() }}
         onCancel={() => setShowConfirmBill(false)}
       />
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
+            {reviewSent ? (
+              <div className="py-6 text-center">
+                <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500" />
+                <p className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Obrigado!</p>
+                <p className={`mt-1 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Sua avaliação foi registrada.</p>
+                <button
+                  onClick={() => { setShowReviewModal(false); setReviewRating(0); setReviewComment(""); setReviewPhone(""); setReviewSent(false) }}
+                  className="mt-6 w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700"
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Avalie sua experiência</h2>
+                  <button onClick={() => setShowReviewModal(false)} className={`rounded-lg p-1 ${darkMode ? "text-zinc-400 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}`}>
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <p className={`mb-4 text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Como foi sua experiência na Mesa {tableNumber}?</p>
+
+                {/* Stars */}
+                <div className="mb-4 flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      className={`text-3xl transition-transform ${star <= reviewRating ? "scale-110" : "opacity-30"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                {/* Comment */}
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Deixe um comentário (opcional)"
+                  rows={3}
+                  className={`mb-3 w-full resize-none rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-400"}`}
+                />
+
+                {/* Phone */}
+                <input
+                  type="tel"
+                  value={reviewPhone}
+                  onChange={(e) => setReviewPhone(e.target.value)}
+                  placeholder="Telefone (opcional)"
+                  className={`mb-4 w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-400"}`}
+                />
+
+                {/* Submit */}
+                <button
+                  onClick={submitReview}
+                  disabled={reviewRating === 0 || reviewSending}
+                  className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-40"
+                >
+                  {reviewSending ? "Enviando..." : "Enviar Avaliação"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
