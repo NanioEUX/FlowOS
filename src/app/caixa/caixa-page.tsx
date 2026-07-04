@@ -1392,101 +1392,320 @@ export default function CaixaPOSPage() {
 
       {/* Mesas Tab */}
       {activeTab === "mesas" && (
-        <div className={`flex-1 overflow-auto p-4 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Mesas</h2>
-            <div className="flex items-center gap-3">
-              <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
-                QR Garcom
+        <>
+          {/* Search + Categories */}
+          <div className={`px-4 py-2 shadow-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`} />
+                <input
+                  type="text"
+                  placeholder="Buscar produto..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => setShowCustomItemModal(true)}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                  darkMode ? "border-white/[.08] bg-[#0f2942] text-white/70 hover:bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                <Plus className="h-4 w-4" />
+                Avulso
               </button>
-              <p className={`text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Toque na mesa para atender</p>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+              <button
+                onClick={() => setActiveCategory("all")}
+                className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  activeCategory === "all" ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
+                }`}
+              >
+                Todos
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    activeCategory === cat.id ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
-              const data = tableData[num] || { cart: [], participants: [] }
-              const tableOrdersTotal = orders
-                .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
-                .reduce((s: number, o: any) => s + o.total, 0)
-              const isActive = activeTable === num
-              const committedCartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
-              const total = committedCartTotal + tableOrdersTotal
-              const partialPaid = tablePartialPaid[num] || 0
-              const remaining = total - partialPaid
-              const isFullyPaid = total > 0 && remaining <= 0.01
-              const isOccupied = total > 0 || committedCartTotal > 0
-              const hasBillRequest = paymentRequests.some((r: any) => r.tableNumber === num)
-              const itemCount = data.cart.reduce((s: number, i: any) => s + i.quantity, 0) + orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status)).reduce((s: number, o: any) => { try { const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items; return s + items.reduce((a: number, b: any) => a + b.quantity, 0) } catch { return s } }, 0)
 
-              return (
-                <div
-                  key={num}
-                  className={`relative flex flex-col rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
-                    hasBillRequest
-                      ? "border-red-500 bg-red-50 shadow-lg dark:border-red-500 dark:bg-red-950"
-                      : isActive
-                      ? "border-green-500 bg-green-50 shadow-lg dark:border-green-400 dark:bg-green-950"
-                      : isFullyPaid
-                      ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950"
-                      : isOccupied
-                      ? darkMode ? "border-amber-500 bg-amber-950/50 hover:border-amber-400" : "border-amber-300 bg-amber-50 hover:border-amber-400"
-                      : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"
-                  }`}
-                  onClick={() => { selectTable(num); setActiveTab("caixa") }}
-                >
-                  <div className="flex flex-1 flex-col items-center justify-center py-4 px-2">
-                    <span className={`text-3xl font-extrabold leading-none ${
-                      hasBillRequest ? "text-red-600 dark:text-red-400"
-                      : isActive ? "text-green-700 dark:text-green-300"
-                      : isOccupied ? "text-amber-700 dark:text-amber-300"
-                      : darkMode ? "text-white/40" : "text-zinc-400"
-                    }`}>{num}</span>
-                    {hasBillRequest ? (
-                      <span className="mt-2 rounded-full bg-red-100 px-3 py-1 text-xs font-extrabold text-red-700 dark:bg-red-900 dark:text-red-300">Pediu a conta</span>
-                    ) : isOccupied && total > 0 ? (
-                      <span className={`mt-2 text-sm font-bold ${isFullyPaid ? "text-green-600 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
-                        {isFullyPaid ? "Paga" : formatCurrency(total)}
-                      </span>
-                    ) : (
-                      <span className={`mt-2 text-xs ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Livre</span>
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left: Tables + Products */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tables Grid */}
+              <div className={`px-4 py-3 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Mesas</p>
+                  <div className="flex items-center gap-2">
+                    {activeTable && (
+                      <button onClick={deselectTable} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
+                        ← Todas as mesas
+                      </button>
                     )}
-                    {isOccupied && !hasBillRequest && itemCount > 0 && (
-                      <span className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
-                    )}
-                    {partialPaid > 0 && remaining > 0.01 && (
-                      <span className="mt-1 text-[10px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
-                    )}
+                    <button onClick={generateStaffQr} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
+                      QR Garcom
+                    </button>
                   </div>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
+                    const data = tableData[num] || { cart: [], participants: [] }
+                    const tableOrdersTotal = orders
+                      .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                      .reduce((s: number, o: any) => s + o.total, 0)
+                    const isActive = activeTable === num
+                    const committedCartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+                    const total = committedCartTotal + tableOrdersTotal
+                    const isOccupied = total > 0 || committedCartTotal > 0
+                    const hasBillRequest = paymentRequests.some((r: any) => r.tableNumber === num)
 
-                  {isOccupied && (
-                    <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
-                      {total > 0 && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openAbater(num) }}
-                          className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
-                            darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
-                          }`}
-                        >
-                          <MinusCircle className="h-5 w-5 mb-1" />
-                          Abater
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
-                        className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-l ${
-                          darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900 border-white/[.08]" : "text-red-600 hover:bg-red-50 active:bg-red-100 border-zinc-200"
+                    return (
+                      <div
+                        key={num}
+                        className={`flex flex-col rounded-xl border-2 transition-all min-w-[72px] overflow-hidden ${
+                          hasBillRequest
+                            ? "border-red-500 bg-red-50 dark:border-red-500 dark:bg-red-950"
+                            : isActive
+                            ? "border-green-500 bg-green-50 shadow-md dark:border-green-400 dark:bg-green-950"
+                            : isOccupied
+                            ? darkMode ? "border-amber-500 bg-amber-950/50" : "border-amber-300 bg-amber-50"
+                            : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"
                         }`}
                       >
-                        <X className="h-5 w-5 mb-1" />
-                        Fechar
-                      </button>
+                        <button onClick={() => selectTable(num)} className="flex flex-1 flex-col items-center justify-center px-4 py-3">
+                          <span className={`text-lg font-extrabold ${
+                            hasBillRequest ? "text-red-600 dark:text-red-400"
+                            : isActive ? "text-green-700 dark:text-green-300"
+                            : isOccupied ? "text-amber-700 dark:text-amber-300"
+                            : darkMode ? "text-white/40" : "text-zinc-400"
+                          }`}>{num}</span>
+                          {hasBillRequest ? (
+                            <span className="mt-0.5 text-[8px] font-extrabold text-red-600 dark:text-red-400">Conta</span>
+                          ) : isOccupied && total > 0 ? (
+                            <span className={`mt-0.5 text-[10px] font-bold ${darkMode ? "text-amber-300" : "text-amber-700"}`}>{formatCurrency(total)}</span>
+                          ) : (
+                            <span className={`mt-0.5 text-[9px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Livre</span>
+                          )}
+                        </button>
+                        {isOccupied && (
+                          <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                            {total > 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openAbater(num) }}
+                                className={`flex flex-1 items-center justify-center py-1.5 text-[9px] font-semibold transition-colors ${
+                                  darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+                                }`}
+                              >
+                                <MinusCircle className="h-3 w-3 mr-0.5" />
+                                Abater
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
+                              className={`flex flex-1 items-center justify-center py-1.5 text-[9px] font-semibold transition-colors border-l ${
+                                darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900 border-white/[.08]" : "text-red-600 hover:bg-red-50 active:bg-red-100 border-zinc-200"
+                              }`}
+                            >
+                              <X className="h-3 w-3 mr-0.5" />
+                              Fechar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Products Grid */}
+              <div className="flex-1 overflow-y-auto p-3">
+                {!cashRegister && !activeTable && (
+                  <div className="mb-3 rounded-xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-6 py-8 text-center">
+                    <Banknote className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
+                    <p className="text-sm font-semibold text-yellow-800">Nenhum caixa aberto</p>
+                    <p className="mt-1 text-xs text-yellow-600">Abra o caixa ou selecione uma mesa para começar</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-6">
+                  {filteredProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}
+                    >
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="mb-2 h-20 w-20 rounded-xl object-cover" />
+                      ) : (
+                        <div className={`mb-2 flex h-20 w-20 items-center justify-center rounded-xl text-3xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
+                      )}
+                      <p className={`w-full truncate text-center text-sm font-medium ${darkMode ? "text-white/90" : "text-zinc-800"}`}>{product.name}</p>
+                      <p className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</p>
+                    </button>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                      Nenhum produto encontrado
                     </div>
                   )}
                 </div>
-              )
-            })}
+              </div>
+            </div>
+
+            {/* Cart + Summary */}
+            <div className={`flex w-80 flex-col border-l ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+              {/* Cart Header */}
+              <div className={`border-b px-4 py-2 ${
+                activeTable
+                  ? darkMode ? "border-amber-700 bg-amber-900/30" : "border-amber-200 bg-amber-50"
+                  : darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-100 bg-white"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <h2 className={`text-sm font-semibold ${
+                    activeTable
+                      ? darkMode ? "text-amber-200" : "text-amber-700"
+                      : darkMode ? "text-white/50" : "text-zinc-400"
+                  }`}>
+                    {activeTable ? `Mesa ${activeTable}` : "Selecione uma mesa"}
+                  </h2>
+                  {activeTable !== null && (
+                    <button
+                      onClick={deselectTable}
+                      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                    >
+                      Trocar mesa
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto px-4 py-2">
+                {stagingCart.length === 0 ? (
+                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                    <ShoppingBag className="mb-2 h-8 w-8" />
+                    <p className="text-xs">{activeTable ? "Toque nos produtos para adicionar" : "Selecione uma mesa primeiro"}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {stagingCart.map((item) => (
+                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.name}</p>
+                          <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQuantity(item.productId, -1)}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-[#162e4a] hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
+                          <span className={`w-5 text-center text-xs font-medium ${darkMode ? "text-white/90" : ""}`}>{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, 1)}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-[#162e4a] hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                          <button
+                            onClick={() => removeItem(item.productId)}
+                            className="ml-1 text-red-400 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary */}
+              <div className={`border-t px-4 py-3 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className={`text-sm font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Total</span>
+                  <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
+                </div>
+
+                {needsPrep && (
+                  <div className={`mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 ${darkMode ? "border-amber-800 bg-amber-900/20" : "border-amber-200 bg-amber-50"}`}>
+                    <span className="text-sm">👨‍🍳</span>
+                    <p className={`text-xs font-medium ${darkMode ? "text-amber-400" : "text-amber-800"}`}>Enviado para preparo automaticamente</p>
+                  </div>
+                )}
+
+                <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-blue-800 bg-blue-900/20" : "border-blue-200 bg-blue-50"}`}>
+                  <input
+                    type="checkbox"
+                    checked={printReceipt}
+                    onChange={(e) => {
+                      setPrintReceipt(e.target.checked)
+                      localStorage.setItem("pedefacil-print-receipt", String(e.target.checked))
+                    }}
+                    className="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <p className={`text-xs font-medium ${darkMode ? "text-blue-400" : "text-blue-800"}`}>Gerar cupom</p>
+                    <p className={`text-[10px] ${darkMode ? "text-blue-500" : "text-blue-600"}`}>Imprimir após venda</p>
+                  </div>
+                </label>
+
+                <div className="mb-3 flex gap-1.5">
+                  {[
+                    { value: "cash", icon: Banknote, label: "Dinheiro", activeColor: "border-green-500 bg-green-50 text-green-700" },
+                    { value: "card", icon: CreditCard, label: "Cartão", activeColor: "border-blue-500 bg-blue-50 text-blue-700" },
+                    { value: "pix", icon: DollarSign, label: "Pix", activeColor: "border-purple-500 bg-purple-50 text-purple-700" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => setPayment(p.value)}
+                      className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
+                        payment === p.value
+                          ? p.activeColor
+                          : darkMode ? "border-white/[.08] text-white/50" : "border-zinc-200 text-zinc-400"
+                      }`}
+                    >
+                      <p.icon className="h-3 w-3" />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={finalizeSale}
+                  disabled={closing || stagingCart.length === 0 || !activeTable}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {closing ? (
+                    "Registrando..."
+                  ) : !activeTable ? (
+                    "Selecione uma mesa"
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5" />
+                      {`ADICIONAR À MESA ${activeTable}`}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Pedidos Balcão Tab */}
