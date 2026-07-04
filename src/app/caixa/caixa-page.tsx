@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff } from "lucide-react"
+import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
@@ -1463,11 +1463,20 @@ export default function CaixaPOSPage() {
 
                       {isOccupied && (
                         <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
+                            className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-r ${
+                              darkMode ? "text-green-400 hover:bg-green-950 active:bg-green-900 border-white/[.08]" : "text-green-600 hover:bg-green-50 active:bg-green-100 border-zinc-200"
+                            }`}
+                          >
+                            <PlusCircle className="h-5 w-5 mb-1" />
+                            Adicionar
+                          </button>
                           {total > 0 && (
                             <button
                               onClick={(e) => { e.stopPropagation(); openAbater(num) }}
-                              className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
-                                darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+                              className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-r ${
+                                darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900 border-white/[.08]" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100 border-zinc-200"
                               }`}
                             >
                               <MinusCircle className="h-5 w-5 mb-1" />
@@ -1476,12 +1485,25 @@ export default function CaixaPOSPage() {
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
-                            className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-l ${
-                              darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900 border-white/[.08]" : "text-red-600 hover:bg-red-50 active:bg-red-100 border-zinc-200"
+                            className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
+                              darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900" : "text-red-600 hover:bg-red-50 active:bg-red-100"
                             }`}
                           >
                             <X className="h-5 w-5 mb-1" />
                             Fechar
+                          </button>
+                        </div>
+                      )}
+                      {!isOccupied && (
+                        <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
+                            className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
+                              darkMode ? "text-green-400 hover:bg-green-950 active:bg-green-900" : "text-green-600 hover:bg-green-50 active:bg-green-100"
+                            }`}
+                          >
+                            <PlusCircle className="h-5 w-5 mb-1" />
+                            Adicionar
                           </button>
                         </div>
                       )}
@@ -1527,7 +1549,7 @@ export default function CaixaPOSPage() {
                   <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Nenhum item nesta mesa</p>
-                    <p className={`mt-1 text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicione itens pela aba Caixa</p>
+                    <p className={`mt-1 text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicione itens pelo card da mesa</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
