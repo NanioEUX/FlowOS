@@ -88,7 +88,7 @@ export default function CaixaPOSPage() {
   })
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [showReceipt, setShowReceipt] = useState(false)
-  const [activeTab, setActiveTab] = useState<"caixa" | "balcao" | "pedidos">(() => {
+  const [activeTab, setActiveTab] = useState<"caixa" | "mesas" | "balcao" | "pedidos">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("pedefacil-caixa-tab") as any) || "caixa"
     }
@@ -1057,6 +1057,24 @@ export default function CaixaPOSPage() {
               Caixa
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab("mesas")}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === "mesas"
+                ? "border-b-2 border-green-500 text-green-500"
+                : darkMode ? "text-white/50 hover:text-white/90" : "text-white/40 hover:text-zinc-700"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-1.5">
+              <Users className="h-4 w-4" />
+              Mesas
+              {paymentRequests.length > 0 && (
+                <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {paymentRequests.length}
+                </span>
+              )}
+            </div>
+          </button>
           {hasPedidos && (
             <button
               onClick={() => setActiveTab("balcao")}
@@ -1208,100 +1226,6 @@ export default function CaixaPOSPage() {
                 </button>
               </div>
 
-              {/* Tables */}
-              <div className="mt-3">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <p className={`text-xs font-medium ${darkMode ? "text-white/50" : "text-white/40"}`}>Mesas</p>
-                  <div className="flex items-center gap-2">
-                    <button onClick={generateStaffQr} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>
-                      QR Garcom
-                    </button>
-                    <p className={`text-[10px] ${darkMode ? "text-white/40" : "text-white/50"}`}>Toque na mesa para atender</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-5 gap-2 pb-2">
-                  {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
-                    const data = tableData[num] || { cart: [], participants: [] }
-                    const tableOrdersTotal = orders
-                      .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
-                      .reduce((s: number, o: any) => s + o.total, 0)
-                    const isActive = activeTable === num
-                    const committedCartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
-                    const total = committedCartTotal + tableOrdersTotal
-                    const partialPaid = tablePartialPaid[num] || 0
-                    const remaining = total - partialPaid
-                    const isFullyPaid = total > 0 && remaining <= 0.01
-                    const isOccupied = total > 0 || committedCartTotal > 0
-                    const hasBillRequest = paymentRequests.some((r: any) => r.tableNumber === num)
-
-                    return (
-                      <div
-                        key={num}
-                        className={`relative flex flex-col rounded-xl border-2 transition-all cursor-pointer overflow-hidden ${
-                          hasBillRequest
-                            ? "border-amber-500 bg-amber-100 shadow-lg dark:border-amber-400 dark:bg-amber-900"
-                            : isActive
-                            ? "border-green-500 bg-green-50 shadow-lg dark:border-green-400 dark:bg-green-950"
-                            : isFullyPaid
-                            ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950"
-                            : isOccupied
-                            ? darkMode ? "border-amber-600 bg-amber-950 hover:border-amber-500" : "border-amber-300 bg-amber-50 hover:border-amber-400"
-                            : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500 hover:bg-[#1a3a5c]" : "border-zinc-200 bg-white hover:border-green-400"
-                        }`}
-                        onClick={() => selectTable(num)}
-                      >
-                        {/* Table info area */}
-                        <div className="flex flex-1 flex-col items-center justify-center py-2 px-1">
-                          <span className={`text-xl font-bold leading-none ${
-                            hasBillRequest ? "text-amber-700 dark:text-amber-300"
-                            : isActive ? "text-green-700 dark:text-green-300"
-                            : isOccupied ? "text-amber-700 dark:text-amber-300"
-                            : darkMode ? "text-white/50" : "text-white/50"
-                          }`}>{num}</span>
-                          {hasBillRequest ? (
-                            <span className="text-[11px] font-extrabold mt-1 text-amber-700 dark:text-amber-200 bg-amber-200 dark:bg-amber-800 rounded-full px-2 py-0.5">Pediu a conta</span>
-                          ) : isOccupied && total > 0 ? (
-                            <span className={`text-[10px] font-medium mt-0.5 ${isFullyPaid ? "text-green-600" : "text-amber-600 dark:text-amber-400"}`}>
-                              {isFullyPaid ? "Paga" : formatCurrency(total)}
-                            </span>
-                          ) : (
-                            <span className={`text-[10px] mt-0.5 ${darkMode ? "text-white/40" : "text-white/70"}`}>Livre</span>
-                          )}
-                          {partialPaid > 0 && remaining > 0.01 && (
-                            <span className="text-[9px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
-                          )}
-                        </div>
-
-                        {/* Action buttons — only for occupied tables */}
-                        {isOccupied && (
-                          <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
-                            {total > 0 && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openAbater(num) }}
-                                className={`flex flex-1 flex-col items-center justify-center py-1.5 text-[9px] font-semibold transition-colors ${
-                                  darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
-                                }`}
-                              >
-                                <MinusCircle className="h-4 w-4 mb-0.5" />
-                                Abater
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
-                              className={`flex flex-1 flex-col items-center justify-center py-1.5 text-[9px] font-semibold transition-colors border-l ${
-                                darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900 border-white/[.08]" : "text-red-600 hover:bg-red-50 active:bg-red-100 border-zinc-200"
-                              }`}
-                            >
-                              <X className="h-4 w-4 mb-0.5" />
-                              Fechar
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Cart + Summary */}
@@ -1477,6 +1401,105 @@ export default function CaixaPOSPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Mesas Tab */}
+      {activeTab === "mesas" && (
+        <div className={`flex-1 overflow-auto p-4 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Mesas</h2>
+            <div className="flex items-center gap-3">
+              <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
+                QR Garcom
+              </button>
+              <p className={`text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Toque na mesa para atender</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
+              const data = tableData[num] || { cart: [], participants: [] }
+              const tableOrdersTotal = orders
+                .filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status))
+                .reduce((s: number, o: any) => s + o.total, 0)
+              const isActive = activeTable === num
+              const committedCartTotal = data.cart.reduce((s, i) => s + i.price * i.quantity, 0)
+              const total = committedCartTotal + tableOrdersTotal
+              const partialPaid = tablePartialPaid[num] || 0
+              const remaining = total - partialPaid
+              const isFullyPaid = total > 0 && remaining <= 0.01
+              const isOccupied = total > 0 || committedCartTotal > 0
+              const hasBillRequest = paymentRequests.some((r: any) => r.tableNumber === num)
+              const itemCount = data.cart.reduce((s: number, i: any) => s + i.quantity, 0) + orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status)).reduce((s: number, o: any) => { try { const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items; return s + items.reduce((a: number, b: any) => a + b.quantity, 0) } catch { return s } }, 0)
+
+              return (
+                <div
+                  key={num}
+                  className={`relative flex flex-col rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
+                    hasBillRequest
+                      ? "border-red-500 bg-red-50 shadow-lg dark:border-red-500 dark:bg-red-950"
+                      : isActive
+                      ? "border-green-500 bg-green-50 shadow-lg dark:border-green-400 dark:bg-green-950"
+                      : isFullyPaid
+                      ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950"
+                      : isOccupied
+                      ? darkMode ? "border-amber-500 bg-amber-950/50 hover:border-amber-400" : "border-amber-300 bg-amber-50 hover:border-amber-400"
+                      : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"
+                  }`}
+                  onClick={() => { selectTable(num); setActiveTab("caixa") }}
+                >
+                  <div className="flex flex-1 flex-col items-center justify-center py-4 px-2">
+                    <span className={`text-3xl font-extrabold leading-none ${
+                      hasBillRequest ? "text-red-600 dark:text-red-400"
+                      : isActive ? "text-green-700 dark:text-green-300"
+                      : isOccupied ? "text-amber-700 dark:text-amber-300"
+                      : darkMode ? "text-white/40" : "text-zinc-400"
+                    }`}>{num}</span>
+                    {hasBillRequest ? (
+                      <span className="mt-2 rounded-full bg-red-100 px-3 py-1 text-xs font-extrabold text-red-700 dark:bg-red-900 dark:text-red-300">Pediu a conta</span>
+                    ) : isOccupied && total > 0 ? (
+                      <span className={`mt-2 text-sm font-bold ${isFullyPaid ? "text-green-600 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
+                        {isFullyPaid ? "Paga" : formatCurrency(total)}
+                      </span>
+                    ) : (
+                      <span className={`mt-2 text-xs ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Livre</span>
+                    )}
+                    {isOccupied && !hasBillRequest && itemCount > 0 && (
+                      <span className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
+                    )}
+                    {partialPaid > 0 && remaining > 0.01 && (
+                      <span className="mt-1 text-[10px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
+                    )}
+                  </div>
+
+                  {isOccupied && (
+                    <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                      {total > 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAbater(num) }}
+                          className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
+                            darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+                          }`}
+                        >
+                          <MinusCircle className="h-5 w-5 mb-1" />
+                          Abater
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
+                        className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-l ${
+                          darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900 border-white/[.08]" : "text-red-600 hover:bg-red-50 active:bg-red-100 border-zinc-200"
+                        }`}
+                      >
+                        <X className="h-5 w-5 mb-1" />
+                        Fechar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* Pedidos Balcão Tab */}
