@@ -1239,7 +1239,7 @@ export default function CaixaPOSPage() {
                         key={num}
                         className={`relative flex flex-col rounded-xl border-2 transition-all cursor-pointer overflow-hidden ${
                           hasBillRequest
-                            ? "border-amber-400 bg-amber-50 shadow-md dark:border-amber-500 dark:bg-amber-950 animate-pulse"
+                            ? "border-amber-500 bg-amber-100 shadow-lg dark:border-amber-400 dark:bg-amber-900"
                             : isActive
                             ? "border-green-500 bg-green-50 shadow-lg dark:border-green-400 dark:bg-green-950"
                             : isFullyPaid
@@ -1259,7 +1259,7 @@ export default function CaixaPOSPage() {
                             : darkMode ? "text-white/50" : "text-white/50"
                           }`}>{num}</span>
                           {hasBillRequest ? (
-                            <span className="text-[9px] font-bold mt-0.5 text-amber-600 dark:text-amber-400">Pediu a conta</span>
+                            <span className="text-[11px] font-extrabold mt-1 text-amber-700 dark:text-amber-200 bg-amber-200 dark:bg-amber-800 rounded-full px-2 py-0.5">Pediu a conta</span>
                           ) : isOccupied && total > 0 ? (
                             <span className={`text-[10px] font-medium mt-0.5 ${isFullyPaid ? "text-green-600" : "text-amber-600 dark:text-amber-400"}`}>
                               {isFullyPaid ? "Paga" : formatCurrency(total)}
