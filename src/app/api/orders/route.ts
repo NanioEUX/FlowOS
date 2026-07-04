@@ -22,19 +22,15 @@ export async function POST(req: NextRequest) {
 
     const trackingToken = crypto.randomBytes(12).toString("hex")
 
-    // Generate order number per establishment
-    const lastOrder = await prisma.order.findFirst({
-      where: { establishmentId },
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-    })
-    const orderNumber = (lastOrder?.orderNumber || 0) + 1
-
     // For presencial mesa orders: status=new, no payment at creation
     const isMesa = orderType === "presencial" && tableNumber
     const initialStatus = body.status || (isMesa ? "new" : "pending")
 
-    // Find or create customer
+    // Parse items and calculate totals outside transaction
+    const parsedItems = typeof items === "string" ? JSON.parse(items) : items
+    const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+
+    // Find or create customer outside transaction (non-critical)
     let customerId: string | undefined
     if (customerPhone) {
       let customer = await prisma.customer.findFirst({
@@ -42,8 +38,6 @@ export async function POST(req: NextRequest) {
       })
       if (customer) {
         customerId = customer.id
-        // Calculate loyalty points: earn points based on subtotal (before loyalty discount)
-        const subtotal = (typeof items === "string" ? JSON.parse(items) : items).reduce((s: number, i: any) => s + i.price * i.quantity, 0)
         let pointsDelta = 0
         if (useLoyalty && loyaltyPointsUsed > 0) {
           pointsDelta -= loyaltyPointsUsed
@@ -73,7 +67,6 @@ export async function POST(req: NextRequest) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
-              const subtotal = (typeof items === "string" ? JSON.parse(items) : items).reduce((s: number, i: any) => s + i.price * i.quantity, 0)
               initialPoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
             }
           } catch {}
@@ -85,26 +78,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const order = await prisma.order.create({
-      data: {
-        establishment: { connect: { id: establishmentId } },
-        ...(customerId ? { customer: { connect: { id: customerId } } } : {}),
-        customerName,
-        customerPhone,
-        customerAddress,
-        orderType: orderType || "delivery",
-        paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
-        deliveryFee: deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0,
-        items: typeof items === "string" ? items : JSON.stringify(items),
-        total: typeof total === "string" ? parseFloat(total) : total,
-        notes,
-        method: method || "site",
-        trackingToken,
-        status: initialStatus,
-        ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
-        orderNumber,
-        tableNumber: tableNumber || null,
-      },
+    // Create order with atomic orderNumber inside transaction
+    const order = await prisma.$transaction(async (tx) => {
+      const lastOrder = await tx.order.findFirst({
+        where: { establishmentId },
+        orderBy: { orderNumber: "desc" },
+        select: { orderNumber: true },
+      })
+      const orderNumber = (lastOrder?.orderNumber || 0) + 1
+
+      return tx.order.create({
+        data: {
+          establishment: { connect: { id: establishmentId } },
+          ...(customerId ? { customer: { connect: { id: customerId } } } : {}),
+          customerName,
+          customerPhone,
+          customerAddress,
+          orderType: orderType || "delivery",
+          paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
+          deliveryFee: deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0,
+          items: typeof items === "string" ? items : JSON.stringify(items),
+          total: typeof total === "string" ? parseFloat(total) : total,
+          notes,
+          method: method || "site",
+          trackingToken,
+          status: initialStatus,
+          ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
+          orderNumber,
+          tableNumber: tableNumber || null,
+        },
+      })
     })
 
     // Increment coupon usedCount
@@ -119,7 +122,6 @@ export async function POST(req: NextRequest) {
 
     if (paymentMethod === "asaas" || paymentMethod === "online") {
       if (establishment.asaasApiKey) {
-        const parsedItems = typeof items === "string" ? JSON.parse(items) : items
         const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
           .map((i: any) => `${i.name} x${i.quantity}`)
           .join(", ")
@@ -129,7 +131,7 @@ export async function POST(req: NextRequest) {
           customerName,
           customerPhone: customerPhone || "",
           value: order.total,
-          description: `Pedido #${orderNumber} - ${establishment.name} - ${itemNames}`,
+          description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
         })
 
         paymentLink = payment.invoiceUrl
@@ -154,7 +156,6 @@ export async function POST(req: NextRequest) {
     // Decrement stock for products
     const lowStockItems: { name: string; quantity: number; minQuantity: number }[] = []
     try {
-      const parsedItems = typeof items === "string" ? JSON.parse(items) : items
       for (const item of parsedItems) {
         if (item.productId && item.productId !== "custom") {
           const product = await prisma.product.findUnique({ where: { id: item.productId } })
