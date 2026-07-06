@@ -338,8 +338,8 @@ export default function DespesasPage() {
               <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Descrição</th>
               <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Categoria</th>
               <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Tipo</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Vencimento</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pagamento</th>
+              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Venc. / Parcela</th>
+              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pago em</th>
               <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Status</th>
               <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Valor</th>
               <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Ações</th>
@@ -359,10 +359,20 @@ export default function DespesasPage() {
                   {expense.type === "agendada" && expense.dueDate ? (
                     <span className={expense.computedStatus === "atrasada" ? "font-medium text-red-500" : ""}>{new Date(expense.dueDate).toLocaleDateString("pt-BR")}</span>
                   ) : expense.type === "recorrente" && expense.recurrenceStart ? (
-                    <span className="text-purple-600">{new Date(expense.recurrenceStart).toLocaleDateString("pt-BR")}</span>
+                    <span className="text-purple-600">
+                      {new Date(expense.recurrenceStart).toLocaleDateString("pt-BR")}
+                      {expense.recurrenceEnd && (() => {
+                        const start = new Date(expense.recurrenceStart + "T00:00:00")
+                        const end = new Date(expense.recurrenceEnd + "T00:00:00")
+                        const current = new Date(expense.recurrenceStart + "T00:00:00")
+                        const total = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
+                        const currentMonth = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth()) + 1
+                        return <span className="ml-1 text-[10px] text-purple-400">{currentMonth}/{total}</span>
+                      })()}
+                    </span>
                   ) : "—"}
                 </td>
-                <td className="px-3 py-2.5 text-xs text-zinc-500">{paymentIcons[expense.paymentMethod] || ""} {paymentLabels[expense.paymentMethod] || expense.paymentMethod}</td>
+                <td className="px-3 py-2.5 text-xs text-zinc-500">{expense.date ? new Date(expense.date).toLocaleDateString("pt-BR") : "—"}</td>
                 <td className="px-3 py-2.5"><Badge className={`text-xs font-medium border ${statusColors[expense.computedStatus] || "bg-zinc-100 text-zinc-700 border-zinc-200"}`}>{expense.computedStatus === "pago" ? "Pago" : expense.computedStatus === "atrasada" ? "Atrasada" : expense.computedStatus === "a_vencer" ? "A vencer" : expense.computedStatus === "vence_hoje" ? "Vence hoje" : "Pendente"}</Badge></td>
                 <td className="px-3 py-2.5 text-right text-sm font-bold text-red-500">-{formatCurrency(expense.amount)}</td>
                 <td className="px-3 py-2.5 text-right">
