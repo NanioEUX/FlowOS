@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -18,6 +18,7 @@ const mainNavItems = [
 ]
 
 const financeiroSubItems = [
+  { icon: TrendingUp, label: "Receitas", href: "/dashboard/financeiro/receitas" },
   { icon: BarChart3, label: "DRE", href: "/dashboard/financeiro" },
   { icon: DollarSign, label: "Despesas", href: "/dashboard/financeiro/despesas" },
   { icon: BarChart3, label: "Relatórios", href: "/dashboard/relatorios", perm: "relatorios" },
