@@ -167,10 +167,13 @@ export default function DashboardHomePage() {
               <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 hover:bg-red-500/10 transition-colors">
                 <Skull className="h-4 w-4 text-red-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-zinc-900">{data.alerts.overdueExpenses} atrasada(s)</p>
-                  <p className="text-[10px] text-red-500 font-medium">{formatCurrency(data.alerts.totalOverdue)}</p>
+                  <p className="text-xs font-semibold text-red-600">Despesa atrasada</p>
+                  {data.alerts.overdueItems?.slice(0, 2).map((item: any, i: number) => (
+                    <p key={i} className="text-[10px] text-zinc-500 truncate">{item.description}: {formatCurrency(item.amount)}</p>
+                  ))}
+                  {data.alerts.overdueExpenses > 2 && <p className="text-[10px] text-zinc-400">+{data.alerts.overdueExpenses - 2} mais</p>}
                 </div>
-                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+                <span className="text-[10px] font-bold text-red-500 shrink-0">{formatCurrency(data.alerts.totalOverdue)}</span>
               </a>
             )}
 
@@ -179,10 +182,13 @@ export default function DashboardHomePage() {
               <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/5 p-2.5 hover:bg-orange-500/10 transition-colors">
                 <CalendarClock className="h-4 w-4 text-orange-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-zinc-900">{data.alerts.todayDueExpenses} vence(m) hoje</p>
-                  <p className="text-[10px] text-orange-500 font-medium">{formatCurrency(data.alerts.totalTodayDue)}</p>
+                  <p className="text-xs font-semibold text-orange-600">Despesa vence hoje</p>
+                  {data.alerts.todayDueItems?.slice(0, 2).map((item: any, i: number) => (
+                    <p key={i} className="text-[10px] text-zinc-500 truncate">{item.description}: {formatCurrency(item.amount)}</p>
+                  ))}
+                  {data.alerts.todayDueExpenses > 2 && <p className="text-[10px] text-zinc-400">+{data.alerts.todayDueExpenses - 2} mais</p>}
                 </div>
-                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+                <span className="text-[10px] font-bold text-orange-500 shrink-0">{formatCurrency(data.alerts.totalTodayDue)}</span>
               </a>
             )}
 
