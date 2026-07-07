@@ -31,8 +31,11 @@ export async function GET(req: NextRequest) {
     pendingExpenses,
     overdueExpenses,
     upcomingExpenses,
+    todayDueExpenses,
     cashRegister,
     stockItems,
+    establishment,
+    activeMesaOrders,
   ] = await Promise.all([
     prisma.order.findMany({
       where: { establishmentId, createdAt: { gte: todayStart }, status: { not: "cancelled" } },
@@ -72,11 +75,15 @@ export async function GET(req: NextRequest) {
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.expense.findMany({
-      where: { establishmentId, dueDate: { lt: now }, type: { not: "lancamento" } },
+      where: { establishmentId, dueDate: { lt: todayStart }, type: { not: "lancamento" } },
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.expense.findMany({
       where: { establishmentId, dueDate: { gte: now, lte: new Date(now.getTime() + 7 * 86400000) }, type: { not: "lancamento" } },
+      select: { id: true, description: true, amount: true, dueDate: true, category: true },
+    }),
+    prisma.expense.findMany({
+      where: { establishmentId, dueDate: { gte: todayStart, lt: new Date(todayStart.getTime() + 86400000) }, type: { not: "lancamento" } },
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.cashRegister.findFirst({
@@ -87,6 +94,14 @@ export async function GET(req: NextRequest) {
       where: { establishmentId, minQuantity: { gt: 0 } },
       select: { id: true, name: true, quantity: true, minQuantity: true },
     }).catch(() => [] as any[]),
+    prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { tableCount: true },
+    }),
+    prisma.order.findMany({
+      where: { establishmentId, orderType: "presencial", status: { notIn: ["delivered", "cancelled"] } },
+      select: { tableNumber: true },
+    }),
   ])
 
   const todayTotal = todayOrders.reduce((sum, o) => sum + o.total, 0)
@@ -144,6 +159,10 @@ export async function GET(req: NextRequest) {
 
   const totalOverdue = overdueExpenses.reduce((s, e) => s + e.amount, 0)
   const totalUpcoming = upcomingExpenses.reduce((s, e) => s + e.amount, 0)
+  const totalTodayDue = todayDueExpenses.reduce((s, e) => s + e.amount, 0)
+
+  const activeTableNumbers = new Set(activeMesaOrders.map((o) => o.tableNumber).filter(Boolean))
+  const totalTables = establishment?.tableCount || 0
 
   return NextResponse.json({
     today: { total: todayTotal, count: todayCount, ticketMedio, paid: paidTotal, pending: pendingTotal, vsYesterday: { total: todayTotal - yesterdayTotal, count: todayCount - yesterdayOrders.length, percentTotal: yesterdayTotal > 0 ? Math.round(((todayTotal - yesterdayTotal) / yesterdayTotal) * 100) : 0 } },
@@ -152,6 +171,7 @@ export async function GET(req: NextRequest) {
     active: { total: activeOrders.length, byStatus: activeByStatus },
     customers: { total: totalCustomers, newToday: newCustomersToday },
     motoboys: { total: deliveryPeople, free: deliveryPeople - busyMotoboys.size, busy: busyMotoboys.size },
+    tables: { active: activeTableNumbers.size, total: totalTables },
     byType,
     cashRegister: cashRegister ? { isOpen: true, openedAt: cashRegister.createdAt, openingBalance: cashRegister.openingAmount } : { isOpen: false },
     alerts: {
@@ -160,6 +180,9 @@ export async function GET(req: NextRequest) {
       overdueExpenses: overdueExpenses.length,
       totalOverdue,
       overdueItems: overdueExpenses.slice(0, 3).map((e) => ({ description: e.description, amount: e.amount, dueDate: e.dueDate })),
+      todayDueExpenses: todayDueExpenses.length,
+      totalTodayDue,
+      todayDueItems: todayDueExpenses.slice(0, 3).map((e) => ({ description: e.description, amount: e.amount })),
       upcomingExpenses: upcomingExpenses.length,
       totalUpcoming,
       readyOrders: activeByStatus.ready,

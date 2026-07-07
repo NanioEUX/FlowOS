@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { DollarSign, ShoppingBag, Users, Bike, TrendingUp, TrendingDown, RefreshCw, Package, Clock, AlertTriangle, Wallet, Store, CreditCard, Banknote, Smartphone, Globe, Plus, BarChart3, ArrowRight, Zap, CircleDollarSign, CalendarClock, Skull, PackageX } from "lucide-react"
+import { DollarSign, ShoppingBag, Users, Bike, TrendingUp, TrendingDown, RefreshCw, Package, Clock, AlertTriangle, Wallet, Store, CreditCard, Banknote, Smartphone, Globe, Plus, BarChart3, ArrowRight, Zap, CircleDollarSign, CalendarClock, Skull, PackageX, UtensilsCrossed } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
@@ -33,7 +33,7 @@ export default function DashboardHomePage() {
 
   const salesPercent = data.today.vsYesterday.percentTotal
   const sparkData = data.weekSales?.map((d: any) => d.total) || []
-  const hasAlerts = data.alerts.lowStock > 0 || data.alerts.overdueExpenses > 0 || data.alerts.noMotoboy > 0
+  const hasAlerts = data.alerts.lowStock > 0 || data.alerts.overdueExpenses > 0 || data.alerts.todayDueExpenses > 0 || data.alerts.noMotoboy > 0
 
   return (
     <div className="space-y-4">
@@ -71,7 +71,7 @@ export default function DashboardHomePage() {
             <p className="text-xl font-bold text-zinc-900">{formatCurrency(data.today.total)}</p>
             <div className="mt-1 flex items-center gap-2 text-[10px]">
               <span className="text-green-600">✓ {formatCurrency(data.today.paid)} pago</span>
-              {data.today.pending > 0 && <span className="text-amber-500">⏳ {formatCurrency(data.today.pending)} a receber</span>}
+              {data.today.pending > 0 && <span className="text-amber-500">⏳ {formatCurrency(data.today.pending)}</span>}
             </div>
           </CardContent>
         </Card>
@@ -140,7 +140,89 @@ export default function DashboardHomePage() {
         </Card>
       </div>
 
-      {/* Linha 2 — 2 gráficos */}
+      {/* Linha 2 — Alertas (prioridade) */}
+      <Card className={hasAlerts ? "border-amber-500/30" : ""}>
+        <CardContent className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
+            Alertas
+            {hasAlerts && <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+          </h3>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+            {/* Estoque Baixo */}
+            {data.alerts.lowStock > 0 && (
+              <a href="/dashboard/estoque" className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 hover:bg-amber-500/10 transition-colors">
+                <PackageX className="h-4 w-4 text-amber-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-900">Estoque baixo</p>
+                  {data.alerts.lowStockItems?.slice(0, 2).map((item: any, i: number) => (
+                    <p key={i} className="text-[10px] text-zinc-400 truncate">{item.name}: {item.quantity}</p>
+                  ))}
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+              </a>
+            )}
+
+            {/* Despesas Atrasadas */}
+            {data.alerts.overdueExpenses > 0 && (
+              <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 hover:bg-red-500/10 transition-colors">
+                <Skull className="h-4 w-4 text-red-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-900">{data.alerts.overdueExpenses} atrasada(s)</p>
+                  <p className="text-[10px] text-red-500 font-medium">{formatCurrency(data.alerts.totalOverdue)}</p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+              </a>
+            )}
+
+            {/* Despesas Vencendo Hoje */}
+            {data.alerts.todayDueExpenses > 0 && (
+              <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/5 p-2.5 hover:bg-orange-500/10 transition-colors">
+                <CalendarClock className="h-4 w-4 text-orange-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-900">{data.alerts.todayDueExpenses} vence(m) hoje</p>
+                  <p className="text-[10px] text-orange-500 font-medium">{formatCurrency(data.alerts.totalTodayDue)}</p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+              </a>
+            )}
+
+            {/* Despesas a Vencer */}
+            {data.alerts.upcomingExpenses > 0 && (
+              <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-2.5 hover:bg-blue-500/10 transition-colors">
+                <CalendarClock className="h-4 w-4 text-blue-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-900">{data.alerts.upcomingExpenses} a vencer (7d)</p>
+                  <p className="text-[10px] text-blue-500 font-medium">{formatCurrency(data.alerts.totalUpcoming)}</p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+              </a>
+            )}
+
+            {/* Pedidos sem Motoboy */}
+            {data.alerts.noMotoboy > 0 && (
+              <a href="/dashboard/entregas" className="flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/5 p-2.5 hover:bg-purple-500/10 transition-colors">
+                <Bike className="h-4 w-4 text-purple-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-zinc-900">{data.alerts.noMotoboy} sem motoboy</p>
+                  <p className="text-[10px] text-zinc-400">Pronto(s) para entrega</p>
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+              </a>
+            )}
+
+            {/* Tudo ok */}
+            {!hasAlerts && (
+              <div className="col-span-full flex flex-col items-center justify-center py-4 text-center">
+                <Zap className="h-5 w-5 text-green-500 mb-1" />
+                <p className="text-xs font-medium text-green-600">Tudo tranquilo!</p>
+                <p className="text-[10px] text-zinc-400">Nenhum alerta no momento</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Linha 3 — Gráficos */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Receita 7 dias */}
         <Card>
@@ -149,7 +231,7 @@ export default function DashboardHomePage() {
               <h3 className="text-sm font-semibold text-zinc-700">Receita — 7 dias</h3>
               <span className="text-[10px] text-zinc-400">Mês: {formatCurrency(data.month?.total || 0)}</span>
             </div>
-            <AreaChart data={data.weekSales || []} height={140} color="#16a34a" />
+            <AreaChart data={data.weekSales || []} height={150} color="#16a34a" />
           </CardContent>
         </Card>
 
@@ -166,7 +248,7 @@ export default function DashboardHomePage() {
         </Card>
       </div>
 
-      {/* Linha 3 — Status + Alertas */}
+      {/* Linha 4 — Status + Top Produtos */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Status Operacional */}
         <Card>
@@ -186,6 +268,21 @@ export default function DashboardHomePage() {
                 </div>
                 <div className={`h-2.5 w-2.5 rounded-full ${data.cashRegister.isOpen ? "bg-green-500 animate-pulse" : "bg-red-400"}`} />
               </div>
+              {/* Mesas */}
+              <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                    <UtensilsCrossed className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-zinc-900">Mesas</p>
+                    <p className="text-[10px] text-zinc-400">{data.tables.active} ativa(s) / {data.tables.total} total</p>
+                  </div>
+                </div>
+                {data.tables.active > 0 && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 rounded-full px-1.5 py-0.5">{data.tables.active}</span>
+                )}
+              </div>
               {/* Motoboys */}
               <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
                 <div className="flex items-center gap-2">
@@ -197,9 +294,9 @@ export default function DashboardHomePage() {
                     <p className="text-[10px] text-zinc-400">{data.motoboys.free} livres / {data.motoboys.total} total</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                {data.motoboys.busy > 0 && (
                   <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 rounded-full px-1.5 py-0.5">{data.motoboys.busy} ocupados</span>
-                </div>
+                )}
               </div>
               {/* Clientes */}
               <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-3">
@@ -213,116 +310,45 @@ export default function DashboardHomePage() {
                   </div>
                 </div>
                 {data.customers.newToday > 0 && (
-                  <span className="text-[10px] font-bold text-green-600 bg-green-600/10 rounded-full px-1.5 py-0.5">+{data.customers.newToday} hoje</span>
+                  <span className="text-[10px] font-bold text-green-600 bg-green-600/10 rounded-full px-1.5 py-0.5">+{data.customers.newToday}</span>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Alertas */}
-        <Card className={hasAlerts ? "border-amber-500/30" : ""}>
+        {/* Top Produtos */}
+        <Card>
           <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
-              Alertas
-              {hasAlerts && <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
-            </h3>
-            <div className="space-y-2">
-              {/* Estoque Baixo */}
-              {data.alerts.lowStock > 0 && (
-                <a href="/dashboard/estoque" className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 hover:bg-amber-500/10 transition-colors">
-                  <PackageX className="h-4 w-4 text-amber-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-zinc-900">Estoque baixo</p>
-                    {data.alerts.lowStockItems?.map((item: any, i: number) => (
-                      <p key={i} className="text-[10px] text-zinc-400 truncate">{item.name}: {item.quantity} (mín: {item.min})</p>
-                    ))}
-                  </div>
-                  <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
-                </a>
-              )}
-
-              {/* Despesas Atrasadas */}
-              {data.alerts.overdueExpenses > 0 && (
-                <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 hover:bg-red-500/10 transition-colors">
-                  <Skull className="h-4 w-4 text-red-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-zinc-900">{data.alerts.overdueExpenses} despesa(s) atrasada(s)</p>
-                    {data.alerts.overdueItems?.map((item: any, i: number) => (
-                      <p key={i} className="text-[10px] text-zinc-400 truncate">{item.description}: {formatCurrency(item.amount)}</p>
-                    ))}
-                  </div>
-                  <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
-                </a>
-              )}
-
-              {/* Despesas a Vencer */}
-              {data.alerts.upcomingExpenses > 0 && (
-                <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/5 p-2.5 hover:bg-orange-500/10 transition-colors">
-                  <CalendarClock className="h-4 w-4 text-orange-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-zinc-900">{data.alerts.upcomingExpenses} despesa(s) a vencer</p>
-                    <p className="text-[10px] text-zinc-400">Total: {formatCurrency(data.alerts.totalUpcoming)}</p>
-                  </div>
-                  <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
-                </a>
-              )}
-
-              {/* Pedidos sem Motoboy */}
-              {data.alerts.noMotoboy > 0 && (
-                <a href="/dashboard/entregas" className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-2.5 hover:bg-blue-500/10 transition-colors">
-                  <Bike className="h-4 w-4 text-blue-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-zinc-900">{data.alerts.noMotoboy} pedido(s) pronto(s) sem motoboy</p>
-                  </div>
-                  <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
-                </a>
-              )}
-
-              {/* Tudo ok */}
-              {!hasAlerts && (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Zap className="h-6 w-6 text-green-500 mb-2" />
-                  <p className="text-xs font-medium text-green-600">Tudo tranquilo!</p>
-                  <p className="text-[10px] text-zinc-400">Nenhum alerta no momento</p>
-                </div>
-              )}
-            </div>
+            <h3 className="text-sm font-semibold text-zinc-700 mb-3">Produtos mais vendidos (hoje)</h3>
+            {data.topProducts.length === 0 ? (
+              <p className="text-xs text-zinc-400 text-center py-6">Nenhuma venda ainda hoje</p>
+            ) : (
+              <div className="space-y-2">
+                {data.topProducts.map((product: any, i: number) => {
+                  const maxCount = data.topProducts[0]?.count || 1
+                  const pct = (product.count / maxCount) * 100
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600/10 text-[10px] font-bold text-green-600 shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="text-xs font-medium text-zinc-900 truncate">{product.name}</p>
+                          <span className="text-[10px] font-medium text-green-600 ml-2">{formatCurrency(product.total)}</span>
+                        </div>
+                        <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-zinc-400 w-6 text-right shrink-0">{product.count}x</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Linha 4 — Top Produtos */}
-      <Card>
-        <CardContent className="p-4">
-          <h3 className="text-sm font-semibold text-zinc-700 mb-3">Produtos mais vendidos (hoje)</h3>
-          {data.topProducts.length === 0 ? (
-            <p className="text-xs text-zinc-400 text-center py-6">Nenhuma venda ainda hoje</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
-              {data.topProducts.map((product: any, i: number) => {
-                const maxCount = data.topProducts[0]?.count || 1
-                const pct = (product.count / maxCount) * 100
-                return (
-                  <div key={i} className="flex items-center gap-2 rounded-lg bg-zinc-50 p-2.5">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600/10 text-[10px] font-bold text-green-600 shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-zinc-900 truncate">{product.name}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="flex-1 h-1 bg-zinc-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[9px] text-zinc-400 shrink-0">{product.count}x</span>
-                      </div>
-                      <p className="text-[10px] font-medium text-green-600">{formatCurrency(product.total)}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }
