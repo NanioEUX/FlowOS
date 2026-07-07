@@ -179,8 +179,8 @@ export async function POST(req: NextRequest) {
   // For agendada: set dueDate
   const finalDueDate = (expenseType === "agendada" || expenseType === "recorrente") && dueDate ? new Date(dueDate + "T12:00:00Z") : null
 
-  // Only lancamento has payment date; agendada/recorrente omit date (uses schema default)
-  const paymentDate = expenseType === "lancamento" ? (date ? new Date(date + "T12:00:00Z") : new Date()) : undefined
+  // Only lancamento has payment date; agendada/recorrente have null
+  const paymentDate = expenseType === "lancamento" ? (date ? new Date(date + "T12:00:00Z") : new Date()) : null
 
   const expense = await prisma.expense.create({
     data: {
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       recurrenceStart: recStart ? new Date(recStart + "T12:00:00Z") : null,
       recurrenceEnd: recEnd ? new Date(recEnd + "T12:00:00Z") : null,
       receiptUrl: receiptUrl || null,
-      ...(paymentDate !== undefined && { date: paymentDate }),
+      date: paymentDate,
       dueDate: finalDueDate,
       cashRegisterId: cashRegisterId || null,
       establishmentId,

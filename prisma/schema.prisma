@@ -367,7 +367,7 @@ model Expense {
   recurrenceStart DateTime?
   recurrenceEnd   DateTime?
   receiptUrl      String?
-  date            DateTime      @default(now())
+  date            DateTime?
   dueDate         DateTime?
   cashRegisterId  String?
   establishmentId String
