@@ -27,7 +27,7 @@ const statusLabels: Record<string, string> = {
 const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "default"> = {
   new: "default",
   pending: "info",
-  payment_pending: "warning",
+  payment_pending: "danger",
   confirmed: "info",
   preparing: "warning",
   ready: "success",
@@ -570,7 +570,7 @@ win.close()
                 </span>
               )}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
-              {["pending", "payment_pending", "confirmed"].includes(order.status) ? (
+              {["pending", "confirmed"].includes(order.status) ? (
                 <span className="inline-flex items-center rounded-full bg-green-600/10 px-2 py-0.5 text-xs font-semibold text-green-600">Novo pedido</span>
               ) : (
                 <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
@@ -605,7 +605,7 @@ win.close()
                   <MessageCircle className="h-3 w-3" />{order.customerPhone}
                 </a>
               )}
-              {order.trackingToken && (
+              {order.trackingToken && order.orderType === "delivery" && (
                 <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
                   <ExternalLink className="h-3 w-3" />Rastrear
                 </a>
@@ -615,7 +615,7 @@ win.close()
               )}
             </div>
 
-            {!isPresencial && order.customerAddress && <p className="mt-1 text-sm text-zinc-500">📍 {order.customerAddress}</p>}
+            {order.orderType === "delivery" && order.customerAddress && <p className="mt-1 text-sm text-zinc-500">📍 {order.customerAddress}</p>}
 
             {items.length > 0 && (
               <div className="mt-2 space-y-0.5 text-sm text-zinc-400">
@@ -643,8 +643,8 @@ win.close()
               </div>
             )}
 
-            {/* Delivery person - only for non-presencial */}
-            {!isPresencial && (
+            {/* Delivery person - only for delivery orders */}
+            {order.orderType === "delivery" && (
               <div className="mt-2 flex items-center gap-2">
                 <Bike className="h-3 w-3 text-zinc-400" />
                 <SearchableSelect
