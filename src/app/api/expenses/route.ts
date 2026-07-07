@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
     if (e.type === "lancamento") {
       computedStatus = "pago"
     } else if (e.type === "agendada") {
-      if (e.dueDate) {
+      if (e.date) {
+        computedStatus = "pago"
+      } else if (e.dueDate) {
         const due = new Date(e.dueDate).toISOString().split("T")[0]
         if (due < today) computedStatus = "atrasada"
         else if (due === today) computedStatus = "vence_hoje"
@@ -56,7 +58,9 @@ export async function GET(req: NextRequest) {
         computedStatus = "pendente"
       }
     } else if (e.type === "recorrente") {
-      if (e.recurrenceStart) {
+      if (e.date) {
+        computedStatus = "pago"
+      } else if (e.recurrenceStart) {
         const start = new Date(e.recurrenceStart).toISOString().split("T")[0]
         if (start < today) computedStatus = "atrasada"
         else if (start === today) computedStatus = "vence_hoje"
@@ -116,7 +120,6 @@ export async function POST(req: NextRequest) {
 
     while (i < maxIter) {
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-      const entryStatus = iso < todayISO ? "atrasada" : "pendente"
       entries.push({
         description,
         amount,
@@ -126,11 +129,11 @@ export async function POST(req: NextRequest) {
         isRecurring: true,
         recurrenceFreq: recurrenceFreq || "mensal",
         recurrenceStart: new Date(d),
-        recurrenceEnd: recEnd ? new Date(recEnd) : null,
+        recurrenceEnd: recEnd ? new Date(recEnd + "T00:00:00") : null,
         receiptUrl: receiptUrl || null,
-        date: new Date(iso),
-        dueDate: new Date(iso),
-        cashRegisterId: cashRegisterId || null,
+        date: null,
+        dueDate: new Date(iso + "T00:00:00"),
+        cashRegisterId: null,
         establishmentId,
       })
       if (d >= end) break
@@ -139,25 +142,14 @@ export async function POST(req: NextRequest) {
     }
 
     const created = await prisma.expense.createMany({ data: entries })
-
-    if (cashRegisterId) {
-      await prisma.cashMovement.createMany({
-        data: entries
-          .filter((e) => e.date <= today)
-          .map((e) => ({
-            type: "expense",
-            amount: e.amount,
-            description: e.description,
-            cashRegisterId,
-          })),
-      })
-    }
-
     return NextResponse.json({ count: created.count })
   }
 
   // For agendada: set dueDate
-  const finalDueDate = expenseType === "agendada" && dueDate ? new Date(dueDate + "T00:00:00") : null
+  const finalDueDate = (expenseType === "agendada" || expenseType === "recorrente") && dueDate ? new Date(dueDate + "T00:00:00") : null
+
+  // Only lancamento has payment date; agendada/recorrente have null (paid later)
+  const paymentDate = expenseType === "lancamento" ? (date ? new Date(date + "T00:00:00") : new Date()) : null
 
   const expense = await prisma.expense.create({
     data: {
@@ -171,14 +163,15 @@ export async function POST(req: NextRequest) {
       recurrenceStart: recStart ? new Date(recStart + "T00:00:00") : null,
       recurrenceEnd: recEnd ? new Date(recEnd + "T00:00:00") : null,
       receiptUrl: receiptUrl || null,
-      date: date ? new Date(date + "T00:00:00") : new Date(),
+      date: paymentDate,
       dueDate: finalDueDate,
       cashRegisterId: cashRegisterId || null,
       establishmentId,
     },
   })
 
-  if (cashRegisterId) {
+  // Only create cash movement for lancamento (already paid)
+  if (expenseType === "lancamento" && cashRegisterId) {
     await prisma.cashMovement.create({
       data: {
         type: "expense",

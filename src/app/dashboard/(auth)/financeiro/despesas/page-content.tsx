@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon, ChevronDown, Search, AlertTriangle, CalendarCheck, Repeat, Settings, ArrowRight } from "lucide-react"
+import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon, ChevronDown, Search, AlertTriangle, CalendarCheck, Repeat, Settings, ArrowRight, CheckCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -259,6 +259,24 @@ export default function DespesasPage() {
     if (res.ok) { setExpenses(expenses.filter((e) => e.id !== confirmDelete.id)); toast("Despesa excluída", "success"); window.dispatchEvent(new Event("expenses-updated")) }
   }
 
+  async function handleBaixar(expenseId: string) {
+    const today = new Date().toLocaleDateString("en-CA")
+    const res = await fetchAuth(`/api/expenses/${expenseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: today }),
+    })
+    if (res.ok) {
+      toast("Despesa baixada", "success")
+      window.dispatchEvent(new Event("expenses-updated"))
+      const params = new URLSearchParams({ establishmentId: establishmentId! })
+      const refreshed = await fetchAuth(`/api/expenses?${params}`).then((r) => r.json())
+      setExpenses(Array.isArray(refreshed) ? refreshed : [])
+    } else {
+      toast("Erro ao baixar", "error")
+    }
+  }
+
   function exportCSV() {
     const header = "Data,Descrição,Tipo,Categoria,Método Pgto,Status,Vencimento\n"
     const rows = expenses.map((e) => `${new Date(e.createdAt).toLocaleDateString("pt-BR")},"${e.description}",${typeLabels[e.type as ExpenseType] || e.type},${e.category},${paymentLabels[e.paymentMethod] || e.paymentMethod},${e.computedStatus === "pago" ? "Pago" : e.computedStatus === "atrasada" ? "Atrasada" : e.computedStatus === "a_vencer" ? "A vencer" : e.computedStatus === "vence_hoje" ? "Vence hoje" : "Pendente"},${e.dueDate ? new Date(e.dueDate).toLocaleDateString("pt-BR") : ""}`).join("\n")
@@ -377,6 +395,9 @@ export default function DespesasPage() {
                 <td className="px-3 py-2.5 text-right text-sm font-bold text-red-500">-{formatCurrency(expense.amount)}</td>
                 <td className="px-3 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1">
+                    {(expense.type === "agendada" || expense.type === "recorrente") && !expense.date && (
+                      <button onClick={() => handleBaixar(expense.id)} className="rounded p-1 text-zinc-400 hover:bg-green-50 hover:text-green-600 transition-colors" title="Baixar (pagar)"><CheckCircle className="h-3.5 w-3.5" /></button>
+                    )}
                     <button onClick={() => openEdit(expense)} className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-blue-600 transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setConfirmDelete({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>

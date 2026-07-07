@@ -75,15 +75,15 @@ export async function GET(req: NextRequest) {
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.expense.findMany({
-      where: { establishmentId, dueDate: { lt: todayStart }, type: { not: "lancamento" } },
+      where: { establishmentId, dueDate: { lt: todayStart }, type: { not: "lancamento" }, date: null },
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.expense.findMany({
-      where: { establishmentId, dueDate: { gte: now, lte: new Date(now.getTime() + 7 * 86400000) }, type: { not: "lancamento" } },
+      where: { establishmentId, dueDate: { gte: now, lte: new Date(now.getTime() + 7 * 86400000) }, type: { not: "lancamento" }, date: null },
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.expense.findMany({
-      where: { establishmentId, dueDate: { gte: todayStart, lt: new Date(todayStart.getTime() + 86400000) }, type: { not: "lancamento" } },
+      where: { establishmentId, dueDate: { gte: todayStart, lt: new Date(todayStart.getTime() + 86400000) }, type: { not: "lancamento" }, date: null },
       select: { id: true, description: true, amount: true, dueDate: true, category: true },
     }),
     prisma.cashRegister.findFirst({
