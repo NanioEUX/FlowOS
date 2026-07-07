@@ -97,6 +97,7 @@ export default function DespesasPage() {
   const [form, setForm] = useState(emptyForm)
   const [formType, setFormType] = useState<ExpenseType>("lancamento")
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string; description: string }>({ open: false, id: "", description: "" })
+  const [confirmBaixar, setConfirmBaixar] = useState<{ open: boolean; id: string; description: string }>({ open: false, id: "", description: "" })
   const [cashRegister, setCashRegister] = useState<any>(null)
   const [linkToCash, setLinkToCash] = useState(false)
 
@@ -276,6 +277,7 @@ export default function DespesasPage() {
     } else {
       toast("Erro ao baixar", "error")
     }
+    setConfirmBaixar({ open: false, id: "", description: "" })
   }
 
   function exportCSV() {
@@ -397,7 +399,7 @@ export default function DespesasPage() {
                 <td className="px-3 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1">
                     {(expense.type === "agendada" || expense.type === "recorrente") && !expense.date && (
-                      <button onClick={() => handleBaixar(expense.id)} className="rounded p-1 text-zinc-400 hover:bg-green-50 hover:text-green-600 transition-colors" title="Baixar (pagar)"><CheckCircle className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setConfirmBaixar({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-400 hover:bg-green-50 hover:text-green-600 transition-colors" title="Baixar (pagar)"><CheckCircle className="h-3.5 w-3.5" /></button>
                     )}
                     <button onClick={() => openEdit(expense)} className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-blue-600 transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setConfirmDelete({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -481,6 +483,7 @@ export default function DespesasPage() {
       )}
 
       <ConfirmDialog open={confirmDelete.open} title="Excluir despesa" message={`Tem certeza que deseja excluir "${confirmDelete.description}"?`} confirmLabel="Excluir" cancelLabel="Cancelar" variant="danger" confirmed={false} onConfirm={handleDelete} onCancel={() => setConfirmDelete({ open: false, id: "", description: "" })} />
+      <ConfirmDialog open={confirmBaixar.open} title="Baixar despesa" message={`Confirmar pagamento de "${confirmBaixar.description}"?`} confirmLabel="Confirmar" cancelLabel="Cancelar" variant="warning" confirmed={false} onConfirm={() => handleBaixar(confirmBaixar.id)} onCancel={() => setConfirmBaixar({ open: false, id: "", description: "" })} />
     </div>
   )
 }
