@@ -197,10 +197,10 @@ export default function DashboardHomePage() {
               <a href="/dashboard/financeiro/despesas" className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-2.5 hover:bg-blue-500/10 transition-colors">
                 <CalendarClock className="h-4 w-4 text-blue-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-zinc-900">{data.alerts.upcomingExpenses} a vencer (7d)</p>
-                  <p className="text-[10px] text-blue-500 font-medium">{formatCurrency(data.alerts.totalUpcoming)}</p>
+                  <p className="text-xs font-semibold text-blue-600">Despesas a vencer</p>
+                  <p className="text-[10px] text-zinc-400">{data.alerts.upcomingExpenses} nos próximos 7 dias</p>
                 </div>
-                <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
+                <span className="text-[10px] font-bold text-blue-500 shrink-0">{formatCurrency(data.alerts.totalUpcoming)}</span>
               </a>
             )}
 
@@ -209,8 +209,8 @@ export default function DashboardHomePage() {
               <a href="/dashboard/entregas" className="flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/5 p-2.5 hover:bg-purple-500/10 transition-colors">
                 <Bike className="h-4 w-4 text-purple-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-zinc-900">{data.alerts.noMotoboy} sem motoboy</p>
-                  <p className="text-[10px] text-zinc-400">Pronto(s) para entrega</p>
+                  <p className="text-xs font-semibold text-purple-600">Pedido(s) sem motoboy</p>
+                  <p className="text-[10px] text-zinc-400">{data.alerts.noMotoboy} aguardando entrega</p>
                 </div>
                 <ArrowRight className="h-3 w-3 text-zinc-400 shrink-0" />
               </a>
