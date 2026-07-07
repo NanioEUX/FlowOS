@@ -382,14 +382,6 @@ export default function DespesasPage() {
                   ) : expense.type === "recorrente" && expense.recurrenceStart ? (
                     <span className="text-purple-600">
                       {new Date(expense.recurrenceStart).toLocaleDateString("pt-BR")}
-                      {expense.recurrenceEnd && (() => {
-                        const start = new Date(expense.recurrenceStart)
-                        const end = new Date(expense.recurrenceEnd)
-                        const total = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
-                        const currentMonth = (new Date().getFullYear() - start.getFullYear()) * 12 + (new Date().getMonth() - start.getMonth()) + 1
-                        const clamped = Math.min(Math.max(currentMonth, 1), total)
-                        return <span className="ml-1 text-[10px] text-purple-400">{clamped}/{total}</span>
-                      })()}
                     </span>
                   ) : "—"}
                 </td>

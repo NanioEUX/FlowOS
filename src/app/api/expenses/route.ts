@@ -146,14 +146,16 @@ export async function POST(req: NextRequest) {
     const entries: any[] = []
     const start = new Date(recStart + "T12:00:00Z")
     const end = recEnd ? new Date(recEnd + "T12:00:00Z") : new Date(start.getFullYear(), start.getMonth() + 1, start.getDate())
+    const total = Math.max(1, Math.round(((end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1)))
     const maxIter = 120
     let i = 0
     const d = new Date(start)
 
     while (i < maxIter) {
       const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
+      const n = i + 1
       entries.push({
-        description,
+        description: total > 1 ? `${description} (${n}/${total})` : description,
         amount,
         category: category || "variavel",
         type: "recorrente",
@@ -163,6 +165,7 @@ export async function POST(req: NextRequest) {
         recurrenceStart: new Date(d),
         recurrenceEnd: recEnd ? new Date(recEnd + "T12:00:00Z") : null,
         receiptUrl: receiptUrl || null,
+        date: null,
         dueDate: new Date(iso + "T12:00:00Z"),
         cashRegisterId: null,
         establishmentId,
