@@ -169,7 +169,7 @@ export default function DashboardHomePage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-red-600">Despesa atrasada</p>
                   {data.alerts.overdueItems?.slice(0, 2).map((item: any, i: number) => (
-                    <p key={i} className="text-[10px] text-zinc-500 truncate">{item.description}: {formatCurrency(item.amount)}</p>
+                    <p key={i} className="text-[10px] text-zinc-500 truncate">{item.description}: {formatCurrency(item.amount)} <span className="text-red-400">venc. {new Date(item.dueDate).toLocaleDateString("pt-BR")}</span></p>
                   ))}
                   {data.alerts.overdueExpenses > 2 && <p className="text-[10px] text-zinc-400">+{data.alerts.overdueExpenses - 2} mais</p>}
                 </div>
