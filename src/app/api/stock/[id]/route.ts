@@ -15,9 +15,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const body = await req.json()
+    const { type, ...data } = body
+    if (data.supplierId === "") data.supplierId = null
+    if (data.supplier === "") data.supplier = null
     const updated = await prisma.stockItem.update({
       where: { id: params.id },
-      data: body,
+      data,
     })
     return NextResponse.json(updated)
   } catch (error) {
