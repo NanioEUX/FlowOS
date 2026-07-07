@@ -257,6 +257,7 @@ export default function DespesasPage() {
   async function handleDelete() {
     const res = await fetchAuth(`/api/expenses/${confirmDelete.id}`, { method: "DELETE" })
     if (res.ok) { setExpenses(expenses.filter((e) => e.id !== confirmDelete.id)); toast("Despesa excluída", "success"); window.dispatchEvent(new Event("expenses-updated")) }
+    setConfirmDelete({ open: false, id: "", description: "" })
   }
 
   async function handleBaixar(expenseId: string) {
@@ -380,12 +381,12 @@ export default function DespesasPage() {
                     <span className="text-purple-600">
                       {new Date(expense.recurrenceStart).toLocaleDateString("pt-BR")}
                       {expense.recurrenceEnd && (() => {
-                        const start = new Date(expense.recurrenceStart + "T00:00:00")
-                        const end = new Date(expense.recurrenceEnd + "T00:00:00")
-                        const current = new Date(expense.recurrenceStart + "T00:00:00")
+                        const start = new Date(expense.recurrenceStart)
+                        const end = new Date(expense.recurrenceEnd)
                         const total = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
-                        const currentMonth = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth()) + 1
-                        return <span className="ml-1 text-[10px] text-purple-400">{currentMonth}/{total}</span>
+                        const currentMonth = (new Date().getFullYear() - start.getFullYear()) * 12 + (new Date().getMonth() - start.getMonth()) + 1
+                        const clamped = Math.min(Math.max(currentMonth, 1), total)
+                        return <span className="ml-1 text-[10px] text-purple-400">{clamped}/{total}</span>
                       })()}
                     </span>
                   ) : "—"}
