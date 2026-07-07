@@ -13,6 +13,16 @@ export async function GET(req: NextRequest) {
 
   if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
 
+  // One-time cleanup: clear date for agendada/recorrente that have date set
+  const cleanup = req.nextUrl.searchParams.get("cleanup")
+  if (cleanup === "fix-dates") {
+    await prisma.expense.updateMany({
+      where: { establishmentId, type: { in: ["agendada", "recorrente"] }, date: { not: null } },
+      data: { date: null },
+    })
+    return NextResponse.json({ cleaned: true })
+  }
+
   const where: any = { establishmentId }
   if (from || to) {
     const dateFilter: any = {}

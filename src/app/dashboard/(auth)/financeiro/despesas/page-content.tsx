@@ -227,7 +227,7 @@ export default function DespesasPage() {
   }
   function openEdit(expense: Expense) {
     setEditingId(expense.id); setFormType(expense.type as ExpenseType)
-    setForm({ description: expense.description, amount: formatMoneyInput(expense.amount), category: expense.category, paymentMethod: expense.paymentMethod || "dinheiro", date: expense.date.split("T")[0], dueDate: expense.dueDate ? expense.dueDate.split("T")[0] : "", recurrenceStart: expense.recurrenceStart ? expense.recurrenceStart.split("T")[0] : "", recurrenceEnd: expense.recurrenceEnd ? expense.recurrenceEnd.split("T")[0] : "", recurrenceFreq: expense.recurrenceFreq || "mensal" })
+    setForm({ description: expense.description, amount: formatMoneyInput(expense.amount), category: expense.category, paymentMethod: expense.paymentMethod || "dinheiro", date: expense.type === "lancamento" ? (expense.date ? expense.date.split("T")[0] : "") : "", dueDate: expense.dueDate ? expense.dueDate.split("T")[0] : "", recurrenceStart: expense.recurrenceStart ? expense.recurrenceStart.split("T")[0] : "", recurrenceEnd: expense.recurrenceEnd ? expense.recurrenceEnd.split("T")[0] : "", recurrenceFreq: expense.recurrenceFreq || "mensal" })
     setLinkToCash(false); setShowForm(true)
   }
 
@@ -237,7 +237,7 @@ export default function DespesasPage() {
     if (amount <= 0) { toast("Informe um valor maior que zero", "error"); return }
     setSaving(true)
     try {
-      const payload: any = { description: form.description, amount, category: form.category, paymentMethod: form.paymentMethod, type: formType, date: form.date || undefined, dueDate: form.dueDate || undefined, recurrenceStart: form.recurrenceStart || undefined, recurrenceEnd: form.recurrenceEnd || undefined, recurrenceFreq: form.recurrenceFreq, isRecurring: formType === "recorrente", establishmentId }
+      const payload: any = { description: form.description, amount, category: form.category, paymentMethod: form.paymentMethod, type: formType, date: formType === "lancamento" ? (form.date || undefined) : null, dueDate: form.dueDate || undefined, recurrenceStart: form.recurrenceStart || undefined, recurrenceEnd: form.recurrenceEnd || undefined, recurrenceFreq: form.recurrenceFreq, isRecurring: formType === "recorrente", establishmentId }
       if (linkToCash && cashRegister) payload.cashRegisterId = cashRegister.id
       if (editingId) {
         const res = await fetchAuth(`/api/expenses/${editingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
