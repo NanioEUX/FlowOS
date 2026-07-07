@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   }
 
   for (const expense of expenses) {
-    const day = expense.date.toISOString().split("T")[0]
+    const day = expense.date ? expense.date.toISOString().split("T")[0] : expense.createdAt.toISOString().split("T")[0]
     if (!dayMap.has(day)) dayMap.set(day, { entradas: 0, saidas: 0, byPayment: {} })
     dayMap.get(day)!.saidas += expense.amount
   }
