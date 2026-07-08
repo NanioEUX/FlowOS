@@ -144,7 +144,11 @@ export default function ConfigPage() {
     setTestingAsaas(true)
     setAsaasTestResult(null)
     try {
-      const res = await fetchAuth(`/api/asaas-test?key=${encodeURIComponent(form.asaasApiKey)}`)
+      const res = await fetchAuth(`/api/asaas-test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: form.asaasApiKey }),
+      })
       const data = await res.json()
       setAsaasTestResult(data.ok ? { ok: true, message: data.message } : { ok: false, message: data.error || "Falha na conexão" })
     } catch {
