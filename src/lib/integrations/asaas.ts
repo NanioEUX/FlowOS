@@ -43,7 +43,6 @@ export async function createPaymentLink({
     body: JSON.stringify({
       name: customerName,
       mobilePhone: customerPhone.replace(/\D/g, ""),
-      cpfCnpj: "00000000000",
     }),
   })
 
