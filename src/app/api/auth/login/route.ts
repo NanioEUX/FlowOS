@@ -6,6 +6,18 @@ import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      if (i === retries || !err?.message?.includes("pool") && !err?.code?.includes("P1001") && !err?.message?.includes("Connection")) throw err
+      await new Promise((r) => setTimeout(r, 200 * (i + 1)))
+    }
+  }
+  throw new Error("unreachable")
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json()
@@ -14,14 +26,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 })
     }
 
-    // Rate limit: 15 attempts per minute per IP
     const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown"
     const { allowed } = checkRateLimit(`login-user:${ip}`, 15, 60_000)
     if (!allowed) {
       return NextResponse.json({ error: "Muitas tentativas. Tente novamente em 1 minuto." }, { status: 429 })
     }
 
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await withRetry(() => prisma.user.findUnique({ where: { email } }))
     if (!user || !user.isActive) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
@@ -31,26 +42,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
 
-    // Success: reset rate limit
     resetRateLimit(`login-user:${ip}`)
 
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: user.establishmentId },
-      select: {
-        id: true, name: true, slug: true, logo: true, description: true, defaultTheme: true,
-        subscriptionStatus: true, subscriptionPlan: true,
-        trialStartsAt: true, trialEndsAt: true, nextPaymentAt: true,
-      },
-    })
+    const establishment = await withRetry(() =>
+      prisma.establishment.findUnique({
+        where: { id: user.establishmentId },
+        select: {
+          id: true, name: true, slug: true, logo: true, description: true, defaultTheme: true,
+          subscriptionStatus: true, subscriptionPlan: true,
+          trialStartsAt: true, trialEndsAt: true, nextPaymentAt: true,
+        },
+      })
+    )
 
     const permissions = JSON.parse(user.permissions || '["caixa"]')
 
     let deliveryPerson = null
     if (user.role === "motoboy") {
-      const dp = await prisma.deliveryPerson.findUnique({
-        where: { userId: user.id },
-        select: { id: true, token: true, name: true },
-      })
+      const dp = await withRetry(() =>
+        prisma.deliveryPerson.findUnique({
+          where: { userId: user.id },
+          select: { id: true, token: true, name: true },
+        })
+      )
       if (dp) {
         deliveryPerson = { id: dp.id, token: dp.token, slug: establishment?.slug }
       }
@@ -68,7 +82,6 @@ export async function POST(req: NextRequest) {
       { expiresIn: "7d" }
     )
 
-    // Check subscription status
     let subscriptionExpired = false
     if (establishment) {
       const now = new Date()
@@ -97,6 +110,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("LOGIN ERROR:", error?.message, error?.code, error?.meta)
-    return NextResponse.json({ error: "Erro ao fazer login", detail: error?.message }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao fazer login" }, { status: 500 })
   }
 }

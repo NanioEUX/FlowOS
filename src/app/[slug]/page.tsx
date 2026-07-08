@@ -3,15 +3,31 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { MenuPage } from "./menu-page"
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      if (i === retries) throw err
+      const isTransient = err?.message?.includes("pool") || err?.code?.includes("P1001") || err?.message?.includes("Connection") || err?.message?.includes("timeout")
+      if (!isTransient) throw err
+      await new Promise((r) => setTimeout(r, 300 * (i + 1)))
+    }
+  }
+  throw new Error("unreachable")
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string }
 }): Promise<Metadata> {
-  const establishment = await prisma.establishment.findUnique({
-    where: { slug: params.slug },
-    select: { name: true, description: true, logo: true, cover: true, phone: true },
-  })
+  const establishment = await withRetry(() =>
+    prisma.establishment.findUnique({
+      where: { slug: params.slug },
+      select: { name: true, description: true, logo: true, cover: true, phone: true },
+    })
+  )
 
   if (!establishment) {
     return { title: "Estabelecimento não encontrado" }
@@ -45,21 +61,22 @@ export default async function EstablishmentPage({
 }: {
   params: { slug: string }
 }) {
-  const establishment = await prisma.establishment.findUnique({
-    where: { slug: params.slug },
-    include: {
-      categories: {
-        include: { products: { where: { isAvailable: true }, orderBy: { order: "asc" } } },
-        orderBy: { order: "asc" },
+  const establishment = await withRetry(() =>
+    prisma.establishment.findUnique({
+      where: { slug: params.slug },
+      include: {
+        categories: {
+          include: { products: { where: { isAvailable: true }, orderBy: { order: "asc" } } },
+          orderBy: { order: "asc" },
+        },
       },
-    },
-  })
+    })
+  )
 
   if (!establishment) {
     notFound()
   }
 
-  // Check subscription status
   const now = new Date()
   const isExpired =
     establishment.subscriptionStatus === "expired" ||

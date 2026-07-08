@@ -23,6 +23,7 @@ export async function createPaymentLink({
   customerCpf,
   value,
   description,
+  billingType,
   dueDate,
   splitRules,
 }: {
@@ -32,6 +33,7 @@ export async function createPaymentLink({
   customerCpf: string
   value: number
   description: string
+  billingType?: "PIX" | "CREDIT_CARD" | "BOLETO" | "UNDEFINED"
   dueDate?: string
   splitRules?: SplitRule[]
 }): Promise<AsaasPaymentResponse> {
@@ -94,7 +96,7 @@ export async function createPaymentLink({
 
   const paymentBody: any = {
     customer: customer.id,
-    billingType: "PIX",
+    billingType: billingType || "UNDEFINED",
     value,
     dueDate: due,
     description: description.substring(0, 200),
@@ -105,7 +107,7 @@ export async function createPaymentLink({
     paymentBody.cpfCnpj = customerCpf.replace(/\D/g, "")
   }
 
-  console.log("[Asaas] Criando pagamento:", { customerId: customer.id, value, billingType: "PIX" })
+  console.log("[Asaas] Criando pagamento:", { customerId: customer.id, value, billingType: billingType || "UNDEFINED" })
 
   const paymentRes = await fetch(`${ASAAS_API_URL}/payments`, {
     method: "POST",

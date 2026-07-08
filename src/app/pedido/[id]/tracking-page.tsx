@@ -88,6 +88,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
   const [showChat, setShowChat] = useState(false)
   const [hasNewMsg, setHasNewMsg] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<string>("default")
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMsgCountRef = useRef(0)
 
@@ -450,12 +451,25 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
         {/* Payment info */}
         {order.paymentLink && order.paymentStatus !== "paid" && order.status !== "cancelled" && (
-          <a href={order.paymentLink} target="_blank" rel="noopener noreferrer">
-            <Button className="w-full gap-2">
-              <CreditCard className="h-4 w-4" />
-              Pagar agora (Pix / Cartão)
-            </Button>
-          </a>
+          <Button className="w-full gap-2" onClick={() => setShowPaymentModal(true)}>
+            <CreditCard className="h-4 w-4" />
+            Pagar agora (Pix / Cartão)
+          </Button>
+        )}
+
+        {/* Payment iframe modal */}
+        {showPaymentModal && order.paymentLink && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}>
+            <div className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white" style={{ width: "min(480px, 95vw)", height: "min(700px, 90vh)" }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+                <p className="text-sm font-semibold text-zinc-900">Pagamento</p>
+                <button onClick={() => setShowPaymentModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-600 transition-colors">
+                  ✕
+                </button>
+              </div>
+              <iframe src={order.paymentLink} className="flex-1 w-full border-0" title="Pagamento" />
+            </div>
+          </div>
         )}
       </div>
     </div>

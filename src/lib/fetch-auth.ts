@@ -40,24 +40,36 @@ export function clearAuth(): void {
   window.location.href = "/login"
 }
 
+let refreshPromise: Promise<string | null> | null = null
+
 async function tryRefreshToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) return null
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) return null
+
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      })
+
+      if (!res.ok) return null
+
+      const data = await res.json()
+      saveTokens(data.token, data.refreshToken)
+      return data.token
+    } catch {
+      return null
+    }
+  })()
 
   try {
-    const res = await fetch("/api/auth/refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    })
-
-    if (!res.ok) return null
-
-    const data = await res.json()
-    saveTokens(data.token, data.refreshToken)
-    return data.token
-  } catch {
-    return null
+    return await refreshPromise
+  } finally {
+    refreshPromise = null
   }
 }
 
@@ -70,7 +82,6 @@ export async function fetchAuth(input: RequestInfo, init?: RequestInit): Promise
 
   const res = await fetch(input, { ...init, headers, cache: "no-store" })
 
-  // If 401, try to refresh token
   if (res.status === 401) {
     const newToken = await tryRefreshToken()
     if (newToken) {

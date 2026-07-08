@@ -20,26 +20,35 @@ const ASAAS_API_URL =
 
 async function syncPaymentStatus(orderId: string, paymentId: string, apiKey: string) {
   try {
+    console.log("[Sync] Checking payment:", paymentId)
     const res = await fetch(`${ASAAS_API_URL}/payments/${paymentId}`, {
       headers: { access_token: apiKey },
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.log("[Sync] Asaas returned:", res.status)
+      return null
+    }
     const payment = await res.json()
+    console.log("[Sync] Asaas status:", payment.status)
 
     const statusMap: Record<string, string> = {
       RECEIVED: "paid",
+      RECEIVED_IN_CASH: "paid",
       CONFIRMED: "paid",
       OVERDUE: "overdue",
       REFUNDED: "refunded",
     }
     const orderStatusMap: Record<string, string> = {
       RECEIVED: "confirmed",
+      RECEIVED_IN_CASH: "confirmed",
       CONFIRMED: "confirmed",
+      SETTLED: "confirmed",
     }
 
     const newPaymentStatus = statusMap[payment.status]
     if (!newPaymentStatus) return null
 
+    console.log("[Sync] Updating order:", { orderId, paymentStatus: newPaymentStatus, status: orderStatusMap[payment.status] })
     await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -49,7 +58,8 @@ async function syncPaymentStatus(orderId: string, paymentId: string, apiKey: str
     })
 
     return { paymentStatus: newPaymentStatus, asaasStatus: payment.status }
-  } catch {
+  } catch (err: any) {
+    console.error("[Sync] Error:", err?.message)
     return null
   }
 }
@@ -70,7 +80,7 @@ export default async function OrderTrackingPage({
     notFound()
   }
 
-  if (order.paymentId && (order.paymentStatus === "pending" || order.paymentStatus === "PENDING") && order.establishment.asaasApiKey) {
+  if (order.paymentId && order.paymentStatus !== "paid" && order.establishment.asaasApiKey) {
     await syncPaymentStatus(order.id, order.paymentId, order.establishment.asaasApiKey)
   }
 

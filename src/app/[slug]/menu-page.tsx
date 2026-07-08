@@ -180,6 +180,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [ordering, setOrdering] = useState(false)
   const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -832,13 +833,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
             {orderResult.paymentLink && (
               <div className="mt-4">
-                <a href={orderResult.paymentLink} target="_blank" rel="noopener noreferrer">
-                  <button className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90">
-                    <CreditCard className="h-4 w-4" />
-                    Pagar agora (Pix / Cartão)
-                    <ExternalLink className="h-4 w-4" />
-                  </button>
-                </a>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pagar agora (Pix / Cartão)
+                </button>
                 <p className="mt-1 text-xs text-white/30">Pagamento processado por Asaas</p>
               </div>
             )}
@@ -1799,6 +1800,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment iframe modal */}
+      {showPaymentModal && orderResult?.paymentLink && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}>
+          <div className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl" style={{ width: "min(480px, 95vw)", height: "min(700px, 90vh)", backgroundColor: theme.bgCard }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.borderInput }}>
+              <p className="text-sm font-semibold" style={{ color: theme.text }}>Pagamento</p>
+              <button onClick={() => setShowPaymentModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                ✕
+              </button>
+            </div>
+            <iframe src={orderResult.paymentLink} className="flex-1 w-full border-0" title="Pagamento" />
           </div>
         </div>
       )}

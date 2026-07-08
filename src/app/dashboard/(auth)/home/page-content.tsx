@@ -17,19 +17,34 @@ export default function DashboardHomePage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  async function loadData() {
+  async function loadData(retry = true) {
     if (!establishmentId) return
     setRefreshing(true)
     try {
       const res = await fetchAuth(`/api/dashboard?establishmentId=${establishmentId}`)
-      if (res.ok) setData(await res.json())
-    } catch {} finally { setLoading(false); setRefreshing(false) }
+      if (res.ok) {
+        setData(await res.json())
+      } else if (retry) {
+        await new Promise((r) => setTimeout(r, 500))
+        return loadData(false)
+      }
+    } catch {
+      if (retry) {
+        await new Promise((r) => setTimeout(r, 500))
+        return loadData(false)
+      }
+    } finally { setLoading(false); setRefreshing(false) }
   }
 
-  useEffect(() => { loadData() }, [establishmentId])
+  useEffect(() => {
+    if (!establishmentId) return
+    loadData()
+    // Auto-sync pending payments in background
+    fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+  }, [establishmentId])
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
-  if (!data) return <div className="py-20 text-center text-zinc-500"><p>Erro ao carregar</p><Button onClick={loadData} className="mt-4">Tentar novamente</Button></div>
+  if (!data) return <div className="py-20 text-center text-zinc-500"><p>Erro ao carregar</p><Button onClick={() => loadData()} className="mt-4">Tentar novamente</Button></div>
 
   const salesPercent = data.today.vsYesterday.percentTotal
   const sparkData = data.weekSales?.map((d: any) => d.total) || []
@@ -43,7 +58,7 @@ export default function DashboardHomePage() {
           <h2 className="text-2xl font-bold text-zinc-900">Dashboard</h2>
           <p className="text-sm text-zinc-500">Visão geral do dia</p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData} disabled={refreshing} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => loadData()} disabled={refreshing} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           Atualizar
         </Button>

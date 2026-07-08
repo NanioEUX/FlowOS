@@ -13,6 +13,8 @@ const PUBLIC_ROUTES = [
   "/api/push",
   "/api/delivery-persons/deliveries",
   "/api/users/change-password",
+  "/api/webhooks",
+  "/api/cron",
 ]
 
 function isPublicRoute(pathname: string): boolean {

@@ -3,6 +3,20 @@ import { prisma } from "@/lib/prisma"
 
 export const revalidate = 10
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      if (i === retries) throw err
+      const isTransient = err?.message?.includes("pool") || err?.code?.includes("P1001") || err?.message?.includes("Connection") || err?.message?.includes("timeout")
+      if (!isTransient) throw err
+      await new Promise((r) => setTimeout(r, 300 * (i + 1)))
+    }
+  }
+  throw new Error("unreachable")
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const establishmentId = searchParams.get("establishmentId")
@@ -11,6 +25,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
 
+  try {
+    return await withRetry(() => loadDashboard(establishmentId))
+  } catch (error: any) {
+    console.error("DASHBOARD ERROR:", error?.message, error?.code)
+    return NextResponse.json({ error: "Erro ao carregar dashboard" }, { status: 500 })
+  }
+}
+
+async function loadDashboard(establishmentId: string) {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const yesterdayStart = new Date(todayStart.getTime() - 86400000)

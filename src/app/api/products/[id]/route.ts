@@ -18,6 +18,7 @@ export async function PATCH(
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData()
+      const booleanFields = ["sendToPrep", "active", "available"]
       for (const [key, value] of formData.entries()) {
         if (key === "file") {
           continue
@@ -26,6 +27,8 @@ export async function PATCH(
           data[key] = null
         } else if (key === "price") {
           data[key] = parseFloat(value as string)
+        } else if (booleanFields.includes(key)) {
+          data[key] = value === "true" || value === "1"
         } else {
           data[key] = value
         }

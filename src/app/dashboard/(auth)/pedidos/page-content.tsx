@@ -74,10 +74,34 @@ export default function PedidosPage() {
     const data = await res.json()
     setOrders(data)
     setLoading(false)
+
+    // Auto-sync pending payments in background
+    const pendingPayments = data.filter((o: any) => 
+      o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
+    )
+    if (pendingPayments.length > 0) {
+      console.log(`[Orders] Auto-syncing ${pendingPayments.length} pending payments...`)
+      fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+    }
   }
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadOrders, 15000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => { const i = setInterval(loadOrders, 10000); return () => clearInterval(i) }, [establishmentId])
+
+  // Periodic payment sync (every 10 seconds for pending payments)
+  useEffect(() => {
+    if (!establishmentId) return
+    const syncInterval = setInterval(() => {
+      const pendingPayments = orders.filter((o: any) => 
+        o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
+      )
+      if (pendingPayments.length > 0) {
+        console.log(`[Orders] Periodic sync: ${pendingPayments.length} pending payments`)
+        fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+      }
+    }, 10000)
+    return () => clearInterval(syncInterval)
+  }, [establishmentId, orders])
 
   async function updateStatus(orderId: string, status: string) {
     await fetchAuth(`/api/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
@@ -615,6 +639,36 @@ win.close()
               )}
               {order.paymentLink && (
                 <a href={order.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 underline">Link pgto</a>
+              )}
+              {order.paymentLink && (order.paymentStatus !== "paid" || order.status === "payment_pending") && (
+                <button
+                  onClick={async () => {
+                    try {
+                      if (!order.paymentId) {
+                        alert("❌ Este pedido não possui ID de cobrança no Asaas. Gere um novo pagamento.")
+                        return
+                      }
+                      const res = await fetchAuth("/api/payments/sync", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ orderId: order.id }),
+                      })
+                      const data = await res.json()
+                      if (res.ok) {
+                        alert(`✅ Asaas: ${data.asaasStatus} → Sistema: ${data.paymentStatus}`)
+                        window.location.reload()
+                      } else {
+                        alert(`❌ ${data.error || "Erro ao sincronizar"}`)
+                      }
+                    } catch (e: any) {
+                      console.error("Sync error:", e)
+                      alert(`❌ Falha: ${e.message}`)
+                    }
+                  }}
+                  className="text-xs text-blue-500 hover:underline"
+                >
+                  🔄 Sincronizar
+                </button>
               )}
             </div>
 
