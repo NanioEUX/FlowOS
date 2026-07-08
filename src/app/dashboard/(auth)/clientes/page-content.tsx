@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Users, Search, Phone, MapPin, ShoppingBag, DollarSign, Calendar, Loader2, X } from "lucide-react"
+import { Users, Search, Phone, MapPin, ShoppingBag, DollarSign, Calendar, Loader2, X, TrendingUp, MessageSquare, ChevronRight } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -126,18 +126,17 @@ export default function ClientesPage() {
       {topCustomers.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold text-zinc-700 mb-3">Top 5 Clientes</h2>
-            <div className="space-y-2">
+            <div className="flex items-center gap-2 border-b border-zinc-100 pb-3 mb-4">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <h2 className="text-sm font-bold text-zinc-800">Top 5 Clientes Fiéis</h2>
+            </div>
+            <div className="divide-y divide-zinc-100">
               {topCustomers.map((c, i) => (
-                <div key={c.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-zinc-400 w-5">{i + 1}.</span>
-                    <span className="font-medium text-zinc-200">{c.name || formatPhone(c.phone)}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-zinc-500">
-                    <span>{c.totalOrders} pedidos</span>
-                    <span className="font-semibold text-green-600">{formatCurrency(c.totalSpent)}</span>
-                  </div>
+                <div key={c.id} className="grid grid-cols-12 py-2.5 items-center text-sm">
+                  <div className="col-span-1 text-zinc-400 font-bold">{i + 1}.</div>
+                  <div className="col-span-5 font-semibold text-zinc-800">{c.name || formatPhone(c.phone)}</div>
+                  <div className="col-span-3 text-right text-zinc-500 text-xs">{c.totalOrders} pedidos</div>
+                  <div className="col-span-3 text-right font-bold text-green-600">{formatCurrency(c.totalSpent)}</div>
                 </div>
               ))}
             </div>
@@ -168,58 +167,79 @@ export default function ClientesPage() {
           <p>{search ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado ainda"}</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((customer) => (
-            <button
-              key={customer.id}
-              onClick={() => setSelectedCustomer(selectedCustomer?.id === customer.id ? null : customer)}
-              className="w-full text-left rounded-lg border border-zinc-200 p-4 hover:border-green-600/30 hover:bg-green-600/10/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600/10 text-sm font-bold text-green-600">
-                    {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                  </div>
-                  <div>
-                    <p className="font-medium text-zinc-900">{customer.name || "Sem nome"}</p>
-                    <p className="text-xs text-zinc-500">{formatPhone(customer.phone)}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-green-600">{formatCurrency(customer.totalSpent)}</p>
-                  <p className="text-xs text-zinc-400">{customer.totalOrders} pedidos</p>
-                </div>
-              </div>
-
-              {/* Expanded details */}
-              {selectedCustomer?.id === customer.id && (
-                <div className="mt-3 pt-3 border-t border-white/[.04] space-y-2 text-sm">
-                  {customer.address && (
-                    <div className="flex items-center gap-2 text-zinc-400">
-                      <MapPin className="h-4 w-4" />
-                      <span>{customer.address}{customer.cep ? ` - CEP: ${customer.cep}` : ""}</span>
+        <div className="space-y-3">
+          {filtered.map((customer, idx) => {
+            const colors = [
+              "bg-green-50 text-green-700 border-green-100",
+              "bg-blue-50 text-blue-700 border-blue-100",
+              "bg-amber-50 text-amber-700 border-amber-100",
+              "bg-purple-50 text-purple-700 border-purple-100",
+              "bg-rose-50 text-rose-700 border-rose-100",
+            ]
+            const colorClass = colors[idx % colors.length]
+            return (
+              <div
+                key={customer.id}
+                className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold border ${colorClass}`}>
+                      {customer.name?.charAt(0)?.toUpperCase() || "?"}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <Calendar className="h-4 w-4" />
-                    <span>Cliente desde {formatDate(customer.createdAt)}</span>
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900">{customer.name || "Sem nome"}</p>
+                      <p className="text-xs font-medium text-zinc-500">{formatPhone(customer.phone)}</p>
+                      <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                        <Calendar className="h-3 w-3" /> Cliente desde {formatDate(customer.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <Phone className="h-4 w-4" />
-                    <a
-                      href={`https://wa.me/55${customer.phone.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Abrir WhatsApp
-                    </a>
+                  <div className="flex items-center justify-between sm:justify-end gap-6 border-t border-zinc-50 pt-2 sm:border-t-0 sm:pt-0">
+                    <div className="text-left sm:text-right">
+                      <span className="text-sm font-bold text-green-600 block">{formatCurrency(customer.totalSpent)}</span>
+                      <span className="text-[11px] font-medium text-zinc-400 block">{customer.totalOrders} pedidos</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://wa.me/55${customer.phone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-lg border border-zinc-200 p-2 text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                        title="Chamar no WhatsApp"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </a>
+                      <button
+                        onClick={() => setSelectedCustomer(selectedCustomer?.id === customer.id ? null : customer)}
+                        className="rounded-lg border border-zinc-200 p-2 text-zinc-500 hover:bg-zinc-50 transition-colors"
+                        title="Ver detalhes"
+                      >
+                        <ChevronRight className={`h-4 w-4 transition-transform ${selectedCustomer?.id === customer.id ? "rotate-90" : ""}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
-            </button>
-          ))}
+
+                {/* Expanded details */}
+                {selectedCustomer?.id === customer.id && (
+                  <div className="mt-3 pt-3 border-t border-zinc-100 space-y-2 text-sm">
+                    {customer.address && (
+                      <div className="flex items-center gap-2 text-zinc-500">
+                        <MapPin className="h-4 w-4" />
+                        <span>{customer.address}{customer.cep ? ` - CEP: ${customer.cep}` : ""}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-zinc-500">
+                      <Phone className="h-4 w-4" />
+                      <span>{formatPhone(customer.phone)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

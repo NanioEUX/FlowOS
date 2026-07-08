@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,6 +32,8 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showKey, setShowKey] = useState(false)
+  const [testingAsaas, setTestingAsaas] = useState(false)
+  const [asaasTestResult, setAsaasTestResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -134,6 +136,24 @@ export default function ConfigPage() {
     }
   }
 
+  async function testAsaasConnection() {
+    if (!form.asaasApiKey) {
+      setAsaasTestResult({ ok: false, message: "Insira uma API Key primeiro" })
+      return
+    }
+    setTestingAsaas(true)
+    setAsaasTestResult(null)
+    try {
+      const res = await fetchAuth(`/api/asaas-test?key=${encodeURIComponent(form.asaasApiKey)}`)
+      const data = await res.json()
+      setAsaasTestResult(data.ok ? { ok: true, message: data.message } : { ok: false, message: data.error || "Falha na conexão" })
+    } catch {
+      setAsaasTestResult({ ok: false, message: "Erro ao conectar com o servidor" })
+    } finally {
+      setTestingAsaas(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h2 className="text-2xl font-bold text-zinc-900">Configurações</h2>
@@ -197,7 +217,7 @@ export default function ConfigPage() {
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Asaas (Pagamentos Online)</h3>
             <p className="text-sm text-zinc-500">
-             
+              Configure sua API Key do Asaas para receber pagamentos via Pix e cartão de crédito no cardápio online. O cliente é redirecionado para a página de pagamento do Asaas após confirmar o pedido.
             </p>
             <div className="relative">
               <div className="space-y-1">
@@ -206,13 +226,25 @@ export default function ConfigPage() {
                   type={showKey ? "text" : "password"}
                   placeholder="asaas_api_key_..."
                   value={form.asaasApiKey}
-                  onChange={(e) => setForm({ ...form, asaasApiKey: e.target.value })}
+                  onChange={(e) => { setForm({ ...form, asaasApiKey: e.target.value }); setAsaasTestResult(null) }}
                   className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-400">
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="outline" size="sm" onClick={testAsaasConnection} disabled={testingAsaas || !form.asaasApiKey} className="gap-2">
+                {testingAsaas ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
+                Testar conexão
+              </Button>
+              {asaasTestResult && (
+                <span className={`flex items-center gap-1.5 text-sm font-medium ${asaasTestResult.ok ? "text-green-600" : "text-red-500"}`}>
+                  {asaasTestResult.ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  {asaasTestResult.message}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

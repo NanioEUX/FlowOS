@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Bike, Phone, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2, DollarSign, History, Wallet, Calendar } from "lucide-react"
+import { Bike, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2, DollarSign, History, Wallet, Calendar } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -283,44 +283,47 @@ export default function EntregasPage() {
       {/* ===== TAB: ENTREGAS ===== */}
       {tab === "entregas" && (
         <>
-          {/* Date filters */}
-          <DateFilters
-            active={dateFilter}
-            onChange={setDateFilter}
-            customStart={customStart}
-            customEnd={customEnd}
-            onCustomStartChange={setCustomStart}
-            onCustomEndChange={setCustomEnd}
-          />
-
-          {/* Motoboy filter tabs */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setSelectedMotoboy("")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
-            >
-              Todos
-            </button>
-            {deliveryPeople.map((p: any) => {
-              const pendings = filteredOrders.filter((o: any) => o.deliveryPersonId === p.id && ["ready", "out_for_delivery"].includes(o.status)).length
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedMotoboy(p.id)}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
-                >
-                  <Bike className="h-3 w-3" />
-                  {p.name}
-                  {pendings > 0 && <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{pendings}</span>}
-                </button>
-              )
-            })}
+          {/* Filtros agrupados */}
+          <div className="rounded-lg bg-zinc-100 p-1">
+            <DateFilters
+              active={dateFilter}
+              onChange={setDateFilter}
+              customStart={customStart}
+              customEnd={customEnd}
+              onCustomStartChange={setCustomStart}
+              onCustomEndChange={setCustomEnd}
+            />
+            <div className="flex flex-wrap items-center gap-1 mt-1">
+              <button
+                onClick={() => setSelectedMotoboy("")}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-400 hover:bg-white/[.08]"}`}
+              >
+                Todos
+              </button>
+              {deliveryPeople.map((p: any) => {
+                const pendings = filteredOrders.filter((o: any) => o.deliveryPersonId === p.id && ["ready", "out_for_delivery"].includes(o.status)).length
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedMotoboy(p.id)}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-400 hover:bg-white/[.08]"}`}
+                  >
+                    <Bike className="h-3 w-3" />
+                    {p.name}
+                    {pendings > 0 && <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{pendings}</span>}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {filteredPeople.map((person: any) => {
             const personOrders = filteredOrders.filter((o: any) => o.deliveryPersonId === person.id)
             const activeOrders = personOrders.filter((o: any) => ["ready", "out_for_delivery"].includes(o.status))
             const completedOrders = personOrders.filter((o: any) => o.status === "delivered")
+            const vinculados = activeOrders.filter((o: any) => o.status === "ready").length
+            const emRota = activeOrders.filter((o: any) => o.status === "out_for_delivery").length
+            const isAvailable = vinculados === 0 && emRota === 0
 
             return (
               <Card key={person.id}>
@@ -331,7 +334,13 @@ export default function EntregasPage() {
                         <Bike className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
-                        <p className="font-semibold text-zinc-900">{person.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-zinc-900">{person.name}</p>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${isAvailable ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${isAvailable ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
+                            {isAvailable ? "Disponível" : "Ocupado"}
+                          </span>
+                        </div>
                         <p className="text-xs text-zinc-500">{person.phone}</p>
                       </div>
                     </div>
@@ -345,17 +354,17 @@ export default function EntregasPage() {
                   </div>
 
                   <div className="mb-4 grid grid-cols-3 gap-3">
-                    <div className="rounded-lg bg-amber-500/10 p-3 text-center">
-                      <p className="text-lg font-bold text-amber-400">{activeOrders.filter((o: any) => o.status === "ready").length}</p>
-                      <p className="text-xs text-amber-500">Entregas</p>
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-600">{vinculados}</p>
+                      <p className="text-xs font-medium text-amber-600/70">Vinculados</p>
                     </div>
-                    <div className="rounded-lg bg-green-600/10 p-3 text-center">
-                      <p className="text-lg font-bold text-green-600">{activeOrders.filter((o: any) => o.status === "out_for_delivery").length}</p>
-                      <p className="text-xs text-blue-500">Em rota</p>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-blue-600">{emRota}</p>
+                      <p className="text-xs font-medium text-blue-600/70">Em Rota</p>
                     </div>
-                    <div className="rounded-lg bg-green-600/10 p-3 text-center">
-                      <p className="text-lg font-bold text-green-600">{completedOrders.length}</p>
-                      <p className="text-xs text-green-600">Entregues</p>
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-green-600">{completedOrders.length}</p>
+                      <p className="text-xs font-medium text-green-600/70">Concluídas</p>
                     </div>
                   </div>
 
@@ -385,15 +394,17 @@ export default function EntregasPage() {
       {/* ===== TAB: FINANCEIRO ===== */}
       {tab === "financeiro" && (
         <>
-          {/* Date filters */}
-          <DateFilters
-            active={finDateFilter}
-            onChange={setFinDateFilter}
-            customStart={finCustomStart}
-            customEnd={finCustomEnd}
-            onCustomStartChange={setFinCustomStart}
-            onCustomEndChange={setFinCustomEnd}
-          />
+          {/* Filtros agrupados */}
+          <div className="rounded-lg bg-zinc-100 p-1">
+            <DateFilters
+              active={finDateFilter}
+              onChange={setFinDateFilter}
+              customStart={finCustomStart}
+              customEnd={finCustomEnd}
+              onCustomStartChange={setFinCustomStart}
+              onCustomEndChange={setFinCustomEnd}
+            />
+          </div>
 
           {/* Pending amounts */}
           <Card>
@@ -499,26 +510,47 @@ export default function EntregasPage() {
 
 function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void }) {
   const isLocked = ["out_for_delivery", "delivered", "cancelled"].includes(order.status)
+  const createdAt = new Date(order.createdAt)
+  const diffMs = Date.now() - createdAt.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const timeLabel = diffMin < 60 ? `${diffMin} min` : `${Math.floor(diffMin / 60)}h ${diffMin % 60}min`
+  const isReady = order.status === "ready"
+
   return (
     <div className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {order.orderNumber && (
-            <span className="inline-flex items-center rounded-full bg-green-600/10 px-2 py-0.5 text-xs font-bold text-green-600">
+            <span className="inline-flex items-center rounded-full bg-green-600 px-2.5 py-0.5 text-xs font-bold text-white">
               #{order.orderNumber}
             </span>
           )}
           <p className="font-medium text-zinc-900">{order.customerName}</p>
+          {isReady && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+              <Clock className="h-3 w-3" />
+              Pronto há {timeLabel}
+            </span>
+          )}
+          {!isReady && order.status === "out_for_delivery" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
+              Em rota há {timeLabel}
+            </span>
+          )}
           <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
         </div>
-        <p className="text-xs text-zinc-400">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
-        {order.customerAddress && <p className="flex items-center gap-1 text-xs text-zinc-500 mt-0.5"><MapPin className="h-3 w-3" />{order.customerAddress}</p>}
-        {order.customerPhone && (
-          <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" className="flex items-center gap-1 text-xs text-green-600 hover:underline mt-0.5">
-            <MessageCircle className="h-3 w-3" />{order.customerPhone}
-          </a>
-        )}
-        <p className="text-xs text-zinc-500 mt-0.5">{formatCurrency(order.total)}</p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-xs text-zinc-400">{createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+          {order.customerAddress && <p className="flex items-center gap-1 text-xs text-zinc-500"><MapPin className="h-3 w-3 shrink-0" />{order.customerAddress}</p>}
+        </div>
+        <div className="flex items-center gap-3 mt-0.5">
+          {order.customerPhone && (
+            <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+              <MessageCircle className="h-3 w-3" />{order.customerPhone}
+            </a>
+          )}
+          <span className="text-xs font-semibold text-zinc-700">{formatCurrency(order.total)}</span>
+        </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
         <SearchableSelect
@@ -545,9 +577,9 @@ function PendingOrdersSection({ orders, deliveryPeople, onReassign, onCancel }: 
   if (orders.length === 0) return null
 
   return (
-    <Card className="border-amber-500/20 bg-amber-500/10">
+    <Card className="border-amber-500/20 bg-amber-500/5">
       <CardContent className="p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-400 mb-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-600 mb-3">
           <Package className="h-4 w-4" />
           Pedidos prontos sem motoboy ({orders.length})
         </h3>

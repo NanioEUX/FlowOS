@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
     const isMesa = orderType === "presencial" && tableNumber
     const initialStatus = body.status || (isMesa ? "new" : "pending")
 
-    // Parse items and calculate totals outside transaction
+    // Parse items and calculate totals server-side (never trust client-sent total)
     const parsedItems = typeof items === "string" ? JSON.parse(items) : items
     const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+    const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
+    const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
+    const calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
 
     // Find or create customer outside transaction (non-critical)
     let customerId: string | undefined
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
             address: customerComplement || customer.address,
             cep: customerCep || customer.cep,
             totalOrders: { increment: 1 },
-            totalSpent: { increment: total },
+            totalSpent: { increment: calculatedTotal },
             loyaltyPoints: { increment: pointsDelta },
           },
         })
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
           } catch {}
         }
         customer = await prisma.customer.create({
-          data: { phone: customerPhone, name: customerName, address: customerComplement, cep: customerCep, establishmentId, totalOrders: 1, totalSpent: total, loyaltyPoints: initialPoints },
+          data: { phone: customerPhone, name: customerName, address: customerComplement, cep: customerCep, establishmentId, totalOrders: 1, totalSpent: calculatedTotal, loyaltyPoints: initialPoints },
         })
         customerId = customer.id
       }
@@ -99,9 +102,9 @@ export async function POST(req: NextRequest) {
           customerAddress,
           orderType: orderType || "delivery",
           paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
-          deliveryFee: deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0,
+          deliveryFee: deliveryFeeValue,
           items: typeof items === "string" ? items : JSON.stringify(items),
-          total: typeof total === "string" ? parseFloat(total) : total,
+          total: calculatedTotal,
           notes,
           method: method || "site",
           trackingToken,
@@ -124,31 +127,32 @@ export async function POST(req: NextRequest) {
     let paymentLink = ""
 
     if (paymentMethod === "asaas" || paymentMethod === "online") {
-      if (establishment.asaasApiKey) {
-        const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
-          .map((i: any) => `${i.name} x${i.quantity}`)
-          .join(", ")
-
-        const payment = await createPaymentLink({
-          apiKey: establishment.asaasApiKey,
-          customerName,
-          customerPhone: customerPhone || "",
-          value: order.total,
-          description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
-        })
-
-        paymentLink = payment.invoiceUrl
-
-        await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            paymentId: payment.id,
-            paymentLink: payment.invoiceUrl,
-            paymentStatus: payment.status,
-            status: "payment_pending",
-          },
-        })
+      if (!establishment.asaasApiKey) {
+        return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Asaas não está configurada. Configure em Configurações." }, { status: 400 })
       }
+      const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
+        .map((i: any) => `${i.name} x${i.quantity}`)
+        .join(", ")
+
+      const payment = await createPaymentLink({
+        apiKey: establishment.asaasApiKey,
+        customerName,
+        customerPhone: customerPhone || "",
+        value: order.total,
+        description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
+      })
+
+      paymentLink = payment.invoiceUrl
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentId: payment.id,
+          paymentLink: payment.invoiceUrl,
+          paymentStatus: payment.status,
+          status: "payment_pending",
+        },
+      })
     }
 
     const fullOrder = await prisma.order.findUnique({

@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck } from "lucide-react"
+import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck, Edit3, DollarSign } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import { formatCurrency } from "@/lib/utils"
@@ -240,55 +239,79 @@ export default function EstoquePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Estoque</h2>
+      <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Estoque</h2>
+          <p className="text-sm text-zinc-500">Controle de insumos, mercadorias e custos operacionais</p>
+        </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo Item
-          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowMovementForm(true)} className="gap-2">
             <ArrowUpCircle className="h-4 w-4" /> Movimentar
+          </Button>
+          <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Item
           </Button>
         </div>
       </div>
 
       {/* Alertas */}
       {lowStockItems.length > 0 && (
-        <Card className="border-amber-500/20 bg-amber-500/10">
-          <CardContent className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-400 mb-2">
-              <AlertTriangle className="h-4 w-4" />
-              Estoque Baixo ({lowStockItems.length})
-            </h3>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              {lowStockItems.map((item) => (
-                <p key={item.id} className="text-sm text-amber-400">
-                  {item.name} — {item.quantity} {item.unit} (mín: {item.minQuantity})
-                </p>
-              ))}
+              <h4 className="text-sm font-bold text-amber-900">Atenção: Estoque Baixo ({lowStockItems.length})</h4>
+              <div className="text-xs text-amber-800 space-y-0.5 font-medium">
+                {lowStockItems.map((item) => (
+                  <p key={item.id}>
+                    • {item.name} — <strong className="font-bold">{item.quantity} {item.unit}</strong> (mín: {item.minQuantity})
+                  </p>
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-3">
         <Card>
-          <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-zinc-900">{items.length}</p>
-            <p className="text-xs text-zinc-500">Itens cadastrados</p>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-zinc-100 p-2">
+                <Package className="h-5 w-5 text-zinc-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-zinc-900">{items.length}</p>
+                <p className="text-xs text-zinc-500">Itens cadastrados</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-green-600">{formatCurrency(totalStockValue)}</p>
-            <p className="text-xs text-zinc-500">Valor em estoque</p>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-green-600/10 p-2">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalStockValue)}</p>
+                <p className="text-xs text-zinc-500">Valor total em estoque</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3 text-center">
-            <p className="text-lg font-bold text-amber-400">{lowStockItems.length}</p>
-            <p className="text-xs text-zinc-500">Abaixo do mínimo</p>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-amber-500/10 p-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-500">{lowStockItems.length}</p>
+                <p className="text-xs text-zinc-500">Abaixo do mínimo</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -318,55 +341,80 @@ export default function EstoquePage() {
           {categories.map((cat) => {
             const catItems = items.filter((i) => i.categoryId === cat.id)
             return (
-              <Card key={cat.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-zinc-400" />
-                      {cat.name}
-                    </h3>
-                    <span className="text-xs text-zinc-400">{catItems.length} itens</span>
+              <div key={cat.id} className="rounded-lg border border-zinc-200 bg-white overflow-hidden">
+                {/* Cabeçalho da categoria */}
+                <div className="bg-zinc-50 border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-zinc-700">
+                    <Tag className="h-4 w-4 text-zinc-400" />
+                    <h3 className="text-sm font-bold tracking-tight text-zinc-800">{cat.name}</h3>
                   </div>
-                  {catItems.length === 0 ? (
-                    <p className="text-sm text-zinc-400">Nenhum item nesta categoria</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {catItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
-                          <div className="flex-1">
+                  <span className="text-xs font-semibold text-zinc-400 bg-white border border-zinc-200 px-2 py-0.5 rounded-md">
+                    {catItems.length} {catItems.length === 1 ? "item" : "itens"}
+                  </span>
+                </div>
+
+                {/* Lista de itens */}
+                {catItems.length === 0 ? (
+                  <p className="text-sm text-zinc-400 p-4">Nenhum item nesta categoria</p>
+                ) : (
+                  <div className="divide-y divide-zinc-100">
+                    {catItems.map((item) => {
+                      const totalValue = item.quantity * item.unitCost
+                      const isZero = item.quantity === 0
+                      const isLow = item.minQuantity > 0 && item.quantity <= item.minQuantity && !isZero
+                      return (
+                        <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-zinc-50/40 transition-colors">
+                          <div className="space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-zinc-900">{item.name}</p>
-                              {item.minQuantity > 0 && item.quantity <= item.minQuantity && (
-                                <Badge variant="warning">Estoque baixo</Badge>
+                              <h4 className="text-sm font-bold text-zinc-900">{item.name}</h4>
+                              {isZero && (
+                                <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-700 ring-1 ring-inset ring-red-600/10">
+                                  Zerado
+                                </span>
+                              )}
+                              {isLow && (
+                                <span className="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-bold text-orange-700 ring-1 ring-inset ring-orange-600/10">
+                                  Estoque Baixo
+                                </span>
                               )}
                               {item.products && item.products.length > 0 && (
-                                <Badge variant="success">Vendável</Badge>
+                                <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-bold text-green-700 ring-1 ring-inset ring-green-600/10">
+                                  Vendável
+                                </span>
                               )}
                             </div>
                             <p className="text-xs text-zinc-500">
-                              {item.quantity} {item.unit} • {formatCurrency(item.unitCost)}/{item.unit}
-                              {item.supplierRef ? ` • ${item.supplierRef.name}` : item.supplier ? ` • ${item.supplier}` : ""}
+                              <span className="font-bold text-zinc-700">{item.quantity} {item.unit}</span> × {formatCurrency(item.unitCost)}/{item.unit}
+                              <span className="mx-1 text-zinc-300">|</span>
+                              Total: <strong className={`font-semibold ${totalValue > 0 ? "text-green-600" : "text-zinc-400"}`}>{formatCurrency(totalValue)}</strong>
                             </p>
+                            {item.supplierRef && (
+                              <p className="text-xs text-zinc-400">Fornecedor: {item.supplierRef.name}</p>
+                            )}
                             {item.productLinks.length > 0 && (
                               <p className="text-xs text-blue-500 mt-0.5">
                                 Vinculado a: {item.productLinks.map((l: any) => l.product.name).join(", ")}
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => editItem(item)} className="text-zinc-400 hover:text-zinc-400 text-xs">Editar</button>
-                            <button onClick={() => handleDeleteItem(item.id, item.name)} className="text-red-400 hover:text-red-400"><Trash2 className="h-3 w-3" /></button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => editItem(item)} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-all shadow-sm">
+                              <Edit3 className="h-3.5 w-3.5" /> Editar
+                            </button>
+                            <button onClick={() => handleDeleteItem(item.id, item.name)} className="rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-all shadow-sm" title="Excluir item">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
-          <button onClick={() => setShowCategoryForm(true)} className="w-full rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-500 hover:bg-zinc-100">
-            + Adicionar categoria
+          <button onClick={() => setShowCategoryForm(true)} className="w-full rounded-lg border border-dashed border-zinc-300 p-4 text-center text-xs font-bold text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50/50 hover:text-zinc-700 transition-all">
+            + Adicionar nova categoria
           </button>
         </div>
       )}
@@ -433,9 +481,13 @@ export default function EstoquePage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => { setEditingSupplier(s); setSupplierForm({ name: s.name, phone: s.phone || "", cnpj: s.cnpj || "", email: s.email || "", notes: s.notes || "" }); setShowSupplierForm(true) }} className="text-zinc-400 hover:text-zinc-600 text-xs">Editar</button>
-                    <button onClick={() => setDeleteSupplierConfirm({ open: true, id: s.id, name: s.name })} className="text-red-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => { setEditingSupplier(s); setSupplierForm({ name: s.name, phone: s.phone || "", cnpj: s.cnpj || "", email: s.email || "", notes: s.notes || "" }); setShowSupplierForm(true) }} className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-all shadow-sm">
+                      <Edit3 className="h-3.5 w-3.5" /> Editar
+                    </button>
+                    <button onClick={() => setDeleteSupplierConfirm({ open: true, id: s.id, name: s.name })} className="rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-all shadow-sm" title="Excluir fornecedor">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}

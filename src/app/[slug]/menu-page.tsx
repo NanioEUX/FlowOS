@@ -488,17 +488,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   function handleOrderTypeChange(type: "delivery" | "pickup") {
     setOrderType(type)
-    if (type === "pickup" && paymentMethod === "delivery") {
-      setPaymentMethod(paymentConfig.pickup ? "pickup" : "online")
-    } else if (type === "delivery" && paymentMethod === "pickup") {
-      setPaymentMethod(paymentConfig.delivery ? "delivery" : "online")
-    }
+    // Pagamento sempre online
+    setPaymentMethod("online")
   }
 
   const availablePayments = []
   if (paymentConfig.online) availablePayments.push({ key: "online", label: "Pix / Cartão", icon: <CreditCard className="h-5 w-5" /> })
-  if (paymentConfig.delivery && orderType === "delivery") availablePayments.push({ key: "delivery", label: "Pagar na Entrega", icon: <Banknote className="h-5 w-5" /> })
-  if (paymentConfig.pickup && orderType === "pickup") availablePayments.push({ key: "pickup", label: "Pagar na Retirada", icon: <Banknote className="h-5 w-5" /> })
+  // Pagamento online-only: remover opções de pagamento na entrega/retirada
+  // if (paymentConfig.delivery && orderType === "delivery") availablePayments.push({ key: "delivery", label: "Pagar na Entrega", icon: <Banknote className="h-5 w-5" /> })
+  // if (paymentConfig.pickup && orderType === "pickup") availablePayments.push({ key: "pickup", label: "Pagar na Retirada", icon: <Banknote className="h-5 w-5" /> })
 
   if (availablePayments.length > 0 && !availablePayments.find(p => p.key === paymentMethod)) {
     setPaymentMethod(availablePayments[0].key as any)
