@@ -47,6 +47,11 @@ export async function createPaymentLink({
 
   const customer = await customerRes.json()
 
+  if (!customerRes.ok || !customer.id) {
+    console.error("Erro ao criar cliente Asaas:", JSON.stringify(customer))
+    throw new Error(`Falha ao criar cliente no Asaas: ${customer.errors?.[0]?.description || customer.detail || customerRes.status}`)
+  }
+
   const paymentBody: any = {
     customer: customer.id,
     billingType: "UNDEFINED",
@@ -71,6 +76,11 @@ export async function createPaymentLink({
   })
 
   const payment = await paymentRes.json()
+
+  if (!paymentRes.ok || !payment.id) {
+    console.error("Erro ao criar cobrança Asaas:", JSON.stringify(payment))
+    throw new Error(`Falha ao criar cobrança no Asaas: ${payment.errors?.[0]?.description || payment.detail || paymentRes.status}`)
+  }
 
   return {
     id: payment.id,

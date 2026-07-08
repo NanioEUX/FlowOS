@@ -130,29 +130,33 @@ export async function POST(req: NextRequest) {
       if (!establishment.asaasApiKey) {
         return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Asaas não está configurada. Configure em Configurações." }, { status: 400 })
       }
-      const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
-        .map((i: any) => `${i.name} x${i.quantity}`)
-        .join(", ")
+      try {
+        const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
+          .map((i: any) => `${i.name} x${i.quantity}`)
+          .join(", ")
 
-      const payment = await createPaymentLink({
-        apiKey: establishment.asaasApiKey,
-        customerName,
-        customerPhone: customerPhone || "",
-        value: order.total,
-        description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
-      })
+        const payment = await createPaymentLink({
+          apiKey: establishment.asaasApiKey,
+          customerName,
+          customerPhone: customerPhone || "",
+          value: order.total,
+          description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
+        })
 
-      paymentLink = payment.invoiceUrl
+        paymentLink = payment.invoiceUrl
 
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          paymentId: payment.id,
-          paymentLink: payment.invoiceUrl,
-          paymentStatus: payment.status,
-          status: "payment_pending",
-        },
-      })
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            paymentId: payment.id,
+            paymentLink: payment.invoiceUrl,
+            paymentStatus: payment.status,
+            status: "payment_pending",
+          },
+        })
+      } catch (paymentError) {
+        console.error("Erro ao gerar pagamento Asaas:", paymentError)
+      }
     }
 
     const fullOrder = await prisma.order.findUnique({
