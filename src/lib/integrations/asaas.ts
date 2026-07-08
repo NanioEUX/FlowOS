@@ -20,6 +20,7 @@ export async function createPaymentLink({
   apiKey,
   customerName,
   customerPhone,
+  customerCpf,
   value,
   description,
   dueDate,
@@ -28,6 +29,7 @@ export async function createPaymentLink({
   apiKey: string
   customerName: string
   customerPhone: string
+  customerCpf: string
   value: number
   description: string
   dueDate?: string
@@ -37,13 +39,18 @@ export async function createPaymentLink({
 
   console.log("[Asaas] URL:", ASAAS_API_URL, "| Criando cliente para:", customerName, "| Valor:", value)
 
+  const customerBody: any = {
+    name: customerName,
+    mobilePhone: customerPhone.replace(/\D/g, ""),
+  }
+  if (customerCpf) {
+    customerBody.cpfCnpj = customerCpf.replace(/\D/g, "")
+  }
+
   const customerRes = await fetch(`${ASAAS_API_URL}/customers`, {
     method: "POST",
     headers: { "Content-Type": "application/json", access_token: apiKey },
-    body: JSON.stringify({
-      name: customerName,
-      mobilePhone: customerPhone.replace(/\D/g, ""),
-    }),
+    body: JSON.stringify(customerBody),
   })
 
   const customer = await customerRes.json()

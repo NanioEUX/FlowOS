@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
         apiKey: establishment.asaasApiKey,
         customerName: description || `${establishment.name} - Mesa`,
         customerPhone: "00000000000",
+        customerCpf: "",
         value: amount,
         description: description || `${establishment.name} - Pagamento`,
       })

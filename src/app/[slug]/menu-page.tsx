@@ -187,7 +187,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [statusAlert, setStatusAlert] = useState<string | null>(null)
   const trackingEndRef = useRef<HTMLDivElement>(null)
   const prevStatusRef = useRef<string | null>(null)
-  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string }>({ name: "", phone: "", address: "", notes: "" })
+  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
@@ -594,6 +594,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           customerAddress: orderType === "delivery" ? fullAddress : "",
           customerComplement: customer.address,
           customerCep: cep || "",
+          customerCpf: customer.cpf || "",
           orderType,
           paymentMethod,
           items: cart,
@@ -1147,18 +1148,38 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                 />
               </div>
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                <input
+                  placeholder="000.000.000-00"
+                  value={customer.cpf || ""}
+                  maxLength={14}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "")
+                    if (v.length > 11) v = v.slice(0, 11)
+                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                    setCustomer({ ...customer, cpf: v })
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>Obrigatório para gerar o pagamento</p>
+              </div>
               {customerData && (
                 <p className="text-xs" style={{ color: theme.accent }}>Cliente encontrado! Dados preenchidos automaticamente.</p>
               )}
               <Button
                 onClick={() => {
-                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11) {
+                  const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfDigits.length === 11) {
                     setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
                   }
                 }}
                 className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11}
+                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11 || (customer.cpf || "").replace(/\D/g, "").length < 11}
               >
                 Confirmar
               </Button>
