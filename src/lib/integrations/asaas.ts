@@ -37,29 +37,59 @@ export async function createPaymentLink({
 }): Promise<AsaasPaymentResponse> {
   const due = dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
+  const rawPhone = customerPhone.replace(/\D/g, "")
+  const formattedPhone = rawPhone.length === 11
+    ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 7)}-${rawPhone.slice(7)}`
+    : rawPhone.length === 10
+      ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 6)}-${rawPhone.slice(6)}`
+      : rawPhone
+
   const customerBody: any = {
     name: customerName,
-    mobilePhone: customerPhone.replace(/\D/g, ""),
+    mobilePhone: formattedPhone,
   }
   if (customerCpf) {
     customerBody.cpfCnpj = customerCpf.replace(/\D/g, "")
   }
 
   console.log("[Asaas] URL:", ASAAS_API_URL)
-  console.log("[Asaas] Criando cliente:", { name: customerBody.name, phone: customerBody.mobilePhone, cpfCnpj: customerBody.cpfCnpj || "NENHUM" })
+  console.log("[Asaas] Criando cliente:", { name: customerBody.name, phone: formattedPhone, cpfCnpj: customerBody.cpfCnpj || "NENHUM" })
 
-  const customerRes = await fetch(`${ASAAS_API_URL}/customers`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", access_token: apiKey },
-    body: JSON.stringify(customerBody),
+  // First, try to find existing customer by phone
+  let customer: any = null
+  const searchRes = await fetch(`${ASAAS_API_URL}/customers?mobilePhone=${encodeURIComponent(formattedPhone)}`, {
+    headers: { access_token: apiKey },
   })
+  const searchList = await searchRes.json()
+  if (searchRes.ok && searchList.data && searchList.data.length > 0) {
+    customer = searchList.data[0]
+    console.log("[Asaas] Cliente encontrado:", customer.id)
 
-  const customer = await customerRes.json()
-  console.log("[Asaas] Resposta cliente:", JSON.stringify({ ok: customerRes.ok, id: customer.id, errors: customer.errors }))
+    // Update CPF if provided and customer doesn't have one
+    if (customerBody.cpfCnpj && !customer.cpfCnpj) {
+      await fetch(`${ASAAS_API_URL}/customers/${customer.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", access_token: apiKey },
+        body: JSON.stringify({ cpfCnpj: customerBody.cpfCnpj }),
+      })
+    }
+  }
 
-  if (!customerRes.ok || !customer.id) {
-    console.error("[Asaas] FALHA cliente:", JSON.stringify(customer))
-    throw new Error(`Falha ao criar cliente: ${customer.errors?.[0]?.description || customer.detail || JSON.stringify(customer)}`)
+  // If not found, create new
+  if (!customer) {
+    const customerRes = await fetch(`${ASAAS_API_URL}/customers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", access_token: apiKey },
+      body: JSON.stringify(customerBody),
+    })
+
+    customer = await customerRes.json()
+    console.log("[Asaas] Resposta cliente:", JSON.stringify({ ok: customerRes.ok, id: customer.id, errors: customer.errors }))
+
+    if (!customerRes.ok || !customer.id) {
+      console.error("[Asaas] FALHA cliente:", JSON.stringify(customer))
+      throw new Error(`Falha ao criar cliente: ${customer.errors?.[0]?.description || customer.detail || JSON.stringify(customer)}`)
+    }
   }
 
   const paymentBody: any = {
