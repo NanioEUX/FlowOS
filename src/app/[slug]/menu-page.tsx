@@ -694,6 +694,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         orderId: data.order?.id,
         orderType: orderType,
         paymentMethod: paymentMethod,
+        orderTotal: total,
       })
 
       if (data.order?.id && data.trackingUrl) {
