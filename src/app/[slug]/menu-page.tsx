@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -265,6 +265,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [orderError, setOrderError] = useState("")
   const [couponCode, setCouponCode] = useState("")
   const [couponData, setCouponData] = useState<{ id: string; code: string; discountType: string; discountValue: number } | null>(null)
+  const [activeTab, setActiveTab] = useState<"menu" | "orders" | "profile">("menu")
   const [couponError, setCouponError] = useState("")
 
   // Business hours
@@ -1049,80 +1050,51 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           {establishment.instagramUrl ? (
             <a href={normalizeUrl(establishment.instagramUrl)} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center shrink-0">
               {establishment.logo ? (
-                <img src={establishment.logo} alt={establishment.name} className="h-14 w-14 rounded-xl object-cover shadow-sm" />
+                <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm" />
               ) : (
-                <FlowOSLogo size={56} variant="icon" className="h-14 w-14" />
+                <FlowOSLogo size={40} variant="icon" className="h-10 w-10" />
               )}
-              <span className="text-[11px] font-medium hover:text-pink-500 transition-colors mt-0.5 flex items-center gap-0.5" style={{ color: theme.textMutedMore }}>
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                Siga-nos
-              </span>
             </a>
           ) : (
             <div className="flex flex-col items-center shrink-0">
               {establishment.logo ? (
-                <img src={establishment.logo} alt={establishment.name} className="h-14 w-14 rounded-xl object-cover shadow-sm" />
+                <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm" />
               ) : (
-                <FlowOSLogo size={56} variant="icon" className="h-14 w-14" />
+                <FlowOSLogo size={40} variant="icon" className="h-10 w-10" />
               )}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-            {establishment.description && (
-              <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>{establishment.description}</p>
+            <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+            {customer.name && (
+              <p className="text-[10px]" style={{ color: theme.textMuted }}>Olá, {getFirstName(customer.name)}</p>
             )}
           </div>
           <button
-            onClick={toggleTheme}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors shrink-0"
+            onClick={() => setShowCart(true)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0"
             style={{ backgroundColor: theme.bgCard, color: theme.textMuted }}
-            title={darkMode ? "Mudar para tema claro" : "Mudar para tema escuro"}
           >
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          {customer.name ? (
-            <div className="text-right shrink-0">
-              <button
-                onClick={() => setShowCustomerProfile(true)}
-                className="text-xs font-medium hover:underline"
-                style={{ color: theme.textSubtle }}
-              >
-                Olá, {getFirstName(customer.name)}!
-              </button>
-              {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
-                <p className="text-[10px] text-amber-400 flex items-center justify-end gap-0.5">
-                  <Star className="h-2.5 w-2.5" />{customerLoyaltyPoints} pontos
-                </p>
-              )}
-              <button
-                onClick={() => { setCustomerData(null); setPhoneInput(""); setCustomer({ name: "", phone: "", address: "", notes: "" }); setCep(""); setCepAddress(null); localStorage.removeItem(`pedefacil-customer-${establishment.slug}`) }}
-                className="text-[10px] hover:underline"
-                style={{ color: theme.textMutedMore }}
-              >
-                Trocar
-              </button>
-            </div>
-          ) : customerData ? (
-            <div className="text-right shrink-0">
-              <p className="text-xs font-medium" style={{ color: theme.textSubtle }}>Olá, {getFirstName(customerData.name || "") || "cliente"}!</p>
-              <button
-                onClick={() => { setCustomerData(null); setPhoneInput(""); setCustomer({ name: "", phone: "", address: "", notes: "" }); setCep(""); setCepAddress(null); localStorage.removeItem(`pedefacil-customer-${establishment.slug}`) }}
-                className="text-[10px] hover:underline"
-                style={{ color: theme.textMutedMore }}
-              >
-                Trocar
-              </button>
-            </div>
-          ) : (
-            <button onClick={() => setShowIdentifyModal(true)} className="flex items-center gap-1.5 text-xs hover:opacity-70 shrink-0 animate-pulse" style={{ color: theme.textMutedMore }}>
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+            <ShoppingBag className="h-4 w-4" />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
+                {totalItems}
               </span>
-              Identificar-se
-            </button>
-          )}
+            )}
+          </button>
+          <button
+            onClick={() => {
+              if (customer.phone || customerData?.phone) {
+                setShowCustomerProfile(true)
+              } else {
+                setShowIdentifyModal(true)
+              }
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0"
+            style={{ backgroundColor: theme.bgCard, color: customer.name ? theme.primary : theme.textMuted }}
+          >
+            <User className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Search Bar */}
@@ -1230,51 +1202,73 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       </div>
 
-      {/* Footer */}
-      {cart.length === 0 && !showCart && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl p-3 transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
-            <button
-              onClick={() => setShowBusinessHours(true)}
-              className={`flex items-center gap-1.5 text-xs transition-colors hover:opacity-70 ${!isOpen ? "animate-hr-blink" : ""}`}
-              style={{ color: theme.textMuted }}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Horários de funcionamento
-            </button>
-            <span className="text-[10px] flex items-center gap-1" style={{ color: theme.textMutedMore }}>
-              Powered by <span className="font-semibold" style={{ color: theme.primary }}>FlowOS</span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Cart FAB */}
-      {cart.length > 0 && !showCart && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl p-3 transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-          <div className="mx-auto flex max-w-3xl items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 overflow-hidden">
-                {cart.slice(0, 3).map((item) => (
-                  <span key={item.id} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0" style={{ backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                    {item.quantity}x {item.name.length > 12 ? item.name.substring(0, 12) + "…" : item.name}
-                  </span>
-                ))}
-                {cart.length > 3 && (
-                  <span className="text-[10px] shrink-0" style={{ color: theme.textMutedMore }}>+{cart.length - 3}</span>
-                )}
+      {/* Bottom Navigation Bar */}
+      {!showCart && !orderResult?.success && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+          {/* Cart summary when items present */}
+          {cart.length > 0 && (
+            <div className="mx-auto max-w-3xl flex items-center gap-2 px-4 pt-2 pb-1">
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <ShoppingBag className="h-3.5 w-3.5 shrink-0" style={{ color: theme.primary }} />
+                <span className="text-[11px] font-medium truncate" style={{ color: theme.text }}>
+                  {totalItems} {totalItems === 1 ? "item" : "itens"} • {formatCurrency(total)}
+                </span>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-xs" style={{ color: theme.textMuted }}>{totalItems} {totalItems === 1 ? "item" : "itens"}</p>
-                <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(total)}</p>
-              </div>
-              <span className="text-[9px] flex items-center gap-0.5 mt-0.5" style={{ color: theme.textMutedMore }}>
-                Powered by <span className="font-semibold" style={{ color: theme.primary }}>FlowOS</span>
-              </span>
+              <button
+                onClick={() => setShowCart(true)}
+                className="text-[11px] font-semibold shrink-0"
+                style={{ color: theme.primary }}
+              >
+                Ver carrinho
+              </button>
             </div>
-            <button onClick={() => setShowCart(true)} className="flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 shrink-0" style={{ backgroundColor: theme.primary, boxShadow: `0 0 30px ${theme.shadowPrimary}` }} disabled={!isOpen}>
-              <ShoppingBag className="h-4 w-4" />
-              Ver carrinho
+          )}
+          {/* Nav items */}
+          <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
+            <button
+              onClick={() => setActiveTab("menu")}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
+              style={{ color: activeTab === "menu" ? theme.primary : theme.textMuted }}
+            >
+              <Utensils className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Cardápio</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("orders")
+                if (customer.phone || customerData?.phone) {
+                  loadCustomerOrders()
+                  setShowOrdersList(true)
+                } else {
+                  setShowIdentifyModal(true)
+                }
+              }}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors relative"
+              style={{ color: activeTab === "orders" ? theme.primary : theme.textMuted }}
+            >
+              <ClipboardList className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Pedidos</span>
+              {hasEstablishmentReply && (
+                <span className="absolute -top-0.5 right-1 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("profile")
+                if (customer.phone || customerData?.phone) {
+                  setShowCustomerProfile(true)
+                } else {
+                  setShowIdentifyModal(true)
+                }
+              }}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
+              style={{ color: activeTab === "profile" ? theme.primary : theme.textMuted }}
+            >
+              <User className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Perfil</span>
             </button>
           </div>
         </div>
@@ -1552,6 +1546,49 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* Dark Mode Toggle */}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: theme.borderCard }}>
+              <button
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between rounded-lg p-3 transition-colors hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard }}
+              >
+                <div className="flex items-center gap-3">
+                  {darkMode ? <Sun className="h-4 w-4" style={{ color: theme.textMuted }} /> : <Moon className="h-4 w-4" style={{ color: theme.textMuted }} />}
+                  <span className="text-sm" style={{ color: theme.text }}>{darkMode ? "Modo claro" : "Modo escuro"}</span>
+                </div>
+                <div
+                  className="relative h-5 w-9 rounded-full transition-colors"
+                  style={{ backgroundColor: darkMode ? theme.primary : theme.borderCard }}
+                >
+                  <div
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all"
+                    style={{ left: darkMode ? "18px" : "2px" }}
+                  />
+                </div>
+              </button>
+            </div>
+
+            {/* Logout */}
+            {(customer.phone || customerData?.phone) && (
+              <button
+                onClick={() => {
+                  setCustomerData(null)
+                  setPhoneInput("")
+                  setCustomer({ name: "", phone: "", address: "", notes: "" })
+                  setCep("")
+                  setCepAddress(null)
+                  localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
+                  setShowCustomerProfile(false)
+                }}
+                className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg p-3 text-sm font-medium transition-colors hover:opacity-80"
+                style={{ color: "#EF4444" }}
+              >
+                <X className="h-4 w-4" />
+                Sair da conta
+              </button>
             )}
           </div>
         </div>
@@ -1917,27 +1954,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             </form>
           </div>
         </div>
-      )}
-
-      {(customer.phone || customerData?.phone) && !orderResult?.success && (
-        <button
-          onClick={handlePedidosClick}
-          className={`fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-lg transition active:scale-95 sm:bottom-6 ${
-            hasEstablishmentReply
-              ? "bg-amber-500 hover:bg-amber-600 animate-pulse"
-              : "bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-          }`}
-        >
-          {hasEstablishmentReply ? (
-            <span className="relative flex h-4 w-4">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-amber-600 font-bold">!</span>
-            </span>
-          ) : (
-            <Package className="h-4 w-4" />
-          )}
-          Pedidos
-        </button>
       )}
 
       {/* Orders list modal */}
