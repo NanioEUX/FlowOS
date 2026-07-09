@@ -1048,8 +1048,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+      {/* Header - Fixed */}
+      <div className="fixed top-0 left-0 right-0 z-10 border-b backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           {establishment.instagramUrl ? (
             <a href={normalizeUrl(establishment.instagramUrl)} target="_blank" rel="noopener noreferrer" className="shrink-0">
@@ -1145,6 +1145,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           </div>
         )}
       </div>
+
+      {/* Spacer for fixed header */}
+      <div className="h-[140px]" />
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
