@@ -210,7 +210,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
-  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string } | null>(null)
+  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
   const [showOrdersList, setShowOrdersList] = useState(false)
@@ -703,12 +703,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       })
 
       if (data.order?.id && data.trackingUrl) {
-        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, timestamp: Date.now() }
+        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now() }
         setLastOrder(lastOrd)
         localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(lastOrd))
       }
 
-      setCart([])
       setEditingAddress(false)
 
       // Open payment modal directly if payment link exists
@@ -919,6 +918,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
+        onPaymentSuccess={() => setCart([])}
       />
     )
   }
@@ -1826,15 +1826,35 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 </div>
 
                 <div className="pt-2">
-                  <Button
-                    size="lg"
-                    className="w-full gap-2"
-                    onClick={() => setShowCheckout(true)}
-                    disabled={!isOpen}
-                  >
-                    <ShoppingBag className="h-5 w-5" />
-                    {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
-                  </Button>
+                  {lastOrder?.paymentLink ? (
+                    <Button
+                      size="lg"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        setShowCart(false)
+                        setOrderResult({
+                          success: true,
+                          orderId: lastOrder.orderId,
+                          paymentLink: lastOrder.paymentLink,
+                          orderTotal: total,
+                        })
+                        setTimeout(() => setShowPaymentModal(true), 300)
+                      }}
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      Pagar pedido
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      className="w-full gap-2"
+                      onClick={() => setShowCheckout(true)}
+                      disabled={!isOpen}
+                    >
+                      <ShoppingBag className="h-5 w-5" />
+                      {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -2270,6 +2290,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           onClose={() => setShowPaymentModal(false)}
           establishmentId={establishment.id}
           initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
+          onPaymentSuccess={() => setCart([])}
         />
       )}
 
@@ -2319,6 +2340,7 @@ function PaymentModal({
   establishmentId,
   initialTab,
   mode,
+  onPaymentSuccess,
 }: {
   orderId: string
   paymentLink: string
@@ -2328,6 +2350,7 @@ function PaymentModal({
   establishmentId: string
   initialTab?: "pix" | "card"
   mode?: "pix" | "card"
+  onPaymentSuccess?: () => void
 }) {
   const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
 
@@ -2421,6 +2444,7 @@ function PaymentModal({
           const data = await res.json()
           if (data.paymentStatus === "paid") {
             setPaymentSuccess(true)
+            onPaymentSuccess?.()
             clearInterval(check)
           }
         }
@@ -2494,6 +2518,7 @@ function PaymentModal({
       const data = await res.json()
       if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
         setPaymentSuccess(true)
+        onPaymentSuccess?.()
       } else if (data.error) {
         setCardError(data.error)
       } else {
