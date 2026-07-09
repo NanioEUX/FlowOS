@@ -186,7 +186,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }, [darkMode, hasCustomColors, establishment])
 
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(`pedefacil-cart-${establishment.slug}`)
+        if (saved) return JSON.parse(saved)
+      } catch {}
+    }
+    return []
+  })
+
+  // Save cart to localStorage
+  useEffect(() => {
+    localStorage.setItem(`pedefacil-cart-${establishment.slug}`, JSON.stringify(cart))
+  }, [cart, establishment.slug])
+
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
   const [showCart, setShowCart] = useState(false)
@@ -918,7 +932,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => setCart([])}
+          onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`) }}
       />
     )
   }
@@ -962,6 +976,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               setShowCart(false)
               setShowCheckout(false)
               setCart([])
+              localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
               setEditingAddress(false)
             }}>
               Fechar
@@ -1029,6 +1044,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 setShowCart(false)
                 setShowCheckout(false)
                 setCart([])
+                localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
                 setEditingAddress(false)
               }}>
                 Fechar
@@ -2290,7 +2306,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           onClose={() => setShowPaymentModal(false)}
           establishmentId={establishment.id}
           initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
-          onPaymentSuccess={() => setCart([])}
+        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`) }}
         />
       )}
 
