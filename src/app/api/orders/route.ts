@@ -37,12 +37,49 @@ export async function POST(req: NextRequest) {
     const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
     const calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
 
-    // Find or create customer outside transaction (non-critical)
+    // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
-    if (customerPhone) {
-      let customer = await prisma.customer.findFirst({
-        where: { phone: customerPhone, establishmentId },
-      })
+    if (customerPhone || customerCpf) {
+      let customer = null
+
+      // 1. Try to find by CPF first (unique per person)
+      if (customerCpf) {
+        const cpfDigits = customerCpf.replace(/\D/g, "")
+        if (cpfDigits.length === 11) {
+          customer = await prisma.customer.findFirst({
+            where: { cpf: cpfDigits, establishmentId },
+          })
+          if (customer) {
+            // Update phone/name if provided
+            await prisma.customer.update({
+              where: { id: customer.id },
+              data: {
+                ...(customerPhone && { phone: customerPhone }),
+                ...(customerName && { name: customerName }),
+              },
+            })
+          }
+        }
+      }
+
+      // 2. If no CPF match, try by phone
+      if (!customer && customerPhone) {
+        customer = await prisma.customer.findFirst({
+          where: { phone: customerPhone, establishmentId },
+        })
+        if (customer) {
+          // Update CPF/name if provided
+          const cpfDigits = customerCpf?.replace(/\D/g, "")
+          await prisma.customer.update({
+            where: { id: customer.id },
+            data: {
+              ...(cpfDigits?.length === 11 && { cpf: cpfDigits }),
+              ...(customerName && { name: customerName }),
+            },
+          })
+        }
+      }
+
       if (customer) {
         customerId = customer.id
         let pointsDelta = 0
@@ -61,7 +98,7 @@ export async function POST(req: NextRequest) {
           where: { id: customer.id },
           data: {
             name: customerName,
-            cpf: customerCpf || customer.cpf,
+            cpf: customerCpf?.replace(/\D/g, "") || customer.cpf,
             address: customerComplement || customer.address,
             cep: customerCep || customer.cep,
             totalOrders: { increment: 1 },
@@ -70,6 +107,7 @@ export async function POST(req: NextRequest) {
           },
         })
       } else {
+        // Create new customer
         let initialPoints = 0
         if (establishment.loyaltyConfig) {
           try {
@@ -80,7 +118,17 @@ export async function POST(req: NextRequest) {
           } catch {}
         }
         customer = await prisma.customer.create({
-          data: { phone: customerPhone, name: customerName, cpf: customerCpf || null, address: customerComplement, cep: customerCep, establishmentId, totalOrders: 1, totalSpent: calculatedTotal, loyaltyPoints: initialPoints },
+          data: {
+            phone: customerPhone || "",
+            name: customerName,
+            cpf: customerCpf?.replace(/\D/g, "") || null,
+            address: customerComplement,
+            cep: customerCep,
+            establishmentId,
+            totalOrders: 1,
+            totalSpent: calculatedTotal,
+            loyaltyPoints: initialPoints,
+          },
         })
         customerId = customer.id
       }
@@ -130,7 +178,7 @@ export async function POST(req: NextRequest) {
     let paymentError: string | null = null
     const paymentProvider = establishment.paymentProvider || "asaas"
 
-    if (paymentMethod === "asaas" || paymentMethod === "online") {
+    if (paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card") {
       if (paymentProvider === "efi") {
         // Efi Pix payment
         if (!establishment.efiClientId || !establishment.efiClientSecret || !establishment.efiCertificate) {

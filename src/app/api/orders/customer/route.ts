@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
       createdAt: true,
       orderType: true,
       paymentMethod: true,
+      paymentStatus: true,
+      paymentLink: true,
       trackingToken: true,
       deliveryFee: true,
     },

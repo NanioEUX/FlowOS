@@ -88,6 +88,12 @@ function ProductBadge({ badge }: { badge: string | null }) {
   )
 }
 
+function normalizeUrl(url: string | null): string {
+  if (!url) return ""
+  if (url.startsWith("http://") || url.startsWith("https://")) return url
+  return `https://${url}`
+}
+
 export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
@@ -175,10 +181,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [showCart, setShowCart] = useState(false)
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup">("online")
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string; paymentMethod?: string } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
@@ -196,6 +202,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [showOrdersList, setShowOrdersList] = useState(false)
   const [customerOrders, setCustomerOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
+  const [showCustomerProfile, setShowCustomerProfile] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
+  const [cpfError, setCpfError] = useState("")
 
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
@@ -494,7 +504,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   const availablePayments = []
-  if (paymentConfig.online) availablePayments.push({ key: "online", label: "Pix / Cartão", icon: <CreditCard className="h-5 w-5" /> })
+  if (paymentConfig.online) {
+    availablePayments.push({ key: "pix", label: "Pix", icon: <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg> })
+    availablePayments.push({ key: "card", label: "Cartão", icon: <CreditCard className="h-5 w-5" /> })
+  }
   // Pagamento online-only: remover opções de pagamento na entrega/retirada
   // if (paymentConfig.delivery && orderType === "delivery") availablePayments.push({ key: "delivery", label: "Pagar na Entrega", icon: <Banknote className="h-5 w-5" /> })
   // if (paymentConfig.pickup && orderType === "pickup") availablePayments.push({ key: "pickup", label: "Pagar na Retirada", icon: <Banknote className="h-5 w-5" /> })
@@ -559,6 +572,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setCouponError("")
   }
 
+  function isValidCpf(cpf: string): boolean {
+    const digits = cpf.replace(/\D/g, "")
+    if (digits.length !== 11) return false
+    if (/^(\d)\1{10}$/.test(digits)) return false
+    let sum = 0
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i)
+    let rev = 11 - (sum % 11)
+    if (rev === 10 || rev === 11) rev = 0
+    if (rev !== parseInt(digits[9])) return false
+    sum = 0
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i)
+    rev = 11 - (sum % 11)
+    if (rev === 10 || rev === 11) rev = 0
+    return rev === parseInt(digits[10])
+  }
+
   async function handleSiteOrder(e: React.FormEvent) {
     e.preventDefault()
     setOrderError("")
@@ -573,6 +602,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     if (!customer.phone || customer.phone.replace(/\D/g, "").length < 11) {
       setOrderError("Preencha um telefone válido com DDD")
+      setOrdering(false)
+      setShowIdentifyModal(true)
+      return
+    }
+
+    const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+    if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
+      setOrderError("CPF inválido. Verifique e tente novamente.")
       setOrdering(false)
       setShowIdentifyModal(true)
       return
@@ -621,6 +658,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         paymentError: data.paymentError,
         orderId: data.order?.id,
         orderType: orderType,
+        paymentMethod: paymentMethod,
       })
 
       if (data.order?.id && data.trackingUrl) {
@@ -631,6 +669,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       setCart([])
       setEditingAddress(false)
+
+      // Open payment modal directly if payment link exists
+      if (data.paymentLink) {
+        setTimeout(() => setShowPaymentModal(true), 300)
+      }
     } catch (err: any) {
       setOrderError(err.message)
     } finally {
@@ -793,6 +836,77 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     delivered: "🎉",
   }
 
+  // If success but has payment link, show only the payment modal (no success screen)
+  if (orderResult?.success && orderResult?.paymentLink && showPaymentModal) {
+    return (
+      <PaymentModal
+        orderId={orderResult.orderId!}
+        paymentLink={orderResult.paymentLink}
+        total={total}
+        theme={theme}
+        onClose={() => {
+          setOrderResult(null)
+          setShowCart(false)
+          setShowCheckout(false)
+          setEditingAddress(false)
+        }}
+        establishmentId={establishment.id}
+        initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
+        mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
+      />
+    )
+  }
+
+  // Error screen - payment failed but order was created
+  if (orderResult?.success && orderResult.paymentError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-4">
+        <div className="w-full max-w-md rounded-[20px] border border-white/[0.08] bg-white/[0.03] text-center backdrop-blur-xl p-8">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
+              <X className="h-8 w-8 text-red-400" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-red-400">Erro no pagamento</h2>
+          <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>{orderResult.paymentError}</p>
+          <p className="mt-1 text-xs" style={{ color: theme.textMutedMore }}>O pedido foi criado, mas não foi possível gerar o pagamento.</p>
+
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <CreditCard className="h-4 w-4" />
+              Tentar novamente
+            </button>
+            {orderResult.orderId && (
+              <Button className="w-full gap-2" onClick={() => {
+                setOrderResult(null)
+                setShowCart(false)
+                setShowCheckout(false)
+                setEditingAddress(false)
+                openTracking()
+              }}>
+                <ExternalLink className="h-4 w-4" />
+                Acompanhar pedido
+              </Button>
+            )}
+            <Button variant="outline" className="w-full" onClick={() => {
+              setOrderResult(null)
+              setShowCart(false)
+              setShowCheckout(false)
+              setCart([])
+              setEditingAddress(false)
+            }}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Success screen
   if (orderResult?.success) {
     return (
       <>
@@ -828,26 +942,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     ? `Usado ${parsedLoyalty.redeemPoints} pontos (-${formatCurrency(loyaltyDiscount)})`
                     : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} pontos ganhos!`}
                 </p>
-              </div>
-            )}
-
-            {orderResult.paymentLink && (
-              <div className="mt-4">
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Pagar agora (Pix / Cartão)
-                </button>
-                <p className="mt-1 text-xs text-white/30">Pagamento processado por Asaas</p>
-              </div>
-            )}
-
-            {!orderResult.paymentLink && orderResult.paymentError && (
-              <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/[0.06] p-3">
-                <p className="text-sm text-red-400">Erro ao gerar pagamento: {orderResult.paymentError}</p>
-                <p className="text-xs text-white/30 mt-1">O pedido foi criado, mas não foi possível gerar o link de pagamento.</p>
               </div>
             )}
 
@@ -892,7 +986,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       <div className="sticky top-0 z-10 border-b backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3">
           {establishment.instagramUrl ? (
-            <a href={establishment.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center shrink-0">
+            <a href={normalizeUrl(establishment.instagramUrl)} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center shrink-0">
               {establishment.logo ? (
                 <img src={establishment.logo} alt={establishment.name} className="h-14 w-14 rounded-xl object-cover shadow-sm" />
               ) : (
@@ -928,7 +1022,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           </button>
           {customer.name ? (
             <div className="text-right shrink-0">
-              <p className="text-xs font-medium" style={{ color: theme.textSubtle }}>Olá, {customer.name}!</p>
+              <button
+                onClick={() => setShowCustomerProfile(true)}
+                className="text-xs font-medium hover:underline"
+                style={{ color: theme.textSubtle }}
+              >
+                Olá, {customer.name}!
+              </button>
               {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
                 <p className="text-[10px] text-amber-400 flex items-center justify-end gap-0.5">
                   <Star className="h-2.5 w-2.5" />{customerLoyaltyPoints} pontos
@@ -1044,8 +1144,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 </div>
               )
             })}
-          </div>
-        ) : (
+            </div>
+          ) : (
           sortedCategories.map((cat) => {
             const products = cat.products
             if (products.length === 0) return null
@@ -1131,6 +1231,63 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             </div>
             <div className="space-y-3">
               <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                <input
+                  placeholder="000.000.000-00"
+                  value={customer.cpf || ""}
+                  maxLength={14}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "")
+                    if (v.length > 11) v = v.slice(0, 11)
+                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                    setCustomer({ ...customer, cpf: v })
+                    // Validate CPF
+                    const cpfDigits = v.replace(/\D/g, "")
+                    if (cpfDigits.length === 11) {
+                      if (!isValidCpf(v)) {
+                        setCpfError("CPF inválido")
+                      } else {
+                        setCpfError("")
+                        // Auto-fill by CPF lookup
+                        setCpfLookupLoading(true)
+                        fetch(`/api/customers?cpf=${cpfDigits}&establishmentId=${establishment.id}`)
+                          .then(r => r.json())
+                          .then(data => {
+                            if (data && !data.notFound) {
+                              setCustomerData(data)
+                              setCustomer(prev => ({
+                                ...prev,
+                                name: data.name || prev.name,
+                                phone: data.phone || prev.phone,
+                                cpf: v,
+                                address: data.address || prev.address,
+                                cep: data.cep || prev.cep,
+                              }))
+                              if (data.phone) setPhoneInput(data.phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3"))
+                              if (data.cep) setCep(data.cep)
+                            } else {
+                              setCustomerData(null)
+                            }
+                          })
+                          .catch(() => {})
+                          .finally(() => setCpfLookupLoading(false))
+                      }
+                    }
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+                {cpfLookupLoading && <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>Buscando cliente...</p>}
+                {cpfError && !cpfLookupLoading && (
+                  <p className="text-xs mt-1 text-red-400">{cpfError}</p>
+                )}
+                {customerData && !cpfLookupLoading && !cpfError && (
+                  <p className="text-xs mt-1" style={{ color: theme.accent }}>Cliente encontrado! Dados preenchidos automaticamente.</p>
+                )}
+              </div>
+              <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
                 <input
                   placeholder="(47) 99999-9999"
@@ -1145,7 +1302,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
                   style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                 />
-                {identifying && <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>Buscando cliente...</p>}
               </div>
               <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>Seu nome</label>
@@ -1157,38 +1313,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                 />
               </div>
-              <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
-                <input
-                  placeholder="000.000.000-00"
-                  value={customer.cpf || ""}
-                  maxLength={14}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "")
-                    if (v.length > 11) v = v.slice(0, 11)
-                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
-                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
-                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
-                    setCustomer({ ...customer, cpf: v })
-                  }}
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                />
-                <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>Obrigatório para gerar o pagamento</p>
-              </div>
-              {customerData && (
-                <p className="text-xs" style={{ color: theme.accent }}>Cliente encontrado! Dados preenchidos automaticamente.</p>
-              )}
+              <p className="text-[10px]" style={{ color: theme.textMutedMore }}>CPF obrigatório para gerar pagamento</p>
               <Button
                 onClick={() => {
                   const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfDigits.length === 11) {
+                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfDigits.length === 11 && isValidCpf(customer.cpf || "")) {
                     setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
                   }
                 }}
                 className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11 || (customer.cpf || "").replace(/\D/g, "").length < 11}
+                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11 || !isValidCpf(customer.cpf || "")}
               >
                 Confirmar
               </Button>
@@ -1226,6 +1361,137 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             >
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Profile Modal */}
+      {showCustomerProfile && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold" style={{ color: theme.text }}>Meus dados</h2>
+              <button onClick={() => { setShowCustomerProfile(false); setEditingProfile(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {!editingProfile ? (
+              <div className="space-y-4">
+                <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nome</p>
+                    <p className="text-sm font-medium" style={{ color: theme.text }}>{customer.name || "Não informado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>WhatsApp</p>
+                    <p className="text-sm font-medium" style={{ color: theme.text }}>{phoneInput || customer.phone ? `(${(phoneInput || customer.phone).slice(0,2)}) ${(phoneInput || customer.phone).slice(2,7)}-${(phoneInput || customer.phone).slice(7)}` : "Não informado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>CPF</p>
+                    <p className="text-sm font-medium" style={{ color: theme.text }}>{customer.cpf || "Não informado"}</p>
+                  </div>
+                  {parsedLoyalty?.enabled && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Pontos</p>
+                      <p className="text-sm font-medium text-amber-400 flex items-center gap-1">
+                        <Star className="h-3 w-3" />{customerLoyaltyPoints} pontos
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setEditingProfile(true)}
+                  className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  Editar dados
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs" style={{ color: theme.textMuted }}>Nome</label>
+                  <input
+                    value={customer.name}
+                    onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
+                  <input
+                    value={phoneInput}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
+                      let formatted = raw
+                      if (raw.length > 2) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`
+                      if (raw.length > 7) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`
+                      setPhoneInput(formatted)
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                  <input
+                    value={customer.cpf || ""}
+                    maxLength={14}
+                    onChange={(e) => {
+                      let v = e.target.value.replace(/\D/g, "")
+                      if (v.length > 11) v = v.slice(0, 11)
+                      if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                      else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                      else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                      setCustomer({ ...customer, cpf: v })
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingProfile(false)}
+                    className="flex-1 rounded-lg py-2.5 text-sm font-medium border hover:opacity-80"
+                    style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderCard }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const phoneRaw = phoneInput.replace(/\D/g, "")
+                      const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+                      // Save to Supabase
+                      if (customerData?.id) {
+                        try {
+                          await fetch("/api/customers", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              id: customerData.id,
+                              name: customer.name,
+                              phone: phoneRaw,
+                              cpf: customer.cpf,
+                              establishmentId: establishment.id,
+                            }),
+                          })
+                        } catch {}
+                      }
+                      // Save to localStorage
+                      localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, phone: phoneRaw }))
+                      setEditingProfile(false)
+                      setShowCustomerProfile(false)
+                    }}
+                    className="flex-1 rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1653,6 +1919,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       out_for_delivery: "bg-purple-500/10 text-purple-400",
                       delivered: "bg-green-500/10 text-green-400",
                       cancelled: "bg-red-500/10 text-red-400",
+                      payment_pending: "bg-amber-500/10 text-amber-400",
                     }
                     const statusLabels: Record<string, string> = {
                       pending: "Pendente",
@@ -1662,36 +1929,61 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       out_for_delivery: "Saiu p/ entrega",
                       delivered: "Entregue",
                       cancelled: "Cancelado",
+                      payment_pending: "Aguardando pagamento",
                     }
+                    const hasPendingPayment = order.paymentStatus === "pending" && order.paymentLink
                     return (
-                      <button
+                      <div
                         key={order.id}
-                        onClick={() => {
-                          setShowOrdersList(false)
-                          if (order.trackingToken) {
-                            openTracking(order.id, `/pedido/${order.trackingToken}`)
-                          }
-                        }}
-                        className="w-full text-left rounded-xl border p-3 transition-colors"
+                        className="rounded-xl border p-3 transition-colors"
                         style={{ borderColor: theme.borderCard }}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
-                              {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
-                            </p>
-                            <p className="text-xs mt-0.5" style={{ color: theme.textMutedMore }}>
-                              {new Date(order.createdAt).toLocaleDateString("pt-BR")} às {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </p>
+                        <button
+                          onClick={() => {
+                            setShowOrdersList(false)
+                            if (order.trackingToken) {
+                              openTracking(order.id, `/pedido/${order.trackingToken}`)
+                            }
+                          }}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
+                                {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
+                              </p>
+                              <p className="text-xs mt-0.5" style={{ color: theme.textMutedMore }}>
+                                {new Date(order.createdAt).toLocaleDateString("pt-BR")} às {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-bold" style={{ color: theme.accent }}>{formatCurrency(order.total)}</p>
+                              <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[order.status] || ""}`} style={!statusColors[order.status] ? { backgroundColor: theme.bgCard, color: theme.textMuted } : {}}>
+                                {statusLabels[order.status] || order.status}
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-bold" style={{ color: theme.accent }}>{formatCurrency(order.total)}</p>
-                            <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[order.status] || ""}`} style={!statusColors[order.status] ? { backgroundColor: theme.bgCard, color: theme.textMuted } : {}}>
-                              {statusLabels[order.status] || order.status}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
+                        </button>
+                        {hasPendingPayment && (
+                          <button
+                            onClick={() => {
+                              setShowOrdersList(false)
+                              setOrderResult({
+                                success: true,
+                                orderId: order.id,
+                                paymentLink: order.paymentLink,
+                                paymentMethod: "pix",
+                              })
+                              setTimeout(() => setShowPaymentModal(true), 300)
+                            }}
+                            className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                            style={{ backgroundColor: theme.primary }}
+                          >
+                            <CreditCard className="inline h-4 w-4 mr-1" />
+                            Pagar agora
+                          </button>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
@@ -1747,6 +2039,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       const flowIdx = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].indexOf(trackingOrder.status)
                       const isCompleted = i <= flowIdx
                       const isCurrent = i === flowIdx
+                      const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
                       return (
                         <div key={step} className="flex items-center gap-3">
                           <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${isCompleted ? "bg-green-500/[0.12] text-green-400" : ""} ${isCurrent ? "ring-2 ring-green-500" : ""}`} style={!isCompleted ? { backgroundColor: theme.bgCard, color: theme.textMutedMore } : {}}>
@@ -1756,6 +2049,26 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                             {statusLabels[step]}
                           </span>
                           {isCurrent && <Badge variant="success" className="text-[10px]">Atual</Badge>}
+                          {showPayButton && (
+                            <button
+                              onClick={() => {
+                                setOrderResult({
+                                  success: true,
+                                  orderId: trackingOrder.id,
+                                  paymentLink: trackingOrder.paymentLink,
+                                })
+                                setTimeout(() => {
+                                  setShowTracking(false)
+                                  setShowPaymentModal(true)
+                                }, 300)
+                              }}
+                              className="ml-auto rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                              style={{ backgroundColor: theme.primary }}
+                            >
+                              <CreditCard className="inline h-3 w-3 mr-1" />
+                              Pagar
+                            </button>
+                          )}
                         </div>
                       )
                     })}
@@ -1804,20 +2117,492 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         </div>
       )}
 
-      {/* Payment iframe modal */}
+      {/* Payment modal - Checkout Transparente */}
       {showPaymentModal && orderResult?.paymentLink && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}>
-          <div className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl" style={{ width: "min(480px, 95vw)", height: "min(700px, 90vh)", backgroundColor: theme.bgCard }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.borderInput }}>
-              <p className="text-sm font-semibold" style={{ color: theme.text }}>Pagamento</p>
-              <button onClick={() => setShowPaymentModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
-                ✕
-              </button>
-            </div>
-            <iframe src={orderResult.paymentLink} className="flex-1 w-full border-0" title="Pagamento" />
-          </div>
-        </div>
+        <PaymentModal
+          orderId={orderResult.orderId!}
+          paymentLink={orderResult.paymentLink}
+          total={total}
+          theme={theme}
+          onClose={() => setShowPaymentModal(false)}
+          establishmentId={establishment.id}
+          initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
+        />
       )}
+    </div>
+  )
+}
+
+function PaymentModal({
+  orderId,
+  paymentLink,
+  total,
+  theme,
+  onClose,
+  establishmentId,
+  initialTab,
+  mode,
+}: {
+  orderId: string
+  paymentLink: string
+  total: number
+  theme: any
+  onClose: () => void
+  establishmentId: string
+  initialTab?: "pix" | "card"
+  mode?: "pix" | "card"
+}) {
+  const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
+
+  // Pix state
+  const [qrCode, setQrCode] = useState<{ image: string; payload: string } | null>(null)
+  const [qrLoading, setQrLoading] = useState(true)
+  const [qrError, setQrError] = useState("")
+  const [copied, setCopied] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const countdownRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Card state
+  const [cardNumber, setCardNumber] = useState("")
+  const [cardExpiry, setCardExpiry] = useState("")
+  const [cardCvv, setCardCvv] = useState("")
+  const [cardName, setCardName] = useState("")
+  const [cardCpf, setCardCpf] = useState("")
+  const [cardEmail, setCardEmail] = useState("")
+  const [cardPhone, setCardPhone] = useState("")
+  const [cardCep, setCardCep] = useState("")
+  const [cardAddressNum, setCardAddressNum] = useState("")
+  const [cardProcessing, setCardProcessing] = useState(false)
+  const [cardError, setCardError] = useState("")
+
+  // Success state
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
+
+  // Fetch QR Code on mount with retry
+  useEffect(() => {
+    if (tab !== "pix" || !orderId) return
+    setQrLoading(true)
+    setQrError("")
+
+    async function fetchQrCode(retries = 3) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch("/api/payments/asaas/qr-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
+          })
+          const data = await res.json()
+          if (data.encodedImage) {
+            setQrCode({ image: data.encodedImage, payload: data.payload })
+            setCountdown(300)
+            setQrLoading(false)
+            return
+          }
+          // If error, wait and retry
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 2000))
+          } else {
+            setQrError(data.error || "Erro ao gerar QR Code")
+          }
+        } catch {
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 2000))
+          } else {
+            setQrError("Erro de conexão")
+          }
+        }
+      }
+      setQrLoading(false)
+    }
+
+    fetchQrCode()
+  }, [tab, orderId])
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
+  }, [countdown > 0])
+
+  // Check payment status periodically
+  useEffect(() => {
+    if (paymentSuccess || !orderId) return
+    const check = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/payment-status`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.paymentStatus === "paid") {
+            setPaymentSuccess(true)
+            clearInterval(check)
+          }
+        }
+      } catch {}
+    }, 3000)
+    return () => clearInterval(check)
+  }, [orderId, paymentSuccess])
+
+  function formatCountdown(seconds: number) {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, "0")}`
+  }
+
+  async function copyPix() {
+    if (!qrCode?.payload) return
+    try {
+      await navigator.clipboard.writeText(qrCode.payload)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea")
+      textarea.value = qrCode.payload
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  async function handleCardPayment() {
+    setCardError("")
+    if (cardNumber.replace(/\s/g, "").length < 16) {
+      setCardError("Número do cartão inválido")
+      return
+    }
+    if (cardExpiry.length < 5) {
+      setCardError("Data de validade inválida")
+      return
+    }
+    if (cardCvv.length < 3) {
+      setCardError("CVV inválido")
+      return
+    }
+    if (!cardName.trim()) {
+      setCardError("Nome do titular obrigatório")
+      return
+    }
+
+    setCardProcessing(true)
+    try {
+      const res = await fetch("/api/payments/asaas/card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          creditCard: { number: cardNumber, expiry: cardExpiry, cvv: cardCvv },
+          creditCardHolderInfo: {
+            name: cardName,
+            cpf: cardCpf,
+            email: cardEmail,
+            phone: cardPhone,
+            cep: cardCep,
+            number: cardAddressNum,
+          },
+        }),
+      })
+      const data = await res.json()
+      if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
+        setPaymentSuccess(true)
+      } else if (data.error) {
+        setCardError(data.error)
+      } else {
+        setCardError("Pagamento não aprovado. Tente novamente.")
+      }
+    } catch {
+      setCardError("Erro ao processar pagamento")
+    } finally {
+      setCardProcessing(false)
+    }
+  }
+
+  function formatCardNumber(value: string) {
+    const v = value.replace(/\D/g, "").slice(0, 16)
+    return v.replace(/(\d{4})(?=\d)/g, "$1 ")
+  }
+
+  function formatExpiry(value: string) {
+    const v = value.replace(/\D/g, "").slice(0, 4)
+    if (v.length >= 3) return `${v.slice(0, 2)}/${v.slice(2)}`
+    return v
+  }
+
+  // Auto-close after payment success
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(3)
+
+  useEffect(() => {
+    if (!paymentSuccess) return
+    // Play success sound
+    try {
+      const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVggoKIeGBGPmmNk4+FYkA3a46UjH5hQz5ujpSPgGFDPnCOlY+AYkU/cY6WkH9hREBxjpaRf2JEQXKOmJF+YkVCco6Yk39iRUJyjpmUf2JGRHOQm5Z/Y0ZFc5Ccl39kR0Z0kZ2Yf2RHSHeTn5p/ZUhId5Ofmn9lSEh4lJ+cf2ZKSnqYk59/aE1MfJyWoX9rUU5/n5ijf25STn+gmKR/cFJOf6GZpH9wUk5/oZmkf3BSTn+hmaR/cVJOf6GZpH9yVE9/opqkf3JUT3+imqR/clRPf6KapH9zVE9/opqkf3RUT3+imqR/dVRPf6KapH92VE9/opqkf3dUT3+imqR/eVRPf6OapH96VE9/pJqkf3tUT3+kmqR/e1RPf6SapH98VE9/pZqkf31UT3+mmqR/fVRPf6aapH9+VE9/p5qkf39UT3+nmqR/gFRPf6iapH+BVE9/qpqkf4JUT3+rmqR/g1RPf6uapH+EVU9/rJqkf4VVT3+tmqR/hlVPf62apH+HWU9/rpqkf4dZT3+vmqR/iFlPf7GapH+IWU9/sZqkf4lZT3+xmqR/illPf7KapH+KWU9/s5qkf4tZT3+0mqR/jFlPf7SapH+NWU9/tZqkf45ZT3+2mqR/j1lPf7eapH+QWU9/t5qkf5FZT3+4mqR/klm2tbe0uLy6u7u5trKvrLW3ubu9vr68ubSzsrO2ubu9vr69vLm0srKztrm7vb6+vr28ubSxsbK1ubu9vr69vbm0sbGytbm7vb6+vb25tLGxsrW5u72+vr29ubSxsbK1ubu9vr69vbm0sbGytbm7vb6+vb25tLGxsrW5u72+vr29ubSxsbK1ubu9vr69vbm0sQ==")
+      audio.play()
+    } catch {}
+    // Vibrate
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200])
+
+    const timer = setInterval(() => {
+      setAutoCloseCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          onClose()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [paymentSuccess, onClose])
+
+  if (paymentSuccess) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="rounded-2xl p-8 text-center shadow-2xl" style={{ width: "min(400px, 95vw)", backgroundColor: theme.bgCard }}>
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 animate-bounce">
+              <CheckCircle className="h-8 w-8 text-green-400" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-green-400">Pagamento confirmado!</h2>
+          <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>Seu pedido foi pago com sucesso.</p>
+          <div className="mt-4 rounded-lg bg-green-500/10 p-3">
+            <p className="text-sm font-medium text-green-400">Pedido confirmado e sendo preparado!</p>
+          </div>
+          <p className="mt-3 text-xs" style={{ color: theme.textMuted }}>
+            Fechando automaticamente em <span className="font-bold">{autoCloseCountdown}s</span>
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-4 w-full rounded-xl py-3 text-sm font-semibold text-white"
+            style={{ backgroundColor: theme.primary }}
+          >
+            Acompanhar pedido
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl max-h-[90vh]"
+        style={{ width: "min(480px, 95vw)", backgroundColor: theme.bgCard }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.borderInput }}>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: theme.text }}>Pagamento</p>
+            <p className="text-xs" style={{ color: theme.textMuted }}>Total: {formatCurrency(total)}</p>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Tabs - only show when mode is not set */}
+        {!mode && (
+          <div className="flex border-b" style={{ borderColor: theme.borderInput }}>
+            <button
+              onClick={() => setTab("pix")}
+              className="flex-1 py-3 text-sm font-medium transition-colors border-b-2"
+              style={tab === "pix" ? { color: theme.primary, borderColor: theme.primary } : { color: theme.textMuted, borderColor: "transparent" }}
+            >
+              Pix
+            </button>
+            <button
+              onClick={() => setTab("card")}
+              className="flex-1 py-3 text-sm font-medium transition-colors border-b-2"
+              style={tab === "card" ? { color: theme.primary, borderColor: theme.primary } : { color: theme.textMuted, borderColor: "transparent" }}
+            >
+              Cartão
+            </button>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {(mode === "pix" || (!mode && tab === "pix")) ? (
+            <div className="flex flex-col items-center">
+              {qrLoading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto" style={{ color: theme.primary }} />
+                  <p className="mt-3 text-sm" style={{ color: theme.textMuted }}>Gerando QR Code...</p>
+                </div>
+              ) : qrError ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-red-400">{qrError}</p>
+                  <button
+                    onClick={() => { setTab("pix"); setQrLoading(true); setQrError("") }}
+                    className="mt-3 text-sm hover:underline"
+                    style={{ color: theme.primary }}
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : qrCode ? (
+                <>
+                  {countdown > 0 && (
+                    <div className="mb-3 rounded-lg px-4 py-2 text-center" style={{ backgroundColor: theme.bgCardHover }}>
+                      <p className="text-xs" style={{ color: theme.textMuted }}>
+                        Expira em <span className="font-mono font-bold" style={{ color: countdown < 60 ? "#ef4444" : theme.primary }}>{formatCountdown(countdown)}</span>
+                      </p>
+                    </div>
+                  )}
+                  {countdown === 0 && (
+                    <div className="mb-3 rounded-lg bg-amber-500/10 px-4 py-3 text-center">
+                      <p className="text-sm font-medium text-amber-400">QR Code expirado</p>
+                      <button
+                        onClick={() => { setQrLoading(true); setQrError(""); setCountdown(0) }}
+                        className="mt-2 text-sm hover:underline"
+                        style={{ color: theme.primary }}
+                      >
+                        Gerar novo QR Code
+                      </button>
+                    </div>
+                  )}
+                  <img
+                    src={`data:image/png;base64,${qrCode.image}`}
+                    alt="QR Code Pix"
+                    className="h-56 w-56 rounded-xl"
+                    style={{ backgroundColor: "#ffffff", padding: 8 }}
+                  />
+                  <p className="mt-3 text-xs text-center" style={{ color: theme.textMuted }}>
+                    Escaneie com o app do seu banco
+                  </p>
+                  <div className="mt-4 w-full">
+                    <p className="text-xs mb-1.5" style={{ color: theme.textMuted }}>Ou copie o código Pix:</p>
+                    <div className="flex gap-2">
+                      <div
+                        className="flex-1 rounded-lg px-3 py-2 text-xs truncate"
+                        style={{ backgroundColor: theme.bgCardHover, color: theme.textMuted }}
+                      >
+                        {qrCode.payload?.substring(0, 40)}...
+                      </div>
+                      <button
+                        onClick={copyPix}
+                        className="rounded-lg px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90 shrink-0"
+                        style={{ backgroundColor: theme.primary }}
+                      >
+                        {copied ? "✓ Copiado" : "Copiar"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : (mode === "card" || (!mode && tab === "card")) ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>Número do cartão</label>
+                <input
+                  placeholder="0000 0000 0000 0000"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                  maxLength={19}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs" style={{ color: theme.textMuted }}>Validade</label>
+                  <input
+                    placeholder="MM/AA"
+                    value={cardExpiry}
+                    onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                    maxLength={5}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs" style={{ color: theme.textMuted }}>CVV</label>
+                  <input
+                    placeholder="000"
+                    value={cardCvv}
+                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    maxLength={4}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>Nome no cartão</label>
+                <input
+                  placeholder="Como está impresso no cartão"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                />
+              </div>
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF do titular</label>
+                <input
+                  placeholder="000.000.000-00"
+                  value={cardCpf}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "").slice(0, 11)
+                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                    setCardCpf(v)
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                />
+              </div>
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>E-mail (opcional)</label>
+                <input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={cardEmail}
+                  onChange={(e) => setCardEmail(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                />
+              </div>
+              {cardError && (
+                <div className="rounded-lg bg-red-500/10 p-2 text-xs text-red-400 border border-red-500/20">{cardError}</div>
+              )}
+              <button
+                onClick={handleCardPayment}
+                disabled={cardProcessing}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: theme.primary }}
+              >
+                {cardProcessing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processando...
+                  </span>
+                ) : (
+                  `Pagar ${formatCurrency(total)}`
+                )}
+              </button>
+              <p className="text-[10px] text-center" style={{ color: theme.textMuted }}>
+                Pagamento seguro processado por Asaas
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
