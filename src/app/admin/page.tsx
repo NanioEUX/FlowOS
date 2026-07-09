@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminPage() {
   const establishments = await prisma.establishment.findMany({
     include: { orders: { select: { total: true, status: true } } },
