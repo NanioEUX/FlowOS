@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -1982,11 +1982,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                       payment_pending: "Aguardando pagamento",
                     }
                     const hasPendingPayment = order.paymentStatus === "pending" && order.paymentLink
+                    const isCancelled = order.status === "cancelled"
                     return (
                       <div
                         key={order.id}
                         className="rounded-xl border p-3 transition-colors"
-                        style={{ borderColor: theme.borderCard }}
+                        style={{
+                          borderColor: isCancelled ? "rgba(239,68,68,0.3)" : theme.borderCard,
+                          backgroundColor: isCancelled ? "rgba(239,68,68,0.05)" : undefined,
+                        }}
                       >
                         <button
                           onClick={() => {
@@ -2045,6 +2049,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                               <X className="inline h-4 w-4" />
                             </button>
                           </div>
+                        )}
+                        {!hasPendingPayment && (
+                          <button
+                            onClick={() => {
+                              setCart(items.map((i: any) => ({ id: i.id || i.productId || i.name, name: i.name, price: i.price, image: i.image, quantity: i.quantity })))
+                              setShowOrdersList(false)
+                              setShowCart(true)
+                            }}
+                            className="mt-2 w-full rounded-lg border py-2 text-sm font-medium transition-opacity hover:opacity-80"
+                            style={{ borderColor: theme.borderCard, color: theme.accent }}
+                          >
+                            <RefreshCw className="inline h-3.5 w-3.5 mr-1" />
+                            Pedir novamente
+                          </button>
                         )}
                       </div>
                     )
