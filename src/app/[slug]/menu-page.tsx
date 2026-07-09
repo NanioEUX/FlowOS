@@ -1739,18 +1739,34 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   </div>
                 ))}
 
-                <button
-                  onClick={() => {
-                    if (window.confirm("Deseja esvaziar o carrinho?")) {
-                      setCart([])
-                      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-                    }
-                  }}
-                  className="text-xs font-medium hover:underline pt-1"
-                  style={{ color: "#EF4444" }}
-                >
-                  Esvaziar carrinho
-                </button>
+                {lastOrder?.paymentLink ? (
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Deseja cancelar o pedido?")) {
+                        cancelOrder(lastOrder.orderId)
+                        setCart([])
+                        localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                      }
+                    }}
+                    className="text-xs font-medium hover:underline pt-1"
+                    style={{ color: "#EF4444" }}
+                  >
+                    Cancelar pedido
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Deseja esvaziar o carrinho?")) {
+                        setCart([])
+                        localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                      }
+                    }}
+                    className="text-xs font-medium hover:underline pt-1"
+                    style={{ color: "#EF4444" }}
+                  >
+                    Esvaziar carrinho
+                  </button>
+                )}
 
                 {!couponData ? (
                   <div className="flex gap-2 pt-3">
