@@ -194,6 +194,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [statusAlert, setStatusAlert] = useState<string | null>(null)
   const trackingEndRef = useRef<HTMLDivElement>(null)
   const prevStatusRef = useRef<string | null>(null)
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
+  const [cancelModalTotal, setCancelModalTotal] = useState<number>(0)
+  const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string } | null>(null)
@@ -517,6 +520,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function addToCart(product: Product) {
+    // Check if customer is identified
+    if (!customer.phone && !customerData?.phone) {
+      setShowIdentifyModal(true)
+      return
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {
@@ -619,6 +627,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setOrderError("Salve o endereço antes de finalizar o pedido")
       setOrdering(false)
       return
+    }
+
+    // Check if there's already a pending payment order
+    const phone = customer.phone || customerData?.phone
+    if (phone) {
+      try {
+        const checkRes = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
+        if (checkRes.ok) {
+          const orders = await checkRes.json()
+          const pendingOrder = orders.find((o: any) => o.paymentStatus === "pending" && o.paymentLink)
+          if (pendingOrder) {
+            setOrderError("Você já tem um pedido com pagamento pendente. Pague ou cancele antes de fazer outro.")
+            setOrdering(false)
+            return
+          }
+        }
+      } catch {}
     }
 
     try {
@@ -771,6 +796,26 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => clearInterval(i)
   }, [showTracking, lastOrder])
 
+  async function cancelOrder(orderId: string) {
+    setCancelling(true)
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled", paymentStatus: "cancelled" }),
+      })
+      if (res.ok) {
+        setCancelModalOrderId(null)
+        loadCustomerOrders()
+        if (trackingOrder?.id === orderId) {
+          setTrackingOrder({ ...trackingOrder, status: "cancelled", paymentStatus: "cancelled" })
+        }
+      }
+    } catch {} finally {
+      setCancelling(false)
+    }
+  }
+
   async function loadCustomerOrders() {
     const phone = customer.phone || customerData?.phone
     if (!phone) return
@@ -837,12 +882,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   // If success but has payment link, show only the payment modal (no success screen)
-  if (orderResult?.success && orderResult?.paymentLink && showPaymentModal) {
+  if (orderResult?.success && orderResult?.paymentLink) {
+    if (!showPaymentModal) {
+      // Auto-open payment modal
+      setTimeout(() => setShowPaymentModal(true), 100)
+      return null
+    }
     return (
       <PaymentModal
         orderId={orderResult.orderId!}
         paymentLink={orderResult.paymentLink}
-        total={total}
+        total={orderResult.orderTotal ?? total}
         theme={theme}
         onClose={() => {
           setOrderResult(null)
@@ -906,8 +956,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     )
   }
 
-  // Success screen
-  if (orderResult?.success) {
+  // Success screen - only show if no paymentLink (otherwise payment modal handles it)
+  if (orderResult?.success && !orderResult?.paymentLink) {
     return (
       <>
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-4">
@@ -1965,24 +2015,36 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                           </div>
                         </button>
                         {hasPendingPayment && (
-                          <button
-                            onClick={() => {
-                              setShowOrdersList(false)
-                              setOrderResult({
-                                success: true,
-                                orderId: order.id,
-                                paymentLink: order.paymentLink,
-                                paymentMethod: "pix",
-                                orderTotal: order.total,
-                              })
-                              setTimeout(() => setShowPaymentModal(true), 300)
-                            }}
-                            className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                            style={{ backgroundColor: theme.primary }}
-                          >
-                            <CreditCard className="inline h-4 w-4 mr-1" />
-                            Pagar agora
-                          </button>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => {
+                                setShowOrdersList(false)
+                                setOrderResult({
+                                  success: true,
+                                  orderId: order.id,
+                                  paymentLink: order.paymentLink,
+                                  paymentMethod: "pix",
+                                  orderTotal: order.total,
+                                })
+                                setTimeout(() => setShowPaymentModal(true), 300)
+                              }}
+                              className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                              style={{ backgroundColor: theme.primary }}
+                            >
+                              <CreditCard className="inline h-4 w-4 mr-1" />
+                              Pagar agora
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCancelModalOrderId(order.id)
+                                setCancelModalTotal(order.total)
+                              }}
+                              className="rounded-lg border px-3 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+                              style={{ borderColor: theme.borderCard, color: theme.textMuted }}
+                            >
+                              <X className="inline h-4 w-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     )
@@ -2050,27 +2112,39 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                             {statusLabels[step]}
                           </span>
                           {isCurrent && <Badge variant="success" className="text-[10px]">Atual</Badge>}
-                          {showPayButton && (
-                            <button
-                              onClick={() => {
-                                setOrderResult({
-                                  success: true,
-                                  orderId: trackingOrder.id,
-                                  paymentLink: trackingOrder.paymentLink,
-                                  orderTotal: trackingOrder.total,
-                                })
-                                setTimeout(() => {
-                                  setShowTracking(false)
-                                  setShowPaymentModal(true)
-                                }, 300)
-                              }}
-                              className="ml-auto rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                              style={{ backgroundColor: theme.primary }}
-                            >
-                              <CreditCard className="inline h-3 w-3 mr-1" />
-                              Pagar
-                            </button>
-                          )}
+                           {showPayButton && (
+                             <div className="ml-auto flex gap-1">
+                               <button
+                                 onClick={() => {
+                                   setOrderResult({
+                                     success: true,
+                                     orderId: trackingOrder.id,
+                                     paymentLink: trackingOrder.paymentLink,
+                                     orderTotal: trackingOrder.total,
+                                   })
+                                   setTimeout(() => {
+                                     setShowTracking(false)
+                                     setShowPaymentModal(true)
+                                   }, 300)
+                                 }}
+                                 className="rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                                 style={{ backgroundColor: theme.primary }}
+                               >
+                                 <CreditCard className="inline h-3 w-3 mr-1" />
+                                 Pagar
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setCancelModalOrderId(trackingOrder.id)
+                                   setCancelModalTotal(trackingOrder.total)
+                                 }}
+                                 className="rounded-lg border px-2 py-1 text-xs font-medium transition-opacity hover:opacity-80"
+                                 style={{ borderColor: theme.borderCard, color: theme.textMuted }}
+                               >
+                                 <X className="inline h-3 w-3" />
+                               </button>
+                             </div>
+                           )}
                         </div>
                       )
                     })}
@@ -2130,6 +2204,40 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           establishmentId={establishment.id}
           initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         />
+      )}
+
+      {/* Cancel order confirmation modal */}
+      {cancelModalOrderId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+                <X className="h-6 w-6 text-red-400" />
+              </div>
+            </div>
+            <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Cancelar pedido?</h3>
+            <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
+              Tem certeza que deseja cancelar este pedido de <strong style={{ color: theme.accent }}>R$ {cancelModalTotal.toFixed(2)}</strong>? O pagamento não será processado.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelModalOrderId(null)}
+                className="flex-1 rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ borderColor: theme.borderCard, color: theme.text }}
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => cancelOrder(cancelModalOrderId)}
+                disabled={cancelling}
+                className="flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#EF4444" }}
+              >
+                {cancelling ? "Cancelando..." : "Sim, cancelar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
