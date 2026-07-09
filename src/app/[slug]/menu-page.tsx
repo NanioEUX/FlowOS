@@ -188,6 +188,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
+  const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -547,6 +548,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
+    // Show toast
+    setCartToast({ name: product.name, image: product.image || undefined })
+    setTimeout(() => setCartToast(null), 3000)
   }
 
   function updateQuantity(productId: string, delta: number) {
@@ -1038,7 +1042,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   return (
     <div className="min-h-screen pb-24 overflow-x-hidden transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
-      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; }`}</style>
+      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; }`}</style>
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
@@ -1070,19 +1074,27 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>{establishment.description}</p>
             )}
           </div>
-          <button
-            onClick={() => {
-              if (customer.phone || customerData?.phone) {
-                setShowCustomerProfile(true)
-              } else {
-                setShowIdentifyModal(true)
-              }
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0"
-            style={{ backgroundColor: theme.bgCard, color: customer.name ? theme.primary : theme.textMuted }}
-          >
-            <User className="h-4 w-4" />
-          </button>
+          {(customer.phone || customerData?.phone) ? (
+            <button
+              onClick={() => setShowCustomerProfile(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold"
+              style={{ backgroundColor: theme.primary, color: "#ffffff" }}
+            >
+              {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowIdentifyModal(true)}
+              className="flex items-center gap-1.5 text-xs hover:opacity-70 shrink-0 animate-pulse"
+              style={{ color: theme.textMutedMore }}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              Identificar-se
+            </button>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -1177,7 +1189,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 id={`cat-${cat.id}`}
                 className={`mb-8 ${!isActive ? "hidden" : ""}`}
               >
-                <h2 className="mb-4 text-xl font-semibold" style={{ color: theme.text }}>{cat.name}</h2>
                 <div className="space-y-3">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
@@ -1189,6 +1200,32 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         )}
 
       </div>
+
+      {/* Cart Toast */}
+      {cartToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 animate-slide-up">
+          <div className="flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            {cartToast.image ? (
+              <img src={cartToast.image} alt="" className="h-8 w-8 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: theme.bgCard }}>
+                <ShoppingBag className="h-4 w-4" style={{ color: theme.primary }} />
+              </div>
+            )}
+            <span className="text-sm font-medium max-w-[180px] truncate" style={{ color: theme.text }}>{cartToast.name}</span>
+            <button
+              onClick={() => {
+                setCartToast(null)
+                setShowCart(true)
+              }}
+              className="text-sm font-semibold shrink-0"
+              style={{ color: theme.primary }}
+            >
+              Ver
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation Bar */}
       {!showCart && !orderResult?.success && (
