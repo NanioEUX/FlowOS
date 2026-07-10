@@ -490,6 +490,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
+  const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
 
   function calcDeliveryFee(): number {
     if (orderType !== "delivery") return 0
@@ -1311,7 +1312,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             >
               <ClipboardList className="h-5 w-5" />
               <span className="text-[10px] font-medium">Pedidos</span>
-              {hasEstablishmentReply && (
+              {activeOrdersCount > 0 && (
+                <span className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
+                  {activeOrdersCount}
+                </span>
+              )}
+              {activeOrdersCount === 0 && hasEstablishmentReply && (
                 <span className="absolute -top-0.5 right-1 flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
