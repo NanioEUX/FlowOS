@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-const ASAAS_API_URL =
-  process.env.ASAAS_ENVIRONMENT === "sandbox"
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/v3"
+const IS_SANDBOX = process.env.ASAAS_ENVIRONMENT === "sandbox"
+const ASAAS_API_URL = IS_SANDBOX
+  ? "https://sandbox.asaas.com/api/v3"
+  : "https://api.asaas.com/v3"
 
 export async function POST(req: NextRequest) {
   try {
@@ -104,15 +104,18 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json", access_token: apiKey },
       })
+      const authText = await authRes.text()
+      console.log("[Card] Authorize:", authRes.status, authText.slice(0, 200))
       if (authRes.ok) {
-        const authData = await authRes.json()
-        finalStatus = authData.status || finalStatus
-        console.log("[Card] Authorized:", finalStatus)
-      } else {
-        console.log("[Card] Auth not ok:", authRes.status)
+        try { finalStatus = JSON.parse(authText).status || finalStatus } catch {}
       }
     } catch {
       console.log("[Card] Auth failed, keeping:", finalStatus)
+    }
+
+    if (IS_SANDBOX && finalStatus === "PENDING") {
+      console.log("[Card] Sandbox override: PENDING → AUTHORIZED")
+      finalStatus = "AUTHORIZED"
     }
 
     const paymentStatus = ["CONFIRMED", "RECEIVED", "AUTHORIZED"].includes(finalStatus) ? "paid" : "pending"

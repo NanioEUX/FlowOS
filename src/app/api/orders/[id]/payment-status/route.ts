@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const IS_SANDBOX = process.env.ASAAS_ENVIRONMENT === "sandbox"
 const ASAAS_API_URL =
-  process.env.ASAAS_ENVIRONMENT === "sandbox"
+  IS_SANDBOX
     ? "https://sandbox.asaas.com/api/v3"
     : "https://api.asaas.com/v3"
 
@@ -33,8 +34,8 @@ export async function GET(
       })
       if (res.ok) {
         const asaasPayment = await res.json()
-        const asaasStatus = asaasPayment.status
-        // CONFIRMED, RECEIVED, AUTHORIZED = paid
+        let asaasStatus = asaasPayment.status
+        if (IS_SANDBOX && asaasStatus === "PENDING") asaasStatus = "AUTHORIZED"
         if (["CONFIRMED", "RECEIVED", "AUTHORIZED"].includes(asaasStatus)) {
           await prisma.order.update({
             where: { id: params.id },
