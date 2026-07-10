@@ -64,39 +64,6 @@ export async function POST(req: NextRequest) {
     const errorCode = err.errors?.[0]?.code
     const errorDesc = err.errors?.[0]?.description || ""
 
-    // Verifica se o pagamento já foi confirmado (sandbox auto-confirma)
-    if (errorCode === "invalid_action" && errorDesc.includes("não pode mais ser paga")) {
-      console.log("[QR Code] Payment in terminal state, checking status...")
-
-      const statusRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
-        headers: { access_token: order.establishment.asaasApiKey },
-      })
-
-      if (statusRes.ok) {
-        const paymentData = await statusRes.json()
-        console.log("[QR Code] Payment status:", paymentData.status)
-
-        const statusMap: Record<string, string> = {
-          CONFIRMED: "paid",
-          RECEIVED: "paid",
-          AUTHORIZED: "paid",
-          REFUNDED: "refunded",
-          RECEIVED_IN_CASH: "paid",
-        }
-
-        const paymentStatus = statusMap[paymentData.status] || "pending"
-
-        if (paymentStatus === "paid") {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { paymentStatus: "paid", status: "confirmed" },
-          })
-          console.log("[QR Code] Order updated to paid via status check")
-          return NextResponse.json({ alreadyPaid: true })
-        }
-      }
-    }
-
     // Pagamento não é PIX (sandbox com UNDEFINED) - retorna invoiceUrl para pagamento
     if (order.paymentLink) {
       console.log("[QR Code] Returning invoiceUrl for non-PIX payment")
