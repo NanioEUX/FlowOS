@@ -950,6 +950,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     delivered: "🎉",
   }
 
+  // Auto-close success screen after 5 seconds
+  useEffect(() => {
+    if (orderResult?.success && !orderResult?.paymentLink) {
+      const timer = setTimeout(() => {
+        setOrderResult(null)
+        setShowCart(false)
+        setShowCheckout(false)
+        setEditingAddress(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [orderResult?.success, orderResult?.paymentLink])
+
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink) {
     if (!showPaymentModal) {
