@@ -1151,67 +1151,56 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         {/* Category Tabs + Search */}
         <div
           ref={tabsRef}
-          className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide items-center"
-          style={{ scrollbarWidth: "none" }}
+          className="mx-auto max-w-3xl px-4 pb-3"
         >
-          <button
-            onClick={() => {
-              if (searchQuery) {
-                setSearchQuery("")
-              } else {
-                setSearchMode(true)
-              }
-            }}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-300 shrink-0 ${
-              searchMode || searchQuery
-                ? "text-white shadow-lg"
-                : "hover:opacity-80"
-            }`}
-            style={searchMode || searchQuery
-              ? { backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.shadowPrimary}`, color: "#ffffff" }
-              : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }
-            }
-          >
-            <Search className="h-4 w-4" />
-            {!searchMode && !searchQuery && <span>Buscar</span>}
-          </button>
-          {searchMode && (
-            <div className="relative flex-1 min-w-0">
-              <input
-                type="text"
-                placeholder="Buscar no cardápio..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                className="w-full rounded-full py-1.5 pl-4 pr-8 text-sm backdrop-blur-sm transition-all focus:outline-none"
-                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                onBlur={() => { if (!searchQuery) setSearchMode(false) }}
-              />
-              {searchQuery && (
+          {searchMode ? (
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
+                <input
+                  type="text"
+                  placeholder="Buscar no cardápio..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-xl py-2.5 pl-10 pr-4 text-sm backdrop-blur-sm transition-all focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+              <button
+                onClick={() => { setSearchQuery(""); setSearchMode(false) }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard, color: theme.textMuted, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+              <button
+                onClick={() => setSearchMode(true)}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-300 shrink-0 hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <Search className="h-4 w-4" />
+                <span>Buscar</span>
+              </button>
+              {sortedCategories.map((cat) => (
                 <button
-                  onClick={() => { setSearchQuery(""); setSearchMode(false) }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 hover:opacity-70"
-                  style={{ color: theme.textMutedMore }}
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
+                    activeCategory === cat.id
+                      ? "text-white shadow-lg"
+                      : "hover:opacity-80"
+                  }`}
+                  style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  {cat.name}
                 </button>
-              )}
+              ))}
             </div>
           )}
-          {!searchQuery && sortedCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
-                activeCategory === cat.id
-                  ? "text-white shadow-lg"
-                  : "hover:opacity-80"
-              }`}
-              style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-            >
-              {cat.name}
-            </button>
-          ))}
         </div>
       </div>
 
