@@ -9,6 +9,7 @@ const ASAAS_API_URL = IS_SANDBOX
 export async function POST(req: NextRequest) {
   try {
     const { orderId, creditCard, creditCardHolderInfo } = await req.json()
+    console.log("[Card] Request received:", JSON.stringify({ orderId, creditCardHolderInfo: { name: creditCardHolderInfo?.name, cpf: creditCardHolderInfo?.cpf, email: creditCardHolderInfo?.email, phone: creditCardHolderInfo?.phone } }))
     const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1"
 
     if (!orderId || !creditCard || !creditCardHolderInfo) {
