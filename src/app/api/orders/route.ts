@@ -249,6 +249,7 @@ export async function POST(req: NextRequest) {
             customerCpf: customerCpf || "",
             value: order.total,
             description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
+            billingType: "PIX",
           })
 
           paymentLink = payment.invoiceUrl
