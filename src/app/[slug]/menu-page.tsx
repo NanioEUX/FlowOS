@@ -209,7 +209,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string; paymentMethod?: string; orderTotal?: number } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
@@ -700,7 +700,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     console.log("[submitOrder] lastOrder:", lastOrder ? { orderId: lastOrder.orderId, paymentLink: !!lastOrder.paymentLink } : null)
     console.log("[submitOrder] showPaymentModal:", showPaymentModal)
     if (orderingRef.current) { console.log("[submitOrder] BLOCKED by orderingRef"); return }
-    if (orderResult?.success && orderResult?.paymentLink) { console.log("[submitOrder] BLOCKED by existing paymentLink"); return }
+    if (orderResult?.success && (orderResult?.paymentLink || orderResult?.paymentDone)) { console.log("[submitOrder] BLOCKED by existing paymentLink or paymentDone"); return }
     orderingRef.current = true
     setOrderError("")
     setOrdering(true)
@@ -1042,10 +1042,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [orderResult?.success, orderResult?.paymentLink, orderResult?.orderId])
+  }, [orderResult?.success, orderResult?.paymentLink, orderResult?.orderId, orderResult?.paymentDone])
 
   // If success but has payment link, show only the payment modal (no success screen)
-  if (orderResult?.success && orderResult?.paymentLink) {
+  if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone) {
     console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
     if (!showPaymentModal) {
       setTimeout(() => setShowPaymentModal(true), 100)
@@ -1067,7 +1067,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined } : null) }}
+        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null) }}
       />
     )
   }
