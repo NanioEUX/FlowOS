@@ -492,6 +492,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
   const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
 
+  // Load customer orders on mount when phone is available
+  useEffect(() => {
+    const phone = customer.phone || customerData?.phone
+    if (!phone) return
+    loadCustomerOrders()
+  }, [customer.phone, customerData?.phone, establishment.id])
+
   function calcDeliveryFee(): number {
     if (orderType !== "delivery") return 0
     const type = establishment.deliveryFeeType || "free"
