@@ -113,11 +113,6 @@ export async function POST(req: NextRequest) {
       console.log("[Card] Auth failed, keeping:", finalStatus)
     }
 
-    if (IS_SANDBOX && finalStatus === "PENDING") {
-      console.log("[Card] Sandbox override: PENDING → AUTHORIZED")
-      finalStatus = "AUTHORIZED"
-    }
-
     const paymentStatus = ["CONFIRMED", "RECEIVED", "AUTHORIZED"].includes(finalStatus) ? "paid" : "pending"
 
     await prisma.order.update({

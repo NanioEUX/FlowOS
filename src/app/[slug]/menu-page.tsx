@@ -2014,6 +2014,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                           success: true,
                           orderId: lastOrder.orderId,
                           paymentLink: lastOrder.paymentLink,
+                          paymentMethod: "card",
                           orderTotal: total,
                         })
                         setTimeout(() => setShowPaymentModal(true), 300)
@@ -2274,7 +2275,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                                   success: true,
                                   orderId: order.id,
                                   paymentLink: order.paymentLink,
-                                  paymentMethod: "pix",
+                                  paymentMethod: "card",
                                   orderTotal: order.total,
                                 })
                                 setTimeout(() => setShowPaymentModal(true), 300)
@@ -2398,18 +2399,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                            {showPayButton && (
                              <div className="ml-auto flex gap-1">
                                <button
-                                 onClick={() => {
-                                   setOrderResult({
-                                     success: true,
-                                     orderId: trackingOrder.id,
-                                     paymentLink: trackingOrder.paymentLink,
-                                     orderTotal: trackingOrder.total,
-                                   })
-                                   setTimeout(() => {
-                                     setShowTracking(false)
-                                     setShowPaymentModal(true)
-                                   }, 300)
-                                 }}
+                                  onClick={() => {
+                                    setOrderResult({
+                                      success: true,
+                                      orderId: trackingOrder.id,
+                                      paymentLink: trackingOrder.paymentLink,
+                                      paymentMethod: "card",
+                                      orderTotal: trackingOrder.total,
+                                    })
+                                    setTimeout(() => {
+                                      setShowTracking(false)
+                                      setShowPaymentModal(true)
+                                    }, 300)
+                                  }}
                                  className="rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
                                  style={{ backgroundColor: theme.primary }}
                                >
