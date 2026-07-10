@@ -312,6 +312,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
+  const paidOrderIdsRef = useRef(new Set<string>())
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -802,6 +803,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         paymentStatus: data.order?.paymentStatus,
       })
 
+      console.log("[submitOrder] setOrderResult com paymentLink:", data.paymentLink ? "SIM" : "NAO")
+      console.trace("[submitOrder] setOrderResult TRACE")
       setOrderResult({
         success: true,
         trackingUrl: data.trackingUrl,
@@ -1050,8 +1053,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }, [orderResult])
 
   // If success but has payment link, show only the payment modal (no success screen)
-  if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone) {
-    console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
+  if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "")) {
+    console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId, "paid:", paidOrderIdsRef.current.has(orderResult.orderId || ""))
     if (!showPaymentModal) {
       setTimeout(() => setShowPaymentModal(true), 100)
       return null
@@ -1063,7 +1066,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         total={orderResult.orderTotal ?? total}
         theme={theme}
         onClose={() => {
-          setOrderResult(null)
+          console.log("[PaymentModal onClose] CHAMADO")
+          console.trace()
+          setOrderResult(prev => {
+            if (prev?.paymentDone) return prev
+            return null
+          })
           setShowCart(false)
           setShowCheckout(false)
           setEditingAddress(false)
@@ -1072,7 +1080,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { console.log("[onPaymentSuccess] CHAMADO - limpando paymentLink e setando paymentDone=true"); setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null) }}
+        onPaymentSuccess={() => { console.log("[onPaymentSuccess] CHAMADO - limpando paymentLink e setando paymentDone=true"); setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
       />
     )
   }
@@ -2845,7 +2853,7 @@ function PaymentModal({
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [paymentSuccess, onClose])
+  }, [paymentSuccess])
 
   if (paymentSuccess) {
     return (
