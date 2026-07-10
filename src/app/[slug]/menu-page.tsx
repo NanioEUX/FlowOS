@@ -1080,7 +1080,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { console.log("[onPaymentSuccess] CHAMADO - limpando paymentLink e setando paymentDone=true"); setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
+        onPaymentSuccess={() => { console.log("[onPaymentSuccess] CHAMADO - limpando paymentLink, lastOrder e setando paymentDone=true"); setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setLastOrder(null); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
       />
     )
   }
