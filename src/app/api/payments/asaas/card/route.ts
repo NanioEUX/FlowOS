@@ -8,7 +8,7 @@ const ASAAS_API_URL =
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, creditCard, creditCardHolderInfo, billingType } = await req.json()
+    const { orderId, creditCard, creditCardHolderInfo } = await req.json()
 
     if (!orderId || !creditCard || !creditCardHolderInfo) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
@@ -31,17 +31,104 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "API Key não configurada" }, { status: 400 })
     }
 
+    const apiKey = order.establishment.asaasApiKey
     console.log("[Card] Processing payment for order:", order.orderNumber)
 
-    // Update payment with credit card info
-    const updateRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
+    // 1. Get the customer from the existing payment
+    const existingPaymentRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
+      headers: { access_token: apiKey },
+    })
+
+    let customerId: string | null = null
+    let customerName = order.customerName || ""
+    let customerPhone = order.customerPhone || ""
+    let customerCpf = ""
+
+    if (existingPaymentRes.ok) {
+      const existingPayment = await existingPaymentRes.json()
+      customerId = existingPayment.customer
+      console.log("[Card] Found customer from existing payment:", customerId)
+    }
+
+    // If no customer from payment, find/create by CPF
+    if (!customerId && creditCardHolderInfo.cpf) {
+      customerCpf = creditCardHolderInfo.cpf.replace(/\D/g, "")
+      const searchRes = await fetch(`${ASAAS_API_URL}/customers?cpfCnpj=${customerCpf}`, {
+        headers: { access_token: apiKey },
+      })
+      const searchList = await searchRes.json()
+      if (searchRes.ok && searchList.data && searchList.data.length > 0) {
+        customerId = searchList.data[0].id
+      }
+    }
+
+    // If still no customer, find by phone
+    if (!customerId && customerPhone) {
+      const rawPhone = customerPhone.replace(/\D/g, "")
+      const formattedPhone = rawPhone.length === 11
+        ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 7)}-${rawPhone.slice(7)}`
+        : rawPhone.length === 10
+          ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 6)}-${rawPhone.slice(6)}`
+          : rawPhone
+      const searchRes = await fetch(`${ASAAS_API_URL}/customers?mobilePhone=${encodeURIComponent(formattedPhone)}`, {
+        headers: { access_token: apiKey },
+      })
+      const searchList = await searchRes.json()
+      if (searchRes.ok && searchList.data && searchList.data.length > 0) {
+        customerId = searchList.data[0].id
+      }
+    }
+
+    // Last resort: create customer
+    if (!customerId) {
+      const rawPhone = customerPhone.replace(/\D/g, "")
+      const formattedPhone = rawPhone.length === 11
+        ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 7)}-${rawPhone.slice(7)}`
+        : rawPhone.length === 10
+          ? `(${rawPhone.slice(0, 2)}) ${rawPhone.slice(2, 6)}-${rawPhone.slice(6)}`
+          : rawPhone
+      const customerRes = await fetch(`${ASAAS_API_URL}/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", access_token: apiKey },
+        body: JSON.stringify({
+          name: creditCardHolderInfo.name || customerName,
+          mobilePhone: formattedPhone,
+          cpfCnpj: creditCardHolderInfo.cpf?.replace(/\D/g, "") || "",
+        }),
+      })
+      const customerData = await customerRes.json()
+      if (!customerRes.ok || !customerData.id) {
+        console.error("[Card] Failed to create customer:", JSON.stringify(customerData))
+        return NextResponse.json({ error: `Erro ao criar cliente: ${customerData.errors?.[0]?.description || "desconhecido"}` }, { status: 500 })
+      }
+      customerId = customerData.id
+      console.log("[Card] Created new customer:", customerId)
+    }
+
+    // 2. Cancel the old PIX payment (ignore errors if already cancelled)
+    await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}/cancel`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: order.establishment.asaasApiKey,
-      },
+      headers: { "Content-Type": "application/json", access_token: apiKey },
+    }).catch(() => {})
+    console.log("[Card] Cancelled old payment:", order.paymentId)
+
+    // 3. Create new CREDIT_CARD payment with card details
+    const itemNames = (() => {
+      try {
+        const items = JSON.parse(order.items)
+        return items.map((i: any) => `${i.name} x${i.quantity}`).join(", ")
+      } catch { return `Pedido #${order.orderNumber}` }
+    })()
+
+    const newPaymentRes = await fetch(`${ASAAS_API_URL}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", access_token: apiKey },
       body: JSON.stringify({
-        billingType: billingType || "CREDIT_CARD",
+        customer: customerId,
+        billingType: "CREDIT_CARD",
+        value: order.total,
+        dueDate: new Date().toISOString().split("T")[0],
+        description: `Pedido #${order.orderNumber} - ${itemNames}`.substring(0, 200),
         creditCard: {
           creditCardNumber: creditCard.number.replace(/\s/g, ""),
           creditCardBrand: detectCardBrand(creditCard.number),
@@ -61,28 +148,27 @@ export async function POST(req: NextRequest) {
       }),
     })
 
-    if (!updateRes.ok) {
-      const errText = await updateRes.text()
-      console.error("[Card] Asaas PUT error:", updateRes.status, errText)
-      let err: any = {}
-      try { err = JSON.parse(errText) } catch {}
+    const newPayment = await newPaymentRes.json()
+    console.log("[Card] New payment created:", newPayment.id, newPayment.status, JSON.stringify(newPayment.errors || {}))
+
+    if (!newPaymentRes.ok || !newPayment.id) {
       return NextResponse.json({
-        error: err.errors?.[0]?.description || `Erro ao processar cartão (${updateRes.status})`,
+        error: newPayment.errors?.[0]?.description || `Erro ao criar cobrança cartão (${newPaymentRes.status})`,
         status: "error",
-        details: err,
+        details: newPayment,
       })
     }
 
-    const payment = await updateRes.json()
-    console.log("[Card] Payment updated:", payment.id, payment.status)
+    // 4. Update order with new paymentId
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentId: newPayment.id },
+    })
 
-    // Now authorize the payment
-    const authRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}/authorize`, {
+    // 5. Authorize the payment
+    const authRes = await fetch(`${ASAAS_API_URL}/payments/${newPayment.id}/authorize`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: order.establishment.asaasApiKey,
-      },
+      headers: { "Content-Type": "application/json", access_token: apiKey },
     })
 
     let authData: any = null
@@ -103,7 +189,7 @@ export async function POST(req: NextRequest) {
       RECEIVED_IN_CASH: "paid",
     }
 
-    const finalStatus = authData?.status || payment.status
+    const finalStatus = authData?.status || newPayment.status
     const paymentStatus = statusMap[finalStatus] || "pending"
 
     await prisma.order.update({
@@ -117,7 +203,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: finalStatus,
       paymentStatus,
-      transactionId: payment.transactionReceiptUrl || null,
+      transactionId: newPayment.transactionReceiptUrl || null,
     })
   } catch (error: any) {
     console.error("[Card] Error:", error.message, error.stack)
