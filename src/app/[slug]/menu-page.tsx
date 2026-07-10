@@ -305,6 +305,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [couponData, setCouponData] = useState<{ id: string; code: string; discountType: string; discountValue: number } | null>(null)
   const [activeTab, setActiveTab] = useState<"menu" | "orders" | "profile">("menu")
   const [couponError, setCouponError] = useState("")
+  const [pendingOrderConfirm, setPendingOrderConfirm] = useState<{ orderId: string; orderNumber: number; total: number } | null>(null)
+  const [skipPendingCheck, setSkipPendingCheck] = useState(false)
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -691,14 +693,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     // Check if there's already a pending payment order
     const phone = customer.phone || customerData?.phone
-    if (phone) {
+    if (phone && !skipPendingCheck) {
       try {
         const checkRes = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
         if (checkRes.ok) {
           const orders = await checkRes.json()
           const pendingOrder = orders.find((o: any) => o.paymentStatus === "pending" && o.paymentLink)
           if (pendingOrder) {
-            setOrderError("Você já tem um pedido com pagamento pendente. Pague ou cancele antes de fazer outro.")
+            setPendingOrderConfirm({ orderId: pendingOrder.id, orderNumber: pendingOrder.orderNumber, total: pendingOrder.total })
             setOrdering(false)
             return
           }
@@ -763,6 +765,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setOrderError(err.message)
     } finally {
       setOrdering(false)
+      setSkipPendingCheck(false)
     }
   }
 
@@ -2401,6 +2404,45 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
           onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined } : null) }}
         />
+      )}
+
+      {/* Pending order confirmation modal */}
+      {pendingOrderConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+                <Package className="h-6 w-6 text-amber-400" />
+              </div>
+            </div>
+            <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pedido em andamento</h3>
+            <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
+              Você já tem o pedido <strong style={{ color: theme.accent }}>#{pendingOrderConfirm.orderNumber}</strong> com pagamento pendente (<strong style={{ color: theme.accent }}>R$ {pendingOrderConfirm.total.toFixed(2)}</strong>). Deseja criar outro pedido?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setPendingOrderConfirm(null); setSkipPendingCheck(false) }}
+                className="flex-1 rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ borderColor: theme.borderCard, color: theme.text }}
+              >
+                Não, voltar
+              </button>
+              <button
+                onClick={() => {
+                  setPendingOrderConfirm(null)
+                  setSkipPendingCheck(true)
+                  setTimeout(() => {
+                    handleSiteOrder(new Event("submit") as any)
+                  }, 100)
+                }}
+                className="flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: theme.primary }}
+              >
+                Sim, criar novo
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cancel order confirmation modal */}
