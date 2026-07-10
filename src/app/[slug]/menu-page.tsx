@@ -2638,6 +2638,7 @@ function PaymentModal({
   const [cardAddressNum, setCardAddressNum] = useState("")
   const [cardProcessing, setCardProcessing] = useState(false)
   const [cardError, setCardError] = useState("")
+  const [cardPending, setCardPending] = useState(false)
 
   // Success state
   const [paymentSuccess, setPaymentSuccess] = useState(false)
@@ -2722,6 +2723,7 @@ function PaymentModal({
           const data = await res.json()
           if (data.paymentStatus === "paid") {
             setPaymentSuccess(true)
+            setCardPending(false)
             onPaymentSuccess?.()
             clearInterval(check)
           }
@@ -2801,6 +2803,9 @@ function PaymentModal({
       } else if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
         setPaymentSuccess(true)
         onPaymentSuccess?.()
+      } else if (data.status === "PENDING" || data.paymentStatus === "pending") {
+        setCardPending(true)
+        setCardError("")
       } else if (data.error) {
         setCardError(data.error)
       } else {
@@ -3007,6 +3012,21 @@ function PaymentModal({
               ) : null}
             </div>
           ) : (mode === "card" || (!mode && tab === "card")) ? (
+            cardPending ? (
+              <div className="flex flex-col items-center py-8">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full animate-pulse" style={{ backgroundColor: `${theme.primary}15` }}>
+                  <CreditCard className="h-8 w-8" style={{ color: theme.primary }} />
+                </div>
+                <h3 className="text-base font-semibold mb-1" style={{ color: theme.text }}>Aguardando pagamento</h3>
+                <p className="text-sm text-center mb-4" style={{ color: theme.textMuted }}>
+                  Processando seu pagamento com cartão...
+                </p>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: theme.primary }} />
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Aguardando confirmação do Asaas</p>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-3">
               <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>Número do cartão</label>
@@ -3102,6 +3122,7 @@ function PaymentModal({
                 Pagamento seguro processado por Asaas
               </p>
             </div>
+            )
           ) : null}
         </div>
       </div>
