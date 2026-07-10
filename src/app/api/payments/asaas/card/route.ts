@@ -84,6 +84,14 @@ export async function POST(req: NextRequest) {
 
     const newPayment = await newPaymentRes.json()
     console.log("[Card] New payment:", newPayment.id, newPayment.status, JSON.stringify(newPayment.errors || {}))
+    console.log("[Card] Sent to Asaas:", JSON.stringify({
+      customer: customerId,
+      billingType: "CREDIT_CARD",
+      value: order.total,
+      remoteIp,
+      creditCard: { creditCardNumber: creditCard.creditCardNumber.slice(0, 4) + "...", creditCardBrand: creditCard.creditCardBrand, creditCardHolder: creditCard.creditCardHolder },
+      creditCardHolderInfo: { name: creditCardHolderInfo.name, cpfCnpj: creditCardHolderInfo.cpfCnpj, email: creditCardHolderInfo.email, phone: creditCardHolderInfo.phone },
+    }))
 
     if (!newPaymentRes.ok || !newPayment.id) {
       return NextResponse.json({

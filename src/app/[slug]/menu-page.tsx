@@ -2787,6 +2787,10 @@ function PaymentModal({
       setCardError("Nome do titular obrigatório")
       return
     }
+    if (!cardEmail.trim() || !cardEmail.includes("@")) {
+      setCardError("E-mail do titular obrigatório")
+      return
+    }
 
     setCardProcessing(true)
     try {
@@ -3106,7 +3110,7 @@ function PaymentModal({
                 />
               </div>
               <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>E-mail (opcional)</label>
+                <label className="text-xs" style={{ color: theme.textMuted }}>E-mail do titular</label>
                 <input
                   type="email"
                   placeholder="email@exemplo.com"
