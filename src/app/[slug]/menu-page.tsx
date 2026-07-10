@@ -1031,7 +1031,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // Auto-close success screen after 5 seconds
   useEffect(() => {
     if (orderResult?.success && !orderResult?.paymentLink) {
-      console.log("[auto-close] Timer iniciado para pedido:", orderResult.orderId)
+      console.log("[auto-close] Timer iniciado para pedido:", orderResult.orderId, "paymentDone:", orderResult.paymentDone)
       const timer = setTimeout(() => {
         console.log("[auto-close] LIMPANDO orderResult do pedido:", orderResult.orderId)
         setOrderResult(null)
@@ -1043,6 +1043,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return () => clearTimeout(timer)
     }
   }, [orderResult?.success, orderResult?.paymentLink, orderResult?.orderId, orderResult?.paymentDone])
+
+  // Track orderResult changes
+  useEffect(() => {
+    console.log("[orderResult TRACK]", orderResult ? { success: orderResult.success, paymentLink: !!orderResult.paymentLink, paymentDone: orderResult.paymentDone, orderId: orderResult.orderId } : null)
+  }, [orderResult])
 
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone) {
@@ -1067,7 +1072,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null) }}
+        onPaymentSuccess={() => { console.log("[onPaymentSuccess] CHAMADO - limpando paymentLink e setando paymentDone=true"); setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null) }}
       />
     )
   }
