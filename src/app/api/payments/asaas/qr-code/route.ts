@@ -38,63 +38,72 @@ export async function POST(req: NextRequest) {
 
     console.log("[QR Code] Fetching for payment:", { paymentId: order.paymentId, establishment: order.establishment.name })
 
+    // Tenta buscar QR Code PIX
     const res = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}/pixQrCode`, {
       headers: { access_token: order.establishment.asaasApiKey },
     })
 
     console.log("[QR Code] Asaas response status:", res.status)
 
-    if (!res.ok) {
-      const err = await res.json()
-      console.error("[QR Code] Asaas error:", JSON.stringify(err))
+    if (res.ok) {
+      // PIX QR Code funcionou (produção)
+      const data = await res.json()
+      console.log("[QR Code] Success:", { hasImage: !!data.encodedImage, hasPayload: !!data.payload })
 
-      const errorCode = err.errors?.[0]?.code
-      const errorDesc = err.errors?.[0]?.description || ""
-
-      if (errorCode === "invalid_action" && errorDesc.includes("não pode mais ser paga")) {
-        console.log("[QR Code] Payment already in terminal state, checking status...")
-
-        const statusRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
-          headers: { access_token: order.establishment.asaasApiKey },
-        })
-
-        if (statusRes.ok) {
-          const paymentData = await statusRes.json()
-          console.log("[QR Code] Payment status:", paymentData.status)
-
-          const statusMap: Record<string, string> = {
-            CONFIRMED: "paid",
-            RECEIVED: "paid",
-            AUTHORIZED: "paid",
-            REFUNDED: "refunded",
-            RECEIVED_IN_CASH: "paid",
-          }
-
-          const paymentStatus = statusMap[paymentData.status] || "pending"
-
-          if (paymentStatus === "paid") {
-            await prisma.order.update({
-              where: { id: order.id },
-              data: { paymentStatus: "paid", status: "confirmed" },
-            })
-            console.log("[QR Code] Order updated to paid via status check")
-            return NextResponse.json({ alreadyPaid: true })
-          }
-        }
-      }
-
-      return NextResponse.json({ error: "Erro ao buscar QR Code", details: err }, { status: 502 })
+      return NextResponse.json({
+        encodedImage: data.encodedImage,
+        payload: data.payload,
+        expiration: data.expiration,
+      })
     }
 
-    const data = await res.json()
+    // QR Code PIX falhou - pode ser pagamento não-PIX (sandbox) ou pagamento já confirmado
+    const err = await res.json()
+    console.error("[QR Code] Asaas error:", JSON.stringify(err))
 
-    console.log("[QR Code] Success:", { hasImage: !!data.encodedImage, hasPayload: !!data.payload })
+    const errorCode = err.errors?.[0]?.code
+    const errorDesc = err.errors?.[0]?.description || ""
 
-    return NextResponse.json({
-      encodedImage: data.encodedImage,
-      payload: data.payload,
-      expiration: data.expiration,
-    })
+    // Verifica se o pagamento já foi confirmado (sandbox auto-confirma)
+    if (errorCode === "invalid_action" && errorDesc.includes("não pode mais ser paga")) {
+      console.log("[QR Code] Payment in terminal state, checking status...")
+
+      const statusRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
+        headers: { access_token: order.establishment.asaasApiKey },
+      })
+
+      if (statusRes.ok) {
+        const paymentData = await statusRes.json()
+        console.log("[QR Code] Payment status:", paymentData.status)
+
+        const statusMap: Record<string, string> = {
+          CONFIRMED: "paid",
+          RECEIVED: "paid",
+          AUTHORIZED: "paid",
+          REFUNDED: "refunded",
+          RECEIVED_IN_CASH: "paid",
+        }
+
+        const paymentStatus = statusMap[paymentData.status] || "pending"
+
+        if (paymentStatus === "paid") {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { paymentStatus: "paid", status: "confirmed" },
+          })
+          console.log("[QR Code] Order updated to paid via status check")
+          return NextResponse.json({ alreadyPaid: true })
+        }
+      }
+    }
+
+    // Pagamento não é PIX (sandbox com UNDEFINED) - retorna invoiceUrl para pagamento
+    if (order.paymentLink) {
+      console.log("[QR Code] Returning invoiceUrl for non-PIX payment")
+      return NextResponse.json({ invoiceUrl: order.paymentLink })
+    }
+
+    return NextResponse.json({ error: "Erro ao buscar QR Code", details: err }, { status: 502 })
   } catch (error: any) {
     console.error("[QR Code] Error:", error.message)
     return NextResponse.json({ error: "Erro ao buscar QR Code", details: error.message }, { status: 500 })

@@ -2561,6 +2561,7 @@ function PaymentModal({
   const [copied, setCopied] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const countdownRef = useRef<NodeJS.Timeout | null>(null)
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
 
   // Card state
   const [cardNumber, setCardNumber] = useState("")
@@ -2602,6 +2603,12 @@ function PaymentModal({
           if (data.encodedImage) {
             setQrCode({ image: data.encodedImage, payload: data.payload })
             setCountdown(300)
+            setQrLoading(false)
+            return
+          }
+          // Handle invoiceUrl for non-PIX payments (sandbox)
+          if (data.invoiceUrl) {
+            setInvoiceUrl(data.invoiceUrl)
             setQrLoading(false)
             return
           }
@@ -2910,6 +2917,24 @@ function PaymentModal({
                     </div>
                   </div>
                 </>
+              ) : invoiceUrl ? (
+                <div className="flex flex-col items-center py-4">
+                  <p className="text-sm mb-4 text-center" style={{ color: theme.textMuted }}>
+                    Clique no botão abaixo para acessar a página de pagamento:
+                  </p>
+                  <a
+                    href={invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    Pagar agora
+                  </a>
+                  <p className="mt-3 text-xs text-center" style={{ color: theme.textMuted }}>
+                    Você será redirecionado para a página de pagamento do Asaas
+                  </p>
+                </div>
               ) : null}
             </div>
           ) : (mode === "card" || (!mode && tab === "card")) ? (
