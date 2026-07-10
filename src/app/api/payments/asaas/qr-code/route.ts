@@ -47,6 +47,42 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const err = await res.json()
       console.error("[QR Code] Asaas error:", JSON.stringify(err))
+
+      const errorCode = err.errors?.[0]?.code
+      const errorDesc = err.errors?.[0]?.description || ""
+
+      if (errorCode === "invalid_action" && errorDesc.includes("não pode mais ser paga")) {
+        console.log("[QR Code] Payment already in terminal state, checking status...")
+
+        const statusRes = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
+          headers: { access_token: order.establishment.asaasApiKey },
+        })
+
+        if (statusRes.ok) {
+          const paymentData = await statusRes.json()
+          console.log("[QR Code] Payment status:", paymentData.status)
+
+          const statusMap: Record<string, string> = {
+            CONFIRMED: "paid",
+            RECEIVED: "paid",
+            AUTHORIZED: "paid",
+            REFUNDED: "refunded",
+            RECEIVED_IN_CASH: "paid",
+          }
+
+          const paymentStatus = statusMap[paymentData.status] || "pending"
+
+          if (paymentStatus === "paid") {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { paymentStatus: "paid", status: "confirmed" },
+            })
+            console.log("[QR Code] Order updated to paid via status check")
+            return NextResponse.json({ alreadyPaid: true })
+          }
+        }
+      }
+
       return NextResponse.json({ error: "Erro ao buscar QR Code", details: err }, { status: 502 })
     }
 

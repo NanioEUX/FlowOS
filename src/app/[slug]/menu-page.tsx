@@ -2593,6 +2593,12 @@ function PaymentModal({
             body: JSON.stringify({ orderId }),
           })
           const data = await res.json()
+          if (data.alreadyPaid) {
+            setQrLoading(false)
+            setPaymentSuccess(true)
+            onPaymentSuccess?.()
+            return
+          }
           if (data.encodedImage) {
             setQrCode({ image: data.encodedImage, payload: data.payload })
             setCountdown(300)
