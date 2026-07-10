@@ -663,13 +663,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   async function submitOrder() {
-    console.log("[submitOrder] called, orderingRef:", orderingRef.current, "skipPendingCheck:", skipPendingCheckRef.current)
+    console.log("[submitOrder] ========== INICIO ==========")
+    console.log("[submitOrder] orderingRef:", orderingRef.current, "| skipPending:", skipPendingCheckRef.current)
+    console.log("[submitOrder] customer:", JSON.stringify(customer))
+    console.log("[submitOrder] paymentMethod:", paymentMethod, "| orderType:", orderType)
+    console.log("[submitOrder] cart:", cart.length, "itens | total:", total)
+    console.log("[submitOrder] addressSaved:", addressSaved, "| couponData:", !!couponData)
+    console.log("[submitOrder] orderResult atual:", orderResult ? { orderId: orderResult.orderId, success: orderResult.success, paymentLink: !!orderResult.paymentLink } : null)
+    console.log("[submitOrder] lastOrder:", lastOrder ? { orderId: lastOrder.orderId, paymentLink: !!lastOrder.paymentLink } : null)
+    console.log("[submitOrder] showPaymentModal:", showPaymentModal)
     if (orderingRef.current) { console.log("[submitOrder] BLOCKED by orderingRef"); return }
     orderingRef.current = true
     setOrderError("")
     setOrdering(true)
 
     if (!customer.name.trim()) {
+      console.log("[submitOrder] RETORNO: nome vazio")
       setOrderError("Preencha seu nome para finalizar")
       setOrdering(false)
       orderingRef.current = false
@@ -678,6 +687,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
 
     if (!customer.phone || customer.phone.replace(/\D/g, "").length < 11) {
+      console.log("[submitOrder] RETORNO: telefone invalido")
       setOrderError("Preencha um telefone válido com DDD")
       setOrdering(false)
       orderingRef.current = false
@@ -687,6 +697,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
     if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
+      console.log("[submitOrder] RETORNO: CPF invalido")
       setOrderError("CPF inválido. Verifique e tente novamente.")
       setOrdering(false)
       orderingRef.current = false
@@ -695,6 +706,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
 
     if (orderType === "delivery" && !addressSaved) {
+      console.log("[submitOrder] RETORNO: endereco nao salvo")
       setOrderError("Salve o endereço antes de finalizar o pedido")
       setOrdering(false)
       orderingRef.current = false
@@ -703,14 +715,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     // Check if there's already a pending payment order
     const phone = customer.phone || customerData?.phone
-    console.log("[submitOrder] pending check - phone:", phone, "skipPendingCheck:", skipPendingCheckRef.current)
     if (phone && !skipPendingCheckRef.current) {
+      console.log("[submitOrder] pending check - phone:", phone)
       try {
         const checkRes = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
         if (checkRes.ok) {
           const orders = await checkRes.json()
           const pendingOrder = orders.find((o: any) => o.paymentStatus === "pending" && o.paymentLink)
           if (pendingOrder) {
+            console.log("[submitOrder] RETORNO: pedido pendente encontrado:", pendingOrder.orderNumber)
             setPendingOrderConfirm({ orderId: pendingOrder.id, orderNumber: pendingOrder.orderNumber, total: pendingOrder.total })
             setOrdering(false)
             orderingRef.current = false
@@ -750,7 +763,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       if (!res.ok) throw new Error("Erro ao criar pedido")
       const data = await res.json()
-      console.log("[submitOrder] API response:", { orderId: data.order?.id, paymentLink: !!data.paymentLink, paymentError: data.paymentError })
+      console.log("[submitOrder] API response:", {
+        orderId: data.order?.id,
+        paymentLink: data.paymentLink ? data.paymentLink.substring(0, 60) + "..." : null,
+        paymentError: data.paymentError,
+        orderStatus: data.order?.status,
+        paymentStatus: data.order?.paymentStatus,
+      })
 
       setOrderResult({
         success: true,
@@ -763,6 +782,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         orderTotal: total,
       })
 
+      console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
+
       if (data.order?.id && data.trackingUrl) {
         const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now() }
         setLastOrder(lastOrd)
@@ -772,7 +793,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setEditingAddress(false)
 
       if (data.paymentLink) {
+        console.log("[submitOrder]Abrindo PaymentModal em 300ms...")
         setTimeout(() => setShowPaymentModal(true), 300)
+      } else {
+        console.log("[submitOrder] SEM paymentLink - tela de sucesso vai aparecer (sem pagamento)")
       }
     } catch (err: any) {
       console.error("[submitOrder] ERROR:", err.message)
@@ -976,7 +1000,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // Auto-close success screen after 5 seconds
   useEffect(() => {
     if (orderResult?.success && !orderResult?.paymentLink) {
+      console.log("[auto-close] Timer iniciado para pedido:", orderResult.orderId)
       const timer = setTimeout(() => {
+        console.log("[auto-close] LIMPANDO orderResult do pedido:", orderResult.orderId)
         setOrderResult(null)
         setShowCart(false)
         setShowCheckout(false)
@@ -989,6 +1015,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink) {
+    console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
     if (!showPaymentModal) {
       // Auto-open payment modal
       setTimeout(() => setShowPaymentModal(true), 100)
@@ -1067,6 +1094,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // Success screen - only show if no paymentLink (otherwise payment modal handles it)
   if (orderResult?.success && !orderResult?.paymentLink) {
+    console.log("[render] TELA DE SUCESSO (sem paymentLink) - orderId:", orderResult.orderId, "paymentError:", orderResult.paymentError)
     return (
       <>
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-4">
