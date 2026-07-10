@@ -177,7 +177,6 @@ export async function POST(req: NextRequest) {
     }
 
     let paymentLink = ""
-    let paymentError: string | null = null
     const paymentProvider = establishment.paymentProvider || "asaas"
 
     console.log("[Orders POST] paymentProvider:", paymentProvider, "| willCreatePayment:", paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card")
@@ -228,7 +227,8 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Efi] ERRO ao gerar pagamento:", err.message)
-          paymentError = err.message || "Erro ao gerar pagamento Efi"
+          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }
       } else {
         // Asaas payment (default)
@@ -266,12 +266,14 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Asaas] ERRO ao gerar pagamento:", err.message)
-          paymentError = err.message || "Erro ao gerar pagamento"
+          // Deleta o pedido se o pagamento falhar
+          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }
       }
     }
 
-    console.log("[Orders POST] Resultado final - paymentLink:", paymentLink ? "SIM" : "NAO", "| paymentError:", paymentError)
+    console.log("[Orders POST] Resultado final - paymentLink:", paymentLink ? "SIM" : "NAO")
 
     const fullOrder = await prisma.order.findUnique({
       where: { id: order.id },
@@ -338,7 +340,7 @@ export async function POST(req: NextRequest) {
       console.error("Error decrementing stock:", e)
     }
 
-    return NextResponse.json({ order: fullOrder, paymentLink, paymentError, trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
+    return NextResponse.json({ order: fullOrder, paymentLink, trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 })
