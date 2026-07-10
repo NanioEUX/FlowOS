@@ -530,7 +530,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const data = await res.json()
         if (data && !data.notFound) {
           setCustomerData(data)
-          setCustomer((prev) => ({ ...prev, name: data.name || prev.name, phone: data.phone, address: data.address || prev.address, cpf: data.cpf || prev.cpf }))
+          setCustomer((prev) => ({ ...prev, name: data.name || prev.name, address: data.address || prev.address, cpf: data.cpf || prev.cpf }))
           setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
           if (data.cep && data.address) {
             setAddressSaved(true)
@@ -541,7 +541,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           }
         } else {
           setCustomerData(null)
-          setCustomer((prev) => ({ ...prev, phone: raw }))
         }
       } catch { } finally {
         setIdentifying(false)
