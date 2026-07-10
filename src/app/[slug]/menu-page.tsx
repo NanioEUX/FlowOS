@@ -972,7 +972,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentId={establishment.id}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-          onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`) }}
+        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined } : null) }}
       />
     )
   }
@@ -2386,7 +2386,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           onClose={() => setShowPaymentModal(false)}
           establishmentId={establishment.id}
           initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
-        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`) }}
+          onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); setOrderResult(prev => prev ? { ...prev, paymentLink: undefined } : null) }}
         />
       )}
 
