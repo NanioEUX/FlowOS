@@ -242,7 +242,6 @@ export async function POST(req: NextRequest) {
 
           console.log("[Asaas] Criando pagamento:", { customerName, customerPhone, customerCpf: customerCpf ? "***" : "VAZIO", value: order.total })
 
-          const isSandbox = process.env.ASAAS_ENVIRONMENT === "sandbox"
           const payment = await createPaymentLink({
             apiKey: establishment.asaasApiKey,
             customerName,
