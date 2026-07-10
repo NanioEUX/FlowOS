@@ -2710,9 +2710,9 @@ function PaymentModal({
     return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
   }, [countdown > 0])
 
-  // Check payment status periodically
+  // Check payment status periodically (only for PIX, not card)
   useEffect(() => {
-    if (paymentSuccess || !orderId) return
+    if (paymentSuccess || !orderId || tab === "card") return
     const controller = new AbortController()
     const check = setInterval(async () => {
       if (controller.signal.aborted) { clearInterval(check); return }
@@ -2729,7 +2729,7 @@ function PaymentModal({
       } catch {}
     }, 3000)
     return () => { controller.abort(); clearInterval(check) }
-  }, [orderId, paymentSuccess])
+  }, [orderId, paymentSuccess, tab])
 
   function formatCountdown(seconds: number) {
     const m = Math.floor(seconds / 60)
