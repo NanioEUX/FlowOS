@@ -273,7 +273,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // When payment is confirmed, clear lastOrder and cart
   useEffect(() => {
     if (!lastOrder?.orderId || !lastOrder?.paymentLink) return
-    fetch(`/api/orders/${lastOrder.orderId}/payment-status`)
+    const controller = new AbortController()
+    fetch(`/api/orders/${lastOrder.orderId}/payment-status`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
         if (data.paymentStatus === "paid") {
@@ -284,6 +285,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         }
       })
       .catch(() => {})
+    return () => controller.abort()
   }, [lastOrder?.orderId, establishment.slug])
 
   const [showIdentifyModal, setShowIdentifyModal] = useState(false)
@@ -307,6 +309,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [couponError, setCouponError] = useState("")
   const [pendingOrderConfirm, setPendingOrderConfirm] = useState<{ orderId: string; orderNumber: number; total: number } | null>(null)
   const skipPendingCheckRef = useRef(false)
+  const orderingRef = useRef(false)
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -658,14 +661,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return rev === parseInt(digits[10])
   }
 
-  async function handleSiteOrder(e: React.FormEvent) {
-    e.preventDefault()
+  async function submitOrder() {
+    if (orderingRef.current) return
+    orderingRef.current = true
     setOrderError("")
     setOrdering(true)
 
     if (!customer.name.trim()) {
       setOrderError("Preencha seu nome para finalizar")
       setOrdering(false)
+      orderingRef.current = false
       openIdentifyModal()
       return
     }
@@ -673,6 +678,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (!customer.phone || customer.phone.replace(/\D/g, "").length < 11) {
       setOrderError("Preencha um telefone válido com DDD")
       setOrdering(false)
+      orderingRef.current = false
       openIdentifyModal()
       return
     }
@@ -681,6 +687,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
       setOrderError("CPF inválido. Verifique e tente novamente.")
       setOrdering(false)
+      orderingRef.current = false
       openIdentifyModal()
       return
     }
@@ -688,6 +695,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (orderType === "delivery" && !addressSaved) {
       setOrderError("Salve o endereço antes de finalizar o pedido")
       setOrdering(false)
+      orderingRef.current = false
       return
     }
 
@@ -702,6 +710,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           if (pendingOrder) {
             setPendingOrderConfirm({ orderId: pendingOrder.id, orderNumber: pendingOrder.orderNumber, total: pendingOrder.total })
             setOrdering(false)
+            orderingRef.current = false
             return
           }
         }
@@ -757,7 +766,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       setEditingAddress(false)
 
-      // Open payment modal directly if payment link exists
       if (data.paymentLink) {
         setTimeout(() => setShowPaymentModal(true), 300)
       }
@@ -765,8 +773,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setOrderError(err.message)
     } finally {
       setOrdering(false)
+      orderingRef.current = false
       skipPendingCheckRef.current = false
     }
+  }
+
+  async function handleSiteOrder(e: React.FormEvent) {
+    e.preventDefault()
+    await submitOrder()
   }
 
   async function openTracking(orderId?: string, trackingUrl?: string) {
@@ -2431,7 +2445,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 onClick={() => {
                   setPendingOrderConfirm(null)
                   skipPendingCheckRef.current = true
-                  handleSiteOrder(new Event("submit") as any)
+                  submitOrder()
                 }}
                 className="flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: theme.primary }}
