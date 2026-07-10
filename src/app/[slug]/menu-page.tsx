@@ -2757,6 +2757,7 @@ function PaymentModal({
   }
 
   async function handleCardPayment() {
+    console.log("[Card] handleCardPayment called")
     setCardError("")
     if (cardNumber.replace(/\s/g, "").length < 16) {
       setCardError("Número do cartão inválido")

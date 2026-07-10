@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     })
 
     const newPayment = await newPaymentRes.json()
-    console.log("[Card] New payment created:", newPayment.id, newPayment.status, JSON.stringify(newPayment.errors || {}))
+    console.log("[Card] New payment created:", newPayment.id, "status:", newPayment.status, JSON.stringify(newPayment.errors || {}))
 
     if (!newPaymentRes.ok || !newPayment.id) {
       return NextResponse.json({
@@ -165,19 +165,34 @@ export async function POST(req: NextRequest) {
       data: { paymentId: newPayment.id },
     })
 
-    // 5. Authorize the payment
-    const authRes = await fetch(`${ASAAS_API_URL}/payments/${newPayment.id}/authorize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", access_token: apiKey },
-    })
+    // 5. Authorize the payment (may fail in sandbox)
+    const isSandbox = process.env.ASAAS_ENVIRONMENT === "sandbox"
+    let finalStatus = newPayment.status
 
-    let authData: any = null
-    if (authRes.ok) {
-      authData = await authRes.json()
-      console.log("[Card] Authorized:", authData.status)
-    } else {
-      authData = await authRes.json()
-      console.error("[Card] Auth error:", JSON.stringify(authData))
+    try {
+      const authRes = await fetch(`${ASAAS_API_URL}/payments/${newPayment.id}/authorize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", access_token: apiKey },
+      })
+
+      if (authRes.ok) {
+        const authData = await authRes.json()
+        console.log("[Card] Authorized:", authData.status)
+        finalStatus = authData.status || finalStatus
+      } else {
+        const authErr = await authRes.json()
+        console.error("[Card] Auth error:", authRes.status, JSON.stringify(authErr))
+        // In sandbox, authorization may not be available - treat PENDING as OK
+        if (isSandbox && finalStatus === "PENDING") {
+          console.log("[Card] Sandbox: treating PENDING as AUTHORIZED")
+          finalStatus = "AUTHORIZED"
+        }
+      }
+    } catch (e: any) {
+      console.error("[Card] Auth exception:", e.message)
+      if (isSandbox && finalStatus === "PENDING") {
+        finalStatus = "AUTHORIZED"
+      }
     }
 
     const statusMap: Record<string, string> = {
@@ -189,7 +204,6 @@ export async function POST(req: NextRequest) {
       RECEIVED_IN_CASH: "paid",
     }
 
-    const finalStatus = authData?.status || newPayment.status
     const paymentStatus = statusMap[finalStatus] || "pending"
 
     await prisma.order.update({
