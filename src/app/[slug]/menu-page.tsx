@@ -2642,9 +2642,9 @@ function PaymentModal({
   // Success state
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
-  // Fetch QR Code on mount with retry
+  // Fetch QR Code on mount with retry (runs for PIX tab and card mode to get invoiceUrl)
   useEffect(() => {
-    if (tab !== "pix" || !orderId) return
+    if ((tab !== "pix" && !mode) || !orderId) return
     setQrLoading(true)
     setQrError("")
     const controller = new AbortController()
@@ -3007,99 +3007,39 @@ function PaymentModal({
               ) : null}
             </div>
           ) : (mode === "card" || (!mode && tab === "card")) ? (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>Número do cartão</label>
-                <input
-                  placeholder="0000 0000 0000 0000"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                  maxLength={19}
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                />
+            <div className="flex flex-col items-center py-4">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.primary}15` }}>
+                <CreditCard className="h-8 w-8" style={{ color: theme.primary }} />
               </div>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-xs" style={{ color: theme.textMuted }}>Validade</label>
-                  <input
-                    placeholder="MM/AA"
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                    maxLength={5}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                  />
+              <p className="text-sm text-center mb-4" style={{ color: theme.textMuted }}>
+                Você será redirecionado para a página segura do Asaas para concluir o pagamento com cartão.
+              </p>
+              {invoiceUrl ? (
+                <a
+                  href={invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full rounded-xl py-3 text-sm font-semibold text-white text-center transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  Pagar com cartão
+                </a>
+              ) : qrLoading ? (
+                <div className="py-4 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" style={{ color: theme.primary }} />
+                  <p className="mt-2 text-xs" style={{ color: theme.textMuted }}>Carregando...</p>
                 </div>
-                <div className="flex-1">
-                  <label className="text-xs" style={{ color: theme.textMuted }}>CVV</label>
-                  <input
-                    placeholder="000"
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    maxLength={4}
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>Nome no cartão</label>
-                <input
-                  placeholder="Como está impresso no cartão"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                />
-              </div>
-              <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>CPF do titular</label>
-                <input
-                  placeholder="000.000.000-00"
-                  value={cardCpf}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "").slice(0, 11)
-                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
-                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
-                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
-                    setCardCpf(v)
-                  }}
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                />
-              </div>
-              <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>E-mail (opcional)</label>
-                <input
-                  type="email"
-                  placeholder="email@exemplo.com"
-                  value={cardEmail}
-                  onChange={(e) => setCardEmail(e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
-                />
-              </div>
-              {cardError && (
-                <div className="rounded-lg bg-red-500/10 p-2 text-xs text-red-400 border border-red-500/20">{cardError}</div>
+              ) : (
+                <button
+                  onClick={() => { setTab("pix"); setQrLoading(true); setQrError("") }}
+                  className="text-sm hover:underline"
+                  style={{ color: theme.primary }}
+                >
+                  Tentar novamente
+                </button>
               )}
-              <button
-                onClick={handleCardPayment}
-                disabled={cardProcessing}
-                className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: theme.primary }}
-              >
-                {cardProcessing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processando...
-                  </span>
-                ) : (
-                  `Pagar ${formatCurrency(total)}`
-                )}
-              </button>
-              <p className="text-[10px] text-center" style={{ color: theme.textMuted }}>
-                Pagamento seguro processado por Asaas
+              <p className="mt-3 text-[10px] text-center" style={{ color: theme.textMuted }}>
+                Você também pode escolher PIX na página de pagamento
               </p>
             </div>
           ) : null}
