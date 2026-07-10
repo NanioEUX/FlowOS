@@ -2794,6 +2794,7 @@ function PaymentModal({
         }),
       })
       const data = await res.json()
+      console.log("[Card] Response:", JSON.stringify(data), "status:", res.status)
       if (!res.ok) {
         setCardError(data.error || `Erro ${res.status}`)
       } else if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
