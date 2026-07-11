@@ -315,6 +315,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
   const paidOrderIdsRef = useRef(new Set<string>())
+  const seenPendingOrdersRef = useRef(new Set<string>())
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -589,33 +590,34 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   function openCart() {
     const phone = customer.phone || customerData?.phone
     if (phone && customerOrders.length > 0) {
-      // PRIMEIRO: verificar pedido pendente de pagamento
       const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
-      if (pendingOrder) {
-        setPendingOrderItems(pendingOrder.items || [])
-        setPendingOrderNumber(pendingOrder.orderNumber)
-        setShowCart(true)
-        return
-      }
-      // DEPOIS: verificar pedido em preparo
       const inProgress = customerOrders.find((o: any) =>
         o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
       )
-      if (inProgress) {
+      const orderToCheck = pendingOrder || inProgress
+
+      // First interaction with this order → show modal
+      if (orderToCheck && !seenPendingOrdersRef.current.has(orderToCheck.id)) {
         const statusLabels: Record<string, string> = {
+          pending: "Pendente",
           confirmed: "Confirmado",
           preparing: "Preparando",
           ready: "Pronto",
           out_for_delivery: "Saiu para Entrega",
         }
         setInProgressOrder({
-          orderId: inProgress.id,
-          orderNumber: inProgress.orderNumber,
-          status: statusLabels[inProgress.status] || inProgress.status,
-          total: inProgress.total,
-          trackingUrl: `/pedido/${inProgress.trackingToken}`,
+          orderId: orderToCheck.id,
+          orderNumber: orderToCheck.orderNumber,
+          status: statusLabels[orderToCheck.status] || orderToCheck.status,
+          total: orderToCheck.total,
+          trackingUrl: `/pedido/${orderToCheck.trackingToken}`,
         })
         return
+      }
+
+      if (pendingOrder) {
+        setPendingOrderItems(pendingOrder.items || [])
+        setPendingOrderNumber(pendingOrder.orderNumber)
       }
     }
     setShowCart(true)
@@ -636,23 +638,28 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
         )
         if (pendingOrder || inProgressOrder) {
-          // Show modal instead of adding
           const orderToShow = pendingOrder || inProgressOrder
-          const statusLabels: Record<string, string> = {
-            pending: "Pendente",
-            confirmed: "Confirmado",
-            preparing: "Preparando",
-            ready: "Pronto",
-            out_for_delivery: "Saiu para Entrega",
+          // If already seen this order's modal, skip it
+          if (seenPendingOrdersRef.current.has(orderToShow.id)) {
+            // Skip modal, add to cart normally
+          } else {
+            // Show modal first time
+            const statusLabels: Record<string, string> = {
+              pending: "Pendente",
+              confirmed: "Confirmado",
+              preparing: "Preparando",
+              ready: "Pronto",
+              out_for_delivery: "Saiu para Entrega",
+            }
+            setInProgressOrder({
+              orderId: orderToShow.id,
+              orderNumber: orderToShow.orderNumber,
+              status: statusLabels[orderToShow.status] || orderToShow.status,
+              total: orderToShow.total,
+              trackingUrl: `/pedido/${orderToShow.trackingToken}`,
+            })
+            return
           }
-          setInProgressOrder({
-            orderId: orderToShow.id,
-            orderNumber: orderToShow.orderNumber,
-            status: statusLabels[orderToShow.status] || orderToShow.status,
-            total: orderToShow.total,
-            trackingUrl: `/pedido/${orderToShow.trackingToken}`,
-          })
-          return
         }
       }
     }
@@ -2557,6 +2564,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <button
                 onClick={() => {
                   console.log("[Sim, criar novo] clicked, setting skipPendingCheck=true and calling submitOrder()")
+                  if (pendingOrderConfirm) seenPendingOrdersRef.current.add(pendingOrderConfirm.orderId)
                   setPendingOrderConfirm(null)
                   skipPendingCheckRef.current = true
                   submitOrder()
@@ -2598,6 +2606,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               </button>
               <button
                 onClick={() => {
+                  seenPendingOrdersRef.current.add(inProgressOrder.orderId)
                   setInProgressOrder(null)
                   setShowCart(true)
                 }}
