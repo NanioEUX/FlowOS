@@ -1875,7 +1875,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   </div>
                 )}
                 {cart.map((item) => {
-                  const isFromPendingOrder = Array.isArray(pendingOrderItems) && pendingOrderItems.some((p: any) => p.productId === item.id)
+                  const isPending = !!pendingOrderNumber
+                  const isFromPendingOrder = isPending
                   return (
                   <div key={item.id} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: theme.bgCard }}>
                     <div className="flex-1">
