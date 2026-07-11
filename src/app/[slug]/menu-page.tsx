@@ -1457,9 +1457,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <ShoppingBag className="h-5 w-5" />
               <span className="text-[10px] font-medium">Carrinho</span>
               {totalItems > 0 && (
-                <span className="absolute -top-1 right-0 flex flex-col items-center justify-center rounded-full px-1 text-[7px] font-bold text-white leading-tight" style={{ backgroundColor: theme.primary, minWidth: "1.8rem", height: "1.8rem" }}>
+                <span className="absolute -top-1.5 right-0.5 flex flex-col items-center justify-center rounded-full px-0.5 text-[6px] font-bold text-white leading-tight" style={{ backgroundColor: theme.primary, minWidth: "1.2rem", height: "1.2rem" }}>
                   <span>R${Math.round(total)}</span>
-                  <span className="text-[6px] opacity-80">{totalItems}x</span>
+                  <span className="text-[5px] opacity-80">{totalItems}</span>
                 </span>
               )}
             </button>
