@@ -310,6 +310,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [pendingOrderConfirm, setPendingOrderConfirm] = useState<{ orderId: string; orderNumber: number; total: number } | null>(null)
   const [inProgressOrder, setInProgressOrder] = useState<{ orderId: string; orderNumber: number; status: string; total: number; trackingUrl: string } | null>(null)
   const [pendingOrderItems, setPendingOrderItems] = useState<any[]>([])
+  const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null)
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
@@ -610,6 +611,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
       if (pendingOrder) {
         setPendingOrderItems(pendingOrder.items || [])
+        setPendingOrderNumber(pendingOrder.orderNumber)
       }
     }
     setShowCart(true)
@@ -1863,6 +1865,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               <p className="py-8 text-center" style={{ color: theme.textMuted }}>Carrinho vazio</p>
             ) : (
               <div className="space-y-3">
+                {pendingOrderNumber && (
+                  <div className="rounded-lg p-2 text-center" style={{ backgroundColor: `${theme.primary}15`, borderWidth: 1, borderStyle: "solid", borderColor: `${theme.primary}30` }}>
+                    <p className="text-xs font-medium" style={{ color: theme.primary }}>Pedido #{pendingOrderNumber} - Aguardando pagamento</p>
+                  </div>
+                )}
                 {cart.map((item) => {
                   const isFromPendingOrder = pendingOrderItems.some((p: any) => p.productId === item.id)
                   return (
@@ -2259,6 +2266,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium" style={{ color: theme.textMuted }}>
+                                #{order.orderNumber}
+                              </p>
                               <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
                                 {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                               </p>
