@@ -627,6 +627,35 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       openIdentifyModal()
       return
     }
+    // Check if has pending payment order or order in progress
+    if (customerOrders.length > 0) {
+      const phone = customer.phone || customerData?.phone
+      if (phone) {
+        const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
+        const inProgressOrder = customerOrders.find((o: any) =>
+          o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
+        )
+        if (pendingOrder || inProgressOrder) {
+          // Show modal instead of adding
+          const orderToShow = pendingOrder || inProgressOrder
+          const statusLabels: Record<string, string> = {
+            pending: "Pendente",
+            confirmed: "Confirmado",
+            preparing: "Preparando",
+            ready: "Pronto",
+            out_for_delivery: "Saiu para Entrega",
+          }
+          setInProgressOrder({
+            orderId: orderToShow.id,
+            orderNumber: orderToShow.orderNumber,
+            status: statusLabels[orderToShow.status] || orderToShow.status,
+            total: orderToShow.total,
+            trackingUrl: `/pedido/${orderToShow.trackingToken}`,
+          })
+          return
+        }
+      }
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {
@@ -3049,7 +3078,14 @@ function PaymentModal({
             </div>
           ) : (mode === "card" || (!mode && tab === "card")) ? (
             cardPending ? (
-              <div className="flex flex-col items-center py-8">
+              <div className="flex flex-col items-center py-8 relative">
+                <button
+                  onClick={onClose}
+                  className="absolute top-0 right-0 flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+                  style={{ color: theme.textMuted }}
+                >
+                  <X className="h-5 w-5" />
+                </button>
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full animate-pulse" style={{ backgroundColor: `${theme.primary}15` }}>
                   <CreditCard className="h-8 w-8" style={{ color: theme.primary }} />
                 </div>
