@@ -311,6 +311,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [inProgressOrder, setInProgressOrder] = useState<{ orderId: string; orderNumber: number; status: string; total: number; trackingUrl: string } | null>(null)
   const [pendingOrderItems, setPendingOrderItems] = useState<any[]>([])
   const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null)
+  const [pendingOrderModal, setPendingOrderModal] = useState<{ orderId: string; orderNumber: number; total: number; paymentLink: string } | null>(null)
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
@@ -594,30 +595,42 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const inProgress = customerOrders.find((o: any) =>
         o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
       )
-      const orderToCheck = pendingOrder || inProgress
 
-      // First interaction with this order → show modal
-      if (orderToCheck && !seenPendingOrdersRef.current.has(orderToCheck.id)) {
+      // Pending payment order
+      if (pendingOrder) {
+        if (!seenPendingOrdersRef.current.has(pendingOrder.id)) {
+          // First interaction - show pending modal with Pagar option
+          setPendingOrderModal({
+            orderId: pendingOrder.id,
+            orderNumber: pendingOrder.orderNumber,
+            total: pendingOrder.total,
+            paymentLink: pendingOrder.paymentLink,
+          })
+          return
+        }
+        // Already chose action - open cart with locked items
+        setPendingOrderItems(pendingOrder.items || [])
+        setPendingOrderNumber(pendingOrder.orderNumber)
+        setShowCart(true)
+        return
+      }
+
+      // In-progress order (preparing, etc.)
+      if (inProgress && !seenPendingOrdersRef.current.has(inProgress.id)) {
         const statusLabels: Record<string, string> = {
-          pending: "Pendente",
           confirmed: "Confirmado",
           preparing: "Preparando",
           ready: "Pronto",
           out_for_delivery: "Saiu para Entrega",
         }
         setInProgressOrder({
-          orderId: orderToCheck.id,
-          orderNumber: orderToCheck.orderNumber,
-          status: statusLabels[orderToCheck.status] || orderToCheck.status,
-          total: orderToCheck.total,
-          trackingUrl: `/pedido/${orderToCheck.trackingToken}`,
+          orderId: inProgress.id,
+          orderNumber: inProgress.orderNumber,
+          status: statusLabels[inProgress.status] || inProgress.status,
+          total: inProgress.total,
+          trackingUrl: `/pedido/${inProgress.trackingToken}`,
         })
         return
-      }
-
-      if (pendingOrder) {
-        setPendingOrderItems(pendingOrder.items || [])
-        setPendingOrderNumber(pendingOrder.orderNumber)
       }
     }
     setShowCart(true)
@@ -629,34 +642,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       openIdentifyModal()
       return
     }
-    // Check if has pending payment order or order in progress
+    // Check if has pending payment order
     if (customerOrders.length > 0) {
       const phone = customer.phone || customerData?.phone
       if (phone) {
         const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
-        const inProgressOrder = customerOrders.find((o: any) =>
-          o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
-        )
-        if (pendingOrder || inProgressOrder) {
-          const orderToShow = pendingOrder || inProgressOrder
-          // If already seen this order's modal, skip it
-          if (seenPendingOrdersRef.current.has(orderToShow.id)) {
-            // Skip modal, add to cart normally
+        if (pendingOrder) {
+          // If already seen this pending order, allow adding (but still show modal on first interaction)
+          if (seenPendingOrdersRef.current.has(pendingOrder.id)) {
+            // Skip modal, allow adding
           } else {
-            // Show modal first time
-            const statusLabels: Record<string, string> = {
-              pending: "Pendente",
-              confirmed: "Confirmado",
-              preparing: "Preparando",
-              ready: "Pronto",
-              out_for_delivery: "Saiu para Entrega",
-            }
-            setInProgressOrder({
-              orderId: orderToShow.id,
-              orderNumber: orderToShow.orderNumber,
-              status: statusLabels[orderToShow.status] || orderToShow.status,
-              total: orderToShow.total,
-              trackingUrl: `/pedido/${orderToShow.trackingToken}`,
+            // First interaction - show modal with Pagar option
+            setPendingOrderModal({
+              orderId: pendingOrder.id,
+              orderNumber: pendingOrder.orderNumber,
+              total: pendingOrder.total,
+              paymentLink: pendingOrder.paymentLink,
             })
             return
           }
@@ -2573,6 +2574,64 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 style={{ backgroundColor: theme.primary }}
               >
                 Sim, criar novo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending payment order modal */}
+      {pendingOrderModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+                <Clock className="h-6 w-6 text-amber-400" />
+              </div>
+            </div>
+            <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pagamento pendente</h3>
+            <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
+              Você tem o pedido <strong style={{ color: theme.accent }}>#{pendingOrderModal.orderNumber}</strong> pendente de pagamento no valor de <strong style={{ color: theme.accent }}>R$ {pendingOrderModal.total.toFixed(2)}</strong>. O que deseja fazer?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setPendingOrderModal(null)
+                  openTracking(pendingOrderModal.orderId, `/pedido/${pendingOrderModal.orderId}`)
+                }}
+                className="w-full rounded-xl py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+                style={{ backgroundColor: theme.primary, color: "white" }}
+              >
+                Acompanhar pedido
+              </button>
+              <button
+                onClick={() => {
+                  seenPendingOrdersRef.current.add(pendingOrderModal.orderId)
+                  setPendingOrderModal(null)
+                  setOrderResult({
+                    success: true,
+                    orderId: pendingOrderModal.orderId,
+                    paymentLink: pendingOrderModal.paymentLink,
+                    paymentMethod: "card",
+                    orderTotal: pendingOrderModal.total,
+                  })
+                  setShowPaymentModal(true)
+                }}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: theme.accent }}
+              >
+                Pagar agora
+              </button>
+              <button
+                onClick={() => {
+                  setCancelModalOrderId(pendingOrderModal.orderId)
+                  setCancelModalTotal(pendingOrderModal.total)
+                  setPendingOrderModal(null)
+                }}
+                className="w-full rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ borderColor: "rgba(239,68,68,0.3)", color: "#EF4444" }}
+              >
+                Cancelar pedido
               </button>
             </div>
           </div>
