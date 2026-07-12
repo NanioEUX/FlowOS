@@ -985,6 +985,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
           setCart([])
           localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+          setShowCart(false)
         }
       }
     } catch {} finally {
