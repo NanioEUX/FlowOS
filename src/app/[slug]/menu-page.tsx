@@ -1916,7 +1916,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     <div className="flex-1">
                       <p className="font-medium" style={{ color: theme.text }}>{item.name}</p>
                       <p className="text-sm" style={{ color: theme.textMuted }}>{formatCurrency(item.price)}</p>
-                      {isFromPendingOrder && <span className="text-[10px] font-medium" style={{ color: theme.primary }}>Aguardando pagamento</span>}
                     </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-11 w-11 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
@@ -1933,7 +1932,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                   </div>
                 );})}
 
-                {!lastOrder?.paymentLink && (
+                {!lastOrder?.paymentLink && !pendingOrderNumber && (
                   <button
                     onClick={() => {
                       if (window.confirm("Deseja esvaziar o carrinho?")) {
