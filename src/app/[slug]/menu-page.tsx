@@ -2646,38 +2646,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             </div>
             <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pedido pendente</h3>
             <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
-              Você tem o pedido <strong style={{ color: theme.accent }}>#{pendingOrderAction.orderNumber}</strong> aguardando pagamento. O que deseja fazer?
+              Você tem o pedido <strong style={{ color: theme.accent }}>#{pendingOrderAction.orderNumber}</strong> aguardando pagamento. Para fazer novo pedido, pague ou cancele o atual.
             </p>
             <div className="flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setPendingOrderAction(null)
-                  openTracking(pendingOrderAction.orderId, `/pedido/${pendingOrderAction.orderId}`)
-                }}
-                className="w-full rounded-xl py-3 text-sm font-semibold transition-opacity hover:opacity-90"
-                style={{ backgroundColor: theme.primary, color: "white" }}
-              >
-                Acompanhar pedido
-              </button>
               <button
                 onClick={() => {
                   const pendingOrder = customerOrders.find((o: any) => o.id === pendingOrderAction.orderId)
                   if (pendingOrder) {
                     setPendingOrderAction(null)
-                    setOrderResult({
-                      success: true,
-                      orderId: pendingOrder.id,
-                      paymentLink: pendingOrder.paymentLink,
-                      paymentMethod: pendingOrder.paymentMethod || "pix",
-                      orderTotal: pendingOrder.total,
-                    })
-                    setShowPaymentModal(true)
+                    setPendingOrderItems(pendingOrder.items || [])
+                    setPendingOrderNumber(pendingOrder.orderNumber)
+                    setShowCart(true)
                   }
                 }}
                 className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: theme.accent }}
               >
-                Pagar agora
+                Ver carrinho
               </button>
               <button
                 onClick={() => {
@@ -2689,31 +2674,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                 style={{ borderColor: "rgba(239,68,68,0.3)", color: "#EF4444" }}
               >
                 Cancelar pedido
-              </button>
-              <button
-                onClick={() => {
-                  const product = establishment.categories.flatMap((c: any) => c.products).find((p: any) => p.id === pendingOrderAction?.productId)
-                  if (!product) return
-                  setPendingOrderAction(null)
-                  setCart((prev) => {
-                    const existing = prev.find((item) => item.id === product.id)
-                    if (existing) {
-                      return prev.map((item) =>
-                        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-                      )
-                    }
-                    return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1 } as CartItem]
-                  })
-                  setAddedItemId(product.id)
-                  setTimeout(() => setAddedItemId(null), 800)
-                  setCartToast({ name: product.name, image: product.image || undefined })
-                  setTimeout(() => setCartToast(null), 3000)
-                  setShowCart(true)
-                }}
-                className="w-full rounded-xl py-3 text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ backgroundColor: theme.bgCard, color: theme.text }}
-              >
-                Continuar comprando
               </button>
             </div>
           </div>
