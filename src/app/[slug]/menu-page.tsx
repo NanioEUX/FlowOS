@@ -108,6 +108,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
   const [darkMode, setDarkMode] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-theme-${establishment.slug}`)
@@ -1103,7 +1108,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
+        onPaymentSuccess={() => { setCart([]); setPendingOrderNumber(null); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
       />
     )
   }
@@ -1440,7 +1445,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             >
               <ShoppingBag className="h-5 w-5" />
               <span className="text-[10px] font-medium">Carrinho</span>
-              {totalItems > 0 && (
+              {mounted && totalItems > 0 && (
                 <span className="absolute -top-1.5 right-0.5 flex flex-col items-center justify-center rounded-full px-0.5 text-[7px] font-bold text-white leading-tight" style={{ backgroundColor: theme.primary, minWidth: "1.4rem", height: "1.4rem" }}>
                   <span>R${Math.round(total)}</span>
                   <span className="text-[6px] opacity-80">{totalItems}</span>
@@ -1462,7 +1467,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             >
               <ClipboardList className="h-5 w-5" />
               <span className="text-[10px] font-medium">Pedidos</span>
-              {activeOrdersCount > 0 && (
+              {mounted && activeOrdersCount > 0 && (
                 <span className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
                   {activeOrdersCount}
                 </span>
