@@ -2616,7 +2616,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     success: true,
                     orderId: pendingOrderModal.orderId,
                     paymentLink: pendingOrderModal.paymentLink,
-                    paymentMethod: "card",
+                    paymentMethod: pendingOrderModal.paymentMethod || "pix",
                     orderTotal: pendingOrderModal.total,
                   })
                   setShowPaymentModal(true)
