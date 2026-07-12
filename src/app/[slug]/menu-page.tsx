@@ -2636,12 +2636,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       {/* Pending order action modal - when trying to add item with pending payment */}
       {pendingOrderAction && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-            <div className="mb-4 flex justify-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
-                <Clock className="h-6 w-6 text-amber-400" />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setPendingOrderAction(null)}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex justify-center flex-1">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+                  <Clock className="h-6 w-6 text-amber-400" />
+                </div>
               </div>
+              <button onClick={() => setPendingOrderAction(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pedido pendente</h3>
             <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
@@ -2681,12 +2686,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
       {/* In-progress order notification modal */}
       {inProgressOrder && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-            <div className="mb-4 flex justify-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10">
-                <Package className="h-6 w-6 text-blue-400" />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setInProgressOrder(null)}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex justify-center flex-1">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10">
+                  <Package className="h-6 w-6 text-blue-400" />
+                </div>
               </div>
+              <button onClick={() => setInProgressOrder(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pedido em andamento</h3>
             <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
