@@ -311,7 +311,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [inProgressOrder, setInProgressOrder] = useState<{ orderId: string; orderNumber: number; status: string; total: number; trackingUrl: string } | null>(null)
   const [pendingOrderItems, setPendingOrderItems] = useState<any[]>([])
   const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null)
-  const [pendingOrderModal, setPendingOrderModal] = useState<{ orderId: string; orderNumber: number; total: number; paymentLink: string } | null>(null)
+  const [pendingOrderModal, setPendingOrderModal] = useState<{ orderId: string; orderNumber: number; total: number; paymentLink: string; paymentMethod?: string } | null>(null)
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
@@ -605,6 +605,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             orderNumber: pendingOrder.orderNumber,
             total: pendingOrder.total,
             paymentLink: pendingOrder.paymentLink,
+            paymentMethod: pendingOrder.paymentMethod,
           })
           return
         }
@@ -658,6 +659,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
               orderNumber: pendingOrder.orderNumber,
               total: pendingOrder.total,
               paymentLink: pendingOrder.paymentLink,
+              paymentMethod: pendingOrder.paymentMethod,
             })
             return
           }
@@ -2337,7 +2339,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                                   success: true,
                                   orderId: order.id,
                                   paymentLink: order.paymentLink,
-                                  paymentMethod: "card",
+                                  paymentMethod: order.paymentMethod || "pix",
                                   orderTotal: order.total,
                                 })
                                 setTimeout(() => setShowPaymentModal(true), 300)
@@ -2466,7 +2468,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                                       success: true,
                                       orderId: trackingOrder.id,
                                       paymentLink: trackingOrder.paymentLink,
-                                      paymentMethod: "card",
+                                      paymentMethod: trackingOrder.paymentMethod || "pix",
                                       orderTotal: trackingOrder.total,
                                     })
                                     setTimeout(() => {
