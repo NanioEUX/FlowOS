@@ -229,7 +229,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
-  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean } | null>(null)
+  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
   const [showOrdersList, setShowOrdersList] = useState(false)
@@ -870,7 +870,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 
       if (data.order?.id && data.trackingUrl) {
-        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false }
+        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false, orderNumber: data.order.orderNumber }
         setLastOrder(lastOrd)
         localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(lastOrd))
       }
