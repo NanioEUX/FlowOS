@@ -1139,17 +1139,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear paymentLink IMMEDIATELY so onClose doesn't reopen modal
+            // Clear paymentLink IMMEDIATELY and mark as done
             setOrderResult(prev => {
               if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
               console.log("[onPaymentSuccess] Order marked as paid, clearing paymentLink:", prev?.orderId)
               return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
             })
-            // Clear rest after success screen shows
+            // Force clear after brief delay for success screen
             setTimeout(() => {
               setOrderResult(null)
               console.log("[onPaymentSuccess] orderResult cleared, returning to normal state")
-            }, 2000)
+            }, 1500)
           }}
       />
     )
@@ -2831,6 +2831,7 @@ function PaymentModal({
   initialTab,
   mode,
   onPaymentSuccess,
+  onForceClose,
 }: {
   orderId: string
   paymentLink: string
@@ -2842,6 +2843,7 @@ function PaymentModal({
   initialTab?: "pix" | "card"
   mode?: "pix" | "card"
   onPaymentSuccess?: () => void
+  onForceClose?: () => void
 }) {
   const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
 
@@ -3086,6 +3088,7 @@ function PaymentModal({
       setAutoCloseCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
+          // Force close: clear orderResult directly via onPaymentSuccess pattern
           onClose()
           return 0
         }
