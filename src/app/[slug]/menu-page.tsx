@@ -698,8 +698,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       openIdentifyModal()
       return
     }
-    // Check if has pending payment order
-    if (customerOrders.length > 0 || (lastOrder?.paymentLink)) {
+    // Check if has pending payment order (but skip if payment already done)
+    const paymentDone = orderResult?.paymentDone || lastOrder?.paymentDone
+    if (!paymentDone && (customerOrders.length > 0 || (lastOrder?.paymentLink))) {
       const phone = customer.phone || customerData?.phone
       if (phone) {
         const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
