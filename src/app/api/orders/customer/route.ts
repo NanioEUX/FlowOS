@@ -34,12 +34,20 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  // Then fetch only paid/confirmed orders for the Pedidos module
+  // Then fetch orders for the Pedidos module:
+// - Online payments: paymentStatus = "paid"
+// - Cash on delivery/pickup: paymentMethod in ["delivery", "pickup"] AND status != "pending" (estabelecimento aceitou)
   const orders = await prisma.order.findMany({
     where: {
       customerPhone: phone,
       establishmentId,
-      paymentStatus: "paid",
+      OR: [
+        { paymentStatus: "paid" },
+        {
+          paymentMethod: { in: ["delivery", "pickup"] },
+          status: { not: "pending" },
+        },
+      ],
     },
     orderBy: { createdAt: "desc" },
     take: 20,
