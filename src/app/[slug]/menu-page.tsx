@@ -608,7 +608,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       ? { id: orderResult.orderId, orderNumber: orderResult.orderNumber || 0, items: [] }
       : null
     const pendingFromLast = lastOrder?.paymentLink && !lastOrder.paymentDone
-      ? { id: lastOrder.orderId, orderNumber: 0, items: [] }
+      ? { id: lastOrder.orderId, orderNumber: lastOrder.orderNumber || 0, items: [] }
       : null
     const pendingOrder = pendingFromResult || pendingFromLast || (phone && customerOrders.length > 0
       ? customerOrders.find((o: any) => o.paymentStatus === "pending")
@@ -2901,7 +2901,7 @@ function PaymentModal({
           const data = await res.json()
           if (data.encodedImage) {
             setQrCode({ image: data.encodedImage, payload: data.payload })
-            setCountdown(300)
+            setCountdown(prev => prev > 0 ? prev : 300)
             setQrLoading(false)
             return
           }
