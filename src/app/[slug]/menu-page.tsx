@@ -1139,7 +1139,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear orderResult after a short delay to allow success screen to show
+            // Clear paymentLink IMMEDIATELY so onClose doesn't reopen modal
+            setOrderResult(prev => {
+              if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
+              console.log("[onPaymentSuccess] Order marked as paid, clearing paymentLink:", prev?.orderId)
+              return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
+            })
+            // Clear rest after success screen shows
             setTimeout(() => {
               setOrderResult(null)
               console.log("[onPaymentSuccess] orderResult cleared, returning to normal state")
