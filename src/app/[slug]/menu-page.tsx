@@ -1178,7 +1178,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => {
+onPaymentSuccess={() => {
             console.log("[onPaymentSuccess] Called - clearing cart and pending order")
             setCart([])
             setPendingOrderItems([])
@@ -1187,11 +1187,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+            // Clear paymentLink immediately so onClose doesn't reopen modal
             setOrderResult(prev => {
               if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
               console.log("[onPaymentSuccess] Order marked as paid:", prev?.orderId)
               return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
             })
+            // Refresh orders list after payment
+            loadCustomerOrders()
           }}
       />
     )
