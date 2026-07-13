@@ -1183,11 +1183,12 @@ onPaymentSuccess={() => {
             setCart([])
             setPendingOrderItems([])
             setPendingOrderNumber(null)
+            setLastOrder(null)
             localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear paymentLink immediately so onClose doesn't reopen modal
+            // Clear orderResult paymentLink immediately so onClose doesn't reopen modal
             setOrderResult(prev => {
               if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
               console.log("[onPaymentSuccess] Order marked as paid:", prev?.orderId)
