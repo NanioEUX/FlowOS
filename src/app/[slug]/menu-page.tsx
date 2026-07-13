@@ -980,6 +980,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       })
       if (res.ok) {
         setCancelModalOrderId(null)
+        setPendingOrderItems([])
+        setPendingOrderNumber(null)
         loadCustomerOrders()
         // Close tracking if showing the cancelled order
         if (trackingOrder?.id === orderId) {
@@ -1108,7 +1110,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { setCart([]); setPendingOrderNumber(null); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
+        onPaymentSuccess={() => { setCart([]); setPendingOrderItems([]); setPendingOrderNumber(null); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
       />
     )
   }
