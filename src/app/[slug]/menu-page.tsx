@@ -654,7 +654,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       if (res.ok) {
         const data = await res.json()
         if (data.paymentStatus === "paid") {
-          // Payment already confirmed - refresh orders and show in-progress modal
+          // Payment already confirmed - clear everything and show in-progress modal
+          setCart([])
+          setPendingOrderItems([])
+          setPendingOrderNumber(null)
+          localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+          localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+          localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+          setOrderResult(null)
+          setLastOrder(null)
+          
+          // Load orders and show in-progress modal
           loadCustomerOrders()
           setTimeout(() => {
             const order = customerOrders.find((o: any) => o.id === orderId)
