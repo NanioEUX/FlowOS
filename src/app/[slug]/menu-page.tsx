@@ -1116,7 +1116,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-        onPaymentSuccess={() => { setCart([]); setPendingOrderItems([]); setPendingOrderNumber(null); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`); localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`); localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`); setOrderResult(prev => { if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId); return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null }) }}
+        onPaymentSuccess={() => {
+            console.log("[onPaymentSuccess] Called - clearing cart and pending order")
+            setCart([])
+            setPendingOrderItems([])
+            setPendingOrderNumber(null)
+            localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+            localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+            localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+            setOrderResult(prev => {
+              if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
+              console.log("[onPaymentSuccess] Order marked as paid:", prev?.orderId)
+              return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
+            })
+          }}
       />
     )
   }
@@ -2936,6 +2950,7 @@ function PaymentModal({
           if (res.ok) {
             const data = await res.json()
             if (data.paymentStatus === "paid") {
+              console.log("[PaymentModal] Polling detected paid status, calling onPaymentSuccess")
               setPaymentSuccess(true)
               setCardPending(false)
               onPaymentSuccess?.()
@@ -3021,6 +3036,7 @@ function PaymentModal({
       if (!res.ok) {
         setCardError(data.error || `Erro ${res.status}`)
       } else if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
+        console.log("[Card] Payment confirmed, calling onPaymentSuccess")
         setPaymentSuccess(true)
         onPaymentSuccess?.()
       } else if (data.error) {
