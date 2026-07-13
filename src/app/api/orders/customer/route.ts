@@ -6,6 +6,8 @@ const ASAAS_API_URL =
     ? "https://sandbox.asaas.com/api/v3"
     : "https://api.asaas.com/v3"
 
+const PENDING_EXPIRY_MINUTES = Number(process.env.PENDING_ORDER_EXPIRY_MINUTES) || 10
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const phone = searchParams.get("phone")
@@ -15,8 +17,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
   }
 
+  const now = new Date()
+  const expiryThreshold = new Date(now.getTime() - PENDING_EXPIRY_MINUTES * 60 * 1000)
+
+  // First, expire old pending orders
+  await prisma.order.updateMany({
+    where: {
+      customerPhone: phone,
+      establishmentId,
+      paymentStatus: "pending",
+      createdAt: { lt: expiryThreshold },
+    },
+    data: {
+      status: "abandoned",
+      paymentStatus: "expired",
+    },
+  })
+
+  // Then fetch only paid/confirmed orders for the Pedidos module
   const orders = await prisma.order.findMany({
-    where: { customerPhone: phone, establishmentId },
+    where: {
+      customerPhone: phone,
+      establishmentId,
+      paymentStatus: "paid",
+    },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
@@ -34,37 +58,8 @@ export async function GET(req: NextRequest) {
       paymentId: true,
       trackingToken: true,
       deliveryFee: true,
-      establishment: { select: { asaasApiKey: true } },
     },
   })
 
-  // Verify pending orders against Asaas and update DB
-  const verifiedOrders = await Promise.all(
-    orders.map(async (order) => {
-      if (order.paymentStatus !== "pending" || !order.paymentId || !order.establishment.asaasApiKey) {
-        const { establishment: _, paymentId: __, ...rest } = order
-        return rest
-      }
-      try {
-        const res = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
-          headers: { access_token: order.establishment.asaasApiKey },
-        })
-        if (res.ok) {
-          const asaasPayment = await res.json()
-          if (["CONFIRMED", "RECEIVED", "AUTHORIZED"].includes(asaasPayment.status)) {
-            await prisma.order.update({
-              where: { id: order.id },
-              data: { paymentStatus: "paid", status: "confirmed" },
-            })
-            const { establishment: _, paymentId: __, ...rest } = order
-            return { ...rest, paymentStatus: "paid", status: "confirmed" }
-          }
-        }
-      } catch {}
-      const { establishment: _, paymentId: __, ...rest } = order
-      return rest
-    })
-  )
-
-  return NextResponse.json(verifiedOrders)
+  return NextResponse.json(orders)
 }
