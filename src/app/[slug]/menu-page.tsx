@@ -1950,29 +1950,32 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
                     <p className="text-xs font-medium" style={{ color: theme.primary }}>Pedido #{pendingOrderNumber} - Aguardando pagamento</p>
                   </div>
                 )}
-                {cart.map((item) => {
+{cart.map((item) => {
                   const isPending = !!pendingOrderNumber
                   const isFromPendingOrder = isPending
                   return (
-                  <div key={item.id} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: theme.bgCard }}>
-                    <div className="flex-1">
-                      <p className="font-medium" style={{ color: theme.text }}>{item.name}</p>
-                      <p className="text-sm" style={{ color: theme.textMuted }}>{formatCurrency(item.price)}</p>
+                  <div key={item.id} className="flex items-center gap-3 rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
+                    {item.image && (
+                      <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate" style={{ color: theme.text }}>{item.name}</p>
+                      <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency(item.price)}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-11 w-11 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
                         <Minus className="h-3 w-3" />
                       </button>
                       <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-11 w-11 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                      <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
                         <Plus className="h-3 w-3" />
                       </button>
-                      <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                        <X className="h-4 w-4" />
+                      <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                        <X className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
-                );})}
+                  );})}
 
                 {!lastOrder?.paymentLink && !pendingOrderNumber && (
                   <button
