@@ -1109,7 +1109,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return null
     }
     return (
-<PaymentModal
+      <PaymentModal
         orderId={orderResult.orderId!}
         paymentLink={orderResult.paymentLink}
         total={orderResult.orderTotal ?? total}
@@ -1126,10 +1126,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           setEditingAddress(false)
           setShowPaymentModal(false)
         }}
-        onForceClose={() => {
-          setOrderResult(null)
-          setShowPaymentModal(false)
-        }}
         establishmentId={establishment.id}
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
@@ -1143,25 +1139,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear paymentLink IMMEDIATELY and mark as done
-            setOrderResult(prev => {
-              if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
-              console.log("[onPaymentSuccess] Order marked as paid, clearing paymentLink:", prev?.orderId)
-              return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
-            })
-            // Force clear after brief delay for success screen
+            // Clear orderResult after a short delay to allow success screen to show
             setTimeout(() => {
               setOrderResult(null)
               console.log("[onPaymentSuccess] orderResult cleared, returning to normal state")
-            }, 1500)
+            }, 2000)
           }}
-        onForceClose={() => {
-            console.log("[onForceClose] Force closing payment modal")
-            setOrderResult(null)
-            setShowPaymentModal(false)
-            setShowCart(false)
-          }}
-        />
+      />
     )
   }
 
@@ -2841,7 +2825,6 @@ function PaymentModal({
   initialTab,
   mode,
   onPaymentSuccess,
-  onForceClose,
 }: {
   orderId: string
   paymentLink: string
@@ -2853,7 +2836,6 @@ function PaymentModal({
   initialTab?: "pix" | "card"
   mode?: "pix" | "card"
   onPaymentSuccess?: () => void
-  onForceClose?: () => void
 }) {
   const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
 
@@ -3098,7 +3080,7 @@ function PaymentModal({
       setAutoCloseCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          onForceClose?.()
+          onClose()
           return 0
         }
         return prev - 1
