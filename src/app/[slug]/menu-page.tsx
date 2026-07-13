@@ -873,6 +873,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false, orderNumber: data.order.orderNumber }
         setLastOrder(lastOrd)
         localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(lastOrd))
+        // Clear old countdown localStorage for new order
+        if (data.paymentLink) {
+          localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+          localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+        }
       }
 
       setEditingAddress(false)
@@ -2901,10 +2906,7 @@ function PaymentModal({
           const data = await res.json()
           if (data.encodedImage) {
             setQrCode({ image: data.encodedImage, payload: data.payload })
-            setCountdown(300)
-            // Clear old countdown localStorage for new QR code
-            localStorage.removeItem(`pedefacil-countdown-${establishmentSlug}`)
-            localStorage.removeItem(`pedefacil-countdown-time-${establishmentSlug}`)
+            setCountdown(prev => prev > 0 ? prev : 300)
             setQrLoading(false)
             return
           }
