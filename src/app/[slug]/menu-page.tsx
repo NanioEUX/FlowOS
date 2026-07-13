@@ -1086,7 +1086,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (!phone) return
     setLoadingOrders(true)
     try {
-      const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
+      const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         setCustomerOrders(data)
