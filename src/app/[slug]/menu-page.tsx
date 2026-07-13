@@ -2901,7 +2901,10 @@ function PaymentModal({
           const data = await res.json()
           if (data.encodedImage) {
             setQrCode({ image: data.encodedImage, payload: data.payload })
-            setCountdown(prev => prev > 0 ? prev : 300)
+            setCountdown(300)
+            // Clear old countdown localStorage for new QR code
+            localStorage.removeItem(`pedefacil-countdown-${establishmentSlug}`)
+            localStorage.removeItem(`pedefacil-countdown-time-${establishmentSlug}`)
             setQrLoading(false)
             return
           }
