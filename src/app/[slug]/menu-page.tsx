@@ -2825,6 +2825,7 @@ function PaymentModal({
   initialTab,
   mode,
   onPaymentSuccess,
+  onForceClose,
 }: {
   orderId: string
   paymentLink: string
@@ -2836,6 +2837,7 @@ function PaymentModal({
   initialTab?: "pix" | "card"
   mode?: "pix" | "card"
   onPaymentSuccess?: () => void
+  onForceClose?: () => void
 }) {
   const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
 
@@ -3080,7 +3082,7 @@ function PaymentModal({
       setAutoCloseCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          onClose()
+          onForceClose?.()
           return 0
         }
         return prev - 1
