@@ -214,7 +214,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
@@ -229,7 +229,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
-  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number } | null>(null)
+  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
   const [showOrdersList, setShowOrdersList] = useState(false)
@@ -602,37 +602,48 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   function openCart() {
     const phone = customer.phone || customerData?.phone
-    if (phone && customerOrders.length > 0) {
-      const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
-      const inProgress = customerOrders.find((o: any) =>
-        o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
-      )
 
-      // Pending payment order - open cart directly with locked items
-      if (pendingOrder) {
-        setPendingOrderItems(pendingOrder.items || [])
-        setPendingOrderNumber(pendingOrder.orderNumber)
-        setShowCart(true)
-        return
-      }
+    // Check orderResult > lastOrder > customerOrders
+    const pendingFromResult = orderResult?.paymentLink && !orderResult.paymentDone
+      ? { id: orderResult.orderId, orderNumber: orderResult.orderNumber || 0, items: [] }
+      : null
+    const pendingFromLast = lastOrder?.paymentLink && !lastOrder.paymentDone
+      ? { id: lastOrder.orderId, orderNumber: 0, items: [] }
+      : null
+    const pendingOrder = pendingFromResult || pendingFromLast || (phone && customerOrders.length > 0
+      ? customerOrders.find((o: any) => o.paymentStatus === "pending")
+      : null)
 
-      // In-progress order (preparing, etc.)
-      if (inProgress && !seenPendingOrdersRef.current.has(inProgress.id)) {
-        const statusLabels: Record<string, string> = {
-          confirmed: "Confirmado",
-          preparing: "Preparando",
-          ready: "Pronto",
-          out_for_delivery: "Saiu para Entrega",
-        }
-        setInProgressOrder({
-          orderId: inProgress.id,
-          orderNumber: inProgress.orderNumber,
-          status: statusLabels[inProgress.status] || inProgress.status,
-          total: inProgress.total,
-          trackingUrl: `/pedido/${inProgress.trackingToken}`,
-        })
-        return
+    const inProgress = phone && customerOrders.length > 0
+      ? customerOrders.find((o: any) =>
+          o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
+        )
+      : null
+
+    // Pending payment order - open cart directly with locked items
+    if (pendingOrder) {
+      setPendingOrderItems(pendingOrder.items || [])
+      setPendingOrderNumber(pendingOrder.orderNumber)
+      setShowCart(true)
+      return
+    }
+
+    // In-progress order (preparing, etc.)
+    if (inProgress && !seenPendingOrdersRef.current.has(inProgress.id)) {
+      const statusLabels: Record<string, string> = {
+        confirmed: "Confirmado",
+        preparing: "Preparando",
+        ready: "Pronto",
+        out_for_delivery: "Saiu para Entrega",
       }
+      setInProgressOrder({
+        orderId: inProgress.id,
+        orderNumber: inProgress.orderNumber,
+        status: statusLabels[inProgress.status] || inProgress.status,
+        total: inProgress.total,
+        trackingUrl: `/pedido/${inProgress.trackingToken}`,
+      })
+      return
     }
     setShowCart(true)
   }
@@ -850,6 +861,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         paymentLink: data.paymentLink,
         paymentError: data.paymentError,
         orderId: data.order?.id,
+        orderNumber: data.order?.orderNumber,
         orderType: orderType,
         paymentMethod: paymentMethod,
         orderTotal: total,
@@ -858,7 +870,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 
       if (data.order?.id && data.trackingUrl) {
-        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total }
+        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false }
         setLastOrder(lastOrd)
         localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(lastOrd))
       }
@@ -2934,14 +2946,13 @@ function PaymentModal({
   }, [countdown > 0])
 
   // Check payment status periodically
-  // PIX tab: poll only after QR code is loaded + 8s delay (gives user time to switch to card)
+  // PIX tab: poll after QR code loaded (no 8s delay since modal is open)
   // Card tab: only poll after user submitted card (cardPending=true)
   useEffect(() => {
     if (paymentSuccess || !orderId) return
     if (tab === "pix" && !qrCode) return
     if (tab === "card" && !cardPending) return
     const controller = new AbortController()
-    const delay = tab === "pix" && !cardPending ? 8000 : 0
     const timer = setTimeout(() => {
       const check = setInterval(async () => {
         if (controller.signal.aborted) { clearInterval(check); return }
@@ -2960,7 +2971,7 @@ function PaymentModal({
         } catch {}
       }, 3000)
       controller.signal.addEventListener("abort", () => clearInterval(check))
-    }, delay)
+    }, 0)
     return () => { controller.abort(); clearTimeout(timer) }
   }, [orderId, paymentSuccess, tab, cardPending, qrCode])
 
