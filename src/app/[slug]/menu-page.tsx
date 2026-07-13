@@ -1199,14 +1199,17 @@ onPaymentSuccess={() => {
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
             localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear orderResult paymentLink immediately so onClose doesn't reopen modal
+            // Clear paymentLink immediately so onClose doesn't reopen modal
             setOrderResult(prev => {
               if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
               console.log("[onPaymentSuccess] Order marked as paid:", prev?.orderId)
               return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
             })
-            // Refresh orders list after payment
-            loadCustomerOrders()
+            // Force state flush then refresh orders
+            setTimeout(() => {
+              loadCustomerOrders()
+              console.log("[onPaymentSuccess] loadCustomerOrders called")
+            }, 0)
           }}
       />
     )
