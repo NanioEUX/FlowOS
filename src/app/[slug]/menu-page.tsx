@@ -1231,8 +1231,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           // Only clear orderResult if payment was done (success or error).
           // If payment is still pending (has paymentLink), keep it so user can retry.
           setOrderResult(prev => {
-            if (prev?.paymentDone) return prev
-            if (prev?.paymentLink) return prev // Keep pending order for retry
+            if (prev?.paymentDone) return null // Payment done → clear
+            if (prev?.paymentLink) return prev // Pending → keep for retry
             return null
           })
           setShowCart(false)
