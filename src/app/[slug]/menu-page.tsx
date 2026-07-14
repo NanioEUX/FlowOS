@@ -2405,7 +2405,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>Nenhum pedido encontrado</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2" key={customerOrders.length + '-' + customerOrders.reduce((acc, o) => acc + o.updatedAt, 0)}>
                   {customerOrders.map((order) => {
                     const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
                     const statusColors: Record<string, string> = {
