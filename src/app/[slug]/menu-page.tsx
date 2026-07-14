@@ -1075,7 +1075,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }
 
-  async function loadCustomerOrders() {
+  const loadCustomerOrders = useCallback(async () => {
     const phone = customer.phone || customerData?.phone
     if (!phone) return
     setLoadingOrders(true)
@@ -1088,7 +1088,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch {} finally {
       setLoadingOrders(false)
     }
-  }
+  }, [customer.phone, customerData?.phone, establishment.id])
 
 const handlePaymentSuccess = useCallback(() => {
     console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
@@ -1107,7 +1107,7 @@ const handlePaymentSuccess = useCallback(() => {
       return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
     })
     loadCustomerOrders()
-  }, [establishment.slug])
+  }, [establishment.slug, loadCustomerOrders])
 
   function handlePedidosClick() {
     if (lastOrder) {
