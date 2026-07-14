@@ -53,12 +53,14 @@ interface Establishment {
   closedTitle: string | null
   closedSub: string | null
   defaultTheme: string
+  paymentProvider: string
 }
 
 interface CustomerData {
   id: string
   name: string | null
   phone: string
+  email: string | null
   totalOrders: number
   totalSpent: number
   loyaltyPoints: number
@@ -1253,6 +1255,8 @@ const handlePaymentSuccess = useCallback(() => {
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
 onPaymentConfirmed={handlePaymentSuccess}
+        paymentProvider={establishment.paymentProvider}
+        customerEmail={customerData?.email || ""}
       />
     )
   }
@@ -2909,6 +2913,8 @@ function PaymentModal({
   mode,
   onPaymentSuccess,
   onPaymentConfirmed,
+  paymentProvider,
+  customerEmail,
 }: {
   orderId: string
   paymentLink: string
@@ -2921,6 +2927,8 @@ function PaymentModal({
   mode?: "pix" | "card"
   onPaymentSuccess?: () => void
   onPaymentConfirmed?: () => void
+  paymentProvider?: string
+  customerEmail?: string
 }) {
   const [tab, setTab] = useState<"pix" | "card">(initialTab || "pix")
 
@@ -2956,7 +2964,14 @@ function PaymentModal({
   const [cardCvv, setCardCvv] = useState("")
   const [cardName, setCardName] = useState("")
   const [cardCpf, setCardCpf] = useState("")
-  const [cardEmail, setCardEmail] = useState("")
+  const [cardEmail, setCardEmail] = useState(customerEmail || "")
+
+  // Prefill email from customer data when modal opens
+  useEffect(() => {
+    if (customerEmail && !cardEmail) {
+      setCardEmail(customerEmail)
+    }
+  }, [customerEmail])
   const [cardPhone, setCardPhone] = useState("")
   const [cardCep, setCardCep] = useState("")
   const [cardAddressNum, setCardAddressNum] = useState("")
@@ -2978,7 +2993,8 @@ function PaymentModal({
       for (let i = 0; i < retries; i++) {
         if (controller.signal.aborted) return
         try {
-          const res = await fetch("/api/payments/asaas/qr-code", {
+          const qrEndpoint = paymentProvider === "inter" ? "/api/payments/inter/qr-code" : "/api/payments/asaas/qr-code"
+          const res = await fetch(qrEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId }),
@@ -3018,7 +3034,7 @@ function PaymentModal({
 
     fetchQrCode()
     return () => controller.abort()
-  }, [tab, orderId])
+  }, [tab, orderId, paymentProvider])
 
   // Countdown timer
   useEffect(() => {

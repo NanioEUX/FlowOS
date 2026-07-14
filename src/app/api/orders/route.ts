@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createPaymentLink } from "@/lib/integrations/asaas"
+import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 
 import crypto from "crypto"
 
@@ -177,21 +178,61 @@ export async function POST(req: NextRequest) {
     }
 
     let paymentLink = ""
-    console.log("[Orders POST] willCreatePayment:", paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card")
+    const isOnlinePayment = paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card"
+    console.log("[Orders POST] willCreatePayment:", isOnlinePayment, "| provider:", establishment.paymentProvider, "| method:", paymentMethod)
 
-    if (paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card") {
-      {
-        // Asaas payment (default)
+    if (isOnlinePayment) {
+      const useInter = establishment.paymentProvider === "inter" && paymentMethod === "pix"
+      const useAsaas = !useInter
+
+      if (useInter) {
+        // Inter PIX payment (0% fee)
+        if (!establishment.interClientId || !establishment.interClientSecret || !establishment.interCertificate || !establishment.interPixKey) {
+          return NextResponse.json({ error: "Pagamento PIX configurado, mas o Inter não está configurado. Configure client ID, secret, certificado e chave PIX." }, { status: 400 })
+        }
+        try {
+          const config = {
+            clientId: establishment.interClientId,
+            clientSecret: establishment.interClientSecret,
+            certificate: establishment.interCertificate,
+          }
+          const txid = generateInterTxId(order.id, order.orderNumber ?? 0)
+          const description = `Pedido #${order.orderNumber} - ${establishment.name}`
+
+          console.log("[Inter] Criando cobrança PIX:", { txid, value: order.total })
+
+          await createInterPixCharge(config, {
+            value: order.total,
+            txid,
+            description,
+            pixKey: establishment.interPixKey,
+          })
+
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              paymentId: `inter_${txid}`,
+              paymentLink: `inter://${txid}`,
+              paymentStatus: "pending",
+              status: "payment_pending",
+            },
+          })
+        } catch (err: any) {
+          console.error("[Inter] ERRO ao gerar pagamento:", err.message)
+          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
+        }
+      }
+
+      if (useAsaas) {
+        // Asaas payment (default) - PIX or Card
         if (!establishment.asaasApiKey) {
           return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Asaas não está configurada. Configure em Configurações." }, { status: 400 })
         }
         try {
-          const itemNames = (Array.isArray(parsedItems) ? parsedItems : [])
-            .map((i: any) => `${i.name} x${i.quantity}`)
-            .join(", ")
-
           console.log("[Asaas] Criando pagamento:", { customerName, customerPhone, customerCpf: customerCpf ? "***" : "VAZIO", value: order.total })
 
+          const billingType = paymentMethod === "card" ? "UNDEFINED" : "PIX"
           const payment = await createPaymentLink({
             apiKey: establishment.asaasApiKey,
             customerName,
@@ -199,7 +240,7 @@ export async function POST(req: NextRequest) {
             customerCpf: customerCpf || "",
             value: order.total,
             description: `Pedido #${order.orderNumber} - ${establishment.name}`,
-            billingType: "PIX",
+            billingType: billingType as any,
           })
 
           paymentLink = payment.invoiceUrl
@@ -215,7 +256,6 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Asaas] ERRO ao gerar pagamento:", err.message)
-          // Deleta o pedido se o pagamento falhar
           await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
           return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }

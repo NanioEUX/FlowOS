@@ -38,6 +38,10 @@ model Establishment {
   efiEnvironment      String            @default("sandbox")
   efiWebhookToken     String?
   paymentProvider     String            @default("asaas")
+  interClientId       String?
+  interClientSecret   String?
+  interCertificate    String?
+  interPixKey         String?
   paymentConfig       String            @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
   orderConfig         String            @default("{\"delivery\":true,\"pickup\":true}")
   deliveryFeeType     String            @default("free")
@@ -84,6 +88,7 @@ model Customer {
   name            String?
   phone           String        @unique
   cpf             String?
+  email           String?
   address         String?
   cep             String?
   totalOrders     Int           @default(0)

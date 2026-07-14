@@ -51,6 +51,10 @@ export default function ConfigPage() {
     efiEnvironment: "sandbox",
     efiWebhookToken: "",
     paymentProvider: "asaas",
+    interClientId: "",
+    interClientSecret: "",
+    interCertificate: "",
+    interPixKey: "",
     deliveryFeeType: "free",
     deliveryFeeAmount: "0",
     deliveryFreeAbove: "0",
@@ -99,6 +103,10 @@ export default function ConfigPage() {
             efiEnvironment: data.efiEnvironment || "sandbox",
             efiWebhookToken: data.efiWebhookToken || "",
             paymentProvider: data.paymentProvider || "asaas",
+            interClientId: data.interClientId || "",
+            interClientSecret: data.interClientSecret || "",
+            interCertificate: data.interCertificate || "",
+            interPixKey: data.interPixKey || "",
             deliveryFeeType: data.deliveryFeeType || "free",
             deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
             deliveryFreeAbove: String(data.deliveryFreeAbove || "0"),
@@ -351,6 +359,74 @@ export default function ConfigPage() {
                     className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                   <p className="text-xs text-zinc-400">URL do webhook: https://flowoshub.com/api/webhooks/efi</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Banco Inter - PIX */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Banco Inter (PIX)</h3>
+            <p className="text-sm text-zinc-500">
+              Configure o Banco Inter para receber pagamentos via PIX sem taxa. Cartão continua pelo Asaas.
+            </p>
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-zinc-700">Provider de Pagamento</label>
+              <select
+                value={form.paymentProvider}
+                onChange={(e) => setForm({ ...form, paymentProvider: e.target.value })}
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+              >
+                <option value="asaas">Asaas — PIX e Cartão</option>
+                <option value="inter">Inter — PIX sem taxa, Cartão Asaas</option>
+              </select>
+            </div>
+
+            {form.paymentProvider === "inter" && (
+              <>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Client ID</label>
+                  <input
+                    type="text"
+                    placeholder="Client ID do Inter"
+                    value={form.interClientId}
+                    onChange={(e) => setForm({ ...form, interClientId: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Client Secret</label>
+                  <input
+                    type="password"
+                    placeholder="Client Secret do Inter"
+                    value={form.interClientSecret}
+                    onChange={(e) => setForm({ ...form, interClientSecret: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Chave PIX</label>
+                  <input
+                    type="text"
+                    placeholder="Sua chave PIX (CPF, CNPJ, email, aleatória)"
+                    value={form.interPixKey}
+                    onChange={(e) => setForm({ ...form, interPixKey: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Certificado (.p12 em Base64)</label>
+                  <textarea
+                    placeholder="Cole o conteúdo do certificado .p12 em Base64"
+                    value={form.interCertificate}
+                    onChange={(e) => setForm({ ...form, interCertificate: e.target.value })}
+                    rows={3}
+                    className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none resize-none font-mono text-xs"
+                  />
+                  <p className="text-xs text-zinc-400">Baixe o certificado no Internet Banking → Soluções → Nova Integração</p>
                 </div>
               </>
             )}

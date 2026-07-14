@@ -128,6 +128,14 @@ export async function POST(req: NextRequest) {
       data: { paymentStatus, status: paymentStatus === "paid" ? "confirmed" : order.status },
     })
 
+    // Save email to customer record if not already saved
+    if (order.customerId && creditCardHolderInfo.email) {
+      await prisma.customer.update({
+        where: { id: order.customerId },
+        data: { email: creditCardHolderInfo.email },
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ status: finalStatus, paymentStatus })
   } catch (error: any) {
     console.error("[Card] Error:", error.message)
