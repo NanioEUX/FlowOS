@@ -1169,11 +1169,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     const controller = new AbortController()
     let mounted = true
+    const startTime = Date.now()
+    const POLLING_TIMEOUT = 2 * 60 * 1000 // 2 minutes
 
     const poll = async () => {
       while (mounted) {
         await new Promise(r => setTimeout(r, 3000))
         if (!mounted) break
+        
+        // Stop polling after 2 minutes
+        if (Date.now() - startTime > POLLING_TIMEOUT) {
+          console.log("[persistent-poll] Timeout reached (2min), stopping polling for order:", orderResult.orderId)
+          break
+        }
         
         try {
           const res = await fetch(`/api/orders/${orderResult.orderId}/payment-status`, { signal: controller.signal })
@@ -1220,8 +1228,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         total={orderResult.orderTotal ?? total}
         theme={theme}
         onClose={() => {
+          // Only clear orderResult if payment was done (success or error).
+          // If payment is still pending (has paymentLink), keep it so user can retry.
           setOrderResult(prev => {
             if (prev?.paymentDone) return prev
+            if (prev?.paymentLink) return prev // Keep pending order for retry
             return null
           })
           setShowCart(false)

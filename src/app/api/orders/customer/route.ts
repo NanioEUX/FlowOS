@@ -6,7 +6,7 @@ const ASAAS_API_URL =
     ? "https://sandbox.asaas.com/api/v3"
     : "https://api.asaas.com/v3"
 
-const PENDING_EXPIRY_MINUTES = Number(process.env.PENDING_ORDER_EXPIRY_MINUTES) || 10
+const PENDING_EXPIRY_MINUTES = Number(process.env.PENDING_ORDER_EXPIRY_MINUTES) || 5
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
