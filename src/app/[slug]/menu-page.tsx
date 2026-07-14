@@ -1571,7 +1571,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Bottom Navigation Bar */}
-      {!showCart && !orderResult?.paymentLink && !orderResult?.paymentDone && (
+      {!showCart && !showPaymentModal && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
