@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { asaasApiKey: true } } },
+      include: { establishment: { select: { asaasApiKey: true, name: true } } },
     })
 
     if (!order) {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           billingType: "CREDIT_CARD",
           value: order.total,
           dueDate: new Date().toISOString().split("T")[0],
-          description: `Pedido #${order.orderNumber}`.substring(0, 200),
+          description: `Pedido #${order.orderNumber} - ${establishment.name}`,
           remoteIp,
           creditCard: {
             creditCardNumber: creditCard.number.replace(/\s/g, ""),

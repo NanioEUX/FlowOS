@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
             customerPhone: customerPhone || "",
             customerCpf: customerCpf || "",
             value: order.total,
-            description: `Pedido #${order.orderNumber} - ${establishment.name} - ${itemNames}`,
+            description: `Pedido #${order.orderNumber} - ${establishment.name}`,
             billingType: "PIX",
           })
 
