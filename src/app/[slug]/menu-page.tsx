@@ -1217,10 +1217,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
     // If user closed modal, don't reopen - just render normal UI
     if (!showPaymentModal && userClosedPaymentModalRef.current) {
-      console.log("[render] User closed modal, not reopening")
-      return null
-    }
-    if (!showPaymentModal && !userClosedPaymentModalRef.current) {
+      console.log("[render] User closed modal, not reopening - rendering normal UI")
+      // Don't return null - let normal UI render
+    } else if (!showPaymentModal && !userClosedPaymentModalRef.current) {
       setTimeout(() => setShowPaymentModal(true), 100)
       return null
     }
