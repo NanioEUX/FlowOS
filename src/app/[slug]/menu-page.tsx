@@ -1215,6 +1215,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "")) {
     console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
+    // If user closed modal, don't reopen - just render normal UI
+    if (!showPaymentModal && userClosedPaymentModalRef.current) {
+      console.log("[render] User closed modal, not reopening")
+      return null
+    }
     if (!showPaymentModal && !userClosedPaymentModalRef.current) {
       setTimeout(() => setShowPaymentModal(true), 100)
       return null
