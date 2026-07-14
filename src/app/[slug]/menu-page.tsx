@@ -217,6 +217,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const userClosedPaymentModalRef = useRef(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -684,6 +685,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     // If not paid or error, open payment modal
     const order = customerOrders.find((o: any) => o.id === orderId) || { paymentLink: lastOrder?.paymentLink }
     if (order?.paymentLink) {
+      userClosedPaymentModalRef.current = false
       setOrderResult({
         success: true,
         orderId,
@@ -1213,9 +1215,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "")) {
     console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
-    if (!showPaymentModal) {
+    if (!showPaymentModal && !userClosedPaymentModalRef.current) {
       setTimeout(() => setShowPaymentModal(true), 100)
       return null
+    }
+    // Reset the flag when modal is shown
+    if (showPaymentModal) {
+      userClosedPaymentModalRef.current = false
     }
     return (
       <PaymentModal
@@ -1226,6 +1232,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         onClose={() => {
           // Only clear orderResult if payment was done (success or error).
           // If payment is still pending (has paymentLink), keep it so user can retry.
+          userClosedPaymentModalRef.current = true
           setOrderResult(prev => {
             if (prev?.paymentDone) return null // Payment done → clear
             if (prev?.paymentLink) return prev // Pending → keep for retry
