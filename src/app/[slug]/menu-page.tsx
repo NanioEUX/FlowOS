@@ -1210,7 +1210,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     poll()
     return () => { mounted = false; controller.abort() }
-  }, [orderResult?.paymentLink, orderResult?.paymentDone, orderResult?.orderId, establishment.slug])
+  }, [orderResult?.paymentLink, orderResult?.paymentDone, orderResult?.orderId, establishment.slug, handlePaymentSuccess])
 
   // If success but has payment link, show only the payment modal (no success screen)
   if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "")) {
