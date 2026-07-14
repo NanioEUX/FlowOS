@@ -654,16 +654,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       if (res.ok) {
         const data = await res.json()
         if (data.paymentStatus === "paid") {
-          // Payment already confirmed - clear everything and show in-progress modal
-          setCart([])
-          setPendingOrderItems([])
-          setPendingOrderNumber(null)
-          localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
-          localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
-          localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-          setOrderResult(null)
-          setLastOrder(null)
+          // Payment already confirmed - use shared handler
+          handlePaymentSuccess()
           
           // Load orders and show in-progress modal
           loadCustomerOrders()
@@ -1096,6 +1088,24 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }
 
+  const handlePaymentSuccess = useCallback(() => {
+    console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
+    setCart([])
+    setPendingOrderItems([])
+    setPendingOrderNumber(null)
+    setLastOrder(null)
+    localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+    localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+    localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+    localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+    setOrderResult(prev => {
+      if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
+      console.log("[handlePaymentSuccess] Order marked as paid:", prev?.orderId)
+      return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
+    })
+    loadCustomerOrders()
+  }, [establishment.slug])
+
   function handlePedidosClick() {
     if (lastOrder) {
       openTracking(lastOrder.orderId, lastOrder.trackingUrl)
@@ -1189,21 +1199,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           const data = await res.json()
           if (data.paymentStatus === "paid") {
             console.log("[persistent-poll] Payment confirmed:", orderResult.orderId)
-            // Trigger the same success handler
-            setCart([])
-            setPendingOrderItems([])
-            setPendingOrderNumber(null)
-            setLastOrder(null)
-            localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            
-            setOrderResult(prev => {
-              if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
-              return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
-            })
-            loadCustomerOrders()
+            handlePaymentSuccess()
             break
           }
         } catch {}
@@ -1244,28 +1240,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         establishmentSlug={establishment.slug}
         initialTab={orderResult.paymentMethod === "card" ? "card" : "pix"}
         mode={orderResult.paymentMethod ? (orderResult.paymentMethod === "card" ? "card" : "pix") : undefined}
-onPaymentSuccess={() => {
-            console.log("[onPaymentSuccess] Called - clearing cart and pending order")
-            setCart([])
-            setPendingOrderItems([])
-            setPendingOrderNumber(null)
-            setLastOrder(null)
-            localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
-            localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-            // Clear paymentLink immediately so onClose doesn't reopen modal
-            setOrderResult(prev => {
-              if (prev?.orderId) paidOrderIdsRef.current.add(prev.orderId)
-              console.log("[onPaymentSuccess] Order marked as paid:", prev?.orderId)
-              return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
-            })
-            // Force state flush then refresh orders
-            setTimeout(() => {
-              loadCustomerOrders()
-              console.log("[onPaymentSuccess] loadCustomerOrders called")
-            }, 0)
-          }}
+onPaymentSuccess={handlePaymentSuccess}
       />
     )
   }
