@@ -2909,6 +2909,7 @@ function PaymentModal({
   initialTab,
   mode,
   onPaymentSuccess,
+  onPaymentConfirmed,
 }: {
   orderId: string
   paymentLink: string
