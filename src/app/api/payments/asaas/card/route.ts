@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           billingType: "CREDIT_CARD",
           value: order.total,
           dueDate: new Date().toISOString().split("T")[0],
-          description: `Pedido #${order.orderNumber} - ${establishment.name}`,
+          description: `Pedido #${order.orderNumber} - ${order.establishment.name}`,
           remoteIp,
           creditCard: {
             creditCardNumber: creditCard.number.replace(/\s/g, ""),
