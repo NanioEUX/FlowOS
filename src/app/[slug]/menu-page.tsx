@@ -1553,7 +1553,7 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 animate-slide-up">
           <div className="flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             {cartToast.image ? (
-              <img src={cartToast.image} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              <img src={cartToast.image} alt="" loading="lazy" className="h-8 w-8 rounded-lg object-cover" />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: theme.bgCard }}>
                 <ShoppingBag className="h-4 w-4" style={{ color: theme.primary }} />
@@ -2071,7 +2071,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   return (
                   <div key={item.id} className="flex items-center gap-3 rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
                     {item.image && (
-                      <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate" style={{ color: theme.text }}>{item.name}</p>

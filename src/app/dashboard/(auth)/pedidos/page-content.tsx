@@ -86,9 +86,9 @@ export default function PedidosPage() {
   }
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadOrders, 10000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => { const i = setInterval(loadOrders, 30000); return () => clearInterval(i) }, [establishmentId])
 
-  // Periodic payment sync (every 10 seconds for pending payments)
+  // Periodic payment sync (every 30 seconds for pending payments)
   useEffect(() => {
     if (!establishmentId) return
     const syncInterval = setInterval(() => {
@@ -99,7 +99,7 @@ export default function PedidosPage() {
         console.log(`[Orders] Periodic sync: ${pendingPayments.length} pending payments`)
         fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
       }
-    }, 10000)
+    }, 30000)
     return () => clearInterval(syncInterval)
   }, [establishmentId, orders])
 
@@ -457,7 +457,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
 
   useEffect(() => {
     fetchMessages()
-    const i = setInterval(fetchMessages, 10000)
+    const i = setInterval(fetchMessages, 30000)
     return () => clearInterval(i)
   }, [order.id])
 

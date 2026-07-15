@@ -158,7 +158,7 @@ export default function EntregasPage() {
   }
 
   useEffect(() => { loadAll() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadAll, 10000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => { const i = setInterval(loadAll, 30000); return () => clearInterval(i) }, [establishmentId])
 
   async function reassignOrder(orderId: string, deliveryPersonId: string) {
     const person = deliveryPeople.find((p: any) => p.id === deliveryPersonId)
