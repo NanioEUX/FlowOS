@@ -1483,17 +1483,17 @@ export default function CaixaPOSPage() {
 
                 {/* Cash change calculator — only for balcão sales */}
                 {payment === "cash" && !activeTable && (
-                  <div className="mb-3 rounded-xl border-2 border-green-500/30 bg-green-50/50 p-4 space-y-3">
+                  <div className={`mb-3 rounded-xl border-2 p-4 space-y-3 ${darkMode ? "border-green-500/50 bg-green-900/30" : "border-green-500/30 bg-green-50/80"}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-green-700">Pagamento em Dinheiro</span>
+                      <span className={`text-sm font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>Pagamento em Dinheiro</span>
                       {cashReceived && parseFloat(cashReceived) >= cartTotal && (
-                        <span className="text-sm font-bold text-green-600">
+                        <span className={`text-sm font-bold ${darkMode ? "text-green-400" : "text-green-600"}`}>
                           Troco: {formatCurrency(parseFloat(cashReceived) - cartTotal)}
                         </span>
                       )}
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-zinc-500 mb-1 block">Valor recebido pelo cliente</label>
+                      <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
                         step="0.01"
@@ -1501,7 +1501,7 @@ export default function CaixaPOSPage() {
                         placeholder="R$ 0,00"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className="w-full rounded-lg border-2 border-green-200 bg-white px-3 py-2 text-lg font-bold text-green-700 focus:border-green-500 focus:outline-none"
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/30" : "border-green-200 bg-white text-green-700"}`}
                         autoFocus
                       />
                     </div>
@@ -1510,14 +1510,14 @@ export default function CaixaPOSPage() {
                         <button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
-                          className="flex-1 min-w-[60px] rounded-lg border-2 border-green-200 bg-white px-2 py-1.5 text-sm font-bold text-green-700 hover:bg-green-100 transition-colors"
+                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
                         >
                           {v === cartTotal ? "Valor exato" : `R$ ${v}`}
                         </button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < cartTotal && (
-                      <p className="text-xs text-red-500 font-medium">
+                      <p className={`text-xs font-medium ${darkMode ? "text-red-400" : "text-red-500"}`}>
                         Valor insuficiente (falta {formatCurrency(cartTotal - parseFloat(cashReceived))})
                       </p>
                     )}
@@ -1617,14 +1617,14 @@ export default function CaixaPOSPage() {
                         {hasBillRequest ? (
                           <span className="mt-2 rounded-full bg-red-100 px-3 py-1 text-xs font-extrabold text-red-700 dark:bg-red-900 dark:text-red-300">Pediu a conta</span>
                         ) : isOccupied && total > 0 ? (
-                          <span className={`mt-2 text-sm font-bold ${isFullyPaid ? "text-yellow-600 dark:text-yellow-400" : "text-yellow-700 dark:text-yellow-300"}`}>
+                          <span className={`mt-2 text-sm font-bold ${isFullyPaid ? "text-yellow-800 dark:text-yellow-400" : "text-yellow-900 dark:text-yellow-300"}`}>
                             {isFullyPaid ? "Paga" : formatCurrency(total)}
                           </span>
                         ) : (
-                          <span className={`mt-2 text-xs ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Livre</span>
+                          <span className={`mt-2 text-xs ${darkMode ? "text-white/30" : "text-zinc-500"}`}>Livre</span>
                         )}
                         {isOccupied && !hasBillRequest && itemCount > 0 && (
-                          <span className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
+                          <span className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-zinc-600"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
                         )}
                         {partialPaid > 0 && remaining > 0.01 && (
                           <span className="mt-1 text-[10px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
@@ -1984,7 +1984,7 @@ export default function CaixaPOSPage() {
               {/* Header */}
               <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
                 <div>
-                  <h3 className="text-lg font-bold text-zinc-900">
+                  <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>
                     Fechar Mesa {closingTableNumber}
                   </h3>
                   <p className={`text-xs mt-0.5 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Confirme os itens e a forma de pagamento</p>
@@ -2073,17 +2073,17 @@ export default function CaixaPOSPage() {
 
                 {/* Cash change calculator */}
                 {closingTablePayment === "cash" && closeTableMode === "single" && (
-                  <div className="mt-4 rounded-xl border-2 border-green-500/30 bg-green-50/50 p-4 space-y-3">
+                  <div className={`mt-4 rounded-xl border-2 p-4 space-y-3 ${darkMode ? "border-green-500/50 bg-green-900/30" : "border-green-500/30 bg-green-50/80"}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-green-700">Pagamento em Dinheiro</span>
+                      <span className={`text-sm font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>Pagamento em Dinheiro</span>
                       {cashReceived && parseFloat(cashReceived) >= remaining && (
-                        <span className="text-sm font-bold text-green-600">
+                        <span className={`text-sm font-bold ${darkMode ? "text-green-400" : "text-green-600"}`}>
                           Troco: {formatCurrency(parseFloat(cashReceived) - remaining)}
                         </span>
                       )}
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-zinc-500 mb-1 block">Valor recebido pelo cliente</label>
+                      <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
                         step="0.01"
@@ -2091,7 +2091,7 @@ export default function CaixaPOSPage() {
                         placeholder="R$ 0,00"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className="w-full rounded-lg border-2 border-green-200 bg-white px-3 py-2 text-lg font-bold text-green-700 focus:border-green-500 focus:outline-none"
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/30" : "border-green-200 bg-white text-green-700"}`}
                         autoFocus
                       />
                     </div>
@@ -2100,14 +2100,14 @@ export default function CaixaPOSPage() {
                         <button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
-                          className="flex-1 min-w-[60px] rounded-lg border-2 border-green-200 bg-white px-2 py-1.5 text-sm font-bold text-green-700 hover:bg-green-100 transition-colors"
+                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
                         >
                           {v === remaining ? "Valor exato" : `R$ ${v}`}
                         </button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < remaining && (
-                      <p className="text-xs text-red-500 font-medium">
+                      <p className={`text-xs font-medium ${darkMode ? "text-red-400" : "text-red-500"}`}>
                         Valor insuficiente (falta {formatCurrency(remaining - parseFloat(cashReceived))})
                       </p>
                     )}
