@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { BarChart3, TrendingUp, DollarSign, ShoppingBag, Calendar, Package, CreditCard, Banknote, Smartphone } from "lucide-react"
+import { BarChart3, TrendingUp, DollarSign, ShoppingBag, Calendar, Package, CreditCard, Banknote, Smartphone, Bike, CheckCircle, Wallet, History, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -16,19 +17,27 @@ export default function RelatoriosPage() {
   const searchParamsEstablishmentId = searchParams.get("establishment")
   const establishmentId = searchParamsEstablishmentId || hookEstablishmentId
   const [orders, setOrders] = useState<any[]>([])
+  const [deliveryPeople, setDeliveryPeople] = useState<any[]>([])
+  const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [payingMotoboy, setPayingMotoboy] = useState<string | null>(null)
   const [period, setPeriod] = useState<Period>("all")
   const [filterType, setFilterType] = useState("all")
 
   useEffect(() => {
     if (!establishmentId) return
-    fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setOrders(data.filter((o: any) => o.status !== "cancelled"))
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
+      fetchAuth(`/api/delivery-persons?establishmentId=${establishmentId}`),
+      fetchAuth(`/api/delivery-payments?establishmentId=${establishmentId}`),
+    ]).then(([ordersRes, peopleRes, paymentsRes]) =>
+      Promise.all([ordersRes.json(), peopleRes.json(), paymentsRes.json()])
+    ).then(([ordersData, peopleData, paymentsData]) => {
+      setOrders(ordersData.filter((o: any) => o.status !== "cancelled"))
+      setDeliveryPeople(peopleData)
+      setPayments(paymentsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [establishmentId])
 
   const filtered = orders.filter((o) => {
@@ -87,6 +96,44 @@ export default function RelatoriosPage() {
   const topProducts = Object.values(productSales)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
+
+  // Delivery financial helpers
+  function calcPendingAmount(person: any) {
+    const completedOrders = orders.filter(
+      (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery"
+    )
+    const totalEarned = completedOrders.reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0)
+    const totalPaid = (person.payments || []).reduce((sum: number, p: any) => sum + p.amount, 0)
+    return totalEarned - totalPaid
+  }
+
+  async function payMotoboy(person: any) {
+    if (!establishmentId) return
+    const pending = calcPendingAmount(person)
+    if (pending <= 0) return
+    setPayingMotoboy(person.id)
+    try {
+      const completedCount = orders.filter(
+        (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery"
+      ).length
+      await fetchAuth("/api/delivery-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryPersonId: person.id,
+          amount: pending,
+          period: "manual",
+          notes: `Pagamento referente a ${completedCount} entregas`,
+          establishmentId,
+        }),
+      })
+      // Reload payments
+      const res = await fetchAuth(`/api/delivery-payments?establishmentId=${establishmentId}`)
+      if (res.ok) setPayments(await res.json())
+    } finally {
+      setPayingMotoboy(null)
+    }
+  }
 
   // Daily revenue (last 14 days)
   const dailyData = Array.from({ length: 14 }, (_, i) => {
@@ -290,6 +337,91 @@ export default function RelatoriosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Equipe - Entregadores */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+            <Bike className="h-4 w-4" />
+            Entregadores
+          </h3>
+          {deliveryPeople.length === 0 ? (
+            <p className="text-sm text-zinc-400 text-center py-4">Nenhum entregador cadastrado</p>
+          ) : (
+            <div className="space-y-3">
+              {deliveryPeople.map((person: any) => {
+                const pending = calcPendingAmount(person)
+                const completedCount = orders.filter(
+                  (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery"
+                ).length
+                const totalEarned = orders.filter(
+                  (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery"
+                ).reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0)
+                return (
+                  <div key={person.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600/10">
+                        <Bike className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-zinc-900">{person.name}</p>
+                        <p className="text-xs text-zinc-500">{completedCount} entregas • Taxa recebida: {formatCurrency(totalEarned)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-lg font-bold ${pending > 0 ? "text-amber-400" : "text-green-600"}`}>
+                        {formatCurrency(pending)}
+                      </span>
+                      {pending > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={() => payMotoboy(person)}
+                          disabled={payingMotoboy === person.id}
+                          className="gap-1"
+                        >
+                          {payingMotoboy === person.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
+                          Pagar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Payment history */}
+      {payments.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Histórico de Pagamentos - Entregadores
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {payments.slice(0, 20).map((p: any) => (
+                <div key={p.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600/10">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">{p.deliveryPerson?.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        {new Date(p.createdAt).toLocaleString("pt-BR")}
+                        {p.notes && ` • ${p.notes}`}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-green-600">{formatCurrency(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Bike, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2, DollarSign, History, Wallet, Calendar } from "lucide-react"
+import { Bike, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2, Calendar } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -136,11 +136,9 @@ export default function EntregasPage() {
   const { toast } = useToast()
   const [deliveryPeople, setDeliveryPeople] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
-  const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMotoboy, setSelectedMotoboy] = useState<string>("")
-  const [tab, setTab] = useState<"entregas" | "financeiro">("entregas")
-  const [payingMotoboy, setPayingMotoboy] = useState<string | null>(null)
+  const [tab, setTab] = useState<"entregas">("entregas")
   const [createdPassword, setCreatedPassword] = useState<string | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState<{ open: boolean; orderId: string }>({ open: false, orderId: "" })
 
@@ -148,20 +146,14 @@ export default function EntregasPage() {
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
 
-  const [finDateFilter, setFinDateFilter] = useState<DateFilter>("all")
-  const [finCustomStart, setFinCustomStart] = useState("")
-  const [finCustomEnd, setFinCustomEnd] = useState("")
-
   async function loadAll() {
     if (!establishmentId) return
-    const [peopleRes, ordersRes, paymentsRes] = await Promise.all([
+    const [peopleRes, ordersRes] = await Promise.all([
       fetchAuth(`/api/delivery-persons?establishmentId=${establishmentId}`),
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
-      fetchAuth(`/api/delivery-payments?establishmentId=${establishmentId}`),
     ])
     if (peopleRes.ok) setDeliveryPeople(await peopleRes.json())
     if (ordersRes.ok) setOrders(await ordersRes.json())
-    if (paymentsRes.ok) setPayments(await paymentsRes.json())
     setLoading(false)
   }
 
@@ -191,44 +183,6 @@ export default function EntregasPage() {
     toast("Pedido cancelado", "success")
     setCancelConfirm({ open: false, orderId: "" })
     loadAll()
-  }
-
-  function calcPendingAmount(person: any) {
-    const range = getDateRange(finDateFilter, finCustomStart, finCustomEnd)
-    const completedOrders = orders.filter(
-      (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)
-    )
-    const totalEarned = completedOrders.reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0)
-    const totalPaid = (person.payments || []).reduce((sum: number, p: any) => sum + p.amount, 0)
-    return totalEarned - totalPaid
-  }
-
-  async function payMotoboy(person: any) {
-    if (!establishmentId) return
-    const pending = calcPendingAmount(person)
-    if (pending <= 0) return
-
-    setPayingMotoboy(person.id)
-    try {
-      const range = getDateRange(finDateFilter, finCustomStart, finCustomEnd)
-      const completedCount = orders.filter(
-        (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)
-      ).length
-      await fetchAuth("/api/delivery-payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deliveryPersonId: person.id,
-          amount: pending,
-          period: "manual",
-          notes: `Pagamento referente a ${completedCount} entregas`,
-          establishmentId,
-        }),
-      })
-      loadAll()
-    } finally {
-      setPayingMotoboy(null)
-    }
   }
 
   const { start: dateStart, end: dateEnd } = getDateRange(dateFilter, customStart, customEnd)
@@ -263,13 +217,6 @@ export default function EntregasPage() {
         >
           <Bike className="h-4 w-4" />
           Entregas
-        </button>
-        <button
-          onClick={() => setTab("financeiro")}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "financeiro" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
-        >
-          <DollarSign className="h-4 w-4" />
-          Financeiro
         </button>
       </div>
 
@@ -388,110 +335,6 @@ export default function EntregasPage() {
           {!selectedMotoboy && (
             <PendingOrdersSection orders={filteredOrders.filter((o: any) => o.status === "ready" && !o.deliveryPersonId)} deliveryPeople={deliveryPeople} onReassign={reassignOrder} onCancel={handleCancelOrder} />
           )}
-        </>
-      )}
-
-      {/* ===== TAB: FINANCEIRO ===== */}
-      {tab === "financeiro" && (
-        <>
-          {/* Filtros agrupados */}
-          <div className="rounded-lg bg-zinc-100 p-1">
-            <DateFilters
-              active={finDateFilter}
-              onChange={setFinDateFilter}
-              customStart={finCustomStart}
-              customEnd={finCustomEnd}
-              onCustomStartChange={setFinCustomStart}
-              onCustomEndChange={setFinCustomEnd}
-            />
-          </div>
-
-          {/* Pending amounts */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-3">
-                <Wallet className="h-4 w-4" />
-                Saldo Pendente por Motoboy
-              </h3>
-              <div className="space-y-3">
-                {deliveryPeople.map((person: any) => {
-                  const pending = calcPendingAmount(person)
-                  const range = getDateRange(finDateFilter, finCustomStart, finCustomEnd)
-                  const completedCount = orders.filter(
-                    (o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)
-                  ).length
-                  return (
-                    <div key={person.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-600/10">
-                          <Bike className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-zinc-900">{person.name}</p>
-                          <p className="text-xs text-zinc-500">{completedCount} entregas • Taxa recebida: {formatCurrency(orders.filter((o: any) => o.deliveryPersonId === person.id && o.status === "delivered" && o.orderType === "delivery" && isInRange(o.createdAt, range.start, range.end)).reduce((sum: number, o: any) => sum + (o.deliveryFee || 0), 0))}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-lg font-bold ${pending > 0 ? "text-amber-400" : "text-green-600"}`}>
-                          {formatCurrency(pending)}
-                        </span>
-                        {pending > 0 && (
-                          <Button
-                            size="sm"
-                            onClick={() => payMotoboy(person)}
-                            disabled={payingMotoboy === person.id}
-                            className="gap-1"
-                          >
-                            {payingMotoboy === person.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
-                            Pagar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-                {deliveryPeople.length === 0 && (
-                  <p className="text-sm text-zinc-400 text-center py-4">Nenhum entregador cadastrado</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment history */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-3">
-                <History className="h-4 w-4" />
-                Histórico de Pagamentos
-              </h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {(() => {
-                  const range = getDateRange(finDateFilter, finCustomStart, finCustomEnd)
-                  const filtered = payments.filter((p: any) => isInRange(p.createdAt, range.start, range.end))
-                  if (filtered.length === 0) {
-                    return <p className="text-sm text-zinc-400 text-center py-4">Nenhum pagamento neste período</p>
-                  }
-                  return filtered.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600/10">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-zinc-900">{p.deliveryPerson?.name}</p>
-                          <p className="text-xs text-zinc-400">
-                            {new Date(p.createdAt).toLocaleString("pt-BR")}
-                            {p.notes && ` • ${p.notes}`}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-bold text-green-600">{formatCurrency(p.amount)}</span>
-                    </div>
-                  ))
-                })()}
-              </div>
-            </CardContent>
-          </Card>
         </>
       )}
 
