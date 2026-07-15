@@ -173,7 +173,6 @@ model Order {
   tableNumber       Int?
   deliveryPerson    String?
   deliveryPersonId  String?
-  waiterName        String?
   couponId          String?
   trackingToken     String?         @unique
   assignedAt        DateTime?

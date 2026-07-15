@@ -165,7 +165,6 @@ export async function POST(req: NextRequest) {
           ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
           orderNumber,
           tableNumber: tableNumber || null,
-          waiterName: waiterName || null,
         },
       })
     })
