@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { BarChart3, TrendingUp, DollarSign, ShoppingBag, Calendar, Package, CreditCard, Banknote, Smartphone, Bike, CheckCircle, Wallet, History, Loader2 } from "lucide-react"
+import { BarChart3, TrendingUp, DollarSign, ShoppingBag, Calendar, Package, CreditCard, Banknote, Smartphone, Bike, CheckCircle, Wallet, History, Loader2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
@@ -21,6 +21,7 @@ export default function RelatoriosPage() {
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [payingMotoboy, setPayingMotoboy] = useState<string | null>(null)
+  const [commissionRates, setCommissionRates] = useState<Record<string, number>>({})
   const [period, setPeriod] = useState<Period>("all")
   const [filterType, setFilterType] = useState("all")
 
@@ -39,6 +40,14 @@ export default function RelatoriosPage() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [establishmentId])
+
+  // Load commission rates from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("waiterCommissionRates")
+      if (saved) setCommissionRates(JSON.parse(saved))
+    } catch {}
+  }, [])
 
   const filtered = orders.filter((o) => {
     const matchesType = filterType === "all" || o.orderType === filterType
@@ -422,6 +431,72 @@ export default function RelatoriosPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Garçoms */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Garçoms
+          </h3>
+          {(() => {
+            const waiterOrders: Record<string, { count: number; revenue: number }> = {}
+            filtered.forEach((o: any) => {
+              if (o.waiterName) {
+                if (!waiterOrders[o.waiterName]) waiterOrders[o.waiterName] = { count: 0, revenue: 0 }
+                waiterOrders[o.waiterName].count++
+                waiterOrders[o.waiterName].revenue += o.total
+              }
+            })
+            const waiters = Object.entries(waiterOrders)
+            if (waiters.length === 0) {
+              return <p className="text-sm text-zinc-400 text-center py-4">Nenhum pedido com garçom vinculado neste período</p>
+            }
+            return (
+              <div className="space-y-3">
+                {waiters.map(([name, data]) => {
+                  const rate = commissionRates[name] ?? 10
+                  const commission = data.revenue * (rate / 100)
+                  return (
+                    <div key={name} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/10">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-zinc-900">{name}</p>
+                          <p className="text-xs text-zinc-500">{data.count} pedidos • {formatCurrency(data.revenue)} em vendas</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-zinc-500">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={rate}
+                            onChange={(e) => {
+                              const newRate = parseFloat(e.target.value) || 0
+                              const updated = { ...commissionRates, [name]: newRate }
+                              setCommissionRates(updated)
+                              localStorage.setItem("waiterCommissionRates", JSON.stringify(updated))
+                            }}
+                            className="w-12 rounded border border-zinc-200 bg-white px-1 py-0.5 text-center text-xs font-medium text-zinc-700 focus:border-green-600 focus:outline-none"
+                          />
+                          <span>%</span>
+                        </div>
+                        <span className="text-lg font-bold text-blue-600">
+                          {formatCurrency(commission)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </CardContent>
+      </Card>
     </div>
   )
 }
