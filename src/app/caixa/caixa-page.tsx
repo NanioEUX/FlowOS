@@ -1481,8 +1481,60 @@ export default function CaixaPOSPage() {
                   ))}
                 </div>
 
+                {/* Cash change calculator — only for balcão sales */}
+                {payment === "cash" && !activeTable && (
+                  <div className="mb-3 rounded-xl border-2 border-green-500/30 bg-green-50/50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-green-700">Pagamento em Dinheiro</span>
+                      {cashReceived && parseFloat(cashReceived) >= cartTotal && (
+                        <span className="text-sm font-bold text-green-600">
+                          Troco: {formatCurrency(parseFloat(cashReceived) - cartTotal)}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-500 mb-1 block">Valor recebido pelo cliente</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="R$ 0,00"
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(e.target.value)}
+                        className="w-full rounded-lg border-2 border-green-200 bg-white px-3 py-2 text-lg font-bold text-green-700 focus:border-green-500 focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {[cartTotal, 10, 20, 50, 100].map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setCashReceived(String(v))}
+                          className="flex-1 min-w-[60px] rounded-lg border-2 border-green-200 bg-white px-2 py-1.5 text-sm font-bold text-green-700 hover:bg-green-100 transition-colors"
+                        >
+                          {v === cartTotal ? "Valor exato" : `R$ ${v}`}
+                        </button>
+                      ))}
+                    </div>
+                    {cashReceived && parseFloat(cashReceived) < cartTotal && (
+                      <p className="text-xs text-red-500 font-medium">
+                        Valor insuficiente (falta {formatCurrency(cartTotal - parseFloat(cashReceived))})
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <button
-                  onClick={finalizeSale}
+                  onClick={() => {
+                    if (payment === "cash" && !activeTable) {
+                      if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
+                        if (!cashReceived) setCashReceived(String(cartTotal))
+                        document.querySelector<HTMLInputElement>('input[placeholder="R$ 0,00"]')?.focus()
+                        return
+                      }
+                    }
+                    finalizeSale()
+                  }}
                   disabled={closing || stagingCart.length === 0 || (!cashRegister && !activeTable)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
                 >
@@ -1490,6 +1542,11 @@ export default function CaixaPOSPage() {
                     "Registrando..."
                   ) : !cashRegister && !activeTable ? (
                     "Abra o caixa no financeiro antes de vender"
+                  ) : payment === "cash" && !activeTable && cashReceived && parseFloat(cashReceived) >= cartTotal ? (
+                    <>
+                      <CheckCircle className="h-5 w-5" />
+                      Confirmar · Troco {formatCurrency(parseFloat(cashReceived) - cartTotal)}
+                    </>
                   ) : (
                     <>
                       <CheckCircle className="h-5 w-5" />
