@@ -3,6 +3,7 @@ import http from "http"
 import tls from "tls"
 import crypto from "crypto"
 
+const isSandbox = process.env.NEXT_PUBLIC_INTER_SANDBOX === "true"
 const INTER_AUTH_URL = "https://cdpj.partners.bancointer.com.br/oauth/v1/token"
 const INTER_API_BASE = "https://cdpj.partners.bancointer.com.br"
 
