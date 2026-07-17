@@ -45,6 +45,7 @@ export async function GET(
         clientId: order.establishment.interClientId!,
         clientSecret: order.establishment.interClientSecret!,
         certificate: order.establishment.interCertificate!,
+        certificatePassword: order.establishment.interCertificatePassword || "",
       }
       const result = await getInterPixStatus(config, txid)
 

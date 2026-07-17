@@ -14,13 +14,14 @@ interface InterConfig {
   clientId: string
   clientSecret: string
   certificate: string // base64 .p12
+  certificatePassword?: string
 }
 
 function createAgent(config: InterConfig): https.Agent {
   const pfxBuffer = Buffer.from(config.certificate, "base64")
   return new https.Agent({
     pfx: pfxBuffer,
-    passphrase: "",
+    passphrase: config.certificatePassword || "",
     rejectUnauthorized: true,
   })
 }

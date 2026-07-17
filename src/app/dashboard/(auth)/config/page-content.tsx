@@ -47,6 +47,7 @@ export default function ConfigPage() {
     interClientId: "",
     interClientSecret: "",
     interCertificate: "",
+    interCertificatePassword: "",
     interPixKey: "",
     deliveryFeeType: "free",
     deliveryFeeAmount: "0",
@@ -94,6 +95,7 @@ export default function ConfigPage() {
             interClientId: data.interClientId || "",
             interClientSecret: data.interClientSecret || "",
             interCertificate: data.interCertificate || "",
+            interCertificatePassword: data.interCertificatePassword || "",
             interPixKey: data.interPixKey || "",
             deliveryFeeType: data.deliveryFeeType || "free",
             deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
@@ -383,10 +385,25 @@ export default function ConfigPage() {
                     }}
                     className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
                   />
-                  {form.interCertificate && (
-                    <p className="text-xs text-green-600">✓ Certificado carregado</p>
+                  {form.interCertificate ? (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Certificado carregado e pronto para salvar
+                    </p>
+                  ) : (
+                    <p className="text-xs text-zinc-400">Nenhum certificado selecionado</p>
                   )}
                   <p className="text-xs text-zinc-400">Baixe no Internet Banking → Soluções → Nova Integração</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Senha do Certificado</label>
+                  <input
+                    type="password"
+                    placeholder="Senha do .p12"
+                    value={form.interCertificatePassword}
+                    onChange={(e) => setForm({ ...form, interCertificatePassword: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
                 </div>
               </div>
             )}

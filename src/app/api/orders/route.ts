@@ -195,6 +195,7 @@ export async function POST(req: NextRequest) {
             clientId: establishment.interClientId,
             clientSecret: establishment.interClientSecret,
             certificate: establishment.interCertificate,
+            certificatePassword: establishment.interCertificatePassword || "",
           }
           const txid = generateInterTxId(order.id, order.orderNumber ?? 0)
           const description = `Pedido #${order.orderNumber} - ${establishment.name}`
