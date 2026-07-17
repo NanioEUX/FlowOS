@@ -27,7 +27,7 @@ export async function GET(
   return NextResponse.json(establishment)
 }
 
-const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover", "description", "deliveryFeeType", "deliveryFeeAmount", "deliveryFreeAbove", "paymentConfig", "orderConfig", "primaryColor", "backgroundColor", "textColor", "headerColor", "colorsPublished", "instagramUrl", "businessHours", "loyaltyConfig", "pickupMessage", "deliveryMessage", "confirmationTitle", "confirmationImage", "closedTitle", "closedSub", "tableCount", "defaultTheme", "expenseCategories", "asaasApiKey", "asaasWalletId", "efiClientId", "efiClientSecret", "efiPixKey", "efiCertificate", "efiEnvironment", "efiWebhookToken", "paymentProvider"]
+const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover", "description", "deliveryFeeType", "deliveryFeeAmount", "deliveryFreeAbove", "paymentConfig", "orderConfig", "primaryColor", "backgroundColor", "textColor", "headerColor", "colorsPublished", "instagramUrl", "businessHours", "loyaltyConfig", "pickupMessage", "deliveryMessage", "confirmationTitle", "confirmationImage", "closedTitle", "closedSub", "tableCount", "defaultTheme", "expenseCategories", "asaasApiKey", "asaasWalletId", "efiClientId", "efiClientSecret", "efiPixKey", "efiCertificate", "efiEnvironment", "efiWebhookToken", "paymentProvider", "interClientId", "interClientSecret", "interCertificate", "interPixKey"]
 
 export async function PATCH(
   req: NextRequest,
