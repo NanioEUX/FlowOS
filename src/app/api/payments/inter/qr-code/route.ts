@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
             interClientId: true,
             interClientSecret: true,
             interCertificate: true,
+            interCertificatePassword: true,
             interPixKey: true,
             name: true,
           },

@@ -25,6 +25,7 @@ export async function GET(
           interClientId: true,
           interClientSecret: true,
           interCertificate: true,
+          interCertificatePassword: true,
           interPixKey: true,
         },
       },

@@ -41,6 +41,7 @@ model Establishment {
   interClientId       String?
   interClientSecret   String?
   interCertificate    String?
+  interCertificatePassword String?
   interPixKey         String?
   paymentConfig       String            @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
   orderConfig         String            @default("{\"delivery\":true,\"pickup\":true}")
