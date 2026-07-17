@@ -367,14 +367,25 @@ export default function ConfigPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Certificado (.p12 em Base64)</label>
-                  <textarea
-                    placeholder="Cole o conteúdo do certificado .p12 em Base64"
-                    value={form.interCertificate}
-                    onChange={(e) => setForm({ ...form, interCertificate: e.target.value })}
-                    rows={3}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none resize-none font-mono text-xs"
+                  <label className="block text-sm font-medium text-zinc-700">Certificado (.p12)</label>
+                  <input
+                    type="file"
+                    accept=".p12,.pfx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => {
+                        const base64 = (reader.result as string).split(",")[1]
+                        setForm({ ...form, interCertificate: base64 })
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
                   />
+                  {form.interCertificate && (
+                    <p className="text-xs text-green-600">✓ Certificado carregado</p>
+                  )}
                   <p className="text-xs text-zinc-400">Baixe no Internet Banking → Soluções → Nova Integração</p>
                 </div>
               </div>
