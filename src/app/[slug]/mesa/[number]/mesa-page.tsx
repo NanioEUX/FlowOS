@@ -108,6 +108,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   const [reviewPhone, setReviewPhone] = useState("")
   const [reviewSending, setReviewSending] = useState(false)
   const [reviewSent, setReviewSent] = useState(false)
+  const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
 
@@ -327,9 +328,9 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   return (
     <div className={`flex h-screen flex-col ${darkMode ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4" style={{ backgroundColor: headerBg }}>
-        {/* Left: logo + establishment */}
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4" style={{ backgroundColor: headerBg }}>
+        {/* Left: logo + establishment - hidden on mobile */}
+        <div className="hidden lg:flex items-center gap-3">
           {est.logo ? <img src={est.logo} alt={est.name} className="h-11 w-11 rounded-xl object-cover shadow-sm" /> : <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-green-500 text-sm font-bold text-white shadow-sm`}>{est.name.charAt(0)}</div>}
           <div>
             <span className={`text-sm font-semibold ${headerSubtext}`}>{est.name}</span>
@@ -341,37 +342,32 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
 
         {/* Center: table number */}
         <div className="flex items-center gap-2">
-          <div className={`rounded-2xl px-6 py-2 shadow-sm ${est.colorsPublished && isLightColor(est.headerColor) ? "bg-zinc-900 text-white" : darkMode ? "bg-white/10 text-white" : "bg-zinc-900 text-white"}`}>
-            <span className="text-2xl font-extrabold tracking-tight">Mesa {tableNumber}</span>
+          <div className={`rounded-2xl px-4 py-1.5 lg:px-6 lg:py-2 shadow-sm ${est.colorsPublished && isLightColor(est.headerColor) ? "bg-zinc-900 text-white" : darkMode ? "bg-white/10 text-white" : "bg-zinc-900 text-white"}`}>
+            <span className="text-lg lg:text-2xl font-extrabold tracking-tight">Mesa {tableNumber}</span>
           </div>
         </div>
 
         {/* Right: actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3">
           {tableStatus && tableStatus.totalPending > 0 && (
-            <span className="rounded-full bg-green-100 px-4 py-1.5 text-sm font-bold text-green-700 dark:bg-green-950 dark:text-green-400">
-              Aberto — {formatCurrency(tableStatus.totalPending)}
+            <span className="hidden sm:inline-flex rounded-full bg-green-100 px-4 py-1.5 text-sm font-bold text-green-700 dark:bg-green-950 dark:text-green-400">
+              {formatCurrency(tableStatus.totalPending)}
             </span>
-          )}
-          {tableStatus && tableStatus.totalPending > 0 && (
-            <button onClick={() => { setPayMethod("pix"); setShowPaymentModal(true) }} className="flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 active:scale-95">
-              <QrCode className="h-4 w-4" />
-              Pagar com Pix
-            </button>
           )}
           {paymentRequested ? (
-            <span className="flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-bold text-white">
+            <span className="flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 lg:px-5 lg:py-3 text-xs lg:text-sm font-bold text-white">
               <Clock className="h-4 w-4 animate-pulse" />
-              Aguardando atendente...
+              <span className="hidden sm:inline">Aguardando</span>
             </span>
           ) : (
-            <button onClick={() => setShowConfirmBill(true)} disabled={requestingPayment || !tableStatus || tableStatus.totalPending <= 0} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 active:scale-95 disabled:opacity-50">
+            <button onClick={() => setShowConfirmBill(true)} disabled={requestingPayment || !tableStatus || tableStatus.totalPending <= 0} className="flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 lg:px-5 lg:py-3 text-xs lg:text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 active:scale-95 disabled:opacity-50">
               {requestingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
-              Pedir a Conta
+              <span className="hidden sm:inline">Pedir a Conta</span>
+              <span className="sm:hidden">Conta</span>
             </button>
           )}
-          <button onClick={() => setDarkMode(!darkMode)} className={`rounded-xl p-3 transition-colors ${darkMode ? "bg-zinc-800 hover:bg-zinc-700" : "bg-zinc-100 hover:bg-zinc-200"}`}>
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          <button onClick={() => setDarkMode(!darkMode)} className={`rounded-xl p-2.5 lg:p-3 transition-colors ${darkMode ? "bg-zinc-800 hover:bg-zinc-700" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+            {darkMode ? <Sun className="h-4 w-4 lg:h-5 lg:w-5" /> : <Moon className="h-4 w-4 lg:h-5 lg:w-5" />}
           </button>
         </div>
       </div>
@@ -602,7 +598,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             {filteredProducts.map((product) => (
               <button key={product.id} onClick={() => addToCart(product)} className={`flex flex-col rounded-2xl border p-3 text-left transition-all hover:shadow-lg active:scale-[0.97] ${darkMode ? "border-zinc-700 bg-zinc-800 hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"}`}>
                 {product.image ? <img src={product.image} alt={product.name} className="mb-3 h-28 w-full rounded-xl object-cover" /> : <div className={`mb-3 flex h-28 w-full items-center justify-center rounded-xl text-4xl ${darkMode ? "bg-zinc-700" : "bg-zinc-100"}`}>🍕</div>}
@@ -614,8 +610,8 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
           <p className={`text-center text-[10px] py-4 ${darkMode ? "text-zinc-600" : "text-zinc-400"}`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
         </div>
 
-        {/* Right panel - Cart + Orders */}
-        <div className={`w-80 flex flex-col border-l ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"}`}>
+        {/* Right panel - Cart + Orders - desktop only */}
+        <div className={`hidden lg:flex w-80 flex-col border-l ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"}`}>
           {/* Tabs */}
           <div className={`flex border-b ${darkMode ? "border-zinc-700" : "border-zinc-200"}`}>
             <button onClick={() => setRightTab("cart")} className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold transition-colors ${rightTab === "cart" ? "border-b-2 border-green-600 text-green-600" : darkMode ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700"}`}>
@@ -752,6 +748,70 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
           )}
         </div>
       </div>
+
+      {/* Mobile Cart Drawer */}
+      {mobileCartOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" onClick={(e) => { if (e.target === e.currentTarget) setMobileCartOpen(false) }}>
+          <div className={`absolute bottom-0 left-0 right-0 max-h-[85vh] rounded-t-3xl overflow-y-auto ${darkMode ? "bg-zinc-800 text-white" : "bg-white text-zinc-900"}`}>
+            <div className={`sticky top-0 flex items-center justify-between px-4 py-3 border-b ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold">Carrinho</h3>
+                {cart.length > 0 && <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">{cart.reduce((s, i) => s + i.quantity, 0)}</span>}
+              </div>
+              <button onClick={() => setMobileCartOpen(false)} className={`p-1 rounded-lg ${darkMode ? "hover:bg-zinc-700" : "hover:bg-zinc-100"}`}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingBag className="mx-auto h-12 w-12 text-zinc-400 mb-2" />
+                  <p className={`text-sm ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>Carrinho vazio</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((item) => (
+                    <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 ${darkMode ? "bg-zinc-700" : "bg-zinc-50"}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold truncate ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.name}</p>
+                        <p className={`text-xs ${darkMode ? "text-zinc-400" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateQuantity(item.id, -1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}>
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center font-bold">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}>
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => removeItem(item.id)} className="ml-1 text-red-400 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className={`flex justify-between items-center pt-3 border-t ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
+                    <span className={`font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Total</span>
+                    <span className="text-xl font-bold text-green-600">{formatCurrency(cartTotal)}</span>
+                  </div>
+                  <button onClick={sendOrder} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50">
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4" /> Enviar Pedido</>}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Cart Button - Mobile only */}
+      <button
+        onClick={() => setMobileCartOpen(true)}
+        className={`fixed bottom-24 right-4 lg:hidden flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-lg z-40 ${cart.length > 0 ? "animate-bounce" : ""}`}
+      >
+        <ShoppingBag className="h-5 w-5" />
+        {cart.length > 0 && <span>{cart.reduce((s, i) => s + i.quantity, 0)} · {formatCurrency(cartTotal)}</span>}
+      </button>
 
       <ConfirmDialog
         open={showConfirmBill}
