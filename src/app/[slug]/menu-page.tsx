@@ -38,10 +38,6 @@ interface Establishment {
   deliveryFeeType: string
   deliveryFeeAmount: number | null
   deliveryFreeAbove: number | null
-  minimumOrderEnabled: boolean
-  minimumOrderValue: number | null
-  minimumOrderApplyToDelivery: boolean
-  minimumOrderApplyToPickup: boolean
   primaryColor: string
   backgroundColor: string
   textColor: string
@@ -2218,15 +2214,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <span style={{ color: theme.text }}>Total</span>
                     <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
                   </div>
-                  {establishment.minimumOrderEnabled && (
-                    ((orderType === "delivery" && establishment.minimumOrderApplyToDelivery) ||
-                     (orderType === "pickup" && establishment.minimumOrderApplyToPickup)) &&
-                    total < Number(establishment.minimumOrderValue) && (
-                      <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm" style={{ color: "#92400e" }}>
-                        Pedido mínimo ({orderType === "delivery" ? "delivery" : "retirada"}): {formatCurrency(Number(establishment.minimumOrderValue))}
-                      </div>
-                    )
-                  )}
                 </div>
 
                 <div className="pt-2">
@@ -2244,19 +2231,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       size="lg"
                       className="w-full gap-2"
                       onClick={() => setShowCheckout(true)}
-                      disabled={
-                        !isOpen ||
-                        (establishment.minimumOrderEnabled && (
-                          (orderType === "delivery" && establishment.minimumOrderApplyToDelivery && total < Number(establishment.minimumOrderValue)) ||
-                          (orderType === "pickup" && establishment.minimumOrderApplyToPickup && total < Number(establishment.minimumOrderValue))
-                        ))
-                      }
+                      disabled={!isOpen}
                     >
                       <ShoppingBag className="h-5 w-5" />
-                      {!isOpen ? "Estabelecimento fechado" : establishment.minimumOrderEnabled && (
-                        (orderType === "delivery" && establishment.minimumOrderApplyToDelivery && total < Number(establishment.minimumOrderValue)) ||
-                        (orderType === "pickup" && establishment.minimumOrderApplyToPickup && total < Number(establishment.minimumOrderValue))
-                      ) ? `Pedido mínimo ${formatCurrency(Number(establishment.minimumOrderValue))}` : "Finalizar pedido"}
+                      {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
                     </Button>
                   )}
                 </div>

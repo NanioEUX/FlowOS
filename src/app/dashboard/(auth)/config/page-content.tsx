@@ -52,10 +52,6 @@ export default function ConfigPage() {
     deliveryFeeType: "free",
     deliveryFeeAmount: "0",
     deliveryFreeAbove: "0",
-    minimumOrderEnabled: false,
-    minimumOrderValue: "0",
-    minimumOrderApplyToDelivery: true,
-    minimumOrderApplyToPickup: false,
     defaultTheme: "dark",
     tableCount: "10",
   })
@@ -104,10 +100,6 @@ export default function ConfigPage() {
             deliveryFeeType: data.deliveryFeeType || "free",
             deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
             deliveryFreeAbove: String(data.deliveryFreeAbove || "0"),
-            minimumOrderEnabled: data.minimumOrderEnabled || false,
-            minimumOrderValue: String(data.minimumOrderValue || "0"),
-            minimumOrderApplyToDelivery: data.minimumOrderApplyToDelivery ?? true,
-            minimumOrderApplyToPickup: data.minimumOrderApplyToPickup ?? false,
             defaultTheme: data.defaultTheme || "dark",
             tableCount: String(data.tableCount || 10),
           })
@@ -655,64 +647,6 @@ export default function ConfigPage() {
                   <p className="text-xs text-zinc-500">Cliente paga ao buscar</p>
                 </div>
               </label>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pedido Mínimo (Cardápio Online) */}
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Pedido Mínimo (Cardápio Online)</h3>
-            <p className="text-sm text-zinc-500">Configure um valor mínimo para pedidos feitos pelo cardápio digital.</p>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.minimumOrderEnabled}
-                  onChange={(e) => setForm({ ...form, minimumOrderEnabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-                />
-                <span className="text-sm font-medium text-zinc-700">Ativar pedido mínimo</span>
-              </label>
-              {form.minimumOrderEnabled && (
-                <>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-zinc-500">Valor mínimo (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="15,00"
-                      value={form.minimumOrderValue}
-                      onChange={(e) => setForm({ ...form, minimumOrderValue: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-zinc-500">Aplicar a:</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={form.minimumOrderApplyToDelivery}
-                          onChange={(e) => setForm({ ...form, minimumOrderApplyToDelivery: e.target.checked })}
-                          className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-                        />
-                        <span className="text-sm text-zinc-700">Delivery</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={form.minimumOrderApplyToPickup}
-                          onChange={(e) => setForm({ ...form, minimumOrderApplyToPickup: e.target.checked })}
-                          className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-                        />
-                        <span className="text-sm text-zinc-700">Retirada</span>
-                      </label>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </CardContent>
         </Card>

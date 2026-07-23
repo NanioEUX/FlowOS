@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle } from "lucide-react"
+import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle, Receipt, QrCode, Loader2 } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
@@ -134,6 +134,9 @@ export default function CaixaPOSPage() {
   const [paymentRequests, setPaymentRequests] = useState<any[]>([])
   const [showStaffQr, setShowStaffQr] = useState(false)
   const [staffQrImage, setStaffQrImage] = useState<string | null>(null)
+  const [tableQrCodes, setTableQrCodes] = useState<Record<number, string>>({})
+  const [tableQRModal, setTableQRModal] = useState(false)
+  const [tableQRNumber, setTableQRNumber] = useState<number | null>(null)
   // "Cada um paga" states
   const [eachPersonStep, setEachPersonStep] = useState(0)
   const [eachPersonSelections, setEachPersonSelections] = useState<Record<number, Record<number, number>>>({})
@@ -440,6 +443,15 @@ export default function CaixaPOSPage() {
           })
         } catch {}
       }
+      if (est.slug) {
+        const baseUrl = window.location.origin
+        const newQrcodes: Record<number, string> = {}
+        for (let i = 1; i <= (est.tableCount || 10); i++) {
+          const url = `${baseUrl}/${est.slug}/mesa/${i}`
+          newQrcodes[i] = await QRCode.toDataURL(url, { width: 80, margin: 1 })
+        }
+        setTableQrCodes(newQrcodes)
+      }
     }
     // Load partial payments from API
     try {
@@ -639,6 +651,16 @@ export default function CaixaPOSPage() {
     setAbaterModal(tableNum)
     setAbaterAmount("")
     setAbaterMethod("cash")
+  }
+
+  async function openTableQr(tableNum: number) {
+    setTableQRNumber(tableNum)
+    if (!tableQrCodes[tableNum] && user?.establishment?.slug) {
+      const url = `${window.location.origin}/${user.establishment.slug}/mesa/${tableNum}`
+      const qr = await QRCode.toDataURL(url, { width: 300, margin: 2 })
+      setTableQrCodes(prev => ({ ...prev, [tableNum]: qr }))
+    }
+    setTableQRModal(true)
   }
 
   async function processAbater() {
@@ -1607,6 +1629,15 @@ export default function CaixaPOSPage() {
                       }`}
                       onClick={() => selectTable(num)}
                     >
+                      {/* QR button top-left */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openTableQr(num) }}
+                        className={`absolute top-2 left-2 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors ${
+                          darkMode ? "bg-purple-900/60 text-purple-300 hover:bg-purple-800" : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        }`}
+                      >
+                        QR
+                      </button>
                       {/* Status badge top-right */}
                       <div className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                         hasBillRequest
@@ -1652,25 +1683,14 @@ export default function CaixaPOSPage() {
                             <PlusCircle className="h-5 w-5 mb-1" />
                             Adicionar
                           </button>
-                          {total > 0 && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openAbater(num) }}
-                              className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-r ${
-                                darkMode ? "text-blue-400 hover:bg-blue-950 active:bg-blue-900 border-white/[.08]" : "text-blue-600 hover:bg-blue-50 active:bg-blue-100 border-zinc-200"
-                              }`}
-                            >
-                              <MinusCircle className="h-5 w-5 mb-1" />
-                              Abater
-                            </button>
-                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
                               darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900" : "text-red-600 hover:bg-red-50 active:bg-red-100"
                             }`}
                           >
-                            <X className="h-5 w-5 mb-1" />
-                            Fechar
+                            <Receipt className="h-5 w-5 mb-1" />
+                            Conta
                           </button>
                         </div>
                       )}
@@ -2553,6 +2573,36 @@ export default function CaixaPOSPage() {
           </div>
         )
       })()}
+
+      {/* Table QR Modal */}
+      {tableQRModal && tableQRNumber !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTableQRModal(false) }}>
+          <div className={`rounded-2xl p-6 text-center shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>QR Code · Mesa {tableQRNumber}</h3>
+              <button onClick={() => setTableQRModal(false)} className={darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className={`text-xs mb-4 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escaneie para ver o cardápio da mesa</p>
+            {tableQrCodes[tableQRNumber] ? (
+              <img src={tableQrCodes[tableQRNumber]} alt="QR Code" className="mx-auto rounded-xl w-64 h-64" />
+            ) : (
+              <div className={`mx-auto w-64 h-64 flex items-center justify-center rounded-xl ${darkMode ? "bg-white/5" : "bg-zinc-100"}`}>
+                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+              </div>
+            )}
+            <p className={`mt-3 text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{user?.establishment?.slug}/mesa/{tableQRNumber}</p>
+            <a
+              href={tableQrCodes[tableQRNumber] ? tableQrCodes[tableQRNumber].replace("image/png", "image/octet-stream") : "#"}
+              download={`mesa-${tableQRNumber}-qr.png`}
+              className="mt-4 inline-block w-full rounded-xl bg-purple-600 py-2.5 text-sm font-bold text-white hover:bg-purple-700"
+            >
+              Baixar QR Code
+            </a>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmDialog.open}
