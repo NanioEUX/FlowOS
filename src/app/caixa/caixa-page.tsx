@@ -2644,26 +2644,20 @@ export default function CaixaPOSPage() {
                   <button
                     key={t}
                     onClick={() => {
-                      const sourceData = tableData[transferModal]
-                      const sourceCart = sourceData?.cart || []
-                      const targetData = tableData[t]
-                      const targetCart = targetData?.cart || []
-
-                      const mergedCart = [...targetCart, ...sourceCart]
-
-                      const newTableData = { ...tableData }
-                      newTableData[t] = { cart: mergedCart, participants: targetData?.participants || [] }
-                      newTableData[transferModal!] = { cart: [], participants: [] }
-
-                      setTableData(newTableData)
-                      localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify({
-                        tableData: newTableData,
-                        activeTable: activeTable,
-                        activeCart: cart,
-                        stagingCart: stagingCart,
-                      }))
+                      const sourceNum = transferModal!
+                      const targetNum = t
+                      const source = tableData[sourceNum] || { cart: [], participants: [] }
+                      const target = tableData[targetNum] || { cart: [], participants: [] }
+                      const merged = [...target.cart, ...source.cart]
+                      const updated = { ...tableData }
+                      updated[targetNum] = { cart: merged, participants: target.participants || [] }
+                      updated[sourceNum] = { cart: [], participants: [] }
+                      setTableData(updated)
+                      const saved = JSON.parse(localStorage.getItem(`pedefacil-tables-${user!.establishmentId}`) || "{}")
+                      saved.tableData = updated
+                      localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify(saved))
                       setTransferModal(null)
-                      toast(`Mesa ${transferModal} transferida para Mesa ${t}`, "success")
+                      toast(`Mesa ${sourceNum} transferida para Mesa ${targetNum}`, "success")
                     }}
                     className={`flex flex-col items-center justify-center rounded-xl border-2 py-3 text-sm font-bold transition-colors ${
                       isOccupied
