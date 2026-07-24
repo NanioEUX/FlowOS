@@ -2643,7 +2643,7 @@ export default function CaixaPOSPage() {
                 return (
                   <button
                     key={t}
-                    onClick={() => {
+                    onClick={async () => {
                       const sourceNum = transferModal!
                       const targetNum = t
                       const source = tableData[sourceNum] || { cart: [], participants: [] }
@@ -2656,6 +2656,14 @@ export default function CaixaPOSPage() {
                       const saved = JSON.parse(localStorage.getItem(`pedefacil-tables-${user!.establishmentId}`) || "{}")
                       saved.tableData = updated
                       localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify(saved))
+                      // Transfer orders in database
+                      try {
+                        await fetchAuth("/api/orders/transfer", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ sourceTable: sourceNum, targetTable: targetNum }),
+                        })
+                      } catch {}
                       setTransferModal(null)
                       toast(`Mesa ${sourceNum} transferida para Mesa ${targetNum}`, "success")
                     }}
