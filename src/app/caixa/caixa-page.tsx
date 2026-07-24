@@ -2672,7 +2672,7 @@ export default function CaixaPOSPage() {
                     }`}
                   >
                     <span>{t}</span>
-                    {isOccupied && <span className="text-[9px] font-normal mt-0.5">{tCart.length + tStaging.length} itens</span>}
+                    {isOccupied && <span className="text-[9px] font-normal mt-0.5">{tCart.length} itens</span>}
                   </button>
                 )
               })}
