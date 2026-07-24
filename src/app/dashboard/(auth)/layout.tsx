@@ -341,9 +341,6 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5 text-zinc-600" />
           </button>
           <div className="flex-1" />
-          <span className="hidden text-sm text-zinc-500 lg:block">
-            <a href={`/${establishment.slug}`} target="_blank" className="text-green-600 hover:text-green-700 font-medium transition-colors">/{establishment.slug}</a>
-          </span>
           <div className="hidden items-center gap-3 text-sm text-zinc-500 lg:flex">
             <div className="flex items-center gap-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">

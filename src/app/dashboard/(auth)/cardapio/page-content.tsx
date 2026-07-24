@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -66,6 +66,7 @@ export default function CardapioPage() {
   const [activeTab, setActiveTab] = useState<Tab>("produtos")
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [establishmentSlug, setEstablishmentSlug] = useState<string>("")
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showProductForm, setShowProductForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
@@ -148,6 +149,7 @@ export default function CardapioPage() {
         headerColor: data.headerColor || "#ffffff",
       })
       setColorsPublished(data.colorsPublished || false)
+      setEstablishmentSlug(data.slug || "")
     }
     setLoading(false)
   }
@@ -436,7 +438,15 @@ export default function CardapioPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-zinc-900">Cardápio</h2>
+      <h2 className="flex items-center gap-2 text-2xl font-bold text-zinc-900">
+        Cardápio
+        {establishmentSlug && (
+          <a href={`/${establishmentSlug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-normal text-green-600 hover:text-green-700">
+            <ExternalLink className="h-4 w-4" />
+            Ver público
+          </a>
+        )}
+      </h2>
 
       {/* Tabs */}
       <div className="flex gap-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1">

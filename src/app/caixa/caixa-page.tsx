@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle, Receipt, QrCode, Loader2 } from "lucide-react"
+import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle, Receipt, QrCode, Loader2, ArrowRightLeft } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
@@ -144,6 +144,8 @@ export default function CaixaPOSPage() {
   const [eachPersonGenerating, setEachPersonGenerating] = useState(false)
   // "Dividir" sequential states
   const [splitPersonStep, setSplitPersonStep] = useState(0)
+  // Transfer table state
+  const [transferModal, setTransferModal] = useState<number | null>(null)
 
   useEffect(() => {
     localStorage.setItem("pedefacil-caixa-theme", darkMode ? "dark" : "light")
@@ -661,6 +663,10 @@ export default function CaixaPOSPage() {
       setTableQrCodes(prev => ({ ...prev, [tableNum]: qr }))
     }
     setTableQRModal(true)
+  }
+
+  function openTransferModal(tableNum: number) {
+    setTransferModal(tableNum)
   }
 
   async function processAbater() {
@@ -1638,6 +1644,18 @@ export default function CaixaPOSPage() {
                       >
                         QR
                       </button>
+                      {/* Transfer button */}
+                      {isOccupied && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openTransferModal(num) }}
+                          className={`absolute top-10 left-2 rounded-full p-1.5 transition-colors ${
+                            darkMode ? "bg-blue-900/60 text-blue-300 hover:bg-blue-800" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          }`}
+                          title="Transferir mesa"
+                        >
+                          <ArrowRightLeft className="h-3 w-3" />
+                        </button>
+                      )}
                       {/* Status badge top-right */}
                       <div className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                         hasBillRequest
@@ -2600,6 +2618,74 @@ export default function CaixaPOSPage() {
             >
               Baixar QR Code
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Table Modal */}
+      {transferModal !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTransferModal(null) }}>
+          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Transferir Mesa {transferModal}</h3>
+                <p className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escolha a mesa destino</p>
+              </div>
+              <button onClick={() => setTransferModal(null)} className={darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: tableCount }, (_, i) => i + 1).filter(t => t !== transferModal).map(t => {
+                const tData = tableData[t]
+                const tCart = tData?.cart || []
+                const tStaging = tData?.stagingCart || []
+                const isOccupied = tCart.length > 0 || tStaging.length > 0
+                return (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      // Transfer source table data to target table
+                      const sourceData = tableData[transferModal]
+                      const sourceCart = sourceData?.cart || []
+                      const sourceStaging = sourceData?.stagingCart || []
+                      const targetData = tableData[t]
+                      const targetCart = targetData?.cart || []
+                      const targetStaging = targetData?.stagingCart || []
+
+                      // Merge: target gets source items
+                      const mergedCart = [...targetCart, ...sourceCart]
+                      const mergedStaging = [...targetStaging, ...sourceStaging]
+
+                      const newTableData = { ...tableData }
+                      // Update target with merged data
+                      newTableData[t] = { cart: mergedCart, participants: targetData?.participants || [] }
+                      // Clear source
+                      newTableData[transferModal!] = { cart: [], participants: [] }
+
+                      setTableData(newTableData)
+                      localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify({
+                        tableData: newTableData,
+                        activeTable: activeTable,
+                        activeCart: cart,
+                        stagingCart: stagingCart,
+                      }))
+                      setTransferModal(null)
+                      toast(`Mesa ${transferModal} transferida para Mesa ${t}`, "success")
+                    }}
+                    className={`flex flex-col items-center justify-center rounded-xl border-2 py-3 text-sm font-bold transition-colors ${
+                      isOccupied
+                        ? darkMode ? "border-yellow-500/50 bg-yellow-900/30 text-yellow-300" : "border-yellow-300 bg-yellow-50 text-yellow-700"
+                        : darkMode ? "border-white/10 bg-white/5 text-white/60 hover:border-green-500" : "border-zinc-200 text-zinc-600 hover:border-green-500"
+                    }`}
+                  >
+                    <span>{t}</span>
+                    {isOccupied && <span className="text-[9px] font-normal mt-0.5">{tCart.length + tStaging.length} itens</span>}
+                  </button>
+                )
+              })}
+            </div>
+            <p className={`mt-3 text-xs text-center ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Mesas ocupadas aparecem em amarelo</p>
           </div>
         </div>
       )}
