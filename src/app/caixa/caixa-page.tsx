@@ -2639,28 +2639,20 @@ export default function CaixaPOSPage() {
               {Array.from({ length: tableCount }, (_, i) => i + 1).filter(t => t !== transferModal).map(t => {
                 const tData = tableData[t]
                 const tCart = tData?.cart || []
-                const tStaging = tData?.stagingCart || []
-                const isOccupied = tCart.length > 0 || tStaging.length > 0
+                const isOccupied = tCart.length > 0
                 return (
                   <button
                     key={t}
                     onClick={() => {
-                      // Transfer source table data to target table
                       const sourceData = tableData[transferModal]
                       const sourceCart = sourceData?.cart || []
-                      const sourceStaging = sourceData?.stagingCart || []
                       const targetData = tableData[t]
                       const targetCart = targetData?.cart || []
-                      const targetStaging = targetData?.stagingCart || []
 
-                      // Merge: target gets source items
                       const mergedCart = [...targetCart, ...sourceCart]
-                      const mergedStaging = [...targetStaging, ...sourceStaging]
 
                       const newTableData = { ...tableData }
-                      // Update target with merged data
                       newTableData[t] = { cart: mergedCart, participants: targetData?.participants || [] }
-                      // Clear source
                       newTableData[transferModal!] = { cart: [], participants: [] }
 
                       setTableData(newTableData)
