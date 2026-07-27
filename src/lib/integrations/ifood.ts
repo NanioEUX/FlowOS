@@ -56,7 +56,17 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     }
     return { productId: "", code: item.externalCode, name, price: item.unitPrice, quantity: item.quantity, observation, totalPrice: item.totalPrice }
   })
-  const isPendingPayment = (order.payments?.pending || 0) > 0
+  // Determine payment status:
+  // - "pending" if there is value to collect on delivery (cash) and no online
+  //   payment was made.
+  // - "paid" if iFood already collected the money online (prepaid).
+  const methods: any[] = order.payments?.methods || []
+  const hasOnlinePaid = methods.some((m: any) => m.type === "ONLINE" && m.prepaid === true)
+  const hasCashPending = methods.some((m: any) => m.method === "CASH" && m.prepaid === false)
+  const isPendingPayment = hasCashPending || (order.payments?.pending || 0) > 0
+  // sanity: if online payment was captured, don't mark pending just because cash
+  // method is also listed.
+  const paymentStatusFinal = hasOnlinePaid ? "paid" : isPendingPayment ? "pending" : "paid"
   // iFood order status is tracked by events; the order resource itself does
   // not expose a status field we can map 1:1 to Flow. The caller (poll or
   // webhook handler) passes the event code so we can decide the initial
@@ -82,7 +92,7 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     notes: deliveryNotes,
     externalDisplayId: order.displayId || null,
     status: initialStatus,
-    paymentStatus: isPendingPayment ? "pending" : "paid",
+    paymentStatus: paymentStatusFinal,
     method: "ifood",
   }
 }
