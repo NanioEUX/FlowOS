@@ -52,6 +52,8 @@ export async function PATCH(
             preparing: "confirm",
             ready: "confirm",
             dispatched: "dispatch",
+            out_for_delivery: "dispatch",
+            outfordelivery: "dispatch",
             delivered: "deliver",
             cancelled: "cancel",
           }
