@@ -173,10 +173,19 @@ export default function PedidosPage() {
   })
 
   function groupOrders(list: any[]) {
+    // Kitchen/operator dashboard only shows orders that haven't left yet.
+    // Once an order goes to delivery it moves to the Entregas tab; once it
+    // is delivered it goes to history.
     const groups: Record<string, typeof list> = { active: [], completed: [], cancelled: [] }
     list.forEach((o) => {
       if (o.status === "cancelled") groups.cancelled.push(o)
       else if (o.status === "delivered") groups.completed.push(o)
+      else if (o.status === "out_for_delivery" || o.status === "dispatched") {
+        // Delivery is happening; show under "completed" so it stays in the page
+        // but visually separated from pending work. The motoboy screen handles
+        // its own status updates.
+        groups.completed.push(o)
+      }
       else groups.active.push(o)
     })
     return groups

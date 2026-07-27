@@ -34,6 +34,7 @@ export async function PATCH(
       data: {
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
+        ...(status === "out_for_delivery" && { assignedAt: new Date() }),
       },
     })
 

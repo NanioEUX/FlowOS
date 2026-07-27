@@ -170,6 +170,15 @@ export default function EntregasPage() {
     loadAll()
   }
 
+  async function updateOrderStatus(orderId: string, status: string) {
+    await fetchAuth(`/api/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    })
+    loadAll()
+  }
+
   function handleCancelOrder(orderId: string) {
     setCancelConfirm({ open: true, orderId })
   }
@@ -319,7 +328,7 @@ export default function EntregasPage() {
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pedidos ativos</p>
                       {activeOrders.map((order: any) => (
-                        <OrderRow key={order.id} order={order} deliveryPeople={deliveryPeople} onReassign={reassignOrder} onCancel={handleCancelOrder} />
+                        <OrderRow key={order.id} order={order} deliveryPeople={deliveryPeople} onReassign={reassignOrder} onCancel={handleCancelOrder} onUpdateStatus={updateOrderStatus} />
                       ))}
                     </div>
                   )}
@@ -333,7 +342,7 @@ export default function EntregasPage() {
           })}
 
           {!selectedMotoboy && (
-            <PendingOrdersSection orders={filteredOrders.filter((o: any) => o.status === "ready" && !o.deliveryPersonId)} deliveryPeople={deliveryPeople} onReassign={reassignOrder} onCancel={handleCancelOrder} />
+            <PendingOrdersSection orders={filteredOrders.filter((o: any) => o.status === "ready" && !o.deliveryPersonId)} deliveryPeople={deliveryPeople} onReassign={reassignOrder} onCancel={handleCancelOrder} onUpdateStatus={updateOrderStatus} />
           )}
         </>
       )}
@@ -351,7 +360,7 @@ export default function EntregasPage() {
   )
 }
 
-function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void }) {
+function OrderRow({ order, deliveryPeople, onReassign, onCancel, onUpdateStatus }: { order: any; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void; onUpdateStatus: (id: string, status: string) => void }) {
   const isLocked = ["out_for_delivery", "delivered", "cancelled"].includes(order.status)
   const createdAt = new Date(order.createdAt)
   const diffMs = Date.now() - createdAt.getTime()
@@ -396,6 +405,24 @@ function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any;
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
+        {isReady && (
+          <button
+            onClick={() => onUpdateStatus(order.id, "out_for_delivery")}
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+            title="Marcar como saiu para entrega"
+          >
+            Saiu p/ entrega
+          </button>
+        )}
+        {order.status === "out_for_delivery" && (
+          <button
+            onClick={() => onUpdateStatus(order.id, "delivered")}
+            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700"
+            title="Marcar como entregue"
+          >
+            Entregue
+          </button>
+        )}
         <SearchableSelect
           value={order.deliveryPersonId || ""}
           onChange={(id) => onReassign(order.id, id)}
@@ -416,7 +443,7 @@ function OrderRow({ order, deliveryPeople, onReassign, onCancel }: { order: any;
   )
 }
 
-function PendingOrdersSection({ orders, deliveryPeople, onReassign, onCancel }: { orders: any[]; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void }) {
+function PendingOrdersSection({ orders, deliveryPeople, onReassign, onCancel, onUpdateStatus }: { orders: any[]; deliveryPeople: any[]; onReassign: (id: string, personId: string) => void; onCancel: (id: string) => void; onUpdateStatus: (id: string, status: string) => void }) {
   if (orders.length === 0) return null
 
   return (
@@ -428,7 +455,7 @@ function PendingOrdersSection({ orders, deliveryPeople, onReassign, onCancel }: 
         </h3>
         <div className="space-y-2">
           {orders.map((order: any) => (
-            <OrderRow key={order.id} order={order} deliveryPeople={deliveryPeople} onReassign={onReassign} onCancel={onCancel} />
+            <OrderRow key={order.id} order={order} deliveryPeople={deliveryPeople} onReassign={onReassign} onCancel={onCancel} onUpdateStatus={onUpdateStatus} />
           ))}
         </div>
       </CardContent>
