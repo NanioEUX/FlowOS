@@ -50,8 +50,11 @@ export async function PATCH(
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             preparing: "confirm",
-            // ready: don't dispatch yet; the Flow UI shows the "Saída para Entrega" button
-            // and user clicks it to advance the order to out_for_delivery, which dispatches.
+            // ready: signal that the kitchen finished; production should call /ready
+            // (which moves the order to "Pronto" in the iFood merchant panel). The
+            // iFood sandbox does not expose /ready and returns 404, so for now we
+            // call /confirm (idempotent) — replace with "ready" once /ready is
+            // enabled in your merchant account.
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",

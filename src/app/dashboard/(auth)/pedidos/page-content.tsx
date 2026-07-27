@@ -516,6 +516,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
+    dispatched: "Entregar",
   }
 
   function printReceipt() {
