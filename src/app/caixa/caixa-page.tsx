@@ -886,7 +886,13 @@ export default function CaixaPOSPage() {
         return
       }
 
-      setLastOrder({ ...orderData, items: savedCart, establishmentName: user?.establishment?.name })
+      const finalOrder = { ...orderData, establishmentName: user?.establishment?.name }
+      setLastOrder({ ...finalOrder, items: savedCart })
+
+      setOrders((prev) => prev.map((o) => o.id === tempId ? finalOrder : o))
+      if (!savedNeedsPrep && !isMesa) {
+        setOrders((prev) => [finalOrder, ...prev])
+      }
 
       setOrders((prev) => prev.map((o) => o.id === tempId ? orderData : o))
       if (!savedNeedsPrep && !isMesa) {

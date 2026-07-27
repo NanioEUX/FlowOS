@@ -30,6 +30,7 @@ interface Order {
   deliveryFee: number
   assignedAt: string | null
   deliveredAt: string | null
+  changeFor: number | null
 }
 
 interface PersonData {
@@ -518,6 +519,28 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
             </div>
 
             {order.notes && <p className="mt-1 text-sm text-zinc-400 italic">Obs: {order.notes}</p>}
+
+            {(order.paymentMethod === "cash" || order.paymentMethod === "delivery") && (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2">
+                <p className="text-xs font-semibold text-amber-700">💵 Pagar em dinheiro na entrega</p>
+                <p className="mt-0.5 text-xs text-amber-700">Total: <strong>{formatCurrency(order.total + (order.deliveryFee || 0))}</strong></p>
+                {order.changeFor && order.changeFor > 0 ? (
+                  <>
+                    <p className="text-xs text-amber-700">Cliente vai pagar: <strong>{formatCurrency(order.changeFor)}</strong></p>
+                    <p className="mt-0.5 text-base font-bold text-amber-900">Troco a devolver: {formatCurrency(order.changeFor - (order.total + (order.deliveryFee || 0)))}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-amber-700">Cliente paga valor exato.</p>
+                )}
+              </div>
+            )}
+            {(order.paymentMethod === "card" || order.paymentMethod === "credit") && (
+              <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2">
+                <p className="text-xs font-semibold text-blue-700">💳 Cobrar no cartão na entrega</p>
+                <p className="mt-0.5 text-xs text-blue-700">Total: <strong>{formatCurrency(order.total + (order.deliveryFee || 0))}</strong></p>
+                <p className="text-xs text-blue-700">Use a maquininha no momento da entrega.</p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-2 shrink-0">
