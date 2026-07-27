@@ -48,6 +48,17 @@ const paymentMethodLabels: Record<string, string> = {
   pickup: "Pagar na Retirada",
 }
 
+// Legacy paymentMethod values from the cardápio online flow used
+// "delivery" / "pickup" / "asaas" / "pix" / "card". Normalize them so the
+// dashboard renders consistent badges regardless of source.
+function normalizePaymentMethod(method: string | null | undefined): string {
+  if (!method) return "online"
+  const m = method.toLowerCase()
+  if (m === "delivery" || m === "pickup") return "cash"
+  if (m === "asaas" || m === "inter") return "online"
+  return m
+}
+
 const orderTypeLabels: Record<string, string> = {
   delivery: "Entrega",
   pickup: "Retirada",
@@ -443,7 +454,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   // Online orders that haven't been paid yet block production; cash-on-delivery
   // and paid online orders may proceed straight to preparation.
   const isOnlinePaymentPending =
-    order.paymentMethod === "online" && order.paymentStatus !== "paid"
+    normalizePaymentMethod(order.paymentMethod) === "online" && order.paymentStatus !== "paid"
 
   let nextStatus: string | null
   if (isOnlinePaymentPending) {
@@ -580,7 +591,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     ${order.customerPhone ? `<p><strong>WhatsApp:</strong> ${order.customerPhone}</p>` : ""}
     ${order.customerAddress ? `<p><strong>Endereço:</strong> ${order.customerAddress}</p>` : ""}
     ${order.orderType ? `<p><strong>Tipo:</strong> ${orderTypeLabels[order.orderType] || order.orderType}</p>` : ""}
-    ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</p>` : ""}
+    ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}</p>` : ""}
     ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${order.deliveryPerson}</p>` : ""}
     <div class="divider"></div>
     <table>
@@ -645,15 +656,19 @@ win.close()
                 <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
               )}
               {order.paymentStatus === "paid" && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">Pago</span>}
-              {order.paymentMethod === "cash" && order.paymentStatus !== "paid" && (
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Dinheiro na entrega</span>
-              )}
-              {order.paymentMethod === "card" && order.paymentStatus !== "paid" && (
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Cartão na entrega</span>
-              )}
-              {order.paymentMethod === "online" && order.paymentStatus === "pending" && (
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">Aguardando pagamento</span>
-              )}
+              {(() => {
+                const m = normalizePaymentMethod(order.paymentMethod)
+                if (m === "cash" && order.paymentStatus !== "paid") {
+                  return <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Dinheiro na entrega</span>
+                }
+                if (m === "card" && order.paymentStatus !== "paid") {
+                  return <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Cartão na entrega</span>
+                }
+                if (m === "online" && order.paymentStatus === "pending") {
+                  return <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">Aguardando pagamento</span>
+                }
+                return null
+              })()}
               {order.method === "whatsapp" && <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">WhatsApp</span>}
               {unreadCount > 0 && (
                 <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 animate-pulse">{unreadCount} msg</span>
@@ -669,8 +684,8 @@ win.close()
               )}
               {order.paymentMethod && (
                 <span className="flex items-center gap-1">
-                  {order.paymentMethod === "online" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
-                  {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}
+                  {normalizePaymentMethod(order.paymentMethod) === "online" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
+                  {paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}
                 </span>
               )}
               <span className="text-zinc-400">•</span>
