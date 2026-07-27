@@ -42,6 +42,8 @@ const selectableStatuses = ["preparing", "ready", "out_for_delivery", "delivered
 
 const paymentMethodLabels: Record<string, string> = {
   online: "Online (Pix/Cartão)",
+  cash: "Dinheiro (entrega)",
+  card: "Cartão (entrega)",
   delivery: "Pagar na Entrega",
   pickup: "Pagar na Retirada",
 }
@@ -644,7 +646,10 @@ win.close()
               )}
               {order.paymentStatus === "paid" && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">Pago</span>}
               {order.paymentMethod === "cash" && order.paymentStatus !== "paid" && (
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Pagar na entrega</span>
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Dinheiro na entrega</span>
+              )}
+              {order.paymentMethod === "card" && order.paymentStatus !== "paid" && (
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Cartão na entrega</span>
               )}
               {order.paymentMethod === "online" && order.paymentStatus === "pending" && (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">Aguardando pagamento</span>
