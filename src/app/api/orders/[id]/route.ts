@@ -50,7 +50,8 @@ export async function PATCH(
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             preparing: "confirm",
-            ready: "dispatch",
+            // ready: don't dispatch yet; the Flow UI shows the "Saída para Entrega" button
+            // and user clicks it to advance the order to out_for_delivery, which dispatches.
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",
