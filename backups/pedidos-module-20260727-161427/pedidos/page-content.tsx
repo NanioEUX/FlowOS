@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
-import { useNewOrderAlerts, ensureNotificationPermission, playNewOrderSound } from "@/lib/use-new-order-alerts"
 import { SearchableSelect } from "@/components/searchable-select"
 
 const statusLabels: Record<string, string> = {
@@ -95,14 +94,6 @@ export default function PedidosPage() {
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])
   useEffect(() => { const i = setInterval(loadOrders, 30000); return () => clearInterval(i) }, [establishmentId])
-
-  // Request browser notification permission once the dashboard loads.
-  useEffect(() => {
-    ensureNotificationPermission()
-  }, [])
-
-  // Sound + desktop notification when a new order arrives.
-  useNewOrderAlerts(orders)
 
   // Periodic payment sync (every 30 seconds for pending payments)
   useEffect(() => {

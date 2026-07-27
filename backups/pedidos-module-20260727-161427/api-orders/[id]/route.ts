@@ -75,35 +75,6 @@ export async function PATCH(
       }
     }
 
-    // When the order becomes ready, auto-assign an available delivery person.
-    if (status === "ready" && order.orderType === "delivery") {
-      try {
-        const freeDriver = await prisma.deliveryPerson.findFirst({
-          where: { establishmentId: order.establishmentId, isActive: true },
-          orderBy: { createdAt: "asc" },
-        })
-        if (freeDriver) {
-          const count = await prisma.order.count({
-            where: { deliveryPersonId: freeDriver.id, status: { in: ["out_for_delivery", "dispatched"] } },
-          })
-          if (count === 0) {
-            await prisma.order.update({
-              where: { id: order.id },
-              data: {
-                deliveryPersonId: freeDriver.id,
-                deliveryPerson: freeDriver.name,
-                assignedAt: new Date(),
-              },
-            })
-            updated.deliveryPersonId = freeDriver.id
-            updated.deliveryPerson = freeDriver.name
-          }
-        }
-      } catch (autoErr: any) {
-        console.error("auto-assign delivery person error:", autoErr.message)
-      }
-    }
-
     return NextResponse.json({ success: true, order: updated })
   } catch (error: any) {
     console.error("[Order PATCH] Error:", error.message)
