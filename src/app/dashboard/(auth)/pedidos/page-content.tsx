@@ -70,13 +70,20 @@ export default function PedidosPage() {
 
   async function loadOrders() {
     if (!establishmentId) return
+
+    // Pull fresh orders from iFood in the background before reloading the list.
+    // This keeps the dashboard in sync without manual polling.
+    try {
+      await fetchAuth(`/api/orders/ifood-poll`, { method: "POST" })
+    } catch (e) {}
+
     const res = await fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
     const data = await res.json()
     setOrders(data)
     setLoading(false)
 
     // Auto-sync pending payments in background
-    const pendingPayments = data.filter((o: any) => 
+    const pendingPayments = data.filter((o: any) =>
       o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
     )
     if (pendingPayments.length > 0) {

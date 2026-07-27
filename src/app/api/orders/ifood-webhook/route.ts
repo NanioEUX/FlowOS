@@ -74,7 +74,12 @@ export async function POST(req: NextRequest) {
       const code = event.code || event.fullCode
       const orderId = event.orderId || event.id
 
-      if (!orderId) continue
+      console.log("[ifood webhook] processing event", { code, orderId: orderId?.slice(0, 8), fullEvent: JSON.stringify(event).slice(0, 300) })
+
+      if (!orderId) {
+        console.log("[ifood webhook] no orderId, skipping")
+        continue
+      }
 
       // iFood sends KEEPALIVE events to verify the webhook is alive.
       // We acknowledge them with 200 OK but do nothing.
@@ -105,6 +110,7 @@ export async function POST(req: NextRequest) {
             )
             const order = await getIfoodOrder(token.accessToken, est.ifoodMerchantId!, orderId)
             console.log("[ifood webhook] fetched order", orderId, "items=", order?.items?.length, "hasCustomer=", !!order?.customer, "orderType=", order?.orderType)
+            console.log("[ifood webhook] full iFood payload:", JSON.stringify(order).slice(0, 500))
             if (order && order.items && order.items.length > 0) {
               const mapped = mapIfoodOrderToFlow(order, est.id, code)
               try {
