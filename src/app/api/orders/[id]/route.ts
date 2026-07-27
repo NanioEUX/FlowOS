@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
-import { getMerchantType } from "@/lib/integrations/ifood-merchant"
 
 export async function PATCH(
   req: NextRequest,
@@ -49,32 +48,36 @@ export async function PATCH(
           where: { id: order.establishmentId },
         })
         if (establishment?.ifoodMerchantId) {
-          // Determine merchant logistics to decide which iFood endpoints apply.
-          // STORE = iFood delivery (we can't finalize on their behalf).
-          // MERCHANT = our own delivery (we call /conclude to mark as delivered).
-          const merchantType = await getMerchantType(establishment.ifoodMerchantId, accessToken)
+          // iFood state machine: confirm -> readyForPickup -> dispatch -> conclude.
+          // Whether the merchant can drive delivery themselves depends on
+          // order.delivery.deliveredBy captured at order creation.
+          //   IFOOD  = iFood delivery (we cannot /conclude, we just update local)
+          //   MERCHANT = own delivery (we can call /conclude)
+          const isMerchantDelivery = order.ifoodDeliveryBy === "MERCHANT"
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             preparing: "confirm",
-            // ready: signal that the kitchen finished; production should call /ready
-            // (which moves the order to "Pronto" in the iFood merchant panel). The
-            // iFood sandbox does not expose /ready and returns 404, so for now we
-            // call /confirm (idempotent) — replace with "ready" once /ready is
-            // enabled in your merchant account.
+            // ready: tell iFood the kitchen finished so the courier can be
+            // dispatched. /readyForPickup is the canonical endpoint for both
+            // STORE and MERCHANT merchants. The iFood sandbox may return 404 —
+            // we fall back to /confirm (idempotent) in that case.
+            ready: "readyForPickup",
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",
             outfordelivery: "dispatch",
-            delivered: merchantType === "MERCHANT" ? "deliver" : "",
+            delivered: isMerchantDelivery ? "deliver" : "",
             cancelled: "cancel",
           }
           const action = statusActionMap[status]
           if (action && order.externalId) {
             const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action)
-            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, merchantType })
+            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, isMerchantDelivery })
+          } else if (status === "delivered" && !isMerchantDelivery) {
+            console.log("[ifood sync] STORE order: skipping /conclude (iFood finishes via webhook CON)", { orderId: order.externalId })
           } else {
-            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, merchantType })
+            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, isMerchantDelivery })
           }
         }
       } catch (err) {

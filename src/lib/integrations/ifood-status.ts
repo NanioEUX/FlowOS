@@ -23,20 +23,15 @@ import https from "https"
 function pathForAction(action: string): string {
   switch (action) {
     case "confirm": return "/confirm"
+    case "readyForPickup": return "/readyForPickup"
     case "dispatch": return "/dispatch"
     case "deliver": return "/conclude"  // iFood's canonical finish endpoint
     case "cancel": return "/cancellation"
-    case "ready": return "/ready" // not always available; falls back to no-op
     default: return ""
   }
 }
 
-export function updateIfoodStatus(
-  token: string,
-  merchantId: string,
-  orderId: string,
-  action: string
-): Promise<{ success: boolean; status?: number; body?: string }> {
+function callEndpoint(action: string, token: string, merchantId: string, orderId: string): Promise<{ success: boolean; status?: number; body?: string }> {
   return new Promise((resolve) => {
     const suffix = pathForAction(action)
     if (!suffix) {
@@ -72,4 +67,30 @@ export function updateIfoodStatus(
     req.write(body)
     req.end()
   })
+}
+
+export async function updateIfoodStatus(
+  token: string,
+  merchantId: string,
+  orderId: string,
+  action: string
+): Promise<{ success: boolean; status?: number; body?: string; tried?: string[] }> {
+  const tried: string[] = [action]
+  let result = await callEndpoint(action, token, merchantId, orderId)
+
+  // Fallback: if /readyForPickup returns 404 (sandbox limitation), fall back to
+  // /confirm (idempotent) so the order at least reaches CFM state.
+  if (
+    action === "readyForPickup" &&
+    result.status === 404
+  ) {
+    tried.push("confirm")
+    const fallback = await callEndpoint("confirm", token, merchantId, orderId)
+    if (fallback.success) {
+      return { ...fallback, tried }
+    }
+    result = fallback
+  }
+
+  return { ...result, tried }
 }

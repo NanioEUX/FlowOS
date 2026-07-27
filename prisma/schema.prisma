@@ -165,6 +165,7 @@ model Order {
   orderNumber       Int?
   externalId        String?
   externalDisplayId String?
+  ifoodDeliveryBy  String?  // "IFOOD" or "MERCHANT" - how iFood delivers the order
   establishmentId   String
   customerId        String?
   customerName      String

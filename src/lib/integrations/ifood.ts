@@ -91,6 +91,7 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     deliveryFee: order.total?.deliveryFee || 0,
     notes: deliveryNotes,
     externalDisplayId: order.displayId || null,
+    ifoodDeliveryBy: order.delivery?.deliveredBy || null,
     status: initialStatus,
     paymentStatus: paymentStatusFinal,
     method: "ifood",
