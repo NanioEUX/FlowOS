@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
+import { getMerchantType } from "@/lib/integrations/ifood-merchant"
 
 export async function PATCH(
   req: NextRequest,
@@ -48,6 +49,11 @@ export async function PATCH(
           where: { id: order.establishmentId },
         })
         if (establishment?.ifoodMerchantId) {
+          // Determine merchant logistics to decide which iFood endpoints apply.
+          // STORE = iFood delivery (we can't finalize on their behalf).
+          // MERCHANT = our own delivery (we call /conclude to mark as delivered).
+          const merchantType = await getMerchantType(establishment.ifoodMerchantId, accessToken)
+
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             preparing: "confirm",
@@ -60,15 +66,15 @@ export async function PATCH(
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",
             outfordelivery: "dispatch",
-            delivered: "deliver",
+            delivered: merchantType === "MERCHANT" ? "deliver" : "",
             cancelled: "cancel",
           }
           const action = statusActionMap[status]
           if (action && order.externalId) {
             const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action)
-            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success })
+            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, merchantType })
           } else {
-            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action })
+            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, merchantType })
           }
         }
       } catch (err) {

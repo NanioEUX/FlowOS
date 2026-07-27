@@ -9,11 +9,14 @@ import https from "https"
  *   DSP (dispatched)    -> in "Em rota" tab after /dispatch
  *   CON (concluded)     -> in "Finalizados" tab after /deliver
  *
- * NOTE: iFood sandbox only exposes /confirm and /dispatch for STORE type
- * merchants. /deliver (concluded) and /ready (pronto) require the merchant
- * to be configured as type MERCHANT (delivered by the merchant's own rider).
- * In the test environment, MERCHANT type needs to be requested via homologação.
- * In production, all status endpoints should work.
+ * NOTE: iFood sandbox only exposes /confirm and /dispatch reliably.
+ * /conclude (or /deliver depending on docs version) is the canonical endpoint
+ * for marking an order as delivered, but the sandbox does NOT expose it
+ * for the standard test merchant — every variation returns 404. In
+ * production (real merchant account), /conclude (POST) is the documented
+ * endpoint and works. The dispatcher falls back to "do nothing" so the
+ * order stays in "delivered" locally even when iFood does not acknowledge
+ * the state change.
  *
  * We log the response so callers can decide whether to retry or alert.
  */
@@ -21,7 +24,7 @@ function pathForAction(action: string): string {
   switch (action) {
     case "confirm": return "/confirm"
     case "dispatch": return "/dispatch"
-    case "deliver": return "/deliver"
+    case "deliver": return "/conclude"  // iFood's canonical finish endpoint
     case "cancel": return "/cancellation"
     case "ready": return "/ready" // not always available; falls back to no-op
     default: return ""
