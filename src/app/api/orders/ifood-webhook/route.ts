@@ -117,8 +117,30 @@ export async function POST(req: NextRequest) {
                 results.push({ orderId, action: 'create_error', error: createErr.message })
               }
             } else {
-              console.log("[ifood webhook] order has no items, skipping", orderId, "order=", JSON.stringify(order).slice(0, 200))
-              results.push({ orderId, action: 'skip_no_items' })
+              // PLC pode vir com items vazios. Salva o pedido com dados básicos
+              // e depois atualiza quando chegar CFM com items completos.
+              console.log("[ifood webhook] PLC without items, saving with placeholders", orderId)
+              try {
+                const placeholder = {
+                  establishmentId: est.id,
+                  customerName: "Aguardando iFood",
+                  customerPhone: "",
+                  total: 0,
+                  items: JSON.stringify([]),
+                  method: "ifood",
+                  status: "pending",
+                  paymentStatus: "pending",
+                  orderType: "delivery",
+                  paymentMethod: "online",
+                }
+                await prisma.order.create({ data: { ...placeholder, externalId: orderId } })
+                created++
+                results.push({ orderId, action: 'created_placeholder' })
+                console.log("[ifood webhook] SAVED placeholder order", orderId)
+              } catch (createErr: any) {
+                console.error("[ifood webhook] PRISMA PLACEHOLDER ERROR", orderId, createErr.message)
+                results.push({ orderId, action: 'create_placeholder_error', error: createErr.message })
+              }
             }
           } catch (e: any) {
             results.push({ orderId, action: 'fetch_error', error: e.message })
