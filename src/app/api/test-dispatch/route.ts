@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const actionMap: Record<string, string> = {
       confirmed: "confirm",
       preparing: "confirm",
-      ready: "confirm",
+      ready: "dispatch",
       dispatched: "dispatch",
       out_to_delivery: "dispatch",
       out_for_delivery: "dispatch",
