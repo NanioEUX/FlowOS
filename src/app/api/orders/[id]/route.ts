@@ -47,19 +47,20 @@ export async function PATCH(
           where: { id: order.establishmentId },
         })
         if (establishment?.ifoodMerchantId) {
-          const statusMap: Record<string, string> = {
-            confirmed: "CFM",
-            preparing: "CFM",
-            ready: "DSP",
-            dispatched: "DSP",
-            delivered: "CON",
+          const statusActionMap: Record<string, string> = {
+            confirmed: "confirm",
+            preparing: "confirm",
+            ready: "confirm",
+            dispatched: "dispatch",
+            delivered: "deliver",
+            cancelled: "cancel",
           }
-          const ifoodStatus = statusMap[status]
-          if (ifoodStatus && order.externalId) {
-            const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, ifoodStatus)
-            console.log("[ifood status update]", { orderId: order.externalId, ifoodStatus, status: result.status, body: result.body })
+          const action = statusActionMap[status]
+          if (action && order.externalId) {
+            const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action)
+            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success })
           } else {
-            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, ifoodStatus })
+            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action })
           }
         }
       } catch (err) {
