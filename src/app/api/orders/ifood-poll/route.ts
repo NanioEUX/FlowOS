@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodEvents, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
+import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 
 export async function POST(req: Request) {
   try {
@@ -47,7 +48,10 @@ export async function POST(req: Request) {
 
           if (order && order.items && order.items.length > 0) {
             const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
-            await prisma.order.create({ data: { ...mapped, externalId: event.orderId } })
+            const customer = await upsertIfoodCustomer(est.id, order.customer)
+            await prisma.order.create({
+              data: { ...mapped, externalId: event.orderId, customerId: customer?.id }
+            })
             created++
           } else {
             // PLC may not have items yet; save placeholder so the merchant sees it.

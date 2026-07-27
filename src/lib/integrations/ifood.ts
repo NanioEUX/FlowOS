@@ -62,7 +62,13 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
   // webhook handler) passes the event code so we can decide the initial
   // Flow status.
   const code = eventCode || ""
-  const initialStatus = (code === "PLC" || code === "PLACED") ? "pending" : "confirmed"
+  const initialStatus = (code === "PLC" || code === "PLACED") ? "pending" : "preparing"
+  // iFood delivery.observations is the customer note for delivery (e.g. "leave
+  // at the door"). Email and other metadata go elsewhere so they don't pollute
+  // the order notes the merchant sees in the dashboard.
+  const deliveryNotes = order.delivery?.observations || ""
+  // Phone is stored on the Customer record. Caller should upsert the customer
+  // before saving the order; we expose it via the mapped object for clarity.
   return {
     establishmentId,
     customerName: order.customer?.name || "Cliente iFood",
@@ -73,7 +79,8 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     items: JSON.stringify(items),
     total: order.total?.orderAmount || 0,
     deliveryFee: order.total?.deliveryFee || 0,
-    notes: order.additionalInfo?.metadata?.customerEmail || "",
+    notes: deliveryNotes,
+    externalDisplayId: order.displayId || null,
     status: initialStatus,
     paymentStatus: isPendingPayment ? "pending" : "paid",
     method: "ifood",

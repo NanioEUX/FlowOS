@@ -163,6 +163,8 @@ model Product {
 model Order {
   id                String          @id @default(cuid())
   orderNumber       Int?
+  externalId        String?
+  externalDisplayId String?
   establishmentId   String
   customerId        String?
   customerName      String
@@ -184,7 +186,6 @@ model Order {
   deliveryPersonId  String?
   couponId          String?
   trackingToken     String?         @unique
-  externalId        String?
   assignedAt        DateTime?
   deliveredAt       DateTime?
   createdAt         DateTime        @default(now())

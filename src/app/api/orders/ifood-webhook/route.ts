@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
+import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 
 function verifySignature(body: string, signature: string, secret: string): boolean {
   if (!signature || !secret) return false
@@ -114,7 +115,10 @@ export async function POST(req: NextRequest) {
             if (order && order.items && order.items.length > 0) {
               const mapped = mapIfoodOrderToFlow(order, est.id, code)
               try {
-                await prisma.order.create({ data: { ...mapped, externalId: orderId } })
+                const customer = await upsertIfoodCustomer(est.id, order.customer)
+                await prisma.order.create({
+                  data: { ...mapped, externalId: orderId, customerId: customer?.id }
+                })
                 created++
                 results.push({ orderId, action: 'created' })
                 console.log("[ifood webhook] SAVED order", orderId, "id=", mapped.establishmentId)
