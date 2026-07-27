@@ -60,9 +60,9 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
   // - "pending" if there is value to collect on delivery (cash) and no online
   //   payment was made.
   // - "paid" if iFood already collected the money online (prepaid).
-  const methods: any[] = order.payments?.methods || []
-  const hasOnlinePaid = methods.some((m: any) => m.type === "ONLINE" && m.prepaid === true)
-  const hasCashPending = methods.some((m: any) => m.method === "CASH" && m.prepaid === false)
+  const paymentMethods: any[] = order.payments?.methods || []
+  const hasOnlinePaid = paymentMethods.some((m: any) => m.type === "ONLINE" && m.prepaid === true)
+  const hasCashPending = paymentMethods.some((m: any) => m.method === "CASH" && m.prepaid === false)
   const isPendingPayment = hasCashPending || (order.payments?.pending || 0) > 0
   // sanity: if online payment was captured, don't mark pending just because cash
   // method is also listed.
@@ -81,8 +81,7 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
   // before saving the order; we expose it via the mapped object for clarity.
   // Detect if iFood already collected payment online or it'll be paid on delivery.
   // CASH OFFLINE -> "cash", ONLINE (PIX/card) -> "online".
-  const methods: any[] = order.payments?.methods || []
-  const hasCash = methods.some((m: any) => m.method === "CASH" && m.prepaid === false)
+  const hasCash = paymentMethods.some((m: any) => m.method === "CASH" && m.prepaid === false)
   const flowPaymentMethod = hasCash ? "cash" : "online"
 
   return {
