@@ -36,8 +36,8 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   cancelled: "danger",
 }
 
-const flowOrder = ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
-const selectableStatuses = ["preparing", "ready", "out_for_delivery", "delivered"]
+const flowOrder = ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
+const selectableStatuses = ["preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
 
 const paymentMethodLabels: Record<string, string> = {
   online: "Online (Pix/Cartão)",

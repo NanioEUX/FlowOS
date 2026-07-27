@@ -18,6 +18,7 @@ function verifySignature(body: string, signature: string, secret: string): boole
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
+    console.log("[ifood webhook] HIT", new Date().toISOString(), "body-len=", raw.length, "headers=", Object.fromEntries(req.headers))
     const signature =
       req.headers.get("x-ifood-signature") ||
       req.headers.get("X-Ifood-Signature") ||
