@@ -45,10 +45,31 @@ export async function POST(req: Request) {
 
           // For status updates (DSP/CON), update the existing order in place.
           if (existing && isUpdate) {
-            const status = event.code === 'CON' || event.code === 'CONCLUDED' ? 'delivered' : 'out_for_delivery'
+            const newStatus = event.code === 'CON' || event.code === 'CONCLUDED' ? 'delivered' : 'out_for_delivery'
+
+            // Don't downgrade a manually-completed order back to a delivery
+            // status. Once the operator marks "delivered" the iFood event
+            // could still be a few seconds behind.
+            if (existing.status === "delivered" && newStatus !== "delivered") {
+              skipped++
+              continue
+            }
+
+            // Avoid resetting if iFood re-delivers an old event after we've
+            // already moved forward locally (use updatedAt).
+            const eventTime = event.createdAt ? new Date(event.createdAt) : null
+            if (
+              existing.status === "delivered" &&
+              eventTime && existing.updatedAt &&
+              eventTime < existing.updatedAt
+            ) {
+              skipped++
+              continue
+            }
+
             await prisma.order.update({
               where: { id: existing.id },
-              data: { status }
+              data: { status: newStatus }
             })
             updated++
             continue

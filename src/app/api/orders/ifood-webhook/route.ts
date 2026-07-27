@@ -163,13 +163,32 @@ export async function POST(req: NextRequest) {
           where: { establishmentId: est.id, externalId: orderId },
         })
         if (existing) {
-          const status = code === 'CON' || code === 'CONCLUDED' ? 'delivered' : 'dispatched'
+          const newStatus = code === 'CON' || code === 'CONCLUDED' ? 'delivered' : 'dispatched'
+
+          // Don't downgrade a manually-completed order. Once the operator
+          // marks "delivered" the iFood event may arrive late.
+          if (existing.status === "delivered" && newStatus !== "delivered") {
+            results.push({ orderId, action: 'skipped_manual_done' })
+            continue
+          }
+
+          // Use the merchant timestamp (iFood event) compared to the order's
+          // updatedAt to avoid resetting forward progress.
+          const eventTime = event.createdAt ? new Date(event.createdAt) : null
+          if (
+            eventTime && existing.updatedAt &&
+            eventTime < existing.updatedAt
+          ) {
+            results.push({ orderId, action: 'skipped_old_event' })
+            continue
+          }
+
           await prisma.order.update({
             where: { id: existing.id },
-            data: { status },
+            data: { status: newStatus },
           })
           updated++
-          results.push({ orderId, action: 'updated', status })
+          results.push({ orderId, action: 'updated', status: newStatus })
         } else {
           results.push({ orderId, action: 'not_found_for_update' })
         }
