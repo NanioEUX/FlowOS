@@ -36,7 +36,7 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   cancelled: "danger",
 }
 
-const flowOrder = ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
+const flowOrder = ["pending", "payment_pending", "preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
 const selectableStatuses = ["preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
 
 const paymentMethodLabels: Record<string, string> = {
@@ -419,13 +419,13 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
   const isNewOrder = ["pending", "payment_pending"].includes(order.status)
-  const isAwaitingAcceptance = order.method === "ifood" && order.status === "pending"
+  const isIfoodOrder = order.method === "ifood"
 
   let nextStatus: string | null
-  if (isAwaitingAcceptance) {
-    nextStatus = "confirmed"
-  } else if (isNewOrder) {
-    nextStatus = "confirmed"
+  // pending orders always advance to "preparing" in one click
+  // (this consolidates "accept + start production" for iFood orders).
+  if (isNewOrder) {
+    nextStatus = "preparing"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"
   } else if (isPresencial && order.status === "preparing") {
@@ -510,9 +510,8 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }, [unreadCount, order.id, order.customerName, lastCustomerMsg?.message])
 
   const nextLabel: Record<string, string> = {
-    pending: order.method === "ifood" ? "Aceitar pedido" : "Iniciar preparo",
+    pending: isIfoodOrder ? "Aceitar e iniciar produção" : "Iniciar preparo",
     payment_pending: "Iniciar preparo",
-    confirmed: "Iniciar preparo",
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
