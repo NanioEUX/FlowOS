@@ -659,7 +659,14 @@ win.close()
               {(() => {
                 const m = normalizePaymentMethod(order.paymentMethod)
                 if (m === "cash" && order.paymentStatus !== "paid") {
-                  return <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Dinheiro na entrega</span>
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                      Dinheiro na entrega
+                      {order.changeFor && order.changeFor > 0 ? (
+                        <span className="text-amber-900">· troco p/ R$ {order.changeFor.toFixed(2).replace(".", ",")}</span>
+                      ) : null}
+                    </span>
+                  )
                 }
                 if (m === "card" && order.paymentStatus !== "paid") {
                   return <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Cartão na entrega</span>

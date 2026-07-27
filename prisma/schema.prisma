@@ -166,6 +166,7 @@ model Order {
   externalId        String?
   externalDisplayId String?
   ifoodDeliveryBy  String?  // "IFOOD" or "MERCHANT" - how iFood delivers the order
+  changeFor        Float?   // cash on delivery: amount the customer will hand to the courier
   establishmentId   String
   customerId        String?
   customerName      String

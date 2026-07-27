@@ -88,6 +88,12 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     (m: any) => (m.method === "CREDIT" || m.method === "DEBIT") && m.prepaid === false
   )
   const flowPaymentMethod = hasCash ? "cash" : hasCardOffline ? "card" : "online"
+  // Cash on delivery: customer may ask for change. iFood exposes this on the
+  // first cash method (cash.changeFor). 0 or null means the customer pays exact.
+  const cashMethod = paymentMethods.find((m: any) => m.method === "CASH" && m.prepaid === false)
+  const changeFor = cashMethod?.cash?.changeFor && cashMethod.cash.changeFor > 0
+    ? cashMethod.cash.changeFor
+    : null
 
   return {
     establishmentId,
@@ -102,6 +108,7 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
     notes: deliveryNotes,
     externalDisplayId: order.displayId || null,
     ifoodDeliveryBy: order.delivery?.deliveredBy || null,
+    changeFor,
     status: initialStatus,
     paymentStatus: paymentStatusFinal,
     method: "ifood",
