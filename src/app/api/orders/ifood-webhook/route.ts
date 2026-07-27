@@ -76,6 +76,13 @@ export async function POST(req: NextRequest) {
 
       if (!orderId) continue
 
+      // iFood sends KEEPALIVE events to verify the webhook is alive.
+      // We acknowledge them with 200 OK but do nothing.
+      if (code === "KEEPALIVE") {
+        console.log("[ifood webhook] keepalive received, ok")
+        continue
+      }
+
       if (["PLACED", "CFM", "CONFIRMED"].includes(code)) {
         const existing = await prisma.order.findFirst({
           where: { establishmentId: est.id, externalId: orderId },
