@@ -104,12 +104,18 @@ export async function POST(req: NextRequest) {
               process.env.IFOOD_CLIENT_SECRET!
             )
             const order = await getIfoodOrder(token.accessToken, est.ifoodMerchantId!, orderId)
-            console.log("[ifood webhook] fetched order", orderId, "items=", order?.items?.length)
-            if (order && order.items) {
+            console.log("[ifood webhook] fetched order", orderId, "items=", order?.items?.length, "hasCustomer=", !!order?.customer, "orderType=", order?.orderType)
+            if (order && order.items && order.items.length > 0) {
               const mapped = mapIfoodOrderToFlow(order, est.id, code)
-              await prisma.order.create({ data: { ...mapped, externalId: orderId } })
-              created++
-              results.push({ orderId, action: 'created' })
+              try {
+                await prisma.order.create({ data: { ...mapped, externalId: orderId } })
+                created++
+                results.push({ orderId, action: 'created' })
+                console.log("[ifood webhook] SAVED order", orderId, "id=", mapped.establishmentId)
+              } catch (createErr: any) {
+                console.error("[ifood webhook] PRISMA CREATE ERROR", orderId, createErr.message)
+                results.push({ orderId, action: 'create_error', error: createErr.message })
+              }
             } else {
               console.log("[ifood webhook] order has no items, skipping", orderId, "order=", JSON.stringify(order).slice(0, 200))
               results.push({ orderId, action: 'skip_no_items' })
