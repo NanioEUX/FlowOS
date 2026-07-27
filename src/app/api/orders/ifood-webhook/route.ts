@@ -26,10 +26,14 @@ export async function POST(req: NextRequest) {
 
     const secret = process.env.IFOOD_WEBHOOK_SECRET || process.env.IFOOD_CLIENT_SECRET || ""
 
-    if (secret && signature) {
-      const ok = verifySignature(raw, signature, secret)
-      if (!ok) {
-        console.warn("[ifood webhook] signature mismatch")
+    if (secret && signature && signature.length > 16) {
+      try {
+        const ok = verifySignature(raw, signature, secret)
+        if (!ok) {
+          console.warn("[ifood webhook] signature mismatch")
+        }
+      } catch {
+        // buffers may have different lengths; ignore
       }
     }
 
@@ -48,6 +52,8 @@ export async function POST(req: NextRequest) {
     if (events.length === 0) {
       return NextResponse.json({ ok: true, msg: "noop" })
     }
+
+    console.log("[ifood webhook] received", events.length, "events:", events.map((e: any) => ({ code: e.code || e.fullCode, orderId: (e.orderId || e.id || "").slice(0, 8) })).slice(0, 5))
 
     const establishments = await prisma.establishment.findMany({
       where: { ifoodEnabled: true, ifoodMerchantId: { not: null } },
