@@ -643,6 +643,12 @@ win.close()
                 <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
               )}
               {order.paymentStatus === "paid" && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">Pago</span>}
+              {order.paymentMethod === "cash" && order.paymentStatus !== "paid" && (
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Pagar na entrega</span>
+              )}
+              {order.paymentMethod === "online" && order.paymentStatus === "pending" && (
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">Aguardando pagamento</span>
+              )}
               {order.method === "whatsapp" && <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">WhatsApp</span>}
               {unreadCount > 0 && (
                 <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 animate-pulse">{unreadCount} msg</span>
