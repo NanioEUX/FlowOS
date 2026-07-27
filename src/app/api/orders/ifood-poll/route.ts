@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       }
 
       for (const event of events) {
-        if (!["CFM", "CONFIRMED"].includes(event.code)) {
+        if (!["PLACED", "PLC", "CFM", "CONFIRMED"].includes(event.code)) {
           skipped++
           continue
         }
