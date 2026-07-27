@@ -44,10 +44,30 @@ export async function POST(req: Request) {
           }
 
           const order = await getIfoodOrder(accessToken, est.ifoodMerchantId!, event.orderId)
-          const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
 
-          await prisma.order.create({ data: { ...mapped, externalId: event.orderId } })
-          created++
+          if (order && order.items && order.items.length > 0) {
+            const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
+            await prisma.order.create({ data: { ...mapped, externalId: event.orderId } })
+            created++
+          } else {
+            // PLC may not have items yet; save placeholder so the merchant sees it.
+            await prisma.order.create({
+              data: {
+                establishmentId: est.id,
+                externalId: event.orderId,
+                customerName: "Aguardando iFood",
+                customerPhone: "",
+                total: 0,
+                items: "[]",
+                method: "ifood",
+                status: "pending",
+                paymentStatus: "pending",
+                orderType: "delivery",
+                paymentMethod: "online",
+              }
+            })
+            created++
+          }
         } catch (e: any) {
           errors++
           if (showDetail) details.push({ error: e.message, orderId: event.orderId })
