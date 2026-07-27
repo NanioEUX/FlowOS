@@ -79,13 +79,19 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCo
   const deliveryNotes = order.delivery?.observations || ""
   // Phone is stored on the Customer record. Caller should upsert the customer
   // before saving the order; we expose it via the mapped object for clarity.
+  // Detect if iFood already collected payment online or it'll be paid on delivery.
+  // CASH OFFLINE -> "cash", ONLINE (PIX/card) -> "online".
+  const methods: any[] = order.payments?.methods || []
+  const hasCash = methods.some((m: any) => m.method === "CASH" && m.prepaid === false)
+  const flowPaymentMethod = hasCash ? "cash" : "online"
+
   return {
     establishmentId,
     customerName: order.customer?.name || "Cliente iFood",
     customerPhone: order.customer?.phone?.number || "",
     customerAddress: order.orderType === "DELIVERY" && order.delivery?.deliveryAddress ? order.delivery.deliveryAddress.formattedAddress : null,
     orderType: order.orderType === "DELIVERY" ? "delivery" : "pickup",
-    paymentMethod: "online",
+    paymentMethod: flowPaymentMethod,
     items: JSON.stringify(items),
     total: order.total?.orderAmount || 0,
     deliveryFee: order.total?.deliveryFee || 0,

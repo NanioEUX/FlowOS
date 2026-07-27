@@ -438,11 +438,15 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const currentIdx = flowOrder.indexOf(order.status)
   const isNewOrder = ["pending", "payment_pending"].includes(order.status)
   const isIfoodOrder = order.method === "ifood"
+  // Online orders that haven't been paid yet block production; cash-on-delivery
+  // and paid online orders may proceed straight to preparation.
+  const isOnlinePaymentPending =
+    order.paymentMethod === "online" && order.paymentStatus !== "paid"
 
   let nextStatus: string | null
-  // pending orders always advance to "preparing" in one click
-  // (this consolidates "accept + start production" for iFood orders).
-  if (isNewOrder) {
+  if (isOnlinePaymentPending) {
+    nextStatus = null
+  } else if (isNewOrder) {
     nextStatus = "preparing"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"
@@ -531,8 +535,10 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }, [unreadCount, order.id, order.customerName, lastCustomerMsg?.message])
 
   const nextLabel: Record<string, string> = {
-    pending: isIfoodOrder ? "Aceitar e iniciar produção" : "Iniciar preparo",
-    payment_pending: "Iniciar preparo",
+    pending: isOnlinePaymentPending
+      ? "Aguardando pagamento"
+      : (isIfoodOrder ? "Aceitar e iniciar produção" : "Iniciar preparo"),
+    payment_pending: isOnlinePaymentPending ? "Aguardando pagamento" : "Iniciar preparo",
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
