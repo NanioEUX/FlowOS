@@ -46,7 +46,7 @@ export async function getIfoodOrder(token: string, merchantId: string, orderId: 
   })
 }
 
-export function mapIfoodOrderToFlow(order: any, establishmentId: string) {
+export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCode?: string) {
   const items = order.items.map((item: any) => {
     let name = item.name
     let observation = item.observations || ""
@@ -57,6 +57,12 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string) {
     return { productId: "", code: item.externalCode, name, price: item.unitPrice, quantity: item.quantity, observation, totalPrice: item.totalPrice }
   })
   const isPendingPayment = (order.payments?.pending || 0) > 0
+  // iFood order status is tracked by events; the order resource itself does
+  // not expose a status field we can map 1:1 to Flow. The caller (poll or
+  // webhook handler) passes the event code so we can decide the initial
+  // Flow status.
+  const code = eventCode || ""
+  const initialStatus = (code === "PLC" || code === "PLACED") ? "pending" : "confirmed"
   return {
     establishmentId,
     customerName: order.customer?.name || "Cliente iFood",
@@ -68,7 +74,7 @@ export function mapIfoodOrderToFlow(order: any, establishmentId: string) {
     total: order.total?.orderAmount || 0,
     deliveryFee: order.total?.deliveryFee || 0,
     notes: order.additionalInfo?.metadata?.customerEmail || "",
-    status: "confirmed",
+    status: initialStatus,
     paymentStatus: isPendingPayment ? "pending" : "paid",
     method: "ifood",
   }

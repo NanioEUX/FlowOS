@@ -411,11 +411,14 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
-  const isNewOrder = ["pending", "payment_pending", "confirmed"].includes(order.status)
+  const isNewOrder = ["pending", "payment_pending"].includes(order.status)
+  const isAwaitingAcceptance = order.method === "ifood" && order.status === "pending"
 
   let nextStatus: string | null
-  if (isNewOrder) {
-    nextStatus = "preparing"
+  if (isAwaitingAcceptance) {
+    nextStatus = "confirmed"
+  } else if (isNewOrder) {
+    nextStatus = "confirmed"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"
   } else if (isPresencial && order.status === "preparing") {
@@ -500,7 +503,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }, [unreadCount, order.id, order.customerName, lastCustomerMsg?.message])
 
   const nextLabel: Record<string, string> = {
-    pending: "Iniciar preparo",
+    pending: order.method === "ifood" ? "Aceitar pedido" : "Iniciar preparo",
     payment_pending: "Iniciar preparo",
     confirmed: "Iniciar preparo",
     preparing: "Finalizar preparo",
