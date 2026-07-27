@@ -36,8 +36,8 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   cancelled: "danger",
 }
 
-const flowOrder = ["pending", "payment_pending", "preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
-const selectableStatuses = ["preparing", "ready", "out_for_delivery", "dispatched", "delivered"]
+const flowOrder = ["pending", "payment_pending", "preparing", "ready", "out_for_delivery", "delivered"]
+const selectableStatuses = ["preparing", "ready", "out_for_delivery", "delivered"]
 
 const paymentMethodLabels: Record<string, string> = {
   online: "Online (Pix/Cartão)",
@@ -430,6 +430,9 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     nextStatus = "delivered"
   } else if (isPresencial && order.status === "preparing") {
     nextStatus = "ready"
+  } else if (order.status === "dispatched") {
+    // Legacy "dispatched" orders still need a way forward; jump straight to delivered.
+    nextStatus = "delivered"
   } else if (!isPresencial && currentIdx >= 0 && currentIdx < flowOrder.length - 1) {
     nextStatus = flowOrder[currentIdx + 1]
   } else {
@@ -515,7 +518,6 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
-    dispatched: "Entregar",
   }
 
   function printReceipt() {
