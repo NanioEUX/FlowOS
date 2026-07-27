@@ -9,10 +9,13 @@ import https from "https"
  *   DSP (dispatched)    -> in "Em rota" tab after /dispatch
  *   CON (concluded)     -> in "Finalizados" tab after /deliver
  *
- * NOTE: iFood sandbox only exposes /confirm and /dispatch. /deliver,
- * /ready, /preparation and /cancellation may return 404 in sandbox but
- * are expected to work in production. We log the response so callers can
- * decide whether to retry or alert.
+ * NOTE: iFood sandbox only exposes /confirm and /dispatch for STORE type
+ * merchants. /deliver (concluded) and /ready (pronto) require the merchant
+ * to be configured as type MERCHANT (delivered by the merchant's own rider).
+ * In the test environment, MERCHANT type needs to be requested via homologação.
+ * In production, all status endpoints should work.
+ *
+ * We log the response so callers can decide whether to retry or alert.
  */
 function pathForAction(action: string): string {
   switch (action) {
