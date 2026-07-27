@@ -1,0 +1,130 @@
+import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
+import { prisma } from "@/lib/prisma"
+import { getIfoodAuth, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
+
+function verifySignature(body: string, signature: string, secret: string): boolean {
+  if (!signature || !secret) return false
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex")
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  )
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const raw = await req.text()
+    const signature =
+      req.headers.get("x-ifood-signature") ||
+      req.headers.get("X-Ifood-Signature") ||
+      req.headers.get("authorization")?.replace("Bearer ", "") ||
+      ""
+
+    const secret = process.env.IFOOD_WEBHOOK_SECRET || process.env.IFOOD_CLIENT_SECRET || ""
+
+    if (secret && signature) {
+      const ok = verifySignature(raw, signature, secret)
+      if (!ok) {
+        console.warn("[ifood webhook] signature mismatch")
+      }
+    }
+
+    const payload = JSON.parse(raw)
+    let events: any[] = []
+    if (Array.isArray(payload)) {
+      events = payload
+    } else if (payload.orderId || payload.code) {
+      events = [payload]
+    } else if (payload.events && Array.isArray(payload.events)) {
+      events = payload.events
+    } else {
+      events = []
+    }
+
+    if (events.length === 0) {
+      return NextResponse.json({ ok: true, msg: "noop" })
+    }
+
+    const establishments = await prisma.establishment.findMany({
+      where: { ifoodEnabled: true, ifoodMerchantId: { not: null } },
+    })
+
+    if (establishments.length === 0) {
+      return NextResponse.json({ ok: true, msg: "no establishment enabled" })
+    }
+
+    const est = establishments[0]
+
+    let created = 0
+    let updated = 0
+    const results: any[] = []
+
+    for (const event of events) {
+      const code = event.code || event.fullCode
+      const orderId = event.orderId || event.id
+
+      if (!orderId) continue
+
+      if (["PLACED", "CFM", "CONFIRMED"].includes(code)) {
+        const existing = await prisma.order.findFirst({
+          where: { establishmentId: est.id, externalId: orderId },
+        })
+
+        if (!existing && event.fullOrder) {
+          try {
+            const mapped = mapIfoodOrderToFlow(event.fullOrder, est.id)
+            await prisma.order.create({ data: { ...mapped, externalId: orderId } })
+            created++
+            results.push({ orderId, action: 'created' })
+          } catch (e: any) {
+            results.push({ orderId, action: 'create_error', error: e.message })
+          }
+        } else if (!existing) {
+          try {
+            const token = await getIfoodAuth(
+              process.env.IFOOD_CLIENT_ID!,
+              process.env.IFOOD_CLIENT_SECRET!
+            )
+            const order = await getIfoodOrder(token.accessToken, est.ifoodMerchantId!, orderId)
+            if (order && order.items) {
+              const mapped = mapIfoodOrderToFlow(order, est.id)
+              await prisma.order.create({ data: { ...mapped, externalId: orderId } })
+              created++
+              results.push({ orderId, action: 'created' })
+            } else {
+              results.push({ orderId, action: 'skip_no_items' })
+            }
+          } catch (e: any) {
+            results.push({ orderId, action: 'fetch_error', error: e.message })
+          }
+        } else {
+          results.push({ orderId, action: 'already_exists' })
+        }
+      } else if (["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(code)) {
+        const existing = await prisma.order.findFirst({
+          where: { establishmentId: est.id, externalId: orderId },
+        })
+        if (existing) {
+          const status = code === 'CON' || code === 'CONCLUDED' ? 'delivered' : 'dispatched'
+          await prisma.order.update({
+            where: { id: existing.id },
+            data: { status },
+          })
+          updated++
+          results.push({ orderId, action: 'updated', status })
+        } else {
+          results.push({ orderId, action: 'not_found_for_update' })
+        }
+      }
+    }
+
+    return NextResponse.json({ ok: true, created, updated, results })
+  } catch (err: any) {
+    console.error("[ifood webhook] error:", err.message)
+    return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
+  }
+}

@@ -49,6 +49,8 @@ export default function ConfigPage() {
     interCertificate: "",
     interCertificatePassword: "",
     interPixKey: "",
+    ifoodEnabled: false,
+    ifoodMerchantId: "",
     deliveryFeeType: "free",
     deliveryFeeAmount: "0",
     deliveryFreeAbove: "0",
@@ -96,6 +98,8 @@ export default function ConfigPage() {
             interClientSecret: data.interClientSecret || "",
             interCertificate: data.interCertificate || "",
             interCertificatePassword: data.interCertificatePassword || "",
+            ifoodEnabled: data.ifoodEnabled || false,
+            ifoodMerchantId: data.ifoodMerchantId || "",
             interPixKey: data.interPixKey || "",
             deliveryFeeType: data.deliveryFeeType || "free",
             deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
@@ -407,6 +411,39 @@ export default function ConfigPage() {
                 </div>
               </div>
             )}
+
+            {/* iFood */}
+            <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-zinc-900">iFood</h4>
+                <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">Em breve</span>
+              </div>
+              <p className="text-xs text-zinc-500">Integração com iFood para receber pedidos automaticamente.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.ifoodEnabled || false}
+                  onChange={(e) => setForm({ ...form, ifoodEnabled: e.target.checked })}
+                  className="h-4 w-4 rounded border-zinc-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span className="text-sm font-medium text-zinc-700">Ativar integração iFood</span>
+              </div>
+              {form.ifoodEnabled && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-zinc-500">Merchant ID</label>
+                    <input
+                      type="text"
+                      placeholder="bd63685a-7c57-41c0-a52f-e6332cafcbd4"
+                      value={form.ifoodMerchantId || ""}
+                      onChange={(e) => setForm({ ...form, ifoodMerchantId: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-orange-600 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-400">Encontre o Merchant ID no painel do desenvolvedor iFood.</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

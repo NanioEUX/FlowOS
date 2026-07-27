@@ -52,6 +52,10 @@ model Establishment {
   minimumOrderValue        Float?         @default(0)
   minimumOrderApplyToDelivery Boolean    @default(true)
   minimumOrderApplyToPickup Boolean       @default(false)
+  ifoodMerchantId       String?
+  ifoodAccessToken      String?
+  ifoodRefreshToken     String?
+  ifoodEnabled          Boolean           @default(false)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   pickupMessage       String?
@@ -180,6 +184,7 @@ model Order {
   deliveryPersonId  String?
   couponId          String?
   trackingToken     String?         @unique
+  externalId        String?
   assignedAt        DateTime?
   deliveredAt       DateTime?
   createdAt         DateTime        @default(now())

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getIfoodAuth } from "@/lib/integrations/ifood"
+import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
 
 export async function PATCH(
   req: NextRequest,
@@ -16,12 +18,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
     }
 
-    // Only allow canceling orders with pending payment
     if (order.paymentStatus !== "pending" && status === "cancelled") {
       return NextResponse.json({ error: "Apenas pedidos com pagamento pendente podem ser cancelados" }, { status: 400 })
     }
 
-    // If cancelling, DELETE the order from database
     if (status === "cancelled") {
       await prisma.order.delete({
         where: { id: params.id },
@@ -29,7 +29,6 @@ export async function PATCH(
       return NextResponse.json({ success: true, deleted: true })
     }
 
-    // Otherwise, update the order
     const updated = await prisma.order.update({
       where: { id: params.id },
       data: {
@@ -37,6 +36,36 @@ export async function PATCH(
         ...(paymentStatus && { paymentStatus }),
       },
     })
+
+    if (order.method === "ifood" && status) {
+      try {
+        const { accessToken } = await getIfoodAuth(
+          process.env.IFOOD_CLIENT_ID!,
+          process.env.IFOOD_CLIENT_SECRET!
+        )
+        const establishment = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+        })
+        if (establishment?.ifoodMerchantId) {
+          const statusMap: Record<string, string> = {
+            confirmed: "CFM",
+            preparing: "CFM",
+            ready: "DSP",
+            dispatched: "DSP",
+            delivered: "CON",
+          }
+          const ifoodStatus = statusMap[status]
+          if (ifoodStatus && order.externalId) {
+            const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, ifoodStatus)
+            console.log("[ifood status update]", { orderId: order.externalId, ifoodStatus, status: result.status, body: result.body })
+          } else {
+            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, ifoodStatus })
+          }
+        }
+      } catch (err) {
+        console.error("iFood status sync error:", err)
+      }
+    }
 
     return NextResponse.json({ success: true, order: updated })
   } catch (error: any) {
