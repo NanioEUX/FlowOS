@@ -214,6 +214,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
+  const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
+  const [changeFor, setChangeFor] = useState<string>("")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [ordering, setOrdering] = useState(false)
   const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
@@ -595,7 +597,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     availablePayments.push({ key: "pix", label: "Pix", icon: <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg> })
     availablePayments.push({ key: "card", label: "Cartão", icon: <CreditCard className="h-5 w-5" /> })
   }
-  // Pagamento na entrega/retirada
+  // Pagamento na entrega/retirada: gera um botão "Pagar na Entrega/Retirada"
+  // que expande em dois sub-botões (Dinheiro / Cartão) e, no caso de dinheiro,
+  // mostra um campo para informar o valor que o cliente vai entregar.
   if (paymentConfig.delivery && orderType === "delivery") availablePayments.push({ key: "delivery", label: "Pagar na Entrega", icon: <Banknote className="h-5 w-5" /> })
   if (paymentConfig.pickup && orderType === "pickup") availablePayments.push({ key: "pickup", label: "Pagar na Retirada", icon: <Banknote className="h-5 w-5" /> })
 
@@ -868,6 +872,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     try {
       console.log("[submitOrder] calling API...")
+      // If the user picked "Pagar na Entrega/Retirada" we need a sub-method
+      // (cash/card) and, for cash, a changeFor amount. Until that is filled
+      // we block the order.
+      const effectivePaymentMethod =
+        paymentMethod === "delivery" || paymentMethod === "pickup"
+          ? cashSubMethod || paymentMethod
+          : paymentMethod
+      if (
+        (paymentMethod === "delivery" || paymentMethod === "pickup") &&
+        !cashSubMethod
+      ) {
+        setOrderError("Escolha Dinheiro ou Cartão para pagar na entrega")
+        return
+      }
+      const changeForValue = cashSubMethod === "cash" && changeFor ? Number(changeFor) : null
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -880,7 +900,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           customerCep: cep || "",
           customerCpf: customer.cpf || "",
           orderType,
-          paymentMethod,
+          paymentMethod: effectivePaymentMethod,
+          changeFor: changeForValue,
           items: cart,
           total,
           deliveryFee,
@@ -2322,7 +2343,17 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <button
                       key={p.key}
                       type="button"
-                      onClick={() => setPaymentMethod(p.key as any)}
+                      onClick={() => {
+                        setPaymentMethod(p.key as any)
+                        // Reset the cash/card sub-selection when switching away.
+                        if (p.key !== "delivery" && p.key !== "pickup") {
+                          setCashSubMethod(null)
+                          setChangeFor("")
+                        } else {
+                          setCashSubMethod(null)
+                          setChangeFor("")
+                        }
+                      }}
                       className="flex items-center gap-2 rounded-lg border p-3 text-sm"
                       style={paymentMethod === p.key ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
                     >
@@ -2331,6 +2362,75 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </button>
                   ))}
                 </div>
+                {(paymentMethod === "delivery" || paymentMethod === "pickup") && (
+                  <div className="mt-2 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setCashSubMethod("cash"); setChangeFor("") }}
+                        className="flex items-center gap-2 rounded-lg border p-2.5 text-sm"
+                        style={cashSubMethod === "cash" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
+                      >
+                        <Banknote className="h-4 w-4" />
+                        Dinheiro
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setCashSubMethod("card"); setChangeFor("") }}
+                        className="flex items-center gap-2 rounded-lg border p-2.5 text-sm"
+                        style={cashSubMethod === "card" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Cartão
+                      </button>
+                    </div>
+                    {cashSubMethod === "cash" && (
+                      <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: theme.borderCard, backgroundColor: theme.bgInput }}>
+                        <p className="text-xs font-medium" style={{ color: theme.textSubtle }}>Precisa de troco?</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setChangeFor("")}
+                            className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                            style={changeFor === "" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
+                          >
+                            Pagamento exato
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChangeFor(total.toFixed(2))}
+                            className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                            style={changeFor === total.toFixed(2) && changeFor !== "" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
+                          >
+                            Valor exato R$ {total.toFixed(2).replace(".", ",")}
+                          </button>
+                        </div>
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Ou troco para</label>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-sm" style={{ color: theme.text }}>R$</span>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              min="0"
+                              placeholder="0,00"
+                              value={changeFor}
+                              onChange={(e) => setChangeFor(e.target.value)}
+                              className="flex h-9 w-full rounded-lg border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                              style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderInput }}
+                            />
+                          </div>
+                          {changeFor && Number(changeFor) > 0 && Number(changeFor) >= total && (
+                            <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
+                              Troco de R$ {(Number(changeFor) - total).toFixed(2).replace(".", ",")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {orderError && <div className="rounded-lg bg-red-500/[0.06] p-3 text-sm text-red-400 border border-red-500/20">{orderError}</div>}

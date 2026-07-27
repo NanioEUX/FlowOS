@@ -11,7 +11,7 @@ export const revalidate = 5
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, tableNumber, waiterName } = body
+    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, tableNumber, waiterName, changeFor } = body
 
     console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method)
 
@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
           customerAddress,
           orderType: orderType || "delivery",
           paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
+          ...(changeFor && Number(changeFor) > 0 ? { changeFor: Number(changeFor) } : {}),
           deliveryFee: deliveryFeeValue,
           items: typeof items === "string" ? items : JSON.stringify(items),
           total: calculatedTotal,
