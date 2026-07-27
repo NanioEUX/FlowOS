@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
         if (!existing && event.fullOrder) {
           try {
-            const mapped = mapIfoodOrderToFlow(event.fullOrder, est.id)
+            const mapped = mapIfoodOrderToFlow(event.fullOrder, est.id, code)
             await prisma.order.create({ data: { ...mapped, externalId: orderId } })
             created++
             results.push({ orderId, action: 'created' })
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
             )
             const order = await getIfoodOrder(token.accessToken, est.ifoodMerchantId!, orderId)
             if (order && order.items) {
-              const mapped = mapIfoodOrderToFlow(order, est.id)
+              const mapped = mapIfoodOrderToFlow(order, est.id, code)
               await prisma.order.create({ data: { ...mapped, externalId: orderId } })
               created++
               results.push({ orderId, action: 'created' })

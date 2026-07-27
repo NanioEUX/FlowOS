@@ -44,7 +44,7 @@ export async function POST(req: Request) {
           }
 
           const order = await getIfoodOrder(accessToken, est.ifoodMerchantId!, event.orderId)
-          const mapped = mapIfoodOrderToFlow(order, est.id)
+          const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
 
           await prisma.order.create({ data: { ...mapped, externalId: event.orderId } })
           created++
