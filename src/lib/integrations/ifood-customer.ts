@@ -10,11 +10,13 @@ export async function upsertIfoodCustomer(establishmentId: string, customerData:
 
   if (!phone) return null
 
-  let customer = await prisma.customer.findUnique({ where: { phone } })
+  let customer = await prisma.customer.findFirst({
+    where: { phone, establishmentId }
+  })
 
   if (!customer) {
     customer = await prisma.customer.create({
-      data: { phone, name, email, address }
+      data: { establishmentId, phone, name, email, address }
     })
   } else {
     // Update email/address only if we have new info.
@@ -22,7 +24,7 @@ export async function upsertIfoodCustomer(establishmentId: string, customerData:
     if (email && !customer.email) data.email = email
     if (address && !customer.address) data.address = address
     if (data.email || data.address) {
-      customer = await prisma.customer.update({ where: { phone }, data })
+      customer = await prisma.customer.update({ where: { id: customer.id }, data })
     }
   }
 

@@ -591,11 +591,15 @@ win.close()
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              {order.orderNumber && (
+              {order.method === "ifood" && order.externalDisplayId ? (
+                <span className="inline-flex items-center rounded-md bg-red-600 px-2 py-0.5 text-xs font-bold text-white" title="Pedido iFood">
+                  iFood #{order.externalDisplayId}
+                </span>
+              ) : order.orderNumber ? (
                 <span className="inline-flex items-center rounded-md bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
                   #{order.orderNumber}
                 </span>
-              )}
+              ) : null}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
               {["pending", "confirmed"].includes(order.status) ? (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20 animate-pulse">Novo</span>

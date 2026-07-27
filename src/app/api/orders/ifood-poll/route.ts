@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     })
 
     let created = 0
+    let updated = 0
     let skipped = 0
     let errors = 0
     const details: any[] = []
@@ -30,7 +31,9 @@ export async function POST(req: Request) {
       }
 
       for (const event of events) {
-        if (!["PLACED", "PLC", "CFM", "CONFIRMED"].includes(event.code)) {
+        const isNewOrder = ["PLACED", "PLC", "CFM", "CONFIRMED"].includes(event.code)
+        const isUpdate = ["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(event.code)
+        if (!isNewOrder && !isUpdate) {
           skipped++
           continue
         }
@@ -39,11 +42,24 @@ export async function POST(req: Request) {
           const existing = await prisma.order.findFirst({
             where: { establishmentId: est.id, externalId: event.orderId },
           })
+
+          // For status updates (DSP/CON), update the existing order in place.
+          if (existing && isUpdate) {
+            const status = event.code === 'CON' || event.code === 'CONCLUDED' ? 'delivered' : 'out_for_delivery'
+            await prisma.order.update({
+              where: { id: existing.id },
+              data: { status }
+            })
+            updated++
+            continue
+          }
+
           if (existing) {
             skipped++
             continue
           }
 
+          // For new orders, fetch full details from iFood.
           const order = await getIfoodOrder(accessToken, est.ifoodMerchantId!, event.orderId)
 
           if (order && order.items && order.items.length > 0) {
@@ -79,7 +95,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, created, skipped, errors, details: showDetail ? details : undefined, establishmentsCount: establishments.length })
+    return NextResponse.json({ ok: true, created, updated, skipped, errors, details: showDetail ? details : undefined, establishmentsCount: establishments.length })
   } catch (err: any) {
     console.error(err)
     return NextResponse.json({ error: String(err?.message || err), stack: err?.stack }, { status: 500 })
