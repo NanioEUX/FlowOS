@@ -713,7 +713,7 @@ win.close()
                   <MessageCircle className="h-3 w-3" />{order.customerPhone}
                 </a>
               )}
-              {order.trackingToken && order.orderType === "delivery" && (
+              {order.trackingToken && order.orderType === "delivery" && false && (
                 <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
                   <ExternalLink className="h-3 w-3" />Rastrear
                 </a>
