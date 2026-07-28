@@ -105,11 +105,15 @@ export async function POST(req: NextRequest) {
           }
         } else if (!existing) {
           try {
-            const token = await getIfoodAuth(
+            const auth = await getIfoodAuth(
               process.env.IFOOD_CLIENT_ID!,
               process.env.IFOOD_CLIENT_SECRET!
             )
-            const order = await getIfoodOrder(token.accessToken, est.ifoodMerchantId!, orderId)
+            if (!auth?.accessToken) {
+              results.push({ orderId, action: 'auth_error' })
+              continue
+            }
+            const order = await getIfoodOrder(auth.accessToken, est.ifoodMerchantId!, orderId)
             console.log("[ifood webhook] fetched order", orderId, "items=", order?.items?.length, "hasCustomer=", !!order?.customer, "orderType=", order?.orderType)
             console.log("[ifood webhook] full iFood payload:", JSON.stringify(order).slice(0, 500))
             if (order && order.items && order.items.length > 0) {

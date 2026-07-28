@@ -5,16 +5,29 @@ const IFOOD_AUTH = "/authentication/v1.0/oauth/token"
 const IFOOD_EVENTS = "/order/v1.0/events:polling"
 const IFOOD_ORDERS = "/order/v1.0/orders"
 
-export async function getIfoodAuth(clientId: string, clientSecret: string): Promise<{ accessToken: string }> {
-  return new Promise((resolve, reject) => {
+export async function getIfoodAuth(clientId: string, clientSecret: string): Promise<{ accessToken: string } | null> {
+  return new Promise((resolve) => {
     const data = new URLSearchParams({ grantType: "client_credentials", clientId, clientSecret }).toString()
     const options = { hostname: IFOOD_API, path: IFOOD_AUTH, method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(data) } }
     const req = https.request(options, (res) => {
       let body = ""
       res.on("data", (c) => (body += c))
-      res.on("end", () => { try { resolve(JSON.parse(body)) } catch { reject(new Error("Auth parse error")) } })
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(body)
+          if (res.statusCode && res.statusCode >= 400) {
+            console.error("[ifood auth] HTTP", res.statusCode, body.slice(0, 200))
+            resolve(null)
+            return
+          }
+          resolve(parsed)
+        } catch {
+          console.error("[ifood auth] parse error, status=", res.statusCode, "body=", body.slice(0, 200))
+          resolve(null)
+        }
+      })
     })
-    req.on("error", reject)
+    req.on("error", (err) => { console.error("[ifood auth] request error:", err.message); resolve(null) })
     req.write(data)
     req.end()
   })

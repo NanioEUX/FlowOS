@@ -19,10 +19,16 @@ export async function POST(req: Request) {
     const details: any[] = []
 
     for (const est of establishments) {
-      const { accessToken } = await getIfoodAuth(
+      const auth = await getIfoodAuth(
         process.env.IFOOD_CLIENT_ID!,
         process.env.IFOOD_CLIENT_SECRET!
       )
+      if (!auth?.accessToken) {
+        errors++
+        if (showDetail) details.push({ error: "ifood auth failed", est: est.name })
+        continue
+      }
+      const accessToken = auth.accessToken
 
       const rawEvents = await getIfoodEvents(accessToken, est.ifoodMerchantId!)
       const events: any[] = Array.isArray(rawEvents) ? rawEvents : []

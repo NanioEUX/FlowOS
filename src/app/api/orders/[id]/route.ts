@@ -52,10 +52,14 @@ export async function PATCH(
 
     if (order.method === "ifood" && status) {
       try {
-        const { accessToken } = await getIfoodAuth(
+        const auth = await getIfoodAuth(
           process.env.IFOOD_CLIENT_ID!,
           process.env.IFOOD_CLIENT_SECRET!
         )
+        if (!auth?.accessToken) {
+          console.warn("[ifood sync] auth failed, skipping iFood status push")
+        } else {
+        const accessToken = auth.accessToken
         const establishment = await prisma.establishment.findUnique({
           where: { id: order.establishmentId },
         })
@@ -91,6 +95,7 @@ export async function PATCH(
           } else {
             console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, isMerchantDelivery })
           }
+        }
         }
       } catch (err) {
         console.error("iFood status sync error:", err)

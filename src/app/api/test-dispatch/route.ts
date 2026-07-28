@@ -10,10 +10,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "need status and externalId" })
     }
 
-    const { accessToken } = await getIfoodAuth(
+    const auth = await getIfoodAuth(
       process.env.IFOOD_CLIENT_ID!,
       process.env.IFOOD_CLIENT_SECRET!
     )
+    if (!auth?.accessToken) {
+      return NextResponse.json({ error: "ifood auth failed" }, { status: 502 })
+    }
+    const accessToken = auth.accessToken
 
     const actionMap: Record<string, string> = {
       confirmed: "confirm",
