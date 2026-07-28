@@ -349,6 +349,17 @@ export async function GET(req: NextRequest) {
 
   const where: any = { establishmentId }
   if (status) where.status = status
+  // Hide cardápio-online orders that haven't been paid yet from the kitchen
+  // dashboard. They'll surface here once paymentStatus becomes "paid".
+  where.AND = [
+    {
+      OR: [
+        { method: { not: "site" } },
+        { paymentMethod: { not: "online" } },
+        { paymentStatus: "paid" },
+      ],
+    },
+  ]
 
   const orders = await prisma.order.findMany({
     where,
