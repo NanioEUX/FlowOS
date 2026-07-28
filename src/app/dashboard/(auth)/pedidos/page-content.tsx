@@ -666,16 +666,6 @@ win.close()
               {order.paymentStatus === "paid" && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">Pago</span>}
               {(() => {
                 const m = normalizePaymentMethod(order.paymentMethod)
-                if (m === "cash" && order.paymentStatus !== "paid") {
-                  return (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                      Dinheiro na entrega
-                    </span>
-                  )
-                }
-                if (m === "card" && order.paymentStatus !== "paid") {
-                  return <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">Cartão na entrega</span>
-                }
                 if (m === "online" && order.paymentStatus === "pending") {
                   return <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">Aguardando pagamento</span>
                 }
