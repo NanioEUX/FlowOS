@@ -646,7 +646,7 @@ win.close()
             <div className="flex items-center gap-2 flex-wrap">
               {order.method === "ifood" && order.externalDisplayId ? (
                 <span className="inline-flex items-center rounded-md bg-red-600 px-2 py-0.5 text-xs font-bold text-white" title="Pedido iFood">
-                  iFood #{order.externalDisplayId}
+                  #{order.externalDisplayId}
                 </span>
               ) : order.orderNumber ? (
                 <span className="inline-flex items-center rounded-md bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
@@ -677,7 +677,6 @@ win.close()
               ) : (
                 <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
               )}
-              {order.paymentStatus === "paid" && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">Pago</span>}
               {(() => {
                 const m = normalizePaymentMethod(order.paymentMethod)
                 if (m === "online" && order.paymentStatus === "pending") {
@@ -740,9 +739,6 @@ win.close()
                 <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
                   <ExternalLink className="h-3 w-3" />Rastrear
                 </a>
-              )}
-              {order.paymentLink && (
-                <a href={order.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 underline">Link pgto</a>
               )}
               {order.paymentLink && (order.paymentStatus !== "paid" || order.status === "payment_pending") && (
                 <button
