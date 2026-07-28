@@ -24,10 +24,11 @@ export async function POST(req: Request) {
         process.env.IFOOD_CLIENT_SECRET!
       )
 
-      const events = await getIfoodEvents(accessToken, est.ifoodMerchantId!)
+      const rawEvents = await getIfoodEvents(accessToken, est.ifoodMerchantId!)
+      const events: any[] = Array.isArray(rawEvents) ? rawEvents : []
 
       if (showDetail) {
-        details.push({ est: est.name, totalEvents: events.length, codes: events.map((e: any) => e.code) })
+        details.push({ est: est.name, totalEvents: events.length, codes: events.map((e: any) => e?.code) })
       }
 
       for (const event of events) {

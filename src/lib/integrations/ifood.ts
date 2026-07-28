@@ -47,7 +47,8 @@ export async function getIfoodOrder(token: string, merchantId: string, orderId: 
 }
 
 export function mapIfoodOrderToFlow(order: any, establishmentId: string, eventCode?: string) {
-  const items = order.items.map((item: any) => {
+  const rawItems = Array.isArray(order?.items) ? order.items : []
+  const items = rawItems.map((item: any) => {
     let name = item.name
     let observation = item.observations || ""
     if (item.options && item.options.length > 0) {
