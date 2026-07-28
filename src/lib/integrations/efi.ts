@@ -188,10 +188,11 @@ export function verifyEfiWebhook(
   token: string,
   webhookToken: string
 ): boolean {
-  return crypto.timingSafeEqual(
-    Buffer.from(token),
-    Buffer.from(webhookToken)
-  )
+  if (!token || !webhookToken) return false
+  const a = Buffer.from(token)
+  const b = Buffer.from(webhookToken)
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(a, b)
 }
 
 export function parseEfiWebhookStatus(

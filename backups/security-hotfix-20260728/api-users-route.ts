@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { verifyAuth } from "@/lib/auth"
 
 export async function GET(req: NextRequest) {
-  const auth = verifyAuth(req)
-  if (!auth) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-  }
-
   const { searchParams } = new URL(req.url)
-  const establishmentId = searchParams.get("establishmentId") || auth.establishmentId
-
-  // Tenant isolation: a user can only list users from their own establishment
-  if (establishmentId !== auth.establishmentId) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+  const establishmentId = searchParams.get("establishmentId")
+  if (!establishmentId) {
+    return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
 
   const users = await prisma.user.findMany({
@@ -37,21 +29,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = verifyAuth(req)
-    if (!auth) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
     const body = await req.json()
     const { name, email, password, role, permissions, establishmentId, canCloseRegister } = body
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !establishmentId) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
-
-    // Tenant isolation: users can only be created in their own establishment.
-    // Ignore any establishmentId in the body and force the caller's tenant.
-    const targetEstablishmentId = auth.establishmentId
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -69,7 +52,7 @@ export async function POST(req: NextRequest) {
         permissions: JSON.stringify(permissions || ["caixa"]),
         canCloseRegister: canCloseRegister || false,
         mustChangePassword: true,
-        establishmentId: targetEstablishmentId,
+        establishmentId,
       },
       select: {
         id: true,

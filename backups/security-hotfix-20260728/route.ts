@@ -7,26 +7,18 @@ const ASAAS_API_URL =
     ? "https://sandbox.asaas.com/api/v3"
     : "https://api.asaas.com/v3"
 
-// Public endpoint used by the cardápio to poll payment status. Requires the
-// order's trackingToken as ?token= so only someone with the order link can
-// trigger an Asaas/Inter status check. Never returns secrets.
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { searchParams } = new URL(req.url)
-  const token = searchParams.get("token")
-  if (!token) {
-    return NextResponse.json({ error: "Token necessário" }, { status: 401 })
-  }
-
   const order = await prisma.order.findUnique({
     where: { id: params.id },
     select: {
-      trackingToken: true,
       paymentStatus: true,
       status: true,
       paymentId: true,
+      paymentLink: true,
+      total: true,
       establishment: {
         select: {
           asaasApiKey: true,
@@ -34,17 +26,19 @@ export async function GET(
           interClientSecret: true,
           interCertificate: true,
           interCertificatePassword: true,
+          interPixKey: true,
         },
       },
     },
   })
 
-  if (!order || order.trackingToken !== token) {
+  if (!order) {
     return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
   }
 
   const isInterPayment = order.paymentId?.startsWith("inter_")
 
+  // Inter payment - poll Inter API
   if (isInterPayment && order.paymentStatus === "pending" && order.establishment.interClientId) {
     const txid = order.paymentId!.replace("inter_", "")
     try {
@@ -68,6 +62,7 @@ export async function GET(
     }
   }
 
+  // Asaas payment - poll Asaas API
   if (!isInterPayment && order.paymentStatus === "pending" && order.paymentId && order.establishment.asaasApiKey) {
     try {
       const res = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {

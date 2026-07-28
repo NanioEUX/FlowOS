@@ -90,6 +90,12 @@ function ProductBadge({ badge }: { badge: string | null }) {
   )
 }
 
+function extractTrackingToken(trackingUrl: string | null | undefined): string {
+  if (!trackingUrl) return ""
+  const parts = trackingUrl.split("/")
+  return parts[parts.length - 1] || ""
+}
+
 function normalizeUrl(url: string | null): string {
   if (!url) return ""
   if (url.startsWith("http://") || url.startsWith("https://")) return url
@@ -287,7 +293,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     lastOrderIdRef.current = lastOrder.orderId
     const capturedOrderId = lastOrder.orderId
     const controller = new AbortController()
-    fetch(`/api/orders/${capturedOrderId}/payment-status`, { signal: controller.signal })
+    fetch(`/api/orders/${capturedOrderId}/payment-status?token=${extractTrackingToken(lastOrder.trackingUrl)}`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
         if (data.paymentStatus === "paid" && lastOrderIdRef.current === capturedOrderId) {
@@ -656,9 +662,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setShowCart(true)
   }
 
-  async function checkAndOpenPayment(orderId: string) {
+  async function checkAndOpenPayment(orderId: string, trackingToken: string) {
     try {
-      const res = await fetch(`/api/orders/${orderId}/payment-status`)
+      const res = await fetch(`/api/orders/${orderId}/payment-status?token=${trackingToken}`)
       if (res.ok) {
         const data = await res.json()
         if (data.paymentStatus === "paid") {
@@ -1228,7 +1234,7 @@ const handlePaymentSuccess = useCallback(() => {
         }
         
         try {
-          const res = await fetch(`/api/orders/${orderResult.orderId}/payment-status`, { signal: controller.signal })
+          const res = await fetch(`/api/orders/${orderResult.orderId}/payment-status?token=${extractTrackingToken(orderResult.trackingUrl)}`, { signal: controller.signal })
           if (!res.ok) continue
           const data = await res.json()
           if (data.paymentStatus === "paid") {
@@ -1262,6 +1268,7 @@ const handlePaymentSuccess = useCallback(() => {
     return (
       <PaymentModal
         orderId={orderResult.orderId!}
+        trackingToken={extractTrackingToken(orderResult.trackingUrl)}
         paymentLink={orderResult.paymentLink}
         total={orderResult.orderTotal ?? total}
         theme={theme}
@@ -2250,7 +2257,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <Button
                       size="lg"
                       className="w-full gap-2"
-                      onClick={() => checkAndOpenPayment(lastOrder.orderId)}
+                      onClick={() => checkAndOpenPayment(lastOrder.orderId, extractTrackingToken(lastOrder.trackingUrl))}
                     >
                       <CreditCard className="h-5 w-5" />
                       Pagar pedido
@@ -2585,7 +2592,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <button
                               onClick={() => {
                                 setShowOrdersList(false)
-                                checkAndOpenPayment(order.id)
+                                checkAndOpenPayment(order.id, order.trackingToken)
                               }}
                               className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
                               style={{ backgroundColor: theme.primary }}
@@ -2853,7 +2860,9 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
               <button
                 onClick={() => {
-                  checkAndOpenPayment(pendingOrderModal.orderId)
+                  // TODO: track token is not stored on pendingOrderModal; look up
+                  // via customerOrders before calling checkAndOpenPayment.
+                  checkAndOpenPayment(pendingOrderModal.orderId, "")
                 }}
                 className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: theme.accent }}
@@ -3020,6 +3029,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
 function PaymentModal({
   orderId,
+  trackingToken,
   paymentLink,
   total,
   theme,
@@ -3034,6 +3044,7 @@ function PaymentModal({
   customerEmail,
 }: {
   orderId: string
+  trackingToken: string
   paymentLink: string
   total: number
   theme: any
@@ -3180,7 +3191,7 @@ function PaymentModal({
       const check = setInterval(async () => {
         if (controller.signal.aborted) { clearInterval(check); return }
         try {
-          const res = await fetch(`/api/orders/${orderId}/payment-status`, { signal: controller.signal })
+          const res = await fetch(`/api/orders/${orderId}/payment-status?token=${trackingToken}`, { signal: controller.signal })
           if (res.ok) {
             const data = await res.json()
             if (data.paymentStatus === "paid") {

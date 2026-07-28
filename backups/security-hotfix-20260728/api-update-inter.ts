@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyAuth } from "@/lib/auth"
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = verifyAuth(req)
-    if (!auth) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
     const formData = await req.formData()
+    const establishmentId = formData.get("establishmentId") as string
     const interClientId = formData.get("interClientId") as string
     const interClientSecret = formData.get("interClientSecret") as string
     const interPixKey = formData.get("interPixKey") as string
     const certificateFile = formData.get("certificateFile") as File
 
-    if (!interClientId || !interClientSecret || !interPixKey || !certificateFile) {
+    if (!establishmentId || !interClientId || !interClientSecret || !interPixKey || !certificateFile) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
     }
 
@@ -23,9 +18,8 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
     const base64 = buffer.toString("base64")
 
-    // Tenant isolation: only update the authenticated user's own establishment
     const updated = await prisma.establishment.update({
-      where: { id: auth.establishmentId },
+      where: { id: establishmentId },
       data: { interClientId, interClientSecret, interCertificate: base64, interPixKey },
     })
 

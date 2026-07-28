@@ -1,44 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import crypto from "crypto"
 
 export const runtime = "nodejs"
 
-// Asaas webhook authentication: the platform sends an access token header
-// that must match the value configured in the merchant's Asaas account.
-// We verify it before processing any payment event.
-function verifyAsaasSignature(req: NextRequest, rawBody: string): boolean {
-  const token = req.headers.get("asaas-access-token")
-  if (!token || !process.env.ASAAS_WEBHOOK_TOKEN) {
-    // If neither side has a token configured, reject to avoid silent accept.
-    return false
-  }
-  // constant-time comparison to prevent timing attacks
-  const a = Buffer.from(token)
-  const b = Buffer.from(process.env.ASAAS_WEBHOOK_TOKEN)
-  if (a.length !== b.length) return false
-  return crypto.timingSafeEqual(a, b)
-}
-
 export async function POST(req: NextRequest) {
-  const rawBody = await req.text()
-
-  if (!verifyAsaasSignature(req, rawBody)) {
-    console.warn("[Asaas Webhook] Invalid or missing access token")
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  let body: any
-  try {
-    body = JSON.parse(rawBody)
-  } catch {
-    return NextResponse.json({ received: true })
-  }
+  const body = await req.json().catch(() => null)
 
   if (!body?.payment?.id) {
     return NextResponse.json({ received: true })
   }
 
+  // Process in background - return 200 immediately
   processWebhook(body).catch((err) => {
     console.error("[Asaas Webhook] Background error:", err.message)
   })
