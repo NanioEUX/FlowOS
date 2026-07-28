@@ -37,8 +37,8 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   cancelled: "danger",
 }
 
-const flowOrder = ["pending", "payment_pending", "preparing", "ready", "out_for_delivery", "delivered"]
-const selectableStatuses = ["preparing", "ready", "out_for_delivery", "delivered"]
+const flowOrder = ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+const selectableStatuses = ["confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
 
 const paymentMethodLabels: Record<string, string> = {
   online: "Online (Pix/Cartão)",
@@ -460,6 +460,10 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   if (isOnlinePaymentPending) {
     nextStatus = null
   } else if (isNewOrder) {
+    // iFood + cash orders jump pending -> preparing in one click ("accept + start").
+    nextStatus = "preparing"
+  } else if (order.status === "confirmed") {
+    // Online payment confirmed by Asaas/Inter: ready to start preparation.
     nextStatus = "preparing"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"
@@ -552,6 +556,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
       ? "Aguardando pagamento"
       : (isIfoodOrder ? "Aceitar e iniciar produção" : "Iniciar preparo"),
     payment_pending: isOnlinePaymentPending ? "Aguardando pagamento" : "Iniciar preparo",
+    confirmed: "Iniciar preparo",
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
