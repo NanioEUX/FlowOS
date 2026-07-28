@@ -77,7 +77,33 @@ export async function POST(req: Request) {
           }
 
           if (existing) {
-            skipped++
+            // Placeholders created from PLC without items should be filled
+            // when a later event (CFM) brings the full order.
+            const isPlaceholder =
+              existing.customerName === "Aguardando iFood" ||
+              (existing.items === "[]" && (!existing.total || existing.total === 0))
+            if (!isPlaceholder) {
+              skipped++
+              continue
+            }
+            // Fetch full details and update the placeholder in place.
+            try {
+              const order = await getIfoodOrder(accessToken, est.ifoodMerchantId!, event.orderId)
+              if (order && order.items && order.items.length > 0) {
+                const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
+                const customer = await upsertIfoodCustomer(est.id, order.customer)
+                await prisma.order.update({
+                  where: { id: existing.id },
+                  data: { ...mapped, externalId: event.orderId, customerId: customer?.id }
+                })
+                updated++
+              } else {
+                skipped++
+              }
+            } catch (e: any) {
+              errors++
+              if (showDetail) details.push({ error: e.message, orderId: event.orderId })
+            }
             continue
           }
 
