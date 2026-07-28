@@ -351,11 +351,13 @@ export async function GET(req: NextRequest) {
   if (status) where.status = status
   // Hide cardápio-online orders that haven't been paid yet from the kitchen
   // dashboard. They'll surface here once paymentStatus becomes "paid".
+  // paymentMethod "pix"/"card" come from the public menu (see menu-page.tsx)
+  // and represent online payments via Asaas/Inter, so they must also be hidden.
   where.AND = [
     {
       OR: [
         { method: { not: "site" } },
-        { paymentMethod: { not: "online" } },
+        { paymentMethod: { notIn: ["online", "asaas", "inter", "pix", "card"] } },
         { paymentStatus: "paid" },
       ],
     },
