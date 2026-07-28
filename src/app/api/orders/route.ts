@@ -357,24 +357,24 @@ export async function GET(req: NextRequest) {
 
   const where: any = { establishmentId }
   if (status) where.status = status
-  // Hide cardápio-online orders that haven't been paid yet from the kitchen
-  // dashboard. They'll surface here once paymentStatus becomes "paid".
-  // paymentMethod "pix"/"card" come from the public menu (see menu-page.tsx)
-  // and represent online payments via Asaas/Inter, so they must also be hidden.
-  // "card_delivery"/"card_pickup" = cartão na máquina (Pagar na entrega),
-  // pagamento presencial — não devem ser escondidos.
+  // Regras para mostrar um pedido no painel de pedidos:
+  // - Pedidos fora do cardápio digital (iFood, WhatsApp, manual) → sempre visíveis.
+  // - Pedidos do cardápio digital com pagamento NA ENTREGA (cash/card na
+  //   máquina) → sempre visíveis (entram em produção imediatamente).
+  // - Pedidos do cardápio digital com pagamento ONLINE (Asaas/Inter) →
+  //   só aparecem após paymentStatus = "paid".
+  // Só escondemos quando TODAS as condições abaixo forem verdadeiras:
+  //   method === "site" AND paymentMethod online AND paymentStatus !== "paid"
   where.AND = [
     {
       OR: [
         { method: { not: "site" } },
         {
           paymentMethod: {
-            notIn: [
-              "online",
-              "asaas",
-              "inter",
-              "pix",
-              "card",
+            in: [
+              "cash",
+              "delivery",
+              "pickup",
               "card_delivery",
               "card_pickup",
             ],
