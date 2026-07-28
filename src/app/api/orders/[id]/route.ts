@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { status, paymentStatus } = await req.json()
+    const { status, paymentStatus, cancellationReason, cancelledBy } = await req.json()
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -23,10 +23,30 @@ export async function PATCH(
     }
 
     if (status === "cancelled") {
-      await prisma.order.delete({
-        where: { id: params.id },
+      // Instead of deleting, mark cancelled + write a CancellationLog entry so
+      // the tenant keeps an audit trail and can review reasons later.
+      await prisma.$transaction(async (tx) => {
+        await tx.cancellationLog.create({
+          data: {
+            establishmentId: order.establishmentId,
+            orderId: order.id,
+            source: order.method || "site",
+            cancelledBy: cancelledBy || "merchant",
+            reason: cancellationReason || null,
+            orderNumber: order.orderNumber,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            total: order.total,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            externalId: order.externalId,
+          },
+        })
+        await tx.order.delete({
+          where: { id: params.id },
+        })
       })
-      return NextResponse.json({ success: true, deleted: true })
+      return NextResponse.json({ success: true, cancelled: true })
     }
 
     // Pagamentos na entrega são confirmados no momento da finalização do

@@ -86,6 +86,7 @@ model Establishment {
   partialPayments     PartialPayment[]
   products            Product[]
   reviews             Review[]
+  cancellations       CancellationLog[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
   suppliers           Supplier[]
@@ -454,4 +455,28 @@ model Review {
 
   @@index([establishmentId, createdAt])
   @@index([establishmentId, rating])
+}
+
+model CancellationLog {
+  id              String        @id @default(cuid())
+  establishmentId String
+  orderId         String?
+  source          String        // "site" | "ifood" | "whatsapp" | "manual"
+  cancelledBy     String        // "customer" | "merchant" | "system"
+  reason          String?
+  // Snapshot of the order at the moment of cancellation, so the log survives
+  // even if the original Order is deleted.
+  orderNumber     Int?
+  customerName    String?
+  customerPhone   String?
+  total           Float?
+  paymentMethod   String?
+  paymentStatus   String?
+  externalId      String?
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, createdAt])
+  @@index([source])
+  @@index([orderId])
 }

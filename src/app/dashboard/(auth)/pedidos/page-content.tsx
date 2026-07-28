@@ -620,8 +620,14 @@ win.print()
 win.close()
 }
 
+  const ageMinutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
+  const isStale =
+    ageMinutes >= 30 &&
+    !["delivered", "cancelled", "out_for_delivery"].includes(order.status)
+  const isCritical = ageMinutes >= 45 && isStale
+
   return (
-    <Card id={`order-${order.id}`} className={`${isNewOrder ? "border-l-4 border-l-blue-500" : ""} ${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
+    <Card id={`order-${order.id}`} className={`${isNewOrder ? "border-l-4 border-l-blue-500" : ""} ${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${isCritical ? "border-red-500 border-2 shadow-md shadow-red-200" : isStale ? "border-amber-400 border-2" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
       <CardContent className="p-4">
         {unreadCount > 0 && (
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
@@ -648,6 +654,14 @@ win.close()
                 </span>
               ) : null}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
+              {isStale && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${isCritical ? "bg-red-50 text-red-700 ring-red-600/20 animate-pulse" : "bg-amber-50 text-amber-700 ring-amber-600/20"}`}
+                  title={`Pedido aguardando há ${ageMinutes} min`}
+                >
+                  ⏱ {ageMinutes >= 60 ? `${Math.floor(ageMinutes / 60)}h${ageMinutes % 60}min` : `${ageMinutes}min`}
+                </span>
+              )}
               {["pending", "confirmed"].includes(order.status) ? (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20 animate-pulse">Novo</span>
               ) : order.status === "preparing" ? (

@@ -162,6 +162,44 @@ export async function POST(req: NextRequest) {
         } else {
           results.push({ orderId, action: 'already_exists' })
         }
+      } else if (["CAN", "CANCELLED", "CANCELLATION_REQUESTED"].includes(code)) {
+        const existing = await prisma.order.findFirst({
+          where: { establishmentId: est.id, externalId: orderId },
+        })
+        if (existing) {
+          const reason =
+            (event as any).reason ||
+            (event as any).metadata?.reason ||
+            (event as any).cancellation?.reason ||
+            null
+          const cancelledBy =
+            (event as any).cancelledBy ||
+            (event as any).metadata?.cancelledBy ||
+            "system"
+          await prisma.$transaction(async (tx) => {
+            await tx.cancellationLog.create({
+              data: {
+                establishmentId: existing.establishmentId,
+                orderId: existing.id,
+                source: "ifood",
+                cancelledBy,
+                reason: typeof reason === "string" ? reason : null,
+                orderNumber: existing.orderNumber,
+                customerName: existing.customerName,
+                customerPhone: existing.customerPhone,
+                total: existing.total,
+                paymentMethod: existing.paymentMethod,
+                paymentStatus: existing.paymentStatus,
+                externalId: existing.externalId,
+              },
+            })
+            await tx.order.delete({ where: { id: existing.id } })
+          })
+          updated++
+          results.push({ orderId, action: 'cancelled_ifood', reason })
+        } else {
+          results.push({ orderId, action: 'not_found_for_cancel' })
+        }
       } else if (["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(code)) {
         const existing = await prisma.order.findFirst({
           where: { establishmentId: est.id, externalId: orderId },

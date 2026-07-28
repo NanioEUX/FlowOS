@@ -231,6 +231,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const prevStatusRef = useRef<string | null>(null)
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
   const [cancelModalTotal, setCancelModalTotal] = useState<number>(0)
+  const [cancelReason, setCancelReason] = useState<string>("")
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
@@ -1068,13 +1069,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => clearInterval(i)
   }, [showTracking, lastOrder])
 
-  async function cancelOrder(orderId: string) {
+  async function cancelOrder(orderId: string, reason: string) {
     setCancelling(true)
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled", paymentStatus: "cancelled" }),
+        body: JSON.stringify({
+          status: "cancelled",
+          paymentStatus: "cancelled",
+          cancelledBy: "customer",
+          cancellationReason: reason || null,
+        }),
       })
       if (res.ok) {
         setCancelModalOrderId(null)
@@ -2976,19 +2982,28 @@ onPaymentConfirmed={handlePaymentSuccess}
               </div>
             </div>
             <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Cancelar pedido?</h3>
-            <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
+            <p className="mb-4 text-center text-sm" style={{ color: theme.textMuted }}>
               Tem certeza que deseja cancelar este pedido de <strong style={{ color: theme.accent }}>R$ {cancelModalTotal.toFixed(2)}</strong>? O pagamento não será processado.
             </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Motivo do cancelamento (opcional)"
+              maxLength={500}
+              rows={3}
+              className="mb-4 w-full resize-none rounded-xl border p-3 text-sm"
+              style={{ borderColor: theme.borderCard, backgroundColor: theme.bgInput, color: theme.text }}
+            />
             <div className="flex gap-3">
               <button
-                onClick={() => setCancelModalOrderId(null)}
+                onClick={() => { setCancelModalOrderId(null); setCancelReason("") }}
                 className="flex-1 rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
                 style={{ borderColor: theme.borderCard, color: theme.text }}
               >
                 Voltar
               </button>
               <button
-                onClick={() => cancelOrder(cancelModalOrderId)}
+                onClick={() => cancelOrder(cancelModalOrderId, cancelReason)}
                 disabled={cancelling}
                 className="flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#EF4444" }}

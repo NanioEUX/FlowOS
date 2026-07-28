@@ -40,7 +40,8 @@ export async function POST(req: Request) {
       for (const event of events) {
         const isNewOrder = ["PLACED", "PLC", "CFM", "CONFIRMED"].includes(event.code)
         const isUpdate = ["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(event.code)
-        if (!isNewOrder && !isUpdate) {
+        const isCancel = ["CAN", "CANCELLED", "CANCELLATION_REQUESTED"].includes(event.code)
+        if (!isNewOrder && !isUpdate && !isCancel) {
           skipped++
           continue
         }
@@ -79,6 +80,47 @@ export async function POST(req: Request) {
               data: { status: newStatus }
             })
             updated++
+            continue
+          }
+
+          // For cancellation events (CAN), mirror the webhook handler:
+          // write a CancellationLog and delete the order so the panel hides it
+          // but the tenant keeps an audit trail.
+          if (existing && isCancel) {
+            try {
+              const reason =
+                (event as any).reason ||
+                (event as any).metadata?.reason ||
+                (event as any).cancellation?.reason ||
+                null
+              const cancelledBy =
+                (event as any).cancelledBy ||
+                (event as any).metadata?.cancelledBy ||
+                "system"
+              await prisma.$transaction(async (tx) => {
+                await tx.cancellationLog.create({
+                  data: {
+                    establishmentId: existing.establishmentId,
+                    orderId: existing.id,
+                    source: "ifood",
+                    cancelledBy,
+                    reason: typeof reason === "string" ? reason : null,
+                    orderNumber: existing.orderNumber,
+                    customerName: existing.customerName,
+                    customerPhone: existing.customerPhone,
+                    total: existing.total,
+                    paymentMethod: existing.paymentMethod,
+                    paymentStatus: existing.paymentStatus,
+                    externalId: existing.externalId,
+                  },
+                })
+                await tx.order.delete({ where: { id: existing.id } })
+              })
+              updated++
+            } catch (e: any) {
+              errors++
+              if (showDetail) details.push({ error: e.message, orderId: event.orderId })
+            }
             continue
           }
 
