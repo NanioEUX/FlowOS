@@ -684,7 +684,31 @@ win.close()
                 }
                 return null
               })()}
-              {order.method === "whatsapp" && <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">WhatsApp</span>}
+              {order.method === "ifood" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                  <ShoppingBag className="h-3 w-3" />iFood
+                </span>
+              )}
+              {order.method === "site" && (
+                <a
+                  href={order.establishment?.slug ? `/${order.establishment.slug}` : "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-600/20 hover:bg-violet-100"
+                >
+                  <Store className="h-3 w-3" />Cardápio digital
+                </a>
+              )}
+              {order.method === "whatsapp" && (
+                <a
+                  href={order.establishment?.slug ? `/${order.establishment.slug}` : "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 hover:bg-emerald-100"
+                >
+                  <MessageCircle className="h-3 w-3" />WhatsApp
+                </a>
+              )}
               {unreadCount > 0 && (
                 <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 animate-pulse">{unreadCount} msg</span>
               )}
