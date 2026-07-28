@@ -81,7 +81,6 @@ export default function PedidosPage() {
   const [filterMotoboy, setFilterMotoboy] = useState("")
   const [filterPeriod, setFilterPeriod] = useState("all")
   const [filterType, setFilterType] = useState("all")
-  const [filterSource, setFilterSource] = useState("all") // Origem: all | ifood | site | whatsapp | manual
   const [filterStatus, setFilterStatus] = useState("all")
   const [unreadOrders, setUnreadOrders] = useState<Record<string, { count: number; name: string; message: string }>>({})
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
@@ -169,10 +168,9 @@ export default function PedidosPage() {
   }
 
   const filtered = orders.filter((o) => {
-    const matchesName = (o.customerName || "").toLowerCase().includes(filter.toLowerCase())
+    const matchesName = o.customerName.toLowerCase().includes(filter.toLowerCase())
     const matchesMotoboy = !filterMotoboy || o.deliveryPersonId === filterMotoboy
     const matchesType = filterType === "all" || o.orderType === filterType
-    const matchesSource = filterSource === "all" || o.method === filterSource
     const matchesStatus = filterStatus === "all" || o.status === filterStatus
     const d = new Date(o.createdAt)
     const now = new Date()
@@ -187,7 +185,7 @@ export default function PedidosPage() {
       const start = new Date(now.getTime() - 30 * 86400000)
       matchesPeriod = d >= start
     }
-    return matchesName && matchesMotoboy && matchesType && matchesSource && matchesPeriod && matchesStatus
+    return matchesName && matchesMotoboy && matchesType && matchesPeriod && matchesStatus
   })
 
   function groupOrders(list: any[]) {
@@ -277,80 +275,47 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {/* Filters: Origem + Tipo (dropdowns) + Período (pills) + Status (pills with counts) */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-600">Origem:</span>
-            <select
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 focus:border-green-500 focus:outline-none"
-            >
-              <option value="all">Todas</option>
-              <option value="ifood">iFood</option>
-              <option value="site">Online</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="manual">Local</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-600">Tipo:</span>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 focus:border-green-500 focus:outline-none"
-            >
-              <option value="all">Todos</option>
-              <option value="delivery">Entrega</option>
-              <option value="pickup">Retirada</option>
-              <option value="presencial">Mesas</option>
-              <option value="balcao">Balcão</option>
-            </select>
-          </div>
-          <div className="flex items-center rounded-lg bg-zinc-100 p-0.5 border border-zinc-200/60">
-            {[
-              { value: "all", label: "Todos" },
-              { value: "today", label: "Hoje" },
-              { value: "7days", label: "7 dias" },
-              { value: "30days", label: "30 dias" },
-            ].map((p) => (
-              <button key={p.value} onClick={() => setFilterPeriod(p.value)} className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filterPeriod === p.value ? "bg-white text-zinc-800 shadow-sm font-semibold" : "text-zinc-500 hover:text-zinc-800"}`}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-zinc-600">Status:</span>
+      {/* Period + Type + Status filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex items-center rounded-lg bg-zinc-100 p-0.5 border border-zinc-200/60">
           {[
             { value: "all", label: "Todos" },
-            { value: "pending", label: "Novos" },
-            { value: "preparing", label: "Preparando" },
-            { value: "ready", label: "Prontos" },
-            { value: "out_for_delivery", label: "Saiu p/ entrega" },
-            { value: "delivered", label: "Entregue" },
-            { value: "cancelled", label: "Cancelado" },
-          ].map((s) => {
-            const count =
-              s.value === "all"
-                ? filtered.length
-                : filtered.filter((o) => o.status === s.value).length
-            const active = filterStatus === s.value
-            return (
-              <button
-                key={s.value}
-                onClick={() => setFilterStatus(s.value)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-green-600 text-white shadow-sm"
-                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
-                }`}
-              >
-                {s.label} <span className={`ml-1 font-semibold ${active ? "text-white" : "text-zinc-500"}`}>({count})</span>
-              </button>
-            )
-          })}
+            { value: "today", label: "Hoje" },
+            { value: "7days", label: "7 dias" },
+            { value: "30days", label: "30 dias" },
+          ].map((p) => (
+            <button key={p.value} onClick={() => setFilterPeriod(p.value)} className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filterPeriod === p.value ? "bg-white text-zinc-800 shadow-sm font-semibold" : "text-zinc-500 hover:text-zinc-800"}`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center rounded-lg bg-zinc-100 p-0.5 border border-zinc-200/60">
+          {[
+            { value: "all", label: "Todos" },
+            { value: "delivery", label: "Entrega" },
+            { value: "pickup", label: "Retirada" },
+            { value: "presencial", label: "Caixa" },
+          ].map((t) => (
+            <button key={t.value} onClick={() => setFilterType(t.value)} className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filterType === t.value ? "bg-white text-zinc-800 shadow-sm font-semibold" : "text-zinc-500 hover:text-zinc-800"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <SearchableSelect
+            value={filterStatus}
+            onChange={setFilterStatus}
+            options={[
+              { value: "all", label: "Todos status" },
+              { value: "pending", label: "Pendente" },
+              { value: "preparing", label: "Preparando" },
+              { value: "ready", label: "Pronto" },
+              { value: "out_for_delivery", label: "Em entrega" },
+              { value: "delivered", label: "Entregue" },
+              { value: "cancelled", label: "Cancelado" },
+            ]}
+            placeholder="Status..."
+          />
         </div>
       </div>
 
