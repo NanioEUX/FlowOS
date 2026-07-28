@@ -714,24 +714,24 @@ win.close()
               )}
             </div>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <div className="mt-1.5 flex flex-wrap items-center gap-3 text-sm font-medium text-zinc-700">
               {order.orderType && (
                 <span className="flex items-center gap-1">
                   {order.orderType === "delivery" ? "🛵" : order.orderType === "pickup" ? "🛍️" : "🍽️"}
-                  {orderTypeLabels[order.orderType] || order.orderType}
+                  <span>{orderTypeLabels[order.orderType] || order.orderType}</span>
                 </span>
               )}
               {order.paymentMethod && (
                 <span className="flex items-center gap-1">
-                  {normalizePaymentMethod(order.paymentMethod) === "online" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
-                  {paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}
+                  {normalizePaymentMethod(order.paymentMethod) === "online" ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
+                  <span>{paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}</span>
                   {normalizePaymentMethod(order.paymentMethod) === "cash" && order.changeFor && order.changeFor > 0 ? (
                     <span className="font-semibold text-amber-700">· troco p/ R$ {order.changeFor.toFixed(2).replace(".", ",")}</span>
                   ) : null}
                 </span>
               )}
-              <span className="text-zinc-400">•</span>
-              <span className="text-zinc-400">{new Date(order.createdAt).toLocaleString("pt-BR")}</span>
+              <span className="text-zinc-300">•</span>
+              <span className="text-zinc-500">{new Date(order.createdAt).toLocaleString("pt-BR")}</span>
             </div>
 
             <div className="mt-1.5 flex flex-wrap gap-2 text-sm">
