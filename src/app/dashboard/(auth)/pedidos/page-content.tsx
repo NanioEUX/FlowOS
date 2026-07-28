@@ -670,9 +670,6 @@ win.close()
                   return (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
                       Dinheiro na entrega
-                      {order.changeFor && order.changeFor > 0 ? (
-                        <span className="text-amber-900">· troco p/ R$ {order.changeFor.toFixed(2).replace(".", ",")}</span>
-                      ) : null}
                     </span>
                   )
                 }
@@ -725,6 +722,9 @@ win.close()
                 <span className="flex items-center gap-1">
                   {normalizePaymentMethod(order.paymentMethod) === "online" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
                   {paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}
+                  {normalizePaymentMethod(order.paymentMethod) === "cash" && order.changeFor && order.changeFor > 0 ? (
+                    <span className="font-semibold text-amber-700">· troco p/ R$ {order.changeFor.toFixed(2).replace(".", ",")}</span>
+                  ) : null}
                 </span>
               )}
               <span className="text-zinc-400">•</span>
@@ -732,11 +732,6 @@ win.close()
             </div>
 
             <div className="mt-1.5 flex flex-wrap gap-2 text-sm">
-              {order.customerPhone && (
-                <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
-                  <MessageCircle className="h-3 w-3" />{order.customerPhone}
-                </a>
-              )}
               {order.trackingToken && order.orderType === "delivery" && false && (
                 <a href={`/pedido/${order.trackingToken}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
                   <ExternalLink className="h-3 w-3" />Rastrear
