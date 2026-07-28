@@ -179,7 +179,15 @@ export async function POST(req: NextRequest) {
     }
 
     let paymentLink = ""
-    const isOnlinePayment = paymentMethod === "asaas" || paymentMethod === "online" || paymentMethod === "pix" || paymentMethod === "card"
+    const isOnlinePayment =
+      paymentMethod === "asaas" ||
+      paymentMethod === "online" ||
+      paymentMethod === "pix" ||
+      paymentMethod === "card"
+    // "card_delivery" / "card_pickup" = cartão NA MÁQUINA do estabelecimento,
+    // não no Asaas. Não deve gerar cobrança online.
+    const isPayOnDeliveryCard =
+      paymentMethod === "card_delivery" || paymentMethod === "card_pickup"
     console.log("[Orders POST] willCreatePayment:", isOnlinePayment, "| provider:", establishment.paymentProvider, "| method:", paymentMethod)
 
     if (isOnlinePayment) {
@@ -353,11 +361,25 @@ export async function GET(req: NextRequest) {
   // dashboard. They'll surface here once paymentStatus becomes "paid".
   // paymentMethod "pix"/"card" come from the public menu (see menu-page.tsx)
   // and represent online payments via Asaas/Inter, so they must also be hidden.
+  // "card_delivery"/"card_pickup" = cartão na máquina (Pagar na entrega),
+  // pagamento presencial — não devem ser escondidos.
   where.AND = [
     {
       OR: [
         { method: { not: "site" } },
-        { paymentMethod: { notIn: ["online", "asaas", "inter", "pix", "card"] } },
+        {
+          paymentMethod: {
+            notIn: [
+              "online",
+              "asaas",
+              "inter",
+              "pix",
+              "card",
+              "card_delivery",
+              "card_pickup",
+            ],
+          },
+        },
         { paymentStatus: "paid" },
       ],
     },

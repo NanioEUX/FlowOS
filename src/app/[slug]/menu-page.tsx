@@ -877,7 +877,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // we block the order.
       const effectivePaymentMethod =
         paymentMethod === "delivery" || paymentMethod === "pickup"
-          ? cashSubMethod || paymentMethod
+          ? cashSubMethod === "card"
+            ? "card_delivery"
+            : cashSubMethod || paymentMethod
           : paymentMethod
       if (
         (paymentMethod === "delivery" || paymentMethod === "pickup") &&

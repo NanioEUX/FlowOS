@@ -51,10 +51,13 @@ const paymentMethodLabels: Record<string, string> = {
 // Legacy paymentMethod values from the cardápio online flow used
 // "delivery" / "pickup" / "asaas" / "pix" / "card". Normalize them so the
 // dashboard renders consistent badges regardless of source.
+// "card_delivery" / "card_pickup" = cartão NA MÁQUINA do estabelecimento
+// (Pagar na Entrega/Retirada + Cartão), normalize to "cash" with badge card.
 function normalizePaymentMethod(method: string | null | undefined): string {
   if (!method) return "online"
   const m = method.toLowerCase()
   if (m === "delivery" || m === "pickup") return "cash"
+  if (m === "card_delivery" || m === "card_pickup") return "cash"
   if (m === "asaas" || m === "inter") return "online"
   return m
 }
