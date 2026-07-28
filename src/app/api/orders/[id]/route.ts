@@ -29,12 +29,24 @@ export async function PATCH(
       return NextResponse.json({ success: true, deleted: true })
     }
 
+    // Pagamentos na entrega são confirmados no momento da finalização do
+    // pedido (entrega/retirada concluída). Evita precisar clicar em botão
+    // separado para marcar como pago.
+    const isPayOnDelivery =
+      order.paymentMethod &&
+      ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(
+        order.paymentMethod
+      )
+    const autoConfirmPayment =
+      status === "delivered" && isPayOnDelivery && order.paymentStatus !== "paid"
+
     const updated = await prisma.order.update({
       where: { id: params.id },
       data: {
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
         ...(status === "out_for_delivery" && { assignedAt: new Date() }),
+        ...(autoConfirmPayment && { paymentStatus: "paid" }),
       },
     })
 
