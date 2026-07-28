@@ -554,9 +554,9 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const nextLabel: Record<string, string> = {
     pending: isOnlinePaymentPending
       ? "Aguardando pagamento"
-      : (isIfoodOrder ? "Aceitar e iniciar produção" : "Iniciar preparo"),
-    payment_pending: isOnlinePaymentPending ? "Aguardando pagamento" : "Iniciar preparo",
-    confirmed: "Iniciar preparo",
+      : "Aceitar e iniciar produção",
+    payment_pending: isOnlinePaymentPending ? "Aguardando pagamento" : "Aceitar e iniciar produção",
+    confirmed: "Aceitar e iniciar produção",
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
