@@ -8,7 +8,7 @@ const IFOOD_ORDERS = "/order/v1.0/orders"
 export async function getIfoodAuth(clientId: string, clientSecret: string): Promise<{ accessToken: string } | null> {
   return new Promise((resolve) => {
     const data = new URLSearchParams({ grantType: "client_credentials", clientId, clientSecret }).toString()
-    const options = { hostname: IFOOD_API, path: IFOOD_AUTH, method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(data) } }
+    const options = { hostname: IFOOD_API, path: IFOOD_AUTH, method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(data), "Accept-Encoding": "identity" } }
     const req = https.request(options, (res) => {
       let body = ""
       res.on("data", (c) => (body += c))
@@ -35,7 +35,7 @@ export async function getIfoodAuth(clientId: string, clientSecret: string): Prom
 
 export async function getIfoodEvents(token: string, merchantId: string): Promise<any[]> {
   return new Promise((resolve) => {
-    const options = { hostname: IFOOD_API, path: IFOOD_EVENTS, method: "GET", headers: { Authorization: `Bearer ${token}`, MerchantId: merchantId } }
+    const options = { hostname: IFOOD_API, path: IFOOD_EVENTS, method: "GET", headers: { Authorization: `Bearer ${token}`, MerchantId: merchantId, "Accept-Encoding": "identity" } }
     const req = https.request(options, (res) => {
       let body = ""
       res.on("data", (c) => (body += c))
