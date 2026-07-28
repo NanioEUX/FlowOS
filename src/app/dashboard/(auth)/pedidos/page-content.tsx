@@ -581,7 +581,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     </style>
   </head>
   <body>
-    <h1>${order.establishmentName || "Estabelecimento"}</h1>
+    <h1>${order.establishment?.name || order.establishmentName || "Estabelecimento"}</h1>
     <h2>--- CUPOM ---</h2>
     <div class="order-number">Pedido #${order.orderNumber || order.id.slice(0, 8)}</div>
     <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
