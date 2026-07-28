@@ -801,7 +801,7 @@ win.close()
               <button onClick={printReceipt} className="rounded-lg p-2 text-zinc-400 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600 transition-colors" title="Imprimir">
                 <Printer className="h-4 w-4" />
               </button>
-              {nextStatus && order.status !== "delivered" && order.status !== "cancelled" && (
+               {nextStatus && !isOnlinePaymentPending && order.status !== "delivered" && order.status !== "cancelled" && (
                 <button onClick={() => onUpdateStatus(order.id, nextStatus!)} className="rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 shadow-sm transition-colors flex items-center gap-1">
                   {nextLabel[order.status] || "Avançar"}
                 </button>
