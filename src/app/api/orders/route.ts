@@ -407,9 +407,11 @@ export async function GET(req: NextRequest) {
   // - Pedidos do cardápio digital com pagamento NA ENTREGA (cash/card na
   //   máquina) → sempre visíveis (entram em produção imediatamente).
   // - Pedidos do cardápio digital com pagamento ONLINE (Asaas/Inter) →
-  //   só aparecem após paymentStatus = "paid".
+  //   aparecem após paymentStatus = "paid" OU se o pedido já foi cancelado
+  //   (para que o painel de "Cancelados" continue exibindo-os).
   // Só escondemos quando TODAS as condições abaixo forem verdadeiras:
   //   method === "site" AND paymentMethod online AND paymentStatus !== "paid"
+  //   AND status !== "cancelled"
   where.AND = [
     {
       OR: [
@@ -426,13 +428,17 @@ export async function GET(req: NextRequest) {
           },
         },
         { paymentStatus: "paid" },
+        { status: "cancelled" },
       ],
     },
   ]
 
   const orders = await prisma.order.findMany({
     where,
-    include: { establishment: { select: { name: true, phone: true, slug: true } } },
+    include: {
+      establishment: { select: { name: true, phone: true, slug: true } },
+      customer: { select: { id: true, name: true, phone: true, cancellationCount: true, blockedUntil: true } },
+    },
     orderBy: { createdAt: "desc" },
   })
 

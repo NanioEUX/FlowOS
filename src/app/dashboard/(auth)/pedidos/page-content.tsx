@@ -83,6 +83,7 @@ export default function PedidosPage() {
   const [filterType, setFilterType] = useState("all")
   const [filterSource, setFilterSource] = useState("all") // Origem: all | ifood | site | whatsapp | manual
   const [filterStatus, setFilterStatus] = useState("all")
+  const [filterCancelledBy, setFilterCancelledBy] = useState("all") // all | customer | merchant | system
   const [unreadOrders, setUnreadOrders] = useState<Record<string, { count: number; name: string; message: string }>>({})
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
 
@@ -174,6 +175,7 @@ export default function PedidosPage() {
     const matchesType = filterType === "all" || o.orderType === filterType
     const matchesSource = filterSource === "all" || o.method === filterSource
     const matchesStatus = filterStatus === "all" || o.status === filterStatus
+    const matchesCancelledBy = filterCancelledBy === "all" || o.cancelledBy === filterCancelledBy
     const d = new Date(o.createdAt)
     const now = new Date()
     let matchesPeriod = true
@@ -187,7 +189,7 @@ export default function PedidosPage() {
       const start = new Date(now.getTime() - 30 * 86400000)
       matchesPeriod = d >= start
     }
-    return matchesName && matchesMotoboy && matchesType && matchesSource && matchesPeriod && matchesStatus
+    return matchesName && matchesMotoboy && matchesType && matchesSource && matchesPeriod && matchesStatus && matchesCancelledBy
   })
 
   function groupOrders(list: any[]) {
@@ -317,6 +319,32 @@ export default function PedidosPage() {
             )
           })}
         </div>
+        {filterStatus === "cancelled" && (
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="text-xs font-medium text-zinc-600">Cancelado por:</span>
+            {[
+              { value: "all", label: "Todos" },
+              { value: "customer", label: "Cliente" },
+              { value: "merchant", label: "Estabelecimento" },
+              { value: "system", label: "Sistema" },
+            ].map((c) => {
+              const active = filterCancelledBy === c.value
+              return (
+                <button
+                  key={c.value}
+                  onClick={() => setFilterCancelledBy(c.value)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-red-600 text-white shadow-sm"
+                      : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Global message notification bar */}
@@ -773,6 +801,45 @@ win.close()
             </div>
 
             {order.orderType === "delivery" && order.customerAddress && <p className="mt-1 text-sm text-zinc-500">📍 {order.customerAddress}</p>}
+
+            {order.status === "cancelled" && (
+              <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5 text-sm space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                    {order.cancelledBy === "customer"
+                      ? "Cancelado pelo cliente"
+                      : order.cancelledBy === "merchant"
+                      ? "Cancelado pelo estabelecimento"
+                      : order.cancelledBy === "system"
+                      ? "Cancelado pelo sistema"
+                      : "Cancelado"}
+                  </span>
+                  {order.cancellationDate && (
+                    <span className="text-xs text-red-700/80">
+                      em {new Date(order.cancellationDate).toLocaleString("pt-BR")}
+                    </span>
+                  )}
+                  {order.customer?.cancellationCount >= 2 && (
+                    <span
+                      className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/30"
+                      title={`Cliente já cancelou ${order.customer.cancellationCount} pedidos neste estabelecimento`}
+                    >
+                      ⚠ Cliente reincidente ({order.customer.cancellationCount} cancelamentos)
+                    </span>
+                  )}
+                  {order.customer?.blockedUntil && new Date(order.customer.blockedUntil) > new Date() && (
+                    <span className="inline-flex items-center rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-semibold text-white ring-1 ring-inset ring-zinc-700">
+                      🚫 Bloqueado até {new Date(order.customer.blockedUntil).toLocaleDateString("pt-BR")}
+                    </span>
+                  )}
+                </div>
+                {order.cancellationReason && (
+                  <p className="text-red-900">
+                    <span className="font-semibold">Motivo:</span> {order.cancellationReason}
+                  </p>
+                )}
+              </div>
+            )}
 
             {items.length > 0 && (
               <div className="mt-2 rounded-lg bg-zinc-50 border border-zinc-100 p-2.5 space-y-0.5 text-sm text-zinc-600">
