@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -877,25 +877,44 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       } catch {}
     }
 
+    // Se o cliente já tem pedido na entrega em andamento, força pagamento
+    // online no novo pedido (qualquer tentativa de pagar na entrega é
+    // convertida para Pix/Card automaticamente).
+    const hasOpenDeliveryOrder =
+      customerOrders.length > 0 &&
+      customerOrders.some((o: any) =>
+        ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
+        ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
+      )
+    let effectivePaymentMethod = paymentMethod
+    if (hasOpenDeliveryOrder && (paymentMethod === "delivery" || paymentMethod === "pickup")) {
+      console.log("[submitOrder] Forçando pagamento online — pedido na entrega em andamento")
+      effectivePaymentMethod = "pix"
+    }
+
     try {
       console.log("[submitOrder] calling API...")
       // If the user picked "Pagar na Entrega/Retirada" we need a sub-method
       // (cash/card) and, for cash, a changeFor amount. Until that is filled
       // we block the order.
-      const effectivePaymentMethod =
-        paymentMethod === "delivery" || paymentMethod === "pickup"
-          ? cashSubMethod === "card"
-            ? "card_delivery"
-            : cashSubMethod || paymentMethod
-          : paymentMethod
-      if (
-        (paymentMethod === "delivery" || paymentMethod === "pickup") &&
-        !cashSubMethod
-      ) {
-        setOrderError("Escolha Dinheiro ou Cartão para pagar na entrega")
-        return
+      let resolvedMethod: any = effectivePaymentMethod
+      if (resolvedMethod === "delivery" || resolvedMethod === "pickup") {
+        if (!cashSubMethod) {
+          setOrderError("Escolha Dinheiro ou Cartão para pagar na entrega")
+          return
+        }
+        resolvedMethod = cashSubMethod === "card" ? "card_delivery" : cashSubMethod || resolvedMethod
       }
-      const changeForValue = cashSubMethod === "cash" && changeFor ? Number(changeFor) : null
+      const isOnlinePaymentMethod =
+        resolvedMethod === "pix" ||
+        resolvedMethod === "card" ||
+        resolvedMethod === "online" ||
+        resolvedMethod === "asaas" ||
+        resolvedMethod === "inter"
+      const changeForValue =
+        !isOnlinePaymentMethod && cashSubMethod === "cash" && changeFor
+          ? Number(changeFor)
+          : null
 
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -909,7 +928,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           customerCep: cep || "",
           customerCpf: customer.cpf || "",
           orderType,
-          paymentMethod: effectivePaymentMethod,
+          paymentMethod: resolvedMethod,
           changeFor: changeForValue,
           items: cart,
           total,
@@ -2383,6 +2402,18 @@ onPaymentConfirmed={handlePaymentSuccess}
 
               <div>
                 <p className="mb-2 text-sm font-medium" style={{ color: theme.textSubtle }}>Pagamento</p>
+                {customerOrders.length > 0 && customerOrders.some((o: any) =>
+                  ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
+                  ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
+                ) && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                    <Shield className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold">Você tem um pedido na entrega em andamento.</p>
+                      <p className="mt-0.5">Este novo pedido será pago online (Pix ou Cartão) automaticamente.</p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {availablePayments.map((p) => {
                     // Desabilita "Pagar na Entrega/Retirada" se já tem pedido
