@@ -621,13 +621,24 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     // ainda pendente (cliente precisa pagar pra fazer novo pedido).
     // Pedidos na entrega (com ou sem aceitação) NÃO travam — o novo pedido
     // é forçado a pagamento online automaticamente.
-    const pendingFromResult = orderResult?.paymentLink && !orderResult.paymentDone
-      ? { id: orderResult.orderId, orderNumber: orderResult.orderNumber || 0, items: [] }
-      : null
-    const pendingFromLast = lastOrder?.paymentLink && !lastOrder.paymentDone
-      ? { id: lastOrder.orderId, orderNumber: lastOrder.orderNumber || 0, items: [] }
-      : null
-    const pendingOrder = pendingFromResult || pendingFromLast
+    let pendingItems: any[] = []
+    let pendingOrderNumberVal: number | null = null
+    if (orderResult?.paymentLink && !orderResult.paymentDone && orderResult.orderNumber) {
+      pendingItems = []
+      pendingOrderNumberVal = orderResult.orderNumber
+    } else if (lastOrder?.paymentLink && !lastOrder.paymentDone) {
+      pendingOrderNumberVal = lastOrder.orderNumber ?? null
+      // Tenta pegar items do customerOrders (mesmo orderId)
+      const sameOrder = customerOrders.find((o: any) => o.id === lastOrder.orderId)
+      if (sameOrder?.items) {
+        try {
+          pendingItems = typeof sameOrder.items === "string" ? JSON.parse(sameOrder.items) : sameOrder.items
+        } catch {
+          pendingItems = []
+        }
+      }
+    }
+    const pendingOrder = pendingOrderNumberVal !== null ? { orderNumber: pendingOrderNumberVal } : null
 
     const inProgress = phone && customerOrders.length > 0
       ? customerOrders.find((o: any) =>
@@ -637,8 +648,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     // Pending payment order - open cart directly with locked items
     if (pendingOrder) {
-      setPendingOrderItems(pendingOrder.items || [])
-      setPendingOrderNumber(pendingOrder.orderNumber)
+      setPendingOrderItems(pendingItems)
+      setPendingOrderNumber(pendingOrderNumberVal)
       setShowCart(true)
       return
     }
@@ -2151,7 +2162,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               </div>
             )}
 
-            {cart.length === 0 ? (
+            {cart.length === 0 && !pendingOrderNumber ? (
               <p className="py-8 text-center" style={{ color: theme.textMuted }}>Carrinho vazio</p>
             ) : (
               <div className="space-y-3">
@@ -2160,7 +2171,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium" style={{ color: theme.primary }}>Pedido #{pendingOrderNumber} - Aguardando pagamento</p>
                   </div>
                 )}
-{cart.map((item) => {
+{(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
                   const isPending = !!pendingOrderNumber
                   const isFromPendingOrder = isPending
                   return (
