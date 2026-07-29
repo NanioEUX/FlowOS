@@ -526,8 +526,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [customerData, setCustomerData] = useState<CustomerData | null>(null)
   const [phoneInput, setPhoneInput] = useState("")
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
+  // Quando há pedido pendente (Pix), usa os items do pedido salvo em
+  // pendingOrderItems. Caso contrário, usa o cart normal.
+  const displayItems = pendingOrderNumber ? pendingOrderItems : cart
+  const subtotal = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0)
   const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
 
   // Load customer orders on mount when phone is available
