@@ -2384,11 +2384,38 @@ onPaymentConfirmed={handlePaymentSuccess}
               <div>
                 <p className="mb-2 text-sm font-medium" style={{ color: theme.textSubtle }}>Pagamento</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {availablePayments.map((p) => (
+                  {availablePayments.map((p) => {
+                    // Desabilita "Pagar na Entrega/Retirada" se já tem pedido
+                    // na entrega em andamento. Backend valida de qualquer jeito.
+                    const isDeliveryOption = p.key === "delivery" || p.key === "pickup"
+                    const blockedByOpenDelivery =
+                      isDeliveryOption &&
+                      customerOrders.length > 0 &&
+                      customerOrders.some((o: any) =>
+                        ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
+                        ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
+                      )
+                    return (
                     <button
                       key={p.key}
                       type="button"
+                      disabled={blockedByOpenDelivery}
                       onClick={() => {
+                        // Bloqueia escolha de "na entrega" se o cliente já tem
+                        // pedido online pendente — vai cancelar o atual.
+                        const switchingToDelivery = p.key === "delivery" || p.key === "pickup"
+                        if (switchingToDelivery && customerOrders.length > 0) {
+                          const pendingOnline = customerOrders.find((o: any) =>
+                            o.paymentStatus === "pending" &&
+                            ["online", "asaas", "inter", "pix"].includes(o.paymentMethod)
+                          )
+                          if (pendingOnline) {
+                            const ok = window.confirm(
+                              `Você tem o pedido #${pendingOnline.orderNumber} com pagamento online pendente. Se mudar para pagamento na entrega, esse pedido será cancelado. Deseja continuar?`
+                            )
+                            if (!ok) return
+                          }
+                        }
                         setPaymentMethod(p.key as any)
                         // Reset the cash/card sub-selection when switching away.
                         if (p.key !== "delivery" && p.key !== "pickup") {
@@ -2399,13 +2426,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                           setChangeFor("")
                         }
                       }}
-                      className="flex items-center gap-2 rounded-lg border p-3 text-sm"
+                      className="flex items-center gap-2 rounded-lg border p-3 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       style={paymentMethod === p.key ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
+                      title={blockedByOpenDelivery ? "Você tem um pedido na entrega em andamento" : undefined}
                     >
                       {p.icon}
                       {p.label}
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
                 {(paymentMethod === "delivery" || paymentMethod === "pickup") && (
                   <div className="mt-2 space-y-2">

@@ -27,18 +27,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
     }
 
-    const trackingToken = crypto.randomBytes(12).toString("hex")
-
-    // For presencial mesa orders: status=new, no payment at creation
-    const isMesa = orderType === "presencial" && tableNumber
-    const initialStatus = body.status || (isMesa ? "new" : "pending")
-
     // Parse items and calculate totals server-side (never trust client-sent total)
     const parsedItems = typeof items === "string" ? JSON.parse(items) : items
     const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
     const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
     const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
     const calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
+
+    const isPayOnDelivery =
+      paymentMethod &&
+      ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(paymentMethod)
+
+    // Regra: limite de valor para pagar na entrega
+    if (
+      isPayOnDelivery &&
+      establishment.maxPayOnDeliveryAmount != null &&
+      calculatedTotal > establishment.maxPayOnDeliveryAmount
+    ) {
+      return NextResponse.json(
+        {
+          error: `Pedidos acima de R$ ${establishment.maxPayOnDeliveryAmount.toFixed(2).replace(".", ",")} só podem ser pagos online.`,
+          code: "pay_on_delivery_limit_exceeded",
+        },
+        { status: 400 }
+      )
+    }
+
+    // Regra: bloqueia novo pedido na entrega se já existe um em andamento
+    if (
+      isPayOnDelivery &&
+      establishment.blockConcurrentPayOnDelivery &&
+      customerPhone
+    ) {
+      const openDeliveryOrder = await prisma.order.findFirst({
+        where: {
+          establishmentId,
+          customerPhone,
+          status: { in: ["pending", "confirmed", "preparing", "ready"] },
+          paymentMethod: { in: ["cash", "delivery", "pickup", "card_delivery", "card_pickup"] },
+        },
+        select: { id: true, orderNumber: true },
+      })
+      if (openDeliveryOrder) {
+        return NextResponse.json(
+          {
+            error: `Você tem o pedido #${openDeliveryOrder.orderNumber} com pagamento na entrega em andamento. Pague online para fazer um novo pedido.`,
+            code: "concurrent_pay_on_delivery_blocked",
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    const trackingToken = crypto.randomBytes(12).toString("hex")
+
+    // For presencial mesa orders: status=new, no payment at creation
+    const isMesa = orderType === "presencial" && tableNumber
+    const initialStatus = body.status || (isMesa ? "new" : "pending")
 
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined

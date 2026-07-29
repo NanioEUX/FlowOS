@@ -52,6 +52,12 @@ model Establishment {
   minimumOrderValue        Float?         @default(0)
   minimumOrderApplyToDelivery Boolean    @default(true)
   minimumOrderApplyToPickup Boolean       @default(false)
+  // Limite de valor (R$) para pedidos na entrega. Pedidos acima desse
+  // valor só podem ser pagos online. Default: R$ 150.
+  maxPayOnDeliveryAmount  Float?         @default(150)
+  // Bloqueia novo pedido na entrega quando já existe um em andamento
+  // (pending/confirmed/preparing/ready). Default: true.
+  blockConcurrentPayOnDelivery Boolean   @default(true)
   ifoodMerchantId       String?
   ifoodAccessToken      String?
   ifoodRefreshToken     String?
