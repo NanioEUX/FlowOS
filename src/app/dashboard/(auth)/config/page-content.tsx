@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -56,10 +56,14 @@ export default function ConfigPage() {
     deliveryFreeAbove: "0",
     defaultTheme: "dark",
     tableCount: "10",
+    maxPayOnDeliveryAmount: "150",
+    blockConcurrentPayOnDelivery: true,
   })
 
   const [asaasMode, setAsaasMode] = useState<"both" | "card_only">("both")
   const [paymentConfig, setPaymentConfig] = useState({ online: true, delivery: true, pickup: true })
+  const [deliveryLimit, setDeliveryLimit] = useState("150")
+  const [blockConcurrent, setBlockConcurrent] = useState(true)
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -106,7 +110,11 @@ export default function ConfigPage() {
             deliveryFreeAbove: String(data.deliveryFreeAbove || "0"),
             defaultTheme: data.defaultTheme || "dark",
             tableCount: String(data.tableCount || 10),
+            maxPayOnDeliveryAmount: String(data.maxPayOnDeliveryAmount ?? 150),
+            blockConcurrentPayOnDelivery: data.blockConcurrentPayOnDelivery ?? true,
           })
+          setDeliveryLimit(String(data.maxPayOnDeliveryAmount ?? 150))
+          setBlockConcurrent(data.blockConcurrentPayOnDelivery ?? true)
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -140,6 +148,8 @@ export default function ConfigPage() {
           businessHours: JSON.stringify(businessHours),
           defaultTheme: form.defaultTheme,
           tableCount: Number(form.tableCount) || 10,
+          maxPayOnDeliveryAmount: Number(deliveryLimit) || 150,
+          blockConcurrentPayOnDelivery: blockConcurrent,
         }),
       })
 
@@ -682,6 +692,46 @@ export default function ConfigPage() {
                     <span className="font-medium text-zinc-900">Pagar na Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente paga ao buscar</p>
+                </div>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Limite de Pagamento na Entrega */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Limite de Pagamento na Entrega</h3>
+            <p className="text-sm text-zinc-500">Defina um valor máximo para pedidos pagos na entrega. Pedidos acima desse valor só podem ser pagos online.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Valor máximo (R$)</label>
+                <div className="relative mt-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">R$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={10}
+                    value={deliveryLimit}
+                    onChange={(e) => setDeliveryLimit(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-zinc-400">Pedidos acima desse valor só podem ser pagos online. Use 0 para desabilitar a entrega.</p>
+              </div>
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+                <input
+                  type="checkbox"
+                  checked={blockConcurrent}
+                  onChange={(e) => setBlockConcurrent(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-zinc-900">Bloquear segundo pedido na entrega</span>
+                  </div>
+                  <p className="text-xs text-zinc-500">Enquanto um pedido na entrega está em andamento (pendente, confirmado, preparando ou pronto), o cliente só pode fazer novos pedidos com pagamento online.</p>
                 </div>
               </label>
             </div>
