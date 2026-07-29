@@ -34,9 +34,11 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  // Then fetch orders for the Pedidos module:
-// - Online payments: paymentStatus = "paid"
-// - Cash on delivery/pickup: paymentMethod in ["delivery", "pickup"] AND status != "pending" (estabelecimento aceitou)
+  // Then fetch orders for the customer's "Meus Pedidos" tab:
+  // - Online payments: paymentStatus = "paid"
+  // - Pay-on-delivery (cash/card/cash_sub/card_delivery/card_pickup): any
+  //   status other than "pending" — i.e. establishment has accepted the
+  //   order. Once the merchant accepts, the customer sees the order here.
   const orders = await prisma.order.findMany({
     where: {
       customerPhone: phone,
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
       OR: [
         { paymentStatus: "paid" },
         {
-          paymentMethod: { in: ["delivery", "pickup"] },
+          paymentMethod: { in: ["cash", "delivery", "pickup", "card_delivery", "card_pickup"] },
           status: { not: "pending" },
         },
       ],

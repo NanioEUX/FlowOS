@@ -937,6 +937,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         paymentStatus: data.order?.paymentStatus,
       })
 
+      // Clear cart and pending state right after the order is successfully
+      // created, regardless of payment method. Otherwise pay-on-delivery
+      // orders leave the cart dirty and the customer sees stale items.
+      setCart([])
+      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+      setShowCart(false)
+      setChangeFor("")
+
       setOrderResult({
         success: true,
         trackingUrl: data.trackingUrl,
@@ -961,8 +969,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
         }
       }
-
-      setEditingAddress(false)
 
       if (data.paymentLink) {
         console.log("[submitOrder]Abrindo PaymentModal em 300ms...")
