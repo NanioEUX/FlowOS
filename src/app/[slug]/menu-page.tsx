@@ -717,16 +717,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       openIdentifyModal()
       return
     }
-    // Check if has pending payment order (but skip if payment already done)
+    // Check if has pending online payment (Pix/Card) — pay-on-delivery
+    // orders never block; the new order is forced to online.
     const paymentDone = orderResult?.paymentDone || lastOrder?.paymentDone
     if (!paymentDone && (customerOrders.length > 0 || (lastOrder?.paymentLink))) {
       const phone = customer.phone || customerData?.phone
       if (phone) {
-        const pendingOrder = customerOrders.find((o: any) => o.paymentStatus === "pending")
-        const orderId = pendingOrder?.id || lastOrder?.orderId
-        const orderNumber = pendingOrder?.orderNumber || 0
-        if (orderId) {
-          // Show action modal instead of silently blocking
+        const pendingOnlineOrder = customerOrders.find((o: any) =>
+          o.paymentStatus === "pending" && o.paymentLink
+        )
+        const orderId = pendingOnlineOrder?.id || lastOrder?.paymentLink ? lastOrder?.orderId : null
+        const orderNumber = pendingOnlineOrder?.orderNumber || 0
+        if (orderId && pendingOnlineOrder) {
+          // Show action modal so customer can pay or cancel the previous
+          // online order before starting a new one.
           setPendingOrderAction({ orderId, orderNumber, productId: product.id })
           return
         }
