@@ -241,7 +241,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
 
-  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number } | null>(null)
+  const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number; items?: CartItem[] } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
   const [showOrdersList, setShowOrdersList] = useState(false)
@@ -624,20 +624,29 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     // ainda pendente (cliente precisa pagar pra fazer novo pedido).
     // Pedidos na entrega (com ou sem aceitação) NÃO travam — o novo pedido
     // é forçado a pagamento online automaticamente.
-    let pendingItems: any[] = []
+    let pendingItems: CartItem[] = []
     let pendingOrderNumberVal: number | null = null
     if (orderResult?.paymentLink && !orderResult.paymentDone && orderResult.orderNumber) {
-      pendingItems = []
+      pendingItems = lastOrder?.items ?? []
       pendingOrderNumberVal = orderResult.orderNumber
     } else if (lastOrder?.paymentLink && !lastOrder.paymentDone) {
       pendingOrderNumberVal = lastOrder.orderNumber ?? null
-      // Tenta pegar items do customerOrders (mesmo orderId)
-      const sameOrder = customerOrders.find((o: any) => o.id === lastOrder.orderId)
-      if (sameOrder?.items) {
-        try {
-          pendingItems = typeof sameOrder.items === "string" ? JSON.parse(sameOrder.items) : sameOrder.items
-        } catch {
-          pendingItems = []
+      // Os itens foram salvos no lastOrder (localStorage) no momento da
+      // criação do pedido, justamente para este caso: reabrição do carrinho
+      // antes do pagamento PIX. Não dependemos mais da API /api/orders/customer
+      // (que filtra pedidos pendentes).
+      if (lastOrder.items && lastOrder.items.length > 0) {
+        pendingItems = lastOrder.items
+      } else {
+        // Fallback legado: tenta pegar do customerOrders pelo orderId.
+        const sameOrder = customerOrders.find((o: any) => o.id === lastOrder.orderId)
+        if (sameOrder?.items) {
+          try {
+            const parsed = typeof sameOrder.items === "string" ? JSON.parse(sameOrder.items) : sameOrder.items
+            pendingItems = Array.isArray(parsed) ? parsed : []
+          } catch {
+            pendingItems = []
+          }
         }
       }
     }
@@ -980,6 +989,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         paymentStatus: data.order?.paymentStatus,
       })
 
+      // Snapshot cart items BEFORE clearing, so we can persist them with
+      // the pending order and show them in the cart if the customer closes
+      // the PIX modal without paying and reopens the cart later.
+      const orderItemsSnapshot: CartItem[] = cart.map((it) => ({ ...it }))
+
       // Clear cart and pending state right after the order is successfully
       // created, regardless of payment method. Otherwise pay-on-delivery
       // orders leave the cart dirty and the customer sees stale items.
@@ -1003,7 +1017,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 
       if (data.order?.id && data.trackingUrl) {
-        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false, orderNumber: data.order.orderNumber }
+        const lastOrd = { orderId: data.order.id, trackingUrl: data.trackingUrl, paymentLink: data.paymentLink || "", timestamp: Date.now(), paymentMethod: paymentMethod, total, paymentDone: false, orderNumber: data.order.orderNumber, items: orderItemsSnapshot }
         setLastOrder(lastOrd)
         localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(lastOrd))
         // Clear old countdown localStorage for new order
