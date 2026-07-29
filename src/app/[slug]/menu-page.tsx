@@ -1160,6 +1160,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         setCancelModalOrderId(null)
         setPendingOrderItems([])
         setPendingOrderNumber(null)
+        // IMPORTANTE: limpar também o orderResult. Caso contrário, o openCart
+        // ainda enxerga paymentLink+orderNumber pendentes e força a abertura
+        // do carrinho vazio (com pendingOrderItems=[]) em vez de mostrar os
+        // itens que o cliente acabou de adicionar ao cart.
+        if (orderResult?.orderId === orderId) {
+          setOrderResult(null)
+        }
         loadCustomerOrders()
         // Close tracking if showing the cancelled order
         if (trackingOrder?.id === orderId) {
