@@ -10,11 +10,9 @@ export async function PATCH(
 ) {
   try {
     const auth = verifyAuth(req)
-    if (!auth) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
-    const { status, paymentStatus, cancellationReason, cancelledBy } = await req.json()
+    const body = await req.json().catch(() => ({} as any))
+    const { status, paymentStatus, cancellationReason, cancelledBy } = body
+    const tokenFromBody = (body && (body.trackingToken || body.token)) || null
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
@@ -24,9 +22,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
     }
 
-    // Tenant isolation: orders can only be modified by users of the same establishment
-    if (order.establishmentId !== auth.establishmentId) {
-      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    // Authorization:
+    // - Authenticated establishment users (admin/caixa/entregador): can do any
+    //   update, but only on orders of their own establishment.
+    // - Anonymous customers: can ONLY cancel their own order, and only via
+    //   tracking token + only when payment is still pending. This matches the
+    //   same pattern used by /api/orders/[id]/messages and /payment-status.
+    if (auth) {
+      if (order.establishmentId !== auth.establishmentId) {
+        return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+      }
+    } else if (status === "cancelled" && tokenFromBody && order.trackingToken === tokenFromBody) {
+      // Customer-initiated cancel with valid tracking token
+      // Falls through to the cancel branch below (which has its own
+      // paymentStatus === "pending" check).
+    } else {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
     if (order.paymentStatus !== "pending" && status === "cancelled") {

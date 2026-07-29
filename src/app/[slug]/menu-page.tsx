@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
+import { useToast } from "@/components/toast"
 
 interface Product {
   id: string
@@ -115,6 +116,7 @@ function getFirstName(name: string): string {
 export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
+  const { toast } = useToast()
   const [darkMode, setDarkMode] = useState(true)
   const [mounted, setMounted] = useState(false)
 
@@ -1141,6 +1143,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   async function cancelOrder(orderId: string, reason: string) {
     setCancelling(true)
     try {
+      // Cliente anônimo autentica via trackingToken salvo no lastOrder
+      const trackingToken = extractTrackingToken(lastOrder?.trackingUrl)
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1149,6 +1153,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           paymentStatus: "cancelled",
           cancelledBy: "customer",
           cancellationReason: reason || null,
+          trackingToken,
         }),
       })
       if (res.ok) {
@@ -1169,8 +1174,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
           setShowCart(false)
         }
+        toast("Pedido cancelado", "success")
+      } else {
+        const errBody = await res.json().catch(() => null)
+        toast(errBody?.error || "Não foi possível cancelar o pedido", "error")
       }
-    } catch {} finally {
+    } catch (e: any) {
+      console.error("[cancelOrder] erro:", e?.message)
+      toast("Erro ao cancelar o pedido", "error")
+    } finally {
       setCancelling(false)
     }
   }
