@@ -63,12 +63,54 @@ export async function PATCH(
         })
 
         if (order.customerId) {
-          await tx.customer.update({
+          const updatedCustomer = await tx.customer.update({
             where: { id: order.customerId },
             data: {
               cancellationCount: { increment: 1 },
             },
           })
+
+          // Regra automática de bloqueio: se este estabelecimento tiver
+          // cancellationBlockEnabled=true e o cliente (atualizado) tiver
+          // cancelado N ou mais pedidos nos últimos X dias, bloqueia o
+          // pagamento na entrega por Y dias (Customer.blockedUntil).
+          if (cancelledByFinal === "customer") {
+            const establishment = await tx.establishment.findUnique({
+              where: { id: order.establishmentId },
+              select: {
+                cancellationBlockEnabled: true,
+                cancellationBlockThreshold: true,
+                cancellationBlockWindowDays: true,
+                cancellationBlockDurationDays: true,
+              },
+            })
+            if (
+              establishment?.cancellationBlockEnabled &&
+              establishment.cancellationBlockThreshold > 0
+            ) {
+              const windowStart = new Date(
+                Date.now() - establishment.cancellationBlockWindowDays * 86400000
+              )
+              const recentCancellations = await tx.order.count({
+                where: {
+                  customerId: order.customerId,
+                  establishmentId: order.establishmentId,
+                  status: "cancelled",
+                  cancelledBy: "customer",
+                  cancellationDate: { gte: windowStart },
+                },
+              })
+              if (recentCancellations >= establishment.cancellationBlockThreshold) {
+                const blockedUntil = new Date(
+                  Date.now() + establishment.cancellationBlockDurationDays * 86400000
+                )
+                await tx.customer.update({
+                  where: { id: order.customerId },
+                  data: { blockedUntil },
+                })
+              }
+            }
+          }
         }
 
         // Mantém o CancellationLog como snapshot adicional de auditoria

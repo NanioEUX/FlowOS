@@ -64,6 +64,10 @@ export default function ConfigPage() {
   const [paymentConfig, setPaymentConfig] = useState({ online: true, delivery: true, pickup: true })
   const [deliveryLimit, setDeliveryLimit] = useState("150")
   const [blockConcurrent, setBlockConcurrent] = useState(true)
+  const [cancellationBlockEnabled, setCancellationBlockEnabled] = useState(false)
+  const [cancellationBlockThreshold, setCancellationBlockThreshold] = useState("3")
+  const [cancellationBlockWindowDays, setCancellationBlockWindowDays] = useState("7")
+  const [cancellationBlockDurationDays, setCancellationBlockDurationDays] = useState("7")
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -115,6 +119,10 @@ export default function ConfigPage() {
           })
           setDeliveryLimit(String(data.maxPayOnDeliveryAmount ?? 150))
           setBlockConcurrent(data.blockConcurrentPayOnDelivery ?? true)
+          setCancellationBlockEnabled(data.cancellationBlockEnabled ?? false)
+          setCancellationBlockThreshold(String(data.cancellationBlockThreshold ?? 3))
+          setCancellationBlockWindowDays(String(data.cancellationBlockWindowDays ?? 7))
+          setCancellationBlockDurationDays(String(data.cancellationBlockDurationDays ?? 7))
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -150,6 +158,10 @@ export default function ConfigPage() {
           tableCount: Number(form.tableCount) || 10,
           maxPayOnDeliveryAmount: Number(deliveryLimit) || 150,
           blockConcurrentPayOnDelivery: blockConcurrent,
+          cancellationBlockEnabled,
+          cancellationBlockThreshold: Number(cancellationBlockThreshold) || 3,
+          cancellationBlockWindowDays: Number(cancellationBlockWindowDays) || 7,
+          cancellationBlockDurationDays: Number(cancellationBlockDurationDays) || 7,
         }),
       })
 
@@ -734,6 +746,72 @@ export default function ConfigPage() {
                   <p className="text-xs text-zinc-500">Enquanto um pedido na entrega está em andamento (pendente, confirmado, preparando ou pronto), o cliente só pode fazer novos pedidos com pagamento online.</p>
                 </div>
               </label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloqueio por cancelamentos */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Bloqueio por cancelamentos</h3>
+            <p className="text-sm text-zinc-500">Quando um cliente cancela pedidos com frequência, o pagamento na entrega é bloqueado automaticamente. Pedidos online (PIX/Cartão) continuam liberados.</p>
+            <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+              <input
+                type="checkbox"
+                checked={cancellationBlockEnabled}
+                onChange={(e) => setCancellationBlockEnabled(e.target.checked)}
+                className="mt-1 h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+              />
+              <div>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-zinc-400" />
+                  <span className="font-medium text-zinc-900">Ativar bloqueio automático</span>
+                </div>
+                <p className="text-xs text-zinc-500">Recomendado para reduzir cancelamentos abusivos no pagamento na entrega.</p>
+              </div>
+            </label>
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-3 ${cancellationBlockEnabled ? "" : "opacity-50 pointer-events-none"}`}>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Nº de cancelamentos (N)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={cancellationBlockThreshold}
+                  onChange={(e) => setCancellationBlockThreshold(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Quantos cancelamentos disparam o bloqueio.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Janela (X dias)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={cancellationBlockWindowDays}
+                  onChange={(e) => setCancellationBlockWindowDays(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Período em que os cancelamentos são contados.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Bloqueio (Y dias)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={cancellationBlockDurationDays}
+                  onChange={(e) => setCancellationBlockDurationDays(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Por quantos dias o pagamento na entrega fica bloqueado.</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3 text-xs text-zinc-600">
+              <strong>Exemplo:</strong> com N={cancellationBlockThreshold}, X={cancellationBlockWindowDays} e Y={cancellationBlockDurationDays},
+              um cliente que cancelar {cancellationBlockThreshold} pedidos em {cancellationBlockWindowDays} dias
+              ficará impedido de pagar na entrega por {cancellationBlockDurationDays} dias.
             </div>
           </CardContent>
         </Card>

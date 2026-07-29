@@ -58,6 +58,12 @@ model Establishment {
   // Bloqueia novo pedido na entrega quando já existe um em andamento
   // (pending/confirmed/preparing/ready). Default: true.
   blockConcurrentPayOnDelivery Boolean   @default(true)
+  // Bloqueio automático por cancelamentos: se um cliente cancelar N ou mais
+  // pedidos em X dias, fica impedido de pagar na entrega por Y dias.
+  cancellationBlockEnabled     Boolean    @default(false)
+  cancellationBlockThreshold   Int        @default(3)
+  cancellationBlockWindowDays  Int        @default(7)
+  cancellationBlockDurationDays Int       @default(7)
   ifoodMerchantId       String?
   ifoodAccessToken      String?
   ifoodRefreshToken     String?

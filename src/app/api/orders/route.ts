@@ -38,6 +38,30 @@ export async function POST(req: NextRequest) {
       paymentMethod &&
       ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(paymentMethod)
 
+    // Regra: cliente bloqueado por excesso de cancelamentos (config por
+    // estabelecimento: cancellationBlockEnabled). Se bloqueado, só permite
+    // pagamento online (PIX/Cartão).
+    if (isPayOnDelivery && customerPhone) {
+      const blockedCustomer = await prisma.customer.findFirst({
+        where: {
+          phone: customerPhone,
+          establishmentId,
+          blockedUntil: { gt: new Date() },
+        },
+        select: { blockedUntil: true },
+      })
+      if (blockedCustomer) {
+        const untilStr = new Date(blockedCustomer.blockedUntil!).toLocaleDateString("pt-BR")
+        return NextResponse.json(
+          {
+            error: `Você está com pagamento na entrega bloqueado até ${untilStr} por excesso de cancelamentos. Por favor, finalize este pagamento online.`,
+            code: "blocked_until",
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     // Regra: limite de valor para pagar na entrega
     if (
       isPayOnDelivery &&
