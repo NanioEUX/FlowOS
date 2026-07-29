@@ -337,7 +337,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [inProgressOrder, setInProgressOrder] = useState<{ orderId: string; orderNumber: number; status: string; total: number; trackingUrl: string } | null>(null)
   const [pendingOrderItems, setPendingOrderItems] = useState<any[]>([])
   const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null)
-  const [pendingOrderModal, setPendingOrderModal] = useState<{ orderId: string; orderNumber: number; total: number; paymentLink: string; paymentMethod?: string } | null>(null)
+  const [pendingOrderModal, setPendingOrderModal] = useState<{ orderId: string; orderNumber: number; total: number; paymentLink: string; paymentMethod?: string; status?: string } | null>(null)
   const [pendingOrderAction, setPendingOrderAction] = useState<{ orderId: string; orderNumber: number; productId: string } | null>(null)
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
@@ -3081,20 +3081,31 @@ onPaymentConfirmed={handlePaymentSuccess}
               >
                 Ver carrinho
               </button>
-              <button
-                onClick={() => {
-                  setCancelModalOrderId(pendingOrderAction.orderId)
-                  setCancelModalTotal(
-                    customerOrders.find((o: any) => o.id === pendingOrderAction.orderId)?.total ||
-                    (lastOrder?.orderId === pendingOrderAction.orderId ? lastOrder.total : 0)
-                  )
-                  setPendingOrderAction(null)
-                }}
-                className="w-full rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ borderColor: "rgba(239,68,68,0.3)", color: "#EF4444" }}
-              >
-                Cancelar pedido
-              </button>
+              {(() => {
+                const pendingOrderStatus =
+                  customerOrders.find((o: any) => o.id === pendingOrderAction.orderId)?.status ||
+                  "pending"
+                return canCancelByCustomer(pendingOrderStatus) ? (
+                  <button
+                    onClick={() => {
+                      setCancelModalOrderId(pendingOrderAction.orderId)
+                      setCancelModalTotal(
+                        customerOrders.find((o: any) => o.id === pendingOrderAction.orderId)?.total ||
+                        (lastOrder?.orderId === pendingOrderAction.orderId ? lastOrder.total : 0)
+                      )
+                      setPendingOrderAction(null)
+                    }}
+                    className="w-full rounded-xl border py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                    style={{ borderColor: "rgba(239,68,68,0.3)", color: "#EF4444" }}
+                  >
+                    Cancelar pedido
+                  </button>
+                ) : (
+                  <p className="text-center text-xs text-zinc-500 pt-1">
+                    Este pedido já está em produção. Solicite cancelamento pelo chat.
+                  </p>
+                )
+              })()}
             </div>
           </div>
         </div>
