@@ -237,45 +237,10 @@ export default function PedidosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-zinc-900">Pedidos</h2>
-        
+
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-        <input
-          type="text"
-          placeholder="Buscar por nome..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none pl-9"
-        />
-      </div>
-
-      {/* Motoboy summary */}
-      {deliveryPeople.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            onClick={() => setFilterMotoboy("")}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!filterMotoboy ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
-          >
-            Todos
-          </div>
-          {deliveryPeople.map((p: any) => {
-            const count = orders.filter((o: any) => o.deliveryPersonId === p.id && !["delivered", "cancelled"].includes(o.status)).length
-            return (
-              <button
-                key={p.id}
-                onClick={() => setFilterMotoboy(p.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
-              >
-                <Bike className="h-3 w-3" />
-                {p.name}
-                {count > 0 && <span className="ml-0.5 rounded-full bg-white/20 px-1.5 text-[10px]">{count}</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Motoboy summary removido — gestão de motoboys fica no módulo /entregas */}
 
       {/* Filters: Origem + Tipo (dropdowns) + Período (pills) + Status (pills with counts) */}
       <div className="space-y-3">

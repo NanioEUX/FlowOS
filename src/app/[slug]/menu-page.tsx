@@ -624,8 +624,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     const pendingFromLast = lastOrder?.paymentLink && !lastOrder.paymentDone
       ? { id: lastOrder.orderId, orderNumber: lastOrder.orderNumber || 0, items: [] }
       : null
+    // Only block if the previous order is still genuinely pending:
+    // - Online (Pix/Card): paymentStatus pending AND has paymentLink (waiting for payment)
+    // - Pay on delivery: status === "pending" (not yet accepted by establishment)
+    // Once the merchant accepts a pay-on-delivery order (status != pending),
+    // the customer can make a new order (which will be forced to online).
     const pendingOrder = pendingFromResult || pendingFromLast || (phone && customerOrders.length > 0
-      ? customerOrders.find((o: any) => o.paymentStatus === "pending")
+      ? customerOrders.find((o: any) =>
+          (o.paymentStatus === "pending" && o.paymentLink) ||
+          (o.paymentMethod &&
+            ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod) &&
+            o.status === "pending")
+        )
       : null)
 
     const inProgress = phone && customerOrders.length > 0
@@ -865,7 +875,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const checkRes = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
         if (checkRes.ok) {
           const orders = await checkRes.json()
-          const pendingOrder = orders.find((o: any) => o.paymentStatus === "pending" && o.paymentLink)
+          // Block only if previous order is genuinely blocking:
+          // - Online (Pix/Card) still awaiting payment
+          // - Pay on delivery not yet accepted by establishment (status === pending)
+          const pendingOrder = orders.find((o: any) =>
+            (o.paymentStatus === "pending" && o.paymentLink) ||
+            (o.paymentMethod &&
+              ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod) &&
+              o.status === "pending")
+          )
           if (pendingOrder) {
             console.log("[submitOrder] RETORNO: pedido pendente encontrado:", pendingOrder.orderNumber)
             setPendingOrderConfirm({ orderId: pendingOrder.id, orderNumber: pendingOrder.orderNumber, total: pendingOrder.total })
