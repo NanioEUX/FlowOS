@@ -40,8 +40,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    if (order.paymentStatus !== "pending" && status === "cancelled") {
-      return NextResponse.json({ error: "Apenas pedidos com pagamento pendente podem ser cancelados" }, { status: 400 })
+    // Regra de cancelamento: só é possível cancelar enquanto o pedido ainda
+    // não foi aceito pelo estabelecimento. Após o restaurante iniciar o
+    // preparo (status="confirmed" em diante), o cliente deve solicitar
+    // cancelamento pelo chat e o admin avalia manualmente.
+    if (status === "cancelled") {
+      const allowedStatuses = ["pending", "payment_pending"]
+      if (!allowedStatuses.includes(order.status)) {
+        return NextResponse.json(
+          { error: "Este pedido já está em produção e não pode mais ser cancelado pelo cliente. Entre em contato pelo chat para solicitar cancelamento." },
+          { status: 400 }
+        )
+      }
     }
 
     if (status === "cancelled") {

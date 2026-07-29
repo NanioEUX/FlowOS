@@ -97,6 +97,13 @@ function extractTrackingToken(trackingUrl: string | null | undefined): string {
   return parts[parts.length - 1] || ""
 }
 
+// Pedidos só podem ser cancelados pelo cliente enquanto ainda não foram
+// aceitos pelo estabelecimento. Após "confirmed" (em preparo ou além), o
+// cliente precisa solicitar cancelamento pelo chat.
+function canCancelByCustomer(orderStatus: string | null | undefined): boolean {
+  return orderStatus === "pending" || orderStatus === "payment_pending"
+}
+
 function normalizeUrl(url: string | null): string {
   if (!url) return ""
   if (url.startsWith("http://") || url.startsWith("https://")) return url
@@ -533,6 +540,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const displayItems = pendingOrderNumber ? pendingOrderItems : cart
   const subtotal = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0)
+  // Status real do pedido pendente para decidir se o botão "Cancelar" aparece.
+  // customerOrders filtra pedidos pending no pagamento online, então pode estar
+  // desatualizado; usamos o que estiver em memória (lastOrder/pendingOrderItems).
+  // Se nenhum dos dois, assumimos "pending" (caminho normal).
+  const pendingOrderLiveStatus: string | null = (() => {
+    if (!pendingOrderNumber) return null
+    const sameOrder = customerOrders.find((o: any) => o.orderNumber === pendingOrderNumber)
+    return sameOrder?.status || "pending"
+  })()
+  const canCancelPending = canCancelByCustomer(pendingOrderLiveStatus) || pendingOrderLiveStatus === null
   const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
 
   // Load customer orders on mount when phone is available
@@ -2115,7 +2132,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold" style={{ color: theme.text }}>Seu pedido</h2>
               <div className="flex items-center gap-2">
-                {pendingOrderNumber && (
+                {pendingOrderNumber && canCancelPending && (
                   <button
                     onClick={() => {
                       setCancelModalOrderId(lastOrder?.orderId || orderResult?.orderId || "")
@@ -2734,7 +2751,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             </div>
                           </div>
                         </button>
-                        {hasPendingPayment && (
+                        {hasPendingPayment && canCancelByCustomer(order.status) && (
                           <div className="mt-2 flex gap-2">
                             <button
                               onClick={() => {
