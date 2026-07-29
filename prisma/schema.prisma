@@ -110,6 +110,8 @@ model Customer {
   totalOrders     Int           @default(0)
   totalSpent      Float         @default(0)
   loyaltyPoints   Int           @default(0)
+  cancellationCount Int         @default(0)
+  blockedUntil    DateTime?     // Future: blocks payment on delivery until this date
   lastOrderAt     DateTime?
   establishmentId String
   createdAt       DateTime      @default(now())
@@ -197,6 +199,10 @@ model Order {
   trackingToken     String?         @unique
   assignedAt        DateTime?
   deliveredAt       DateTime?
+  cancellationReason String?
+  cancellationDate  DateTime?
+  cancelledBy       String?         // "customer" | "merchant" | "system"
+  cancellationCount Int             @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   coupon            Coupon?         @relation(fields: [couponId], references: [id])

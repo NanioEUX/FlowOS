@@ -45,15 +45,39 @@ export async function PATCH(
     }
 
     if (status === "cancelled") {
-      // Instead of deleting, mark cancelled + write a CancellationLog entry so
-      // the tenant keeps an audit trail and can review reasons later.
+      // Soft-delete: keep the order with status="cancelled" so admins can
+      // view it, see the reason, and act on repeat-cancelling customers.
+      // Also bump the customer's cancellationCount for future blocking rules.
+      const cancelledByFinal = cancelledBy || (auth ? "merchant" : "customer")
+
       await prisma.$transaction(async (tx) => {
+        await tx.order.update({
+          where: { id: params.id },
+          data: {
+            status: "cancelled",
+            paymentStatus: "cancelled",
+            cancellationReason: cancellationReason || null,
+            cancellationDate: new Date(),
+            cancelledBy: cancelledByFinal,
+          },
+        })
+
+        if (order.customerId) {
+          await tx.customer.update({
+            where: { id: order.customerId },
+            data: {
+              cancellationCount: { increment: 1 },
+            },
+          })
+        }
+
+        // Mantém o CancellationLog como snapshot adicional de auditoria
         await tx.cancellationLog.create({
           data: {
             establishmentId: order.establishmentId,
             orderId: order.id,
             source: order.method || "site",
-            cancelledBy: cancelledBy || "merchant",
+            cancelledBy: cancelledByFinal,
             reason: cancellationReason || null,
             orderNumber: order.orderNumber,
             customerName: order.customerName,
@@ -63,9 +87,6 @@ export async function PATCH(
             paymentStatus: order.paymentStatus,
             externalId: order.externalId,
           },
-        })
-        await tx.order.delete({
-          where: { id: params.id },
         })
       })
       return NextResponse.json({ success: true, cancelled: true })
