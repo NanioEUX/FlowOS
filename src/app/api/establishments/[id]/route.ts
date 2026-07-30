@@ -6,6 +6,14 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const authUser = await verifyAuth(req)
+  if (!authUser) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+  if (authUser.establishmentId !== params.id) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+  }
+
   const establishment = await prisma.establishment.findUnique({
     where: { id: params.id },
     include: {

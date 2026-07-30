@@ -7,6 +7,21 @@ import { loadBotContext, buildSystemPrompt } from "@/lib/whatsapp/ai/prompt"
 
 export async function POST(req: NextRequest) {
   try {
+    // Validação de origem: Evolution API envia o header "apikey" com a
+    // chave do webhook (não a API key global). Se não bater com nenhuma
+    // chave configurada, rejeita.
+    const webhookKey = req.headers.get("apikey") || req.headers.get("x-api-key")
+    if (webhookKey) {
+      const validKey = await prisma.establishment.findFirst({
+        where: { evolutionApiKey: webhookKey },
+        select: { id: true },
+      })
+      if (!validKey) {
+        console.warn("[WhatsApp Webhook] Chave de webhook inválida")
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      }
+    }
+
     const body = await req.text()
     const evolutionWebhook = JSON.parse(body)
 
