@@ -298,6 +298,7 @@ export default function ConfigPage() {
   const [botTemplateOrderDelivering, setBotTemplateOrderDelivering] = useState("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
   const [botTemplateOrderDelivered, setBotTemplateOrderDelivered] = useState("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
   const [botTemplateOrderCancelled, setBotTemplateOrderCancelled] = useState("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+  const [botTemplateOrderScheduled, setBotTemplateOrderScheduled] = useState("📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
   // Agendamento de pedidos
   const [scheduledMinHours, setScheduledMinHours] = useState("24")
   const [scheduledPrepMinutes, setScheduledPrepMinutes] = useState("60")
@@ -396,6 +397,7 @@ export default function ConfigPage() {
           setBotTemplateOrderDelivering(data.botTemplateOrderDelivering || "🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
           setBotTemplateOrderDelivered(data.botTemplateOrderDelivered || "🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
           setBotTemplateOrderCancelled(data.botTemplateOrderCancelled || "❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+          setBotTemplateOrderScheduled(data.botTemplateOrderScheduled || "📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
           setScheduledMinHours(String(data.scheduledMinHours ?? 24))
           setScheduledPrepMinutes(String(data.scheduledPrepMinutes ?? 60))
           setScheduledMaxAdvanceDays(String(data.scheduledMaxAdvanceDays ?? 30))
@@ -477,6 +479,7 @@ export default function ConfigPage() {
           botTemplateOrderDelivering,
           botTemplateOrderDelivered,
           botTemplateOrderCancelled,
+          botTemplateOrderScheduled,
           scheduledMinHours: Number(scheduledMinHours) || 24,
           scheduledPrepMinutes: Number(scheduledPrepMinutes) || 60,
           scheduledMaxAdvanceDays: Number(scheduledMaxAdvanceDays) || 30,
@@ -1594,6 +1597,7 @@ export default function ConfigPage() {
                         { key: "botTemplateOrderDelivering", label: "Saiu para entrega", value: botTemplateOrderDelivering, set: setBotTemplateOrderDelivering },
                         { key: "botTemplateOrderDelivered", label: "Entregue", value: botTemplateOrderDelivered, set: setBotTemplateOrderDelivered },
                         { key: "botTemplateOrderCancelled", label: "Cancelado", value: botTemplateOrderCancelled, set: setBotTemplateOrderCancelled },
+                        { key: "botTemplateOrderScheduled", label: "📅 Agendado (use {data} e {hora})", value: botTemplateOrderScheduled, set: setBotTemplateOrderScheduled },
                       ].map((t) => (
                         <div key={t.key}>
                           <label className="block text-xs font-medium text-zinc-600">{t.label}</label>

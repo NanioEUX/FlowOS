@@ -8,3 +8,5 @@ CREATE INDEX "Order_establishmentId_isScheduled_deliveryDate_idx" ON "Order"("es
 ALTER TABLE "Establishment" ADD COLUMN "scheduledMinHours" INTEGER NOT NULL DEFAULT 24;
 ALTER TABLE "Establishment" ADD COLUMN "scheduledPrepMinutes" INTEGER NOT NULL DEFAULT 60;
 ALTER TABLE "Establishment" ADD COLUMN "scheduledMaxAdvanceDays" INTEGER NOT NULL DEFAULT 30;
+
+ALTER TABLE "Establishment" ADD COLUMN "botTemplateOrderScheduled" TEXT DEFAULT '📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!';

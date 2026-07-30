@@ -268,6 +268,7 @@ export async function PATCH(
             botTemplateOrderDelivering: true,
             botTemplateOrderDelivered: true,
             botTemplateOrderCancelled: true,
+            botTemplateOrderScheduled: true,
           },
         })
         const templateMap: Record<string, string | null | undefined> = {
@@ -298,6 +299,51 @@ export async function PATCH(
         }
       } catch (notifyErr: any) {
         console.error(`[Order PATCH] Falha ao notificar cliente: ${notifyErr.message}`)
+      }
+    }
+
+    // Notificação inicial pra pedido agendado recém-criado
+    if (order.isScheduled && order.deliveryDate && order.customerPhone) {
+      try {
+        const establishment = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+          select: {
+            whatsappProvider: true,
+            evolutionBaseUrl: true,
+            evolutionApiKey: true,
+            evolutionInstanceName: true,
+            whatsappNumber: true,
+            botEnabled: true,
+            botTypingDelayMinMs: true,
+            botTypingDelayMaxMs: true,
+            botTemplateOrderScheduled: true,
+          },
+        })
+        if (establishment?.botTemplateOrderScheduled && establishment.botEnabled) {
+          const provider = getWhatsAppProvider({
+            whatsappProvider: establishment.whatsappProvider,
+            evolutionBaseUrl: establishment.evolutionBaseUrl,
+            evolutionApiKey: establishment.evolutionApiKey,
+            evolutionInstanceName: establishment.evolutionInstanceName,
+            whatsappNumber: establishment.whatsappNumber,
+          })
+          if (provider) {
+            const dt = new Date(order.deliveryDate)
+            const data = dt.toLocaleDateString("pt-BR")
+            const hora = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+            const msg = establishment.botTemplateOrderScheduled
+              .replace("{data}", data)
+              .replace("{hora}", hora)
+            const delay = randomTypingDelay(
+              establishment.botTypingDelayMinMs || 1500,
+              establishment.botTypingDelayMaxMs || 3500
+            )
+            await provider.sendText(order.customerPhone, msg, { delay })
+            console.log(`[Order] Notificação de agendamento enviada para ${order.customerPhone}`)
+          }
+        }
+      } catch (schedErr: any) {
+        console.error(`[Order] Falha ao notificar agendamento: ${schedErr.message}`)
       }
     }
 

@@ -66,6 +66,7 @@ model Establishment {
   botTemplateOrderDelivering String?   @default("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
   botTemplateOrderDelivered  String?   @default("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
   botTemplateOrderCancelled  String?   @default("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+  botTemplateOrderScheduled  String?   @default("📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
   // Cobrança de automação WhatsApp
   whatsappAutomationEnabled   Boolean    @default(false)
   whatsappAutomationActivatedAt DateTime?

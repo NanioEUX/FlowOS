@@ -22,6 +22,8 @@ export interface BotContext {
   } | null
   acceptsScheduledOrders?: boolean
   scheduledOrderMessage?: string
+  scheduledMinHours?: number
+  scheduledMaxAdvanceDays?: number
 }
 
 export async function loadBotContext(
@@ -53,6 +55,7 @@ export async function loadBotContext(
 
   const products = establishment.categories.flatMap((cat) =>
     cat.products.map((p) => ({
+      id: p.id,
       name: p.name,
       description: p.description,
       price: p.price,
@@ -135,8 +138,8 @@ export function buildSystemPrompt(context: BotContext): string {
   const productsText =
     context.products && context.products.length > 0
       ? context.products
-          .slice(0, 30)
-          .map((p) => `- ${p.name} (${p.category}): R$ ${p.price.toFixed(2)}${p.description ? ` - ${p.description}` : ""}`)
+          .slice(0, 50)
+          .map((p: any) => `- id="${p.id}" ${p.name} (${p.category}): R$ ${p.price.toFixed(2)}${p.description ? ` - ${p.description}` : ""}`)
           .join("\n")
       : ""
 
@@ -154,7 +157,8 @@ Quando o cliente perguntar "onde está meu pedido", "qual o status", ou similar,
     ? `AGENDAMENTO DE PEDIDOS:
 Este estabelecimento aceita pedidos agendados (encomendas para eventos/datas futuras).
 ${context.scheduledOrderMessage ? `Mensagem padrão: "${context.scheduledOrderMessage}"` : ""}
-Quando o cliente quiser fazer um pedido grande ou para outra data, conduza a conversa coletando: produtos, quantidades, data/hora desejada, endereço (se entrega).`
+Quando o cliente quiser fazer um pedido grande ou para outra data, conduza a conversa coletando: produtos, quantidades, data/hora desejada, endereço (se entrega).
+Use a tool create_order passando scheduledFor (ISO datetime no futuro) quando o cliente confirmar data e itens.`
     : ""
 
   const basePrompt = `Você é ${context.agentName}, atendente virtual da ${context.establishmentName}.
@@ -163,11 +167,12 @@ ${toneDescriptions[context.tone] || toneDescriptions.casual}
 
 INSTRUÇÕES:
 1. Responda de forma curta e clara (máximo 3 parágrafos).
-2. Use o cardápio abaixo quando o cliente perguntar sobre produtos.
-3. Para fazer pedido, oriente o cliente a acessar o cardápio digital.
-4. Se o cliente quiser falar com humano, responda: "Vou chamar um atendente humano. Aguarde um momento!"
-5. Nunca confirme pagamentos ou prazos sem informações explícitas.
-6. Se não souber responder, diga que vai chamar um humano.
+2. Use o cardápio abaixo quando o cliente perguntar sobre produtos. Cada produto tem um "id" que você DEVE usar ao criar pedidos via tool.
+3. Para FAZER PEDIDO: colete nome, telefone, endereço (se entrega), itens (com IDs e quantidades), tipo (entrega/retirada), forma de pagamento. Quando tiver TUDO confirmado, use a tool create_order. NÃO calcule valores — o servidor recalcula.
+4. Para PEDIDOS AGENDADOS: além dos dados acima, pergunte data/hora desejada. Calcule o ISO datetime (fuso -03:00 Brasília). Se o cliente pedir pra menos de ${context.scheduledMinHours || 24}h ou mais de ${context.scheduledMaxAdvanceDays || 30}dias, explique educadamente que precisa de mais antecedência.
+5. Se o cliente quiser falar com humano, responda: "Vou chamar um atendente humano. Aguarde um momento!"
+6. Nunca confirme pagamentos ou prazos sem informações explícitas.
+7. Se não souber responder, diga que vai chamar um humano.
 
 ${context.greeting ? `SUA SAUDAÇÃO PADRÃO:\n"${context.greeting}"` : ""}
 
@@ -176,7 +181,7 @@ ${context.businessHours ? `HORÁRIO DE FUNCIONAMENTO:\n${context.businessHours}`
 MENU DE OPÇÕES RÁPIDAS:
 ${menuText}
 
-${productsText ? `CARDÁPIO:\n${productsText}` : ""}
+${productsText ? `CARDÁPIO (com IDs para criar pedido):\n${productsText}` : ""}
 
 ${lastOrderBlock}
 

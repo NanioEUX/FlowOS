@@ -241,9 +241,28 @@ export async function POST(req: NextRequest) {
             const context = await loadBotContext(establishment.id, parsed.phone)
             if (context) {
               const systemPrompt = buildSystemPrompt(context)
-              const aiResult = await generateAIResponse(systemPrompt, parsed.text)
+              const aiResult = await generateAIResponse(systemPrompt, parsed.text, [], {
+                create_order: async (args: any) => {
+                  try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000"}/api/bot/create-order`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        establishmentId: establishment.id,
+                        ...args,
+                      }),
+                    })
+                    return await res.json()
+                  } catch (e: any) {
+                    return { error: e.message }
+                  }
+                },
+              })
               responseMessage = aiResult.text
               usedAI = true
+              if (aiResult.toolCalls?.length) {
+                console.log(`[WhatsApp] IA usou ${aiResult.toolCalls.length} tool call(s):`, aiResult.toolCalls.map((t) => t.name).join(", "))
+              }
               console.log(`[WhatsApp] IA respondeu (${aiResult.totalTokens} tokens, R$ ${(aiResult.costCents / 100).toFixed(4)})`)
 
               await prisma.$transaction([
