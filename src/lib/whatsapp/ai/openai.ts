@@ -16,8 +16,17 @@ function getClient(): OpenAI {
 
 export interface AIResponse {
   text: string
-  tokensUsed: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  costCents: number
 }
+
+// Preços gpt-4o-mini (em dólares por 1M tokens)
+const PRICE_INPUT_PER_M = 0.15
+const PRICE_OUTPUT_PER_M = 0.60
+// Câmbio aproximado USD -> BRL
+const USD_TO_BRL = 5.0
 
 export async function generateAIResponse(
   systemPrompt: string,
@@ -40,9 +49,16 @@ export async function generateAIResponse(
   })
 
   const text = completion.choices[0]?.message?.content?.trim() || ""
-  const tokensUsed = completion.usage?.total_tokens || 0
+  const inputTokens = completion.usage?.prompt_tokens || 0
+  const outputTokens = completion.usage?.completion_tokens || 0
+  const totalTokens = completion.usage?.total_tokens || 0
 
-  return { text, tokensUsed }
+  // Calcula custo em centavos (R$)
+  const costUsd = (inputTokens * PRICE_INPUT_PER_M / 1000000) + (outputTokens * PRICE_OUTPUT_PER_M / 1000000)
+  const costBrl = costUsd * USD_TO_BRL
+  const costCents = Math.ceil(costBrl * 100)
+
+  return { text, inputTokens, outputTokens, totalTokens, costCents }
 }
 
 export function isAIAvailable(): boolean {

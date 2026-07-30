@@ -39,6 +39,10 @@ export async function POST(req: NextRequest) {
         botFAQ: true,
         botSystemPrompt: true,
         businessHours: true,
+        whatsappAutomationEnabled: true,
+        aiMessagesUsed: true,
+        aiMessagesLimit: true,
+        aiMessagesResetAt: true,
       },
     })
 
@@ -48,6 +52,14 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "Instância não encontrada",
       }, { status: 404 })
+    }
+
+    if (!establishment.whatsappAutomationEnabled) {
+      console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Automação desabilitada (não pagou plano)`)
+      return NextResponse.json({
+        success: true,
+        automationDisabled: true,
+      })
     }
 
     const provider = getWhatsAppProvider({
@@ -83,36 +95,72 @@ export async function POST(req: NextRequest) {
     let usedAI = false
 
     if (establishment.botUseAI && isAIAvailable()) {
-      const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
-      const isGreeting = greetWords.includes(parsed.text.toLowerCase().trim())
+      const aiLimitReached = establishment.aiMessagesUsed >= establishment.aiMessagesLimit
+      const needsAI = !isMenuOption(parsed.text, establishment.botMenuOptions) && !isGreeting(parsed.text)
 
-      const menuOption = isGreeting
-        ? null
-        : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
-
-      if (isGreeting && establishment.botGreeting) {
-        responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions)
-        usedAI = false
-      } else if (menuOption) {
+      if (aiLimitReached && needsAI) {
+        console.log(`[WhatsApp] Limite IA atingido (${establishment.aiMessagesUsed}/${establishment.aiMessagesLimit}) - usando menu fixo`)
         const botConfig = await loadMenuConfig(establishment)
         if (botConfig) {
-          responseMessage = generateBotResponse(parsed.text, botConfig).message || null
+          const resp = generateBotResponse(parsed.text, botConfig)
+          responseMessage = resp.message || `Olá! Você atingiu o limite de IA deste mês. Por favor, escolha uma opção do menu:\n\n${formatMenuText(establishment.botMenuOptions)}`
         }
         usedAI = false
       } else {
-        try {
-          const context = await loadBotContext(establishment.id)
-          if (context) {
-            const systemPrompt = buildSystemPrompt(context)
-            const aiResult = await generateAIResponse(systemPrompt, parsed.text)
-            responseMessage = aiResult.text
-            usedAI = true
-            console.log(`[WhatsApp] IA respondeu (${aiResult.tokensUsed} tokens)`)
+        const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
+        const isGreetingMatch = greetWords.includes(parsed.text.toLowerCase().trim())
+
+        const menuOption = isGreetingMatch
+          ? null
+          : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
+
+        if (isGreetingMatch && establishment.botGreeting) {
+          responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions)
+          usedAI = false
+        } else if (menuOption) {
+          const botConfig = await loadMenuConfig(establishment)
+          if (botConfig) {
+            responseMessage = generateBotResponse(parsed.text, botConfig).message || null
           }
-        } catch (aiErr: any) {
-          console.error(`[WhatsApp] Erro na IA:`, aiErr.message)
-          if (establishment.botGreeting) {
-            responseMessage = establishment.botGreeting
+          usedAI = false
+        } else {
+          try {
+            const context = await loadBotContext(establishment.id)
+            if (context) {
+              const systemPrompt = buildSystemPrompt(context)
+              const aiResult = await generateAIResponse(systemPrompt, parsed.text)
+              responseMessage = aiResult.text
+              usedAI = true
+              console.log(`[WhatsApp] IA respondeu (${aiResult.totalTokens} tokens, R$ ${(aiResult.costCents / 100).toFixed(4)})`)
+
+              await prisma.$transaction([
+                prisma.establishment.update({
+                  where: { id: establishment.id },
+                  data: {
+                    aiMessagesUsed: { increment: 1 },
+                    aiMessagesResetAt: establishment.aiMessagesResetAt || new Date(),
+                  },
+                }),
+                prisma.aIUsageLog.create({
+                  data: {
+                    establishmentId: establishment.id,
+                    customerPhone: parsed.phone,
+                    inputTokens: aiResult.inputTokens,
+                    outputTokens: aiResult.outputTokens,
+                    totalTokens: aiResult.totalTokens,
+                    costCents: aiResult.costCents,
+                    model: "gpt-4o-mini",
+                    userMessage: parsed.text.substring(0, 500),
+                    responseLength: aiResult.text.length,
+                  },
+                }),
+              ])
+            }
+          } catch (aiErr: any) {
+            console.error(`[WhatsApp] Erro na IA:`, aiErr.message)
+            if (establishment.botGreeting) {
+              responseMessage = establishment.botGreeting
+            }
           }
         }
       }
@@ -160,6 +208,21 @@ function parseMenuOptions(json: string | null | undefined): Array<{ id: string; 
   } catch {
     return []
   }
+}
+
+function isMenuOption(text: string, menuJson: string | null | undefined): boolean {
+  const options = parseMenuOptions(menuJson)
+  return options.some((o) => o.id === text.trim())
+}
+
+function isGreeting(text: string): boolean {
+  const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
+  return greetWords.includes(text.toLowerCase().trim())
+}
+
+function formatMenuText(menuJson: string | null | undefined): string {
+  const options = parseMenuOptions(menuJson)
+  return options.map((opt, idx) => `${idx + 1}. ${opt.label}`).join("\n")
 }
 
 async function loadMenuConfig(establishment: any) {

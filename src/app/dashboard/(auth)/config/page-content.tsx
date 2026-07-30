@@ -84,6 +84,9 @@ export default function ConfigPage() {
   const [botTone, setBotTone] = useState<"formal" | "casual" | "direct">("casual")
   const [botFAQ, setBotFAQ] = useState("")
   const [botSystemPrompt, setBotSystemPrompt] = useState("")
+  const [whatsappAutomationEnabled, setWhatsappAutomationEnabled] = useState(false)
+  const [aiMessagesUsed, setAiMessagesUsed] = useState(0)
+  const [aiMessagesLimit, setAiMessagesLimit] = useState(1000)
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -155,6 +158,9 @@ export default function ConfigPage() {
           setBotTone(data.botTone || "casual")
           setBotFAQ(data.botFAQ || "")
           setBotSystemPrompt(data.botSystemPrompt || "")
+          setWhatsappAutomationEnabled(data.whatsappAutomationEnabled ?? false)
+          setAiMessagesUsed(data.aiMessagesUsed || 0)
+          setAiMessagesLimit(data.aiMessagesLimit || 1000)
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -210,6 +216,8 @@ export default function ConfigPage() {
           botTone,
           botFAQ,
           botSystemPrompt,
+          whatsappAutomationEnabled,
+          aiMessagesLimit,
         }),
       })
 
@@ -869,6 +877,65 @@ export default function ConfigPage() {
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
             <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
+
+            <div className={`rounded-lg border p-4 ${whatsappAutomationEnabled ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    {whatsappAutomationEnabled ? (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                        ✓ ATIVA
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                        ⚠ DESATIVADA
+                      </span>
+                    )}
+                    <span className="font-medium text-zinc-900">
+                      Automação WhatsApp {whatsappAutomationEnabled ? "ativada" : "desativada"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    {whatsappAutomationEnabled
+                      ? `Mensagens IA este mês: ${aiMessagesUsed} / ${aiMessagesLimit}`
+                      : "Ative a automação para começar a usar o bot. R$ 50/mês adicional ao seu plano."}
+                  </p>
+                  {whatsappAutomationEnabled && (
+                    <div className="mt-2 h-2 w-full rounded-full bg-zinc-200">
+                      <div
+                        className={`h-2 rounded-full ${aiMessagesUsed > aiMessagesLimit * 0.8 ? "bg-red-500" : "bg-green-500"}`}
+                        style={{ width: `${Math.min(100, (aiMessagesUsed / aiMessagesLimit) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setWhatsappAutomationEnabled(!whatsappAutomationEnabled)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    whatsappAutomationEnabled
+                      ? "bg-red-100 text-red-700 hover:bg-red-200"
+                      : "bg-green-100 text-green-700 hover:bg-green-200"
+                  }`}
+                >
+                  {whatsappAutomationEnabled ? "Desativar" : "Ativar"}
+                </button>
+              </div>
+            </div>
+
+            {whatsappAutomationEnabled && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-zinc-700">Limite mensal de mensagens IA</label>
+                <input
+                  type="number"
+                  min={100}
+                  step={100}
+                  value={aiMessagesLimit}
+                  onChange={(e) => setAiMessagesLimit(Number(e.target.value) || 1000)}
+                  className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                />
+                <p className="text-xs text-zinc-400">Quando atingido, o bot volta pro menu fixo. Reset automático todo dia 1º.</p>
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-zinc-700">Provedor WhatsApp</label>

@@ -40,6 +40,13 @@ model Establishment {
   botTone             String?           // "formal" | "casual" | "direct"
   botFAQ              String?           // texto livre com regras da casa
   botSystemPrompt     String?           // prompt customizado (avançado)
+  // Cobrança de automação WhatsApp
+  whatsappAutomationEnabled   Boolean    @default(false)
+  whatsappAutomationActivatedAt DateTime?
+  whatsappAutomationPriceCents Int        @default(5000)  // R$ 50,00
+  aiMessagesUsed      Int               @default(0)
+  aiMessagesLimit     Int               @default(1000)    // limite mensal
+  aiMessagesResetAt   DateTime?
 
   address             String?
   category            String?
@@ -122,6 +129,7 @@ model Establishment {
   products            Product[]
   reviews             Review[]
   cancellations       CancellationLog[]
+  aiUsageLogs         AIUsageLog[]
   stockCategories     StockCategory[]
   stockItems          StockItem[]
   suppliers           Supplier[]
@@ -520,4 +528,27 @@ model CancellationLog {
   @@index([establishmentId, createdAt])
   @@index([source])
   @@index([orderId])
+}
+
+model AIUsageLog {
+  id              String   @id @default(cuid())
+  establishmentId String
+  // Customer que mandou a mensagem
+  customerPhone   String?
+  // Tokens consumidos
+  inputTokens     Int
+  outputTokens    Int
+  totalTokens     Int
+  // Custo estimado em centavos (input + output)
+  costCents       Int
+  // Modelo usado
+  model           String   @default("gpt-4o-mini")
+  // Mensagem que originou (opcional, pra debug)
+  userMessage     String?
+  responseLength  Int      @default(0)
+  createdAt       DateTime @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, createdAt])
+  @@index([createdAt])
 }
