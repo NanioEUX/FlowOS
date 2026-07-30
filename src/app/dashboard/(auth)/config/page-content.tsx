@@ -979,7 +979,7 @@ export default function ConfigPage() {
                         rows={6}
                         className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 focus:border-green-600 focus:outline-none"
                       />
-                      <p className="mt-1 text-xs text-zinc-400">Formato: array de objetos com <code>id</code>, <code>label</code> e <code>response</code> ("menu", "cardapio", "atendente" ou texto livre).</p>
+                      <p className="mt-1 text-xs text-zinc-400">Formato: array de objetos com <code>id</code>, <code>label</code> e <code>response</code> (menu, cardapio, atendente ou texto livre).</p>
                     </div>
                   </div>
                 </div>
