@@ -35,6 +35,11 @@ model Establishment {
   botAgentName        String?           @default("Atendente")
   botGreeting         String?
   botMenuOptions      String?           // JSON: [{label, response}]
+  // Bot IA (Fase 2)
+  botUseAI            Boolean           @default(false)
+  botTone             String?           // "formal" | "casual" | "direct"
+  botFAQ              String?           // texto livre com regras da casa
+  botSystemPrompt     String?           // prompt customizado (avançado)
 
   address             String?
   category            String?

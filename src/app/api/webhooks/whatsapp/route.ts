@@ -1,14 +1,13 @@
-// DEPLOY_MARKER_2026_07_30_v2
-
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
-import { getBotConfig, generateBotResponse } from "@/lib/whatsapp/bot"
+import { generateBotResponse } from "@/lib/whatsapp/bot"
+import { generateAIResponse, isAIAvailable } from "@/lib/whatsapp/ai/openai"
+import { loadBotContext, buildSystemPrompt } from "@/lib/whatsapp/ai/prompt"
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text()
-
     const evolutionWebhook = JSON.parse(body)
 
     if (evolutionWebhook.event !== "messages.upsert") {
@@ -23,9 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const establishment = await prisma.establishment.findFirst({
-      where: {
-        evolutionInstanceName: instanceName,
-      },
+      where: { evolutionInstanceName: instanceName },
       select: {
         id: true,
         whatsappProvider: true,
@@ -34,6 +31,14 @@ export async function POST(req: NextRequest) {
         evolutionInstanceName: true,
         whatsappNumber: true,
         botEnabled: true,
+        botUseAI: true,
+        botAgentName: true,
+        botGreeting: true,
+        botMenuOptions: true,
+        botTone: true,
+        botFAQ: true,
+        botSystemPrompt: true,
+        businessHours: true,
       },
     })
 
@@ -42,7 +47,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: "Instância não encontrada",
-        hint: "Crie um estabelecimento com esta instanceName via /dashboard/config ou seed-test-establishment.ts",
       }, { status: 404 })
     }
 
@@ -64,53 +68,111 @@ export async function POST(req: NextRequest) {
     })
 
     const parsed = await provider.parseWebhook(mockReq)
-
     if (!parsed || parsed.fromMe) {
       return NextResponse.json({ success: true, ignored: true })
     }
 
     console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Mensagem de ${parsed.phone}: "${parsed.text}"`)
 
-    const botConfig = await getBotConfig(establishment.id)
-
-    if (!botConfig) {
+    if (!establishment.botEnabled) {
       console.log(`[WhatsApp] Bot desabilitado para ${establishment.id}`)
       return NextResponse.json({ success: true, botDisabled: true })
     }
 
-    const response = generateBotResponse(parsed.text, botConfig)
+    let responseMessage: string | null = null
+    let usedAI = false
 
-    if (!response.shouldRespond || !response.message) {
+    if (establishment.botUseAI && isAIAvailable()) {
+      const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
+      const isGreeting = greetWords.includes(parsed.text.toLowerCase().trim())
+
+      const menuOption = isGreeting
+        ? null
+        : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
+
+      if (isGreeting && establishment.botGreeting) {
+        responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions)
+        usedAI = false
+      } else if (menuOption) {
+        const botConfig = await loadMenuConfig(establishment)
+        if (botConfig) {
+          responseMessage = generateBotResponse(parsed.text, botConfig).message || null
+        }
+        usedAI = false
+      } else {
+        try {
+          const context = await loadBotContext(establishment.id)
+          if (context) {
+            const systemPrompt = buildSystemPrompt(context)
+            const aiResult = await generateAIResponse(systemPrompt, parsed.text)
+            responseMessage = aiResult.text
+            usedAI = true
+            console.log(`[WhatsApp] IA respondeu (${aiResult.tokensUsed} tokens)`)
+          }
+        } catch (aiErr: any) {
+          console.error(`[WhatsApp] Erro na IA:`, aiErr.message)
+          if (establishment.botGreeting) {
+            responseMessage = establishment.botGreeting
+          }
+        }
+      }
+    } else {
+      const botConfig = await loadMenuConfig(establishment)
+      if (botConfig) {
+        const resp = generateBotResponse(parsed.text, botConfig)
+        responseMessage = resp.message || null
+      }
+    }
+
+    if (!responseMessage) {
       console.log(`[WhatsApp] Sem resposta para "${parsed.text}"`)
       return NextResponse.json({ success: true, noResponse: true, receivedText: parsed.text })
     }
 
-    console.log(`[WhatsApp] Respondendo para ${parsed.phone}: "${response.message.substring(0, 50)}..."`)
+    console.log(`[WhatsApp] Respondendo (${usedAI ? "IA" : "menu"}): "${responseMessage.substring(0, 50)}..."`)
 
-    const sendResult = await provider.sendText(parsed.phone, response.message, { delay: 2000 })
+    const sendResult = await provider.sendText(parsed.phone, responseMessage, { delay: 2000 })
 
     if (!sendResult.success) {
       console.error(`[WhatsApp] Erro ao enviar:`, sendResult.error)
       return NextResponse.json({ success: false, error: sendResult.error }, { status: 500 })
     }
 
-    console.log(`[WhatsApp] ✓ Resposta enviada para ${parsed.phone} (messageId: ${sendResult.messageId})`)
+    console.log(`[WhatsApp] ✓ Resposta enviada para ${parsed.phone}`)
 
     return NextResponse.json({
       success: true,
       messageId: sendResult.messageId,
       receivedText: parsed.text,
-      responsePreview: response.message.substring(0, 100),
+      usedAI,
+      responsePreview: responseMessage.substring(0, 100),
     })
-
-    return NextResponse.json({ success: true, messageId: sendResult.messageId })
   } catch (error: any) {
     console.error("[WhatsApp Webhook] Erro:", error.message)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 
+function parseMenuOptions(json: string | null | undefined): Array<{ id: string; label: string; response: string }> {
+  if (!json) return []
+  try {
+    return JSON.parse(json)
+  } catch {
+    return []
+  }
+}
+
+async function loadMenuConfig(establishment: any) {
+  const { getBotConfig } = await import("@/lib/whatsapp/bot")
+  return getBotConfig(establishment.id)
+}
+
+function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null): string {
+  const menuOptions = parseMenuOptions(menuJson)
+  const menuText = menuOptions.map((opt, idx) => `${idx + 1}. ${opt.label}`).join("\n")
+  return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada ou faça sua pergunta livremente.`
+}
+
 export async function GET() {
   return NextResponse.json({ status: "ok", webhook: "whatsapp" })
 }
-// touch: force redeploy Thu Jul 30 12:07:57 -03 2026

@@ -80,6 +80,10 @@ export default function ConfigPage() {
   const [botAgentName, setBotAgentName] = useState("Atendente")
   const [botGreeting, setBotGreeting] = useState("")
   const [botMenuOptions, setBotMenuOptions] = useState(`[{"id":"1","label":"Fazer Pedido","response":"menu"},{"id":"2","label":"Ver Cardápio","response":"cardapio"},{"id":"3","label":"Falar com Atendente","response":"atendente"}]`)
+  const [botUseAI, setBotUseAI] = useState(false)
+  const [botTone, setBotTone] = useState<"formal" | "casual" | "direct">("casual")
+  const [botFAQ, setBotFAQ] = useState("")
+  const [botSystemPrompt, setBotSystemPrompt] = useState("")
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -147,6 +151,10 @@ export default function ConfigPage() {
           setBotAgentName(data.botAgentName || "Atendente")
           setBotGreeting(data.botGreeting || "")
           setBotMenuOptions(data.botMenuOptions || `[{"id":"1","label":"Fazer Pedido","response":"menu"},{"id":"2","label":"Ver Cardápio","response":"cardapio"},{"id":"3","label":"Falar com Atendente","response":"atendente"}]`)
+          setBotUseAI(data.botUseAI ?? false)
+          setBotTone(data.botTone || "casual")
+          setBotFAQ(data.botFAQ || "")
+          setBotSystemPrompt(data.botSystemPrompt || "")
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -198,6 +206,10 @@ export default function ConfigPage() {
           botAgentName,
           botGreeting,
           botMenuOptions,
+          botUseAI,
+          botTone,
+          botFAQ,
+          botSystemPrompt,
         }),
       })
 
@@ -981,6 +993,63 @@ export default function ConfigPage() {
                       />
                       <p className="mt-1 text-xs text-zinc-400">Formato: array de objetos com <code>id</code>, <code>label</code> e <code>response</code> (menu, cardapio, atendente ou texto livre).</p>
                     </div>
+
+                    <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+                      <input
+                        type="checkbox"
+                        checked={botUseAI}
+                        onChange={(e) => setBotUseAI(e.target.checked)}
+                        className="mt-1 h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4 text-zinc-400" />
+                          <span className="font-medium text-zinc-900">Usar IA pra mensagens livres</span>
+                        </div>
+                        <p className="text-xs text-zinc-500">Quando ligado, o bot usa IA pra responder perguntas em linguagem natural. Menu numerado continua funcionando como atalho.</p>
+                      </div>
+                    </label>
+
+                    {botUseAI && (
+                      <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700">Tom de voz</label>
+                          <select
+                            value={botTone}
+                            onChange={(e) => setBotTone(e.target.value as "formal" | "casual" | "direct")}
+                            className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                          >
+                            <option value="casual">Descontraído (amigável, usa emojis)</option>
+                            <option value="formal">Formal (educado, senhor/senhora)</option>
+                            <option value="direct">Direto (objetivo, sem enrolação)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700">FAQ / Regras da casa</label>
+                          <textarea
+                            placeholder="Ex: Temos estacionamento próprio. Não aceitamos troco para R$ 100. Delivery só até 22h."
+                            value={botFAQ}
+                            onChange={(e) => setBotFAQ(e.target.value)}
+                            rows={4}
+                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                          />
+                          <p className="mt-1 text-xs text-zinc-400">Regras específicas do seu estabelecimento que a IA deve considerar.</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700">Prompt customizado (avançado)</label>
+                          <textarea
+                            placeholder="Instruções extras que concatenam com o prompt mestre. Opcional."
+                            value={botSystemPrompt}
+                            onChange={(e) => setBotSystemPrompt(e.target.value)}
+                            rows={3}
+                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                          />
+                          <p className="mt-1 text-xs text-zinc-400">Adicionado ao final do prompt do sistema. Use com cuidado.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
