@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 export interface BotContext {
   agentName: string
   establishmentName: string
+  establishmentSlug?: string
   greeting: string
   tone: string
   faq: string
@@ -10,9 +11,23 @@ export interface BotContext {
   menuOptions: Array<{ id: string; label: string; response: string }>
   businessHours?: string
   products?: any[]
+  customerLastOrder?: {
+    orderNumber: number
+    status: string
+    paymentStatus: string
+    total: number
+    items: string
+    trackingUrl: string
+    createdAt: string
+  } | null
+  acceptsScheduledOrders?: boolean
+  scheduledOrderMessage?: string
 }
 
-export async function loadBotContext(establishmentId: string): Promise<BotContext | null> {
+export async function loadBotContext(
+  establishmentId: string,
+  customerPhone?: string
+): Promise<BotContext | null> {
   const establishment = await prisma.establishment.findUnique({
     where: { id: establishmentId },
     include: {
@@ -56,9 +71,43 @@ export async function loadBotContext(establishmentId: string): Promise<BotContex
     } catch {}
   }
 
+  let customerLastOrder: BotContext["customerLastOrder"] = null
+  if (customerPhone) {
+      const lastOrder = await prisma.order.findFirst({
+      where: {
+        establishmentId,
+        customerPhone,
+        status: { notIn: ["cancelled"] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        total: true,
+        items: true,
+        trackingToken: true,
+        createdAt: true,
+      },
+    })
+    if (lastOrder) {
+      customerLastOrder = {
+        orderNumber: lastOrder.orderNumber || 0,
+        status: lastOrder.status,
+        paymentStatus: lastOrder.paymentStatus,
+        total: lastOrder.total,
+        items: lastOrder.items,
+        trackingUrl: `https://flowoshub.com/${establishment.slug}/pedido/${lastOrder.id}?token=${lastOrder.trackingToken}`,
+        createdAt: lastOrder.createdAt.toISOString(),
+      }
+    }
+  }
+
   return {
     agentName: establishment.botAgentName || "Atendente",
     establishmentName: establishment.name,
+    establishmentSlug: establishment.slug,
     greeting: establishment.botGreeting || "",
     tone: establishment.botTone || "casual",
     faq: establishment.botFAQ || "",
@@ -66,6 +115,9 @@ export async function loadBotContext(establishmentId: string): Promise<BotContex
     menuOptions,
     businessHours,
     products,
+    customerLastOrder,
+    acceptsScheduledOrders: establishment.botAcceptsScheduledOrders ?? false,
+    scheduledOrderMessage: establishment.botScheduledOrderMessage || "",
   }
 }
 
@@ -88,6 +140,23 @@ export function buildSystemPrompt(context: BotContext): string {
           .join("\n")
       : ""
 
+  const lastOrderBlock = context.customerLastOrder
+    ? `ÚLTIMO PEDIDO DO CLIENTE:
+- Pedido #${context.customerLastOrder.orderNumber}
+- Status: ${context.customerLastOrder.status}
+- Pagamento: ${context.customerLastOrder.paymentStatus}
+- Total: R$ ${context.customerLastOrder.total.toFixed(2)}
+- Link de acompanhamento: ${context.customerLastOrder.trackingUrl}
+Quando o cliente perguntar "onde está meu pedido", "qual o status", ou similar, use essas informações. NÃO invente status. Se não souber, peça o número do pedido.`
+    : ""
+
+  const schedulingBlock = context.acceptsScheduledOrders
+    ? `AGENDAMENTO DE PEDIDOS:
+Este estabelecimento aceita pedidos agendados (encomendas para eventos/datas futuras).
+${context.scheduledOrderMessage ? `Mensagem padrão: "${context.scheduledOrderMessage}"` : ""}
+Quando o cliente quiser fazer um pedido grande ou para outra data, conduza a conversa coletando: produtos, quantidades, data/hora desejada, endereço (se entrega).`
+    : ""
+
   const basePrompt = `Você é ${context.agentName}, atendente virtual da ${context.establishmentName}.
 
 ${toneDescriptions[context.tone] || toneDescriptions.casual}
@@ -108,6 +177,10 @@ MENU DE OPÇÕES RÁPIDAS:
 ${menuText}
 
 ${productsText ? `CARDÁPIO:\n${productsText}` : ""}
+
+${lastOrderBlock}
+
+${schedulingBlock}
 
 ${context.faq ? `REGRAS DA CASA (FAQ):\n${context.faq}` : ""}
 

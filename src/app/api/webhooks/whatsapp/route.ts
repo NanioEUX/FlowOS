@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
           usedAI = false
         } else {
           try {
-            const context = await loadBotContext(establishment.id)
+            const context = await loadBotContext(establishment.id, parsed.phone)
             if (context) {
               const systemPrompt = buildSystemPrompt(context)
               const aiResult = await generateAIResponse(systemPrompt, parsed.text)
