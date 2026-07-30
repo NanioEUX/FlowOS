@@ -298,6 +298,10 @@ export default function ConfigPage() {
   const [botTemplateOrderDelivering, setBotTemplateOrderDelivering] = useState("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
   const [botTemplateOrderDelivered, setBotTemplateOrderDelivered] = useState("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
   const [botTemplateOrderCancelled, setBotTemplateOrderCancelled] = useState("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+  // Agendamento de pedidos
+  const [scheduledMinHours, setScheduledMinHours] = useState("24")
+  const [scheduledPrepMinutes, setScheduledPrepMinutes] = useState("60")
+  const [scheduledMaxAdvanceDays, setScheduledMaxAdvanceDays] = useState("30")
   const [whatsappAutomationEnabled, setWhatsappAutomationEnabled] = useState(false)
   const [aiMessagesUsed, setAiMessagesUsed] = useState(0)
   const [aiMessagesLimit, setAiMessagesLimit] = useState(1000)
@@ -392,6 +396,9 @@ export default function ConfigPage() {
           setBotTemplateOrderDelivering(data.botTemplateOrderDelivering || "🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
           setBotTemplateOrderDelivered(data.botTemplateOrderDelivered || "🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
           setBotTemplateOrderCancelled(data.botTemplateOrderCancelled || "❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+          setScheduledMinHours(String(data.scheduledMinHours ?? 24))
+          setScheduledPrepMinutes(String(data.scheduledPrepMinutes ?? 60))
+          setScheduledMaxAdvanceDays(String(data.scheduledMaxAdvanceDays ?? 30))
           setWhatsappAutomationEnabled(data.whatsappAutomationEnabled ?? false)
           setAiMessagesUsed(data.aiMessagesUsed || 0)
           setAiMessagesLimit(data.aiMessagesLimit || 1000)
@@ -470,6 +477,9 @@ export default function ConfigPage() {
           botTemplateOrderDelivering,
           botTemplateOrderDelivered,
           botTemplateOrderCancelled,
+          scheduledMinHours: Number(scheduledMinHours) || 24,
+          scheduledPrepMinutes: Number(scheduledPrepMinutes) || 60,
+          scheduledMaxAdvanceDays: Number(scheduledMaxAdvanceDays) || 30,
           whatsappAutomationEnabled,
           aiMessagesLimit,
         }),
@@ -1600,6 +1610,53 @@ export default function ConfigPage() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Agendamento de Pedidos (Encomendas) */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+              📦 Agendamento de Pedidos
+            </h3>
+            <p className="text-sm text-zinc-500">
+              Defina as regras para pedidos agendados (encomendas para eventos/datas futuras). O bot vai validar esses limites ao conduzir o cliente pelo agendamento.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Antecedência mínima (horas)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={scheduledMinHours}
+                  onChange={(e) => setScheduledMinHours(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Cliente deve agendar com pelo menos esse tempo de antecedência.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Tempo médio de preparo (min)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={scheduledPrepMinutes}
+                  onChange={(e) => setScheduledPrepMinutes(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Informativo. Use pra definir janelas de entrega.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Antecedência máxima (dias)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={scheduledMaxAdvanceDays}
+                  onChange={(e) => setScheduledMaxAdvanceDays(e.target.value)}
+                  className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Cliente não pode agendar pra mais do que esse prazo.</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

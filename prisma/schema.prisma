@@ -73,6 +73,10 @@ model Establishment {
   aiMessagesUsed      Int               @default(0)
   aiMessagesLimit     Int               @default(1000)    // limite mensal
   aiMessagesResetAt   DateTime?
+  // Agendamento de pedidos (encomendas)
+  scheduledMinHours       Int           @default(24)   // antecedência mínima em horas
+  scheduledPrepMinutes    Int           @default(60)   // tempo médio de preparo em minutos
+  scheduledMaxAdvanceDays Int           @default(30)   // antecedência máxima em dias
 
   address             String?
   category            String?
@@ -268,6 +272,9 @@ model Order {
   cancellationDate  DateTime?
   cancelledBy       String?         // "customer" | "merchant" | "system"
   cancellationCount Int             @default(0)
+  // Agendamento de pedidos
+  isScheduled       Boolean         @default(false)
+  deliveryDate      DateTime?       // data/hora agendada para entrega/retirada
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   coupon            Coupon?         @relation(fields: [couponId], references: [id])
@@ -282,6 +289,7 @@ model Order {
   @@index([establishmentId, tableNumber, orderType])
   @@index([establishmentId, orderType, status])
   @@index([establishmentId, deliveryPersonId])
+  @@index([establishmentId, isScheduled, deliveryDate])
   @@index([paymentId])
 }
 

@@ -84,6 +84,7 @@ export default function PedidosPage() {
   const [filterSource, setFilterSource] = useState("all") // Origem: all | ifood | site | whatsapp | manual
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterCancelledBy, setFilterCancelledBy] = useState("all") // all | customer | merchant | system
+  const [filterScheduled, setFilterScheduled] = useState<"all" | "scheduled" | "immediate">("all")
   const [unreadOrders, setUnreadOrders] = useState<Record<string, { count: number; name: string; message: string }>>({})
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
 
@@ -176,6 +177,10 @@ export default function PedidosPage() {
     const matchesSource = filterSource === "all" || o.method === filterSource
     const matchesStatus = filterStatus === "all" || o.status === filterStatus
     const matchesCancelledBy = filterCancelledBy === "all" || o.cancelledBy === filterCancelledBy
+    const matchesScheduled =
+      filterScheduled === "all" ||
+      (filterScheduled === "scheduled" && o.isScheduled) ||
+      (filterScheduled === "immediate" && !o.isScheduled)
     const d = new Date(o.createdAt)
     const now = new Date()
     let matchesPeriod = true
@@ -189,7 +194,7 @@ export default function PedidosPage() {
       const start = new Date(now.getTime() - 30 * 86400000)
       matchesPeriod = d >= start
     }
-    return matchesName && matchesMotoboy && matchesType && matchesSource && matchesPeriod && matchesStatus && matchesCancelledBy
+    return matchesName && matchesMotoboy && matchesType && matchesSource && matchesPeriod && matchesStatus && matchesCancelledBy && matchesScheduled
   })
 
   function groupOrders(list: any[]) {
@@ -207,6 +212,15 @@ export default function PedidosPage() {
         groups.completed.push(o)
       }
       else groups.active.push(o)
+    })
+    // Pedidos agendados: ordem por deliveryDate ascendente (próximos primeiro)
+    groups.active.sort((a, b) => {
+      if (a.isScheduled && b.isScheduled) {
+        return new Date(a.deliveryDate).getTime() - new Date(b.deliveryDate).getTime()
+      }
+      if (a.isScheduled) return -1
+      if (b.isScheduled) return 1
+      return 0
     })
     return groups
   }
@@ -345,6 +359,29 @@ export default function PedidosPage() {
             })}
           </div>
         )}
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <span className="text-xs font-medium text-zinc-600">Agendamento:</span>
+          {[
+            { value: "all", label: "Todos" },
+            { value: "scheduled", label: "📅 Agendados" },
+            { value: "immediate", label: "⚡ Imediatos" },
+          ].map((s) => {
+            const active = filterScheduled === s.value
+            return (
+              <button
+                key={s.value}
+                onClick={() => setFilterScheduled(s.value as any)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                }`}
+              >
+                {s.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Global message notification bar */}
@@ -682,6 +719,14 @@ win.close()
                 </span>
               ) : null}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
+              {order.isScheduled && order.deliveryDate && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20"
+                  title={`Agendado para ${new Date(order.deliveryDate).toLocaleString("pt-BR")}`}
+                >
+                  📅 {new Date(order.deliveryDate).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
               {isStale && (
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${isCritical ? "bg-red-50 text-red-700 ring-red-600/20 animate-pulse" : "bg-amber-50 text-amber-700 ring-amber-600/20"}`}
