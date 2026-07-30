@@ -1,3 +1,5 @@
+// DEPLOY_MARKER_2026_07_30_v2
+
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
