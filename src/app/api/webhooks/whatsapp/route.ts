@@ -111,3 +111,4 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({ status: "ok", webhook: "whatsapp" })
 }
+// touch: force redeploy Thu Jul 30 12:07:57 -03 2026
