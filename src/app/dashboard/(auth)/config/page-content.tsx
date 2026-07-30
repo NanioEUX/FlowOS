@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -68,6 +68,18 @@ export default function ConfigPage() {
   const [cancellationBlockThreshold, setCancellationBlockThreshold] = useState("3")
   const [cancellationBlockWindowDays, setCancellationBlockWindowDays] = useState("7")
   const [cancellationBlockDurationDays, setCancellationBlockDurationDays] = useState("7")
+  const [whatsappProvider, setWhatsappProvider] = useState<"evolution" | "meta" | null>(null)
+  const [whatsappNumber, setWhatsappNumber] = useState("")
+  const [evolutionBaseUrl, setEvolutionBaseUrl] = useState("")
+  const [evolutionApiKey, setEvolutionApiKey] = useState("")
+  const [evolutionInstanceName, setEvolutionInstanceName] = useState("")
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState("")
+  const [metaAccessToken, setMetaAccessToken] = useState("")
+  const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState("")
+  const [botEnabled, setBotEnabled] = useState(false)
+  const [botAgentName, setBotAgentName] = useState("Atendente")
+  const [botGreeting, setBotGreeting] = useState("")
+  const [botMenuOptions, setBotMenuOptions] = useState(`[{"id":"1","label":"Fazer Pedido","response":"menu"},{"id":"2","label":"Ver Cardápio","response":"cardapio"},{"id":"3","label":"Falar com Atendente","response":"atendente"}]`)
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -123,6 +135,18 @@ export default function ConfigPage() {
           setCancellationBlockThreshold(String(data.cancellationBlockThreshold ?? 3))
           setCancellationBlockWindowDays(String(data.cancellationBlockWindowDays ?? 7))
           setCancellationBlockDurationDays(String(data.cancellationBlockDurationDays ?? 7))
+          setWhatsappProvider(data.whatsappProvider ?? null)
+          setWhatsappNumber(data.whatsappNumber || "")
+          setEvolutionBaseUrl(data.evolutionBaseUrl || "")
+          setEvolutionApiKey(data.evolutionApiKey || "")
+          setEvolutionInstanceName(data.evolutionInstanceName || "")
+          setMetaPhoneNumberId(data.metaPhoneNumberId || "")
+          setMetaAccessToken(data.metaAccessToken || "")
+          setMetaWebhookVerifyToken(data.metaWebhookVerifyToken || "")
+          setBotEnabled(data.botEnabled ?? false)
+          setBotAgentName(data.botAgentName || "Atendente")
+          setBotGreeting(data.botGreeting || "")
+          setBotMenuOptions(data.botMenuOptions || `[{"id":"1","label":"Fazer Pedido","response":"menu"},{"id":"2","label":"Ver Cardápio","response":"cardapio"},{"id":"3","label":"Falar com Atendente","response":"atendente"}]`)
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -162,6 +186,18 @@ export default function ConfigPage() {
           cancellationBlockThreshold: Number(cancellationBlockThreshold) || 3,
           cancellationBlockWindowDays: Number(cancellationBlockWindowDays) || 7,
           cancellationBlockDurationDays: Number(cancellationBlockDurationDays) || 7,
+          whatsappProvider,
+          whatsappNumber,
+          evolutionBaseUrl,
+          evolutionApiKey,
+          evolutionInstanceName,
+          metaPhoneNumberId,
+          metaAccessToken,
+          metaWebhookVerifyToken,
+          botEnabled,
+          botAgentName,
+          botGreeting,
+          botMenuOptions,
         }),
       })
 
@@ -813,6 +849,142 @@ export default function ConfigPage() {
               um cliente que cancelar {cancellationBlockThreshold} pedidos em {cancellationBlockWindowDays} dias
               ficará impedido de pagar na entrega por {cancellationBlockDurationDays} dias.
             </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp + Bot */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
+            <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-zinc-700">Provedor WhatsApp</label>
+              <select
+                value={whatsappProvider || ""}
+                onChange={(e) => setWhatsappProvider(e.target.value === "" ? null : (e.target.value as "evolution" | "meta"))}
+                className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+              >
+                <option value="">Desabilitado</option>
+                <option value="evolution">Evolution API</option>
+                <option value="meta">Meta Cloud (em breve)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-zinc-700">Número WhatsApp (com DDD)</label>
+              <input
+                type="text"
+                placeholder="5511999999999"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value.replace(/\D/g, ""))}
+                className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
+              <p className="text-xs text-zinc-400">Formato: 55 (Brasil) + DDD + número. Ex: 5511999999999</p>
+            </div>
+
+            {whatsappProvider === "evolution" && (
+              <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
+                <h4 className="text-sm font-semibold text-zinc-700">Evolution API</h4>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">URL Base</label>
+                  <input
+                    type="text"
+                    placeholder="https://sua-evolution.up.railway.app"
+                    value={evolutionBaseUrl}
+                    onChange={(e) => setEvolutionBaseUrl(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">API Key</label>
+                  <input
+                    type="text"
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    value={evolutionApiKey}
+                    onChange={(e) => setEvolutionApiKey(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Nome da Instância</label>
+                  <input
+                    type="text"
+                    placeholder="minha-loja"
+                    value={evolutionInstanceName}
+                    onChange={(e) => setEvolutionInstanceName(e.target.value)}
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <p className="text-xs text-zinc-400">Webhook para configurar na Evolution: <code>https://seu-dominio.com/api/webhooks/whatsapp</code></p>
+              </div>
+            )}
+
+            {whatsappProvider === "meta" && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm text-amber-900">⚠️ Integração Meta Cloud oficial está em desenvolvimento. Use Evolution API por enquanto.</p>
+              </div>
+            )}
+
+            {whatsappProvider && (
+              <>
+                <div className="border-t border-zinc-200 pt-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-zinc-700">Bot de Atendimento</h4>
+
+                  <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+                    <input
+                      type="checkbox"
+                      checked={botEnabled}
+                      onChange={(e) => setBotEnabled(e.target.checked)}
+                      className="mt-1 h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4 text-zinc-400" />
+                        <span className="font-medium text-zinc-900">Ativar bot automático</span>
+                      </div>
+                      <p className="text-xs text-zinc-500">Quando ativado, o bot responde clientes automaticamente com o menu de opções.</p>
+                    </div>
+                  </label>
+
+                  <div className={`space-y-3 ${botEnabled ? "" : "opacity-50 pointer-events-none"}`}>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700">Nome do atendente</label>
+                      <input
+                        type="text"
+                        placeholder="Atendente"
+                        value={botAgentName}
+                        onChange={(e) => setBotAgentName(e.target.value)}
+                        className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700">Mensagem de saudação</label>
+                      <textarea
+                        placeholder="Olá! Eu sou a Sofia, atendente virtual da Pizzaria do João."
+                        value={botGreeting}
+                        onChange={(e) => setBotGreeting(e.target.value)}
+                        rows={2}
+                        className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-zinc-400">Deixe vazio para usar mensagem padrão.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700">Opções do menu (JSON)</label>
+                      <textarea
+                        value={botMenuOptions}
+                        onChange={(e) => setBotMenuOptions(e.target.value)}
+                        rows={6}
+                        className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 focus:border-green-600 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-zinc-400">Formato: array de objetos com <code>id</code>, <code>label</code> e <code>response</code> ("menu", "cardapio", "atendente" ou texto livre).</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

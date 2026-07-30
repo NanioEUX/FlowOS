@@ -18,6 +18,24 @@ model Establishment {
   logo                String?
   cover               String?
   description         String?
+  // WhatsApp / Bot config
+  whatsappProvider    String?           // "evolution" | "meta" | null
+  whatsappNumber      String?           // número E.164 (ex: 5511999999999)
+  // Evolution API
+  evolutionBaseUrl    String?
+  evolutionApiKey     String?
+  evolutionInstanceName String?
+  // Meta Cloud (preparado pra quando migrar)
+  metaPhoneNumberId   String?
+  metaAccessToken     String?
+  metaWebhookVerifyToken String?
+  metaBusinessAccountId String?
+  // Bot
+  botEnabled          Boolean           @default(false)
+  botAgentName        String?           @default("Atendente")
+  botGreeting         String?
+  botMenuOptions      String?           // JSON: [{label, response}]
+
   address             String?
   category            String?
   instagramUrl        String?
