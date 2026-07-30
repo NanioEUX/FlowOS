@@ -24,6 +24,194 @@ const categories = [
   { value: "outro", label: "Outro" },
 ]
 
+function WhatsAppConnection({
+  establishmentId,
+  evolutionBaseUrl,
+  evolutionApiKey,
+  evolutionInstanceName,
+  whatsappNumber,
+  onNumberDetected,
+}: {
+  establishmentId: string
+  evolutionBaseUrl: string
+  evolutionApiKey: string
+  evolutionInstanceName: string
+  whatsappNumber: string
+  onNumberDetected: (number: string) => void
+}) {
+  const [status, setStatus] = useState<"open" | "connecting" | "close" | "loading">("loading")
+  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [pairingCode, setPairingCode] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetchAuth(`/api/establishments/${establishmentId}/whatsapp-status`)
+      const data = await res.json()
+      if (data.state) setStatus(data.state)
+      if (data.number && !whatsappNumber) onNumberDetected(data.number)
+    } catch {
+      setStatus("close")
+    }
+  }
+
+  useEffect(() => {
+    checkStatus()
+    const interval = setInterval(() => {
+      if (status === "connecting") {
+        checkStatus()
+      }
+    }, 3000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [establishmentId])
+
+  const handleConnect = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetchAuth(`/api/establishments/${establishmentId}/whatsapp-connect`, {
+        method: "POST",
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Erro ao conectar")
+        return
+      }
+      if (data.state === "open") {
+        setStatus("open")
+        if (data.number) onNumberDetected(data.number)
+      } else if (data.qrcode) {
+        setStatus("connecting")
+        setQrCode(data.qrcode.base64 || null)
+        setPairingCode(data.qrcode.pairingCode || data.qrcode.code || null)
+      }
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm("Desconectar WhatsApp? O bot vai parar de responder.")) return
+    setLoading(true)
+    try {
+      await fetchAuth(`/api/establishments/${establishmentId}/whatsapp-disconnect`, {
+        method: "POST",
+      })
+      setStatus("close")
+      setQrCode(null)
+      setPairingCode(null)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="rounded-lg border border-zinc-200 p-4 text-center text-sm text-zinc-500">
+        Verificando conexão...
+      </div>
+    )
+  }
+
+  if (status === "open") {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                  ✓ CONECTADO
+                </span>
+                {whatsappNumber && (
+                  <span className="text-sm font-medium text-green-900">
+                    {whatsappNumber}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-green-700">
+                WhatsApp ativo e respondendo mensagens automaticamente.
+              </p>
+            </div>
+            <button
+              onClick={handleDisconnect}
+              disabled={loading}
+              className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
+            >
+              {loading ? "Desconectando..." : "Desconectar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === "connecting" && qrCode) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+              ⏳ AGUARDANDO CONEXÃO
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-amber-900">
+            Escaneie o QR Code abaixo com o WhatsApp do seu celular:
+          </p>
+          <ol className="mt-2 list-decimal pl-5 text-xs text-amber-900 space-y-0.5">
+            <li>Abra o WhatsApp no celular</li>
+            <li>Configurações (⚙️) → Aparelhos conectados</li>
+            <li>Toque em "Conectar um aparelho"</li>
+            <li>Aponte a câmera para o QR Code</li>
+          </ol>
+        </div>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-zinc-200 bg-white p-4">
+          <img src={qrCode} alt="QR Code WhatsApp" className="h-64 w-64" />
+          {pairingCode && (
+            <div className="text-center">
+              <p className="text-xs text-zinc-500">Ou use o código de pareamento:</p>
+              <code className="mt-1 block rounded bg-zinc-100 px-3 py-1 text-sm font-mono">{pairingCode}</code>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+          {error}
+        </div>
+      )}
+      <div className="rounded-lg border border-zinc-200 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-zinc-900">WhatsApp desconectado</p>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Clique no botão pra gerar o QR Code e conectar.
+            </p>
+          </div>
+          <button
+            onClick={handleConnect}
+            disabled={loading}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {loading ? "Conectando..." : "Conectar WhatsApp"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ConfigPage() {
   const searchParams = useSearchParams()
   const hookEstablishmentId = useEstablishmentId()
@@ -869,6 +1057,42 @@ export default function ConfigPage() {
               um cliente que cancelar {cancellationBlockThreshold} pedidos em {cancellationBlockWindowDays} dias
               ficará impedido de pagar na entrega por {cancellationBlockDurationDays} dias.
             </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Connection */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Conexão WhatsApp</h3>
+            <p className="text-sm text-zinc-500">Conecte seu número de WhatsApp escaneando o QR Code abaixo. Não precisa acessar o Evolution.</p>
+
+            {(() => {
+              if (!establishmentId) {
+                return (
+                  <div className="rounded-lg border border-zinc-200 p-4 text-sm text-zinc-500">
+                    Carregando...
+                  </div>
+                )
+              }
+              const hasConfig = !!evolutionBaseUrl && !!evolutionApiKey && !!evolutionInstanceName
+              if (!hasConfig) {
+                return (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    ⚠️ Preencha as credenciais do Evolution API abaixo antes de conectar.
+                  </div>
+                )
+              }
+              return (
+                <WhatsAppConnection
+                  establishmentId={establishmentId}
+                  evolutionBaseUrl={evolutionBaseUrl}
+                  evolutionApiKey={evolutionApiKey}
+                  evolutionInstanceName={evolutionInstanceName}
+                  whatsappNumber={whatsappNumber}
+                  onNumberDetected={setWhatsappNumber}
+                />
+              )
+            })()}
           </CardContent>
         </Card>
 

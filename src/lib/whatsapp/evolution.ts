@@ -6,6 +6,19 @@ interface EvolutionConfig {
   instanceName: string
 }
 
+export interface ConnectionState {
+  state: "open" | "connecting" | "close" | "refused"
+  number?: string
+  profileName?: string
+}
+
+export interface QRCodeResponse {
+  pairingCode?: string
+  code?: string
+  base64?: string
+  count?: number
+}
+
 export class EvolutionProvider implements WhatsAppProvider {
   private config: EvolutionConfig
 
@@ -33,6 +46,86 @@ export class EvolutionProvider implements WhatsAppProvider {
       return `55${digits}`
     }
     return digits
+  }
+
+  async getConnectionState(): Promise<ConnectionState> {
+    try {
+      const url = `${this.config.baseUrl}/instance/connectionState/${this.config.instanceName}`
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      })
+
+      if (!response.ok) {
+        return { state: "close" }
+      }
+
+      const data = await response.json()
+      return {
+        state: data.instance?.state || "close",
+        number: data.instance?.number || undefined,
+        profileName: data.instance?.profileName || undefined,
+      }
+    } catch {
+      return { state: "close" }
+    }
+  }
+
+  async connectInstance(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
+    try {
+      const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        return { success: false, error: `Evolution error: ${response.status} - ${errorText}` }
+      }
+
+      const data = await response.json()
+      return { success: true, qrcode: data }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  async getQRCode(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
+    try {
+      const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        return { success: false, error: `Evolution error: ${response.status} - ${errorText}` }
+      }
+
+      const data = await response.json()
+      return { success: true, qrcode: data }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  async logoutInstance(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const url = `${this.config.baseUrl}/instance/logout/${this.config.instanceName}`
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      })
+
+      if (!response.ok) {
+        return { success: false, error: `Status ${response.status}` }
+      }
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
   }
 
   async sendText(phone: string, text: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
