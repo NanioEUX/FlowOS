@@ -31,12 +31,17 @@ export async function POST(req: NextRequest) {
         evolutionApiKey: true,
         evolutionInstanceName: true,
         whatsappNumber: true,
+        botEnabled: true,
       },
     })
 
     if (!establishment) {
       console.warn(`[WhatsApp Webhook] Instância não encontrada: ${instanceName}`)
-      return NextResponse.json({ success: false, error: "Instância não encontrada" }, { status: 404 })
+      return NextResponse.json({
+        success: false,
+        error: "Instância não encontrada",
+        hint: "Crie um estabelecimento com esta instanceName via /dashboard/config ou seed-test-establishment.ts",
+      }, { status: 404 })
     }
 
     const provider = getWhatsAppProvider({
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, ignored: true })
     }
 
-    console.log(`[WhatsApp] Mensagem de ${parsed.phone}: "${parsed.text}"`)
+    console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Mensagem de ${parsed.phone}: "${parsed.text}"`)
 
     const botConfig = await getBotConfig(establishment.id)
 
@@ -74,8 +79,11 @@ export async function POST(req: NextRequest) {
     const response = generateBotResponse(parsed.text, botConfig)
 
     if (!response.shouldRespond || !response.message) {
-      return NextResponse.json({ success: true, noResponse: true })
+      console.log(`[WhatsApp] Sem resposta para "${parsed.text}"`)
+      return NextResponse.json({ success: true, noResponse: true, receivedText: parsed.text })
     }
+
+    console.log(`[WhatsApp] Respondendo para ${parsed.phone}: "${response.message.substring(0, 50)}..."`)
 
     const sendResult = await provider.sendText(parsed.phone, response.message, { delay: 2000 })
 
@@ -84,7 +92,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: sendResult.error }, { status: 500 })
     }
 
-    console.log(`[WhatsApp] Resposta enviada para ${parsed.phone}`)
+    console.log(`[WhatsApp] ✓ Resposta enviada para ${parsed.phone} (messageId: ${sendResult.messageId})`)
+
+    return NextResponse.json({
+      success: true,
+      messageId: sendResult.messageId,
+      receivedText: parsed.text,
+      responsePreview: response.message.substring(0, 100),
+    })
 
     return NextResponse.json({ success: true, messageId: sendResult.messageId })
   } catch (error: any) {
