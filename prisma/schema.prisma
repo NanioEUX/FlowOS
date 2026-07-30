@@ -40,6 +40,32 @@ model Establishment {
   botTone             String?           // "formal" | "casual" | "direct"
   botFAQ              String?           // texto livre com regras da casa
   botSystemPrompt     String?           // prompt customizado (avançado)
+  // Bot v2: inatividade
+  botInactivityEnabled  Boolean        @default(true)
+  botInactivityMinutes  Int            @default(10)
+  botInactivityMessage  String?        @default("Se precisar de algo mais, é só chamar! 😊")
+  // Bot v2: auto-transfer humano
+  botTransferEnabled    Boolean        @default(true)
+  botTransferKeywords   String?        @default("atendente,humano,pessoa,recepcao,recepção")
+  botTransferMessage    String?        @default("Vou chamar um atendente para te ajudar. Só um momento! 🙏")
+  // Bot v2: delay typing (anti-ban)
+  botTypingDelayMinMs   Int            @default(1500)
+  botTypingDelayMaxMs   Int            @default(3500)
+  // Bot v2: fora de horário
+  botRespectBusinessHours Boolean      @default(false)
+  botOutsideHoursMode    String?       @default("closed") // "closed" | "scheduled"
+  botOutsideHoursMessage String?       @default("Estamos fechados no momento. Nosso horário de atendimento é:")
+  botAcceptsScheduledOrders Boolean    @default(false)
+  botScheduledOrderMessage String?     @default("Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
+  // Bot v2: fallback
+  botFallbackMessage    String?        @default("Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
+  // Bot v2: templates de status do pedido
+  botTemplateOrderConfirmed  String?   @default("✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
+  botTemplateOrderPreparing  String?   @default("👨‍🍳 Seu pedido está sendo preparado!")
+  botTemplateOrderReady      String?   @default("🛎️ Seu pedido está pronto!")
+  botTemplateOrderDelivering String?   @default("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
+  botTemplateOrderDelivered  String?   @default("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
+  botTemplateOrderCancelled  String?   @default("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
   // Cobrança de automação WhatsApp
   whatsappAutomationEnabled   Boolean    @default(false)
   whatsappAutomationActivatedAt DateTime?
@@ -150,6 +176,8 @@ model Customer {
   cancellationCount Int         @default(0)
   blockedUntil    DateTime?     // Future: blocks payment on delivery until this date
   lastOrderAt     DateTime?
+  needsHuman      Boolean       @default(false)
+  needsHumanAt    DateTime?
   establishmentId String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

@@ -105,7 +105,7 @@ export function generateBotResponse(text: string, config: BotConfig): BotRespons
     case "cardapio":
       return {
         shouldRespond: true,
-        message: `🍴 *Cardápio Digital*\n\nAcesse nosso cardápio completo:\nhttps://${config.slug}.flowos.com\n\nOu digite *menu* para voltar ao início.`,
+        message: `🍴 *Cardápio Digital*\n\nAcesse nosso cardápio completo:\nhttps://flowoshub.com/${config.slug}\n\nOu digite *menu* para voltar ao início.`,
       }
 
     case "atendente":

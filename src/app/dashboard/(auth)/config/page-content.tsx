@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle } from "lucide-react"
@@ -44,6 +44,11 @@ function WhatsAppConnection({
   const [pairingCode, setPairingCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const statusRef = useRef(status)
+
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
 
   const checkStatus = async () => {
     try {
@@ -59,7 +64,7 @@ function WhatsAppConnection({
   useEffect(() => {
     checkStatus()
     const interval = setInterval(() => {
-      if (status === "connecting") {
+      if (statusRef.current === "connecting" || statusRef.current === "open") {
         checkStatus()
       }
     }, 3000)
@@ -272,6 +277,27 @@ export default function ConfigPage() {
   const [botTone, setBotTone] = useState<"formal" | "casual" | "direct">("casual")
   const [botFAQ, setBotFAQ] = useState("")
   const [botSystemPrompt, setBotSystemPrompt] = useState("")
+  // Bot v2
+  const [botInactivityEnabled, setBotInactivityEnabled] = useState(true)
+  const [botInactivityMinutes, setBotInactivityMinutes] = useState("10")
+  const [botInactivityMessage, setBotInactivityMessage] = useState("Se precisar de algo mais, é só chamar! 😊")
+  const [botTransferEnabled, setBotTransferEnabled] = useState(true)
+  const [botTransferKeywords, setBotTransferKeywords] = useState("atendente,humano,pessoa,recepcao,recepção")
+  const [botTransferMessage, setBotTransferMessage] = useState("Vou chamar um atendente para te ajudar. Só um momento! 🙏")
+  const [botTypingDelayMinMs, setBotTypingDelayMinMs] = useState("1500")
+  const [botTypingDelayMaxMs, setBotTypingDelayMaxMs] = useState("3500")
+  const [botRespectBusinessHours, setBotRespectBusinessHours] = useState(false)
+  const [botOutsideHoursMode, setBotOutsideHoursMode] = useState<"closed" | "scheduled">("closed")
+  const [botOutsideHoursMessage, setBotOutsideHoursMessage] = useState("Estamos fechados no momento. Nosso horário de atendimento é:")
+  const [botAcceptsScheduledOrders, setBotAcceptsScheduledOrders] = useState(false)
+  const [botScheduledOrderMessage, setBotScheduledOrderMessage] = useState("Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
+  const [botFallbackMessage, setBotFallbackMessage] = useState("Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
+  const [botTemplateOrderConfirmed, setBotTemplateOrderConfirmed] = useState("✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
+  const [botTemplateOrderPreparing, setBotTemplateOrderPreparing] = useState("👨‍🍳 Seu pedido está sendo preparado!")
+  const [botTemplateOrderReady, setBotTemplateOrderReady] = useState("🛎️ Seu pedido está pronto!")
+  const [botTemplateOrderDelivering, setBotTemplateOrderDelivering] = useState("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
+  const [botTemplateOrderDelivered, setBotTemplateOrderDelivered] = useState("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
+  const [botTemplateOrderCancelled, setBotTemplateOrderCancelled] = useState("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
   const [whatsappAutomationEnabled, setWhatsappAutomationEnabled] = useState(false)
   const [aiMessagesUsed, setAiMessagesUsed] = useState(0)
   const [aiMessagesLimit, setAiMessagesLimit] = useState(1000)
@@ -346,6 +372,26 @@ export default function ConfigPage() {
           setBotTone(data.botTone || "casual")
           setBotFAQ(data.botFAQ || "")
           setBotSystemPrompt(data.botSystemPrompt || "")
+          setBotInactivityEnabled(data.botInactivityEnabled ?? true)
+          setBotInactivityMinutes(String(data.botInactivityMinutes ?? 10))
+          setBotInactivityMessage(data.botInactivityMessage || "Se precisar de algo mais, é só chamar! 😊")
+          setBotTransferEnabled(data.botTransferEnabled ?? true)
+          setBotTransferKeywords(data.botTransferKeywords || "atendente,humano,pessoa,recepcao,recepção")
+          setBotTransferMessage(data.botTransferMessage || "Vou chamar um atendente para te ajudar. Só um momento! 🙏")
+          setBotTypingDelayMinMs(String(data.botTypingDelayMinMs ?? 1500))
+          setBotTypingDelayMaxMs(String(data.botTypingDelayMaxMs ?? 3500))
+          setBotRespectBusinessHours(data.botRespectBusinessHours ?? false)
+          setBotOutsideHoursMode(data.botOutsideHoursMode || "closed")
+          setBotOutsideHoursMessage(data.botOutsideHoursMessage || "Estamos fechados no momento. Nosso horário de atendimento é:")
+          setBotAcceptsScheduledOrders(data.botAcceptsScheduledOrders ?? false)
+          setBotScheduledOrderMessage(data.botScheduledOrderMessage || "Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
+          setBotFallbackMessage(data.botFallbackMessage || "Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
+          setBotTemplateOrderConfirmed(data.botTemplateOrderConfirmed || "✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
+          setBotTemplateOrderPreparing(data.botTemplateOrderPreparing || "👨‍🍳 Seu pedido está sendo preparado!")
+          setBotTemplateOrderReady(data.botTemplateOrderReady || "🛎️ Seu pedido está pronto!")
+          setBotTemplateOrderDelivering(data.botTemplateOrderDelivering || "🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
+          setBotTemplateOrderDelivered(data.botTemplateOrderDelivered || "🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
+          setBotTemplateOrderCancelled(data.botTemplateOrderCancelled || "❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
           setWhatsappAutomationEnabled(data.whatsappAutomationEnabled ?? false)
           setAiMessagesUsed(data.aiMessagesUsed || 0)
           setAiMessagesLimit(data.aiMessagesLimit || 1000)
@@ -404,6 +450,26 @@ export default function ConfigPage() {
           botTone,
           botFAQ,
           botSystemPrompt,
+          botInactivityEnabled,
+          botInactivityMinutes: Number(botInactivityMinutes) || 10,
+          botInactivityMessage,
+          botTransferEnabled,
+          botTransferKeywords,
+          botTransferMessage,
+          botTypingDelayMinMs: Number(botTypingDelayMinMs) || 1500,
+          botTypingDelayMaxMs: Number(botTypingDelayMaxMs) || 3500,
+          botRespectBusinessHours,
+          botOutsideHoursMode,
+          botOutsideHoursMessage,
+          botAcceptsScheduledOrders,
+          botScheduledOrderMessage,
+          botFallbackMessage,
+          botTemplateOrderConfirmed,
+          botTemplateOrderPreparing,
+          botTemplateOrderReady,
+          botTemplateOrderDelivering,
+          botTemplateOrderDelivered,
+          botTemplateOrderCancelled,
           whatsappAutomationEnabled,
           aiMessagesLimit,
         }),
@@ -1341,6 +1407,195 @@ export default function ConfigPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Inatividade */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">⏱️ Encerrar por inatividade</h5>
+                      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
+                        <input
+                          type="checkbox"
+                          checked={botInactivityEnabled}
+                          onChange={(e) => setBotInactivityEnabled(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-zinc-900">Encerrar conversa se cliente não responder</span>
+                          <p className="text-xs text-zinc-500">Se o cliente sumir, o bot manda uma última mensagem e para de responder.</p>
+                        </div>
+                      </label>
+                      {botInactivityEnabled && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-zinc-600">Tempo limite (min):</label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={botInactivityMinutes}
+                              onChange={(e) => setBotInactivityMinutes(e.target.value)}
+                              className="w-20 h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm"
+                            />
+                          </div>
+                          <textarea
+                            value={botInactivityMessage}
+                            onChange={(e) => setBotInactivityMessage(e.target.value)}
+                            rows={2}
+                            placeholder="Mensagem de despedida..."
+                            className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    {/* Auto-transfer humano */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">👤 Transferir para humano</h5>
+                      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
+                        <input
+                          type="checkbox"
+                          checked={botTransferEnabled}
+                          onChange={(e) => setBotTransferEnabled(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-zinc-900">Detectar pedidos de atendente humano</span>
+                          <p className="text-xs text-zinc-500">Quando o cliente digitar uma palavra-chave, o bot para e marca a conversa como pendente.</p>
+                        </div>
+                      </label>
+                      {botTransferEnabled && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-600">Palavras-chave (separadas por vírgula)</label>
+                            <input
+                              type="text"
+                              value={botTransferKeywords}
+                              onChange={(e) => setBotTransferKeywords(e.target.value)}
+                              className="mt-1 flex h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                            />
+                          </div>
+                          <textarea
+                            value={botTransferMessage}
+                            onChange={(e) => setBotTransferMessage(e.target.value)}
+                            rows={2}
+                            className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    {/* Delay typing */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">⌨️ Delay entre mensagens</h5>
+                      <p className="text-xs text-zinc-500">Simula tempo de digitação pra não correr risco de ban e parecer mais humano.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-600">Mínimo (ms)</label>
+                          <input
+                            type="number"
+                            min={500}
+                            max={10000}
+                            step={100}
+                            value={botTypingDelayMinMs}
+                            onChange={(e) => setBotTypingDelayMinMs(e.target.value)}
+                            className="mt-1 flex h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-600">Máximo (ms)</label>
+                          <input
+                            type="number"
+                            min={500}
+                            max={15000}
+                            step={100}
+                            value={botTypingDelayMaxMs}
+                            onChange={(e) => setBotTypingDelayMaxMs(e.target.value)}
+                            className="mt-1 flex h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fora de horário */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">🕐 Fora de horário</h5>
+                      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
+                        <input
+                          type="checkbox"
+                          checked={botRespectBusinessHours}
+                          onChange={(e) => setBotRespectBusinessHours(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-zinc-900">Respeitar horário de funcionamento</span>
+                          <p className="text-xs text-zinc-500">Fora do horário configurado no card abaixo, o bot envia mensagem especial.</p>
+                        </div>
+                      </label>
+                      {botRespectBusinessHours && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-600">Comportamento</label>
+                            <select
+                              value={botOutsideHoursMode}
+                              onChange={(e) => setBotOutsideHoursMode(e.target.value as "closed" | "scheduled")}
+                              className="mt-1 flex h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+                            >
+                              <option value="closed">Apenas informar que está fechado</option>
+                              <option value="scheduled">Aceitar pedidos agendados</option>
+                            </select>
+                          </div>
+                          <textarea
+                            value={botOutsideHoursMessage}
+                            onChange={(e) => setBotOutsideHoursMessage(e.target.value)}
+                            rows={2}
+                            className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                          />
+                          {botOutsideHoursMode === "scheduled" && (
+                            <textarea
+                              value={botScheduledOrderMessage}
+                              onChange={(e) => setBotScheduledOrderMessage(e.target.value)}
+                              rows={2}
+                              className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Fallback */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">🤔 Não entendeu o cliente</h5>
+                      <p className="text-xs text-zinc-500">Quando o bot não sabe responder.</p>
+                      <textarea
+                        value={botFallbackMessage}
+                        onChange={(e) => setBotFallbackMessage(e.target.value)}
+                        rows={2}
+                        className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {/* Templates de status */}
+                    <div className="space-y-3 border-t border-zinc-200 pt-4">
+                      <h5 className="text-sm font-semibold text-zinc-700">📦 Mensagens de status do pedido</h5>
+                      <p className="text-xs text-zinc-500">O bot envia automaticamente quando o status do pedido muda.</p>
+                      {[
+                        { key: "botTemplateOrderConfirmed", label: "Confirmado", value: botTemplateOrderConfirmed, set: setBotTemplateOrderConfirmed },
+                        { key: "botTemplateOrderPreparing", label: "Preparando", value: botTemplateOrderPreparing, set: setBotTemplateOrderPreparing },
+                        { key: "botTemplateOrderReady", label: "Pronto", value: botTemplateOrderReady, set: setBotTemplateOrderReady },
+                        { key: "botTemplateOrderDelivering", label: "Saiu para entrega", value: botTemplateOrderDelivering, set: setBotTemplateOrderDelivering },
+                        { key: "botTemplateOrderDelivered", label: "Entregue", value: botTemplateOrderDelivered, set: setBotTemplateOrderDelivered },
+                        { key: "botTemplateOrderCancelled", label: "Cancelado", value: botTemplateOrderCancelled, set: setBotTemplateOrderCancelled },
+                      ].map((t) => (
+                        <div key={t.key}>
+                          <label className="block text-xs font-medium text-zinc-600">{t.label}</label>
+                          <textarea
+                            value={t.value}
+                            onChange={(e) => t.set(e.target.value)}
+                            rows={2}
+                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </>

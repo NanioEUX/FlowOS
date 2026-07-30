@@ -4,6 +4,14 @@ import { getWhatsAppProvider } from "@/lib/whatsapp"
 import { generateBotResponse } from "@/lib/whatsapp/bot"
 import { generateAIResponse, isAIAvailable } from "@/lib/whatsapp/ai/openai"
 import { loadBotContext, buildSystemPrompt } from "@/lib/whatsapp/ai/prompt"
+import {
+  isOpenNow,
+  formatBusinessHoursForMessage,
+  parseBusinessHours,
+  randomTypingDelay,
+  parseTransferKeywords,
+  detectTransferIntent,
+} from "@/lib/whatsapp/bot-rules"
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,6 +66,27 @@ export async function POST(req: NextRequest) {
         aiMessagesUsed: true,
         aiMessagesLimit: true,
         aiMessagesResetAt: true,
+        // Bot v2
+        botInactivityEnabled: true,
+        botInactivityMinutes: true,
+        botInactivityMessage: true,
+        botTransferEnabled: true,
+        botTransferKeywords: true,
+        botTransferMessage: true,
+        botTypingDelayMinMs: true,
+        botTypingDelayMaxMs: true,
+        botRespectBusinessHours: true,
+        botOutsideHoursMode: true,
+        botOutsideHoursMessage: true,
+        botAcceptsScheduledOrders: true,
+        botScheduledOrderMessage: true,
+        botFallbackMessage: true,
+        botTemplateOrderConfirmed: true,
+        botTemplateOrderPreparing: true,
+        botTemplateOrderReady: true,
+        botTemplateOrderDelivering: true,
+        botTemplateOrderDelivered: true,
+        botTemplateOrderCancelled: true,
       },
     })
 
@@ -104,6 +133,75 @@ export async function POST(req: NextRequest) {
     if (!establishment.botEnabled) {
       console.log(`[WhatsApp] Bot desabilitado para ${establishment.id}`)
       return NextResponse.json({ success: true, botDisabled: true })
+    }
+
+    // ===== Regras Bot v2 =====
+
+    // 1. Auto-transfer humano (palavras-chave)
+    if (establishment.botTransferEnabled) {
+      const keywords = parseTransferKeywords(establishment.botTransferKeywords)
+      if (detectTransferIntent(parsed.text, keywords)) {
+        const customer = await prisma.customer.findFirst({
+          where: { phone: parsed.phone, establishmentId: establishment.id },
+          select: { id: true },
+        })
+        if (customer) {
+          await prisma.customer.update({
+            where: { id: customer.id },
+            data: { needsHuman: true, needsHumanAt: new Date() },
+          })
+        }
+        const transferMsg =
+          establishment.botTransferMessage ||
+          "Vou chamar um atendente para te ajudar. Só um momento! 🙏"
+        const delay = randomTypingDelay(
+          establishment.botTypingDelayMinMs || 1500,
+          establishment.botTypingDelayMaxMs || 3500
+        )
+        await provider.sendText(parsed.phone, transferMsg, { delay })
+        console.log(`[WhatsApp] Transferido para humano (keyword detectada em "${parsed.text}")`)
+        return NextResponse.json({ success: true, transferred: true })
+      }
+    }
+
+    // 2. Fora de horário (se ativado)
+    if (establishment.botRespectBusinessHours) {
+      const hours = parseBusinessHours(establishment.businessHours)
+      if (!isOpenNow(hours)) {
+        let outsideMsg =
+          establishment.botOutsideHoursMessage ||
+          "Estamos fechados no momento. Nosso horário de atendimento é:"
+        const formatted = formatBusinessHoursForMessage(hours)
+        if (formatted) outsideMsg = `${outsideMsg}\n\n${formatted}`
+        if (
+          establishment.botOutsideHoursMode === "scheduled" &&
+          establishment.botAcceptsScheduledOrders
+        ) {
+          outsideMsg = `${outsideMsg}\n\n${
+            establishment.botScheduledOrderMessage ||
+            "Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊"
+          }`
+        }
+        const delay = randomTypingDelay(
+          establishment.botTypingDelayMinMs || 1500,
+          establishment.botTypingDelayMaxMs || 3500
+        )
+        await provider.sendText(parsed.phone, outsideMsg, { delay })
+        console.log(`[WhatsApp] Fora de horário - respondendo com mensagem padrão`)
+        return NextResponse.json({ success: true, outsideHours: true })
+      }
+    }
+
+    // 3. Inatividade: se cliente não respondeu, encerrar
+    if (establishment.botInactivityEnabled) {
+      const customer = await prisma.customer.findFirst({
+        where: { phone: parsed.phone, establishmentId: establishment.id },
+        select: { needsHuman: true },
+      })
+      if (customer?.needsHuman) {
+        // cliente pediu humano antes, bot não responde
+        return NextResponse.json({ success: true, ignored: "needsHuman" })
+      }
     }
 
     let responseMessage: string | null = null
@@ -189,12 +287,27 @@ export async function POST(req: NextRequest) {
 
     if (!responseMessage) {
       console.log(`[WhatsApp] Sem resposta para "${parsed.text}"`)
+      // Fallback: pede pro cliente reformular
+      if (establishment.botFallbackMessage) {
+        const delay = randomTypingDelay(
+          establishment.botTypingDelayMinMs || 1500,
+          establishment.botTypingDelayMaxMs || 3500
+        )
+        await provider.sendText(parsed.phone, establishment.botFallbackMessage, { delay })
+        console.log(`[WhatsApp] Fallback enviado`)
+        return NextResponse.json({ success: true, fallback: true })
+      }
       return NextResponse.json({ success: true, noResponse: true, receivedText: parsed.text })
     }
 
     console.log(`[WhatsApp] Respondendo (${usedAI ? "IA" : "menu"}): "${responseMessage.substring(0, 50)}..."`)
 
-    const sendResult = await provider.sendText(parsed.phone, responseMessage, { delay: 2000 })
+    const sendResult = await provider.sendText(parsed.phone, responseMessage, {
+      delay: randomTypingDelay(
+        establishment.botTypingDelayMinMs || 1500,
+        establishment.botTypingDelayMaxMs || 3500
+      ),
+    })
 
     if (!sendResult.success) {
       console.error(`[WhatsApp] Erro ao enviar:`, sendResult.error)

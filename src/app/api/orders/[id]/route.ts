@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
 import { verifyAuth } from "@/lib/auth"
+import { getWhatsAppProvider } from "@/lib/whatsapp"
+import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
 
 export async function PATCH(
   req: NextRequest,
@@ -243,6 +245,59 @@ export async function PATCH(
         }
       } catch (autoErr: any) {
         console.error("auto-assign delivery person error:", autoErr.message)
+      }
+    }
+
+    // Notificar cliente via WhatsApp quando o status mudar (templates do bot v2)
+    if (status && status !== order.status && order.customerPhone) {
+      try {
+        const establishment = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+          select: {
+            whatsappProvider: true,
+            evolutionBaseUrl: true,
+            evolutionApiKey: true,
+            evolutionInstanceName: true,
+            whatsappNumber: true,
+            botEnabled: true,
+            botTypingDelayMinMs: true,
+            botTypingDelayMaxMs: true,
+            botTemplateOrderConfirmed: true,
+            botTemplateOrderPreparing: true,
+            botTemplateOrderReady: true,
+            botTemplateOrderDelivering: true,
+            botTemplateOrderDelivered: true,
+            botTemplateOrderCancelled: true,
+          },
+        })
+        const templateMap: Record<string, string | null | undefined> = {
+          confirmed: establishment?.botTemplateOrderConfirmed,
+          preparing: establishment?.botTemplateOrderPreparing,
+          ready: establishment?.botTemplateOrderReady,
+          out_for_delivery: establishment?.botTemplateOrderDelivering,
+          delivered: establishment?.botTemplateOrderDelivered,
+          cancelled: establishment?.botTemplateOrderCancelled,
+        }
+        const template = templateMap[status]
+        if (template && establishment?.botEnabled) {
+          const provider = getWhatsAppProvider({
+            whatsappProvider: establishment.whatsappProvider,
+            evolutionBaseUrl: establishment.evolutionBaseUrl,
+            evolutionApiKey: establishment.evolutionApiKey,
+            evolutionInstanceName: establishment.evolutionInstanceName,
+            whatsappNumber: establishment.whatsappNumber,
+          })
+          if (provider) {
+            const delay = randomTypingDelay(
+              establishment.botTypingDelayMinMs || 1500,
+              establishment.botTypingDelayMaxMs || 3500
+            )
+            await provider.sendText(order.customerPhone, template, { delay })
+            console.log(`[Order PATCH] Notificação de status "${status}" enviada para ${order.customerPhone}`)
+          }
+        }
+      } catch (notifyErr: any) {
+        console.error(`[Order PATCH] Falha ao notificar cliente: ${notifyErr.message}`)
       }
     }
 
