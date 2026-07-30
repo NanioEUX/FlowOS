@@ -167,7 +167,7 @@ function WhatsAppConnection({
           <ol className="mt-2 list-decimal pl-5 text-xs text-amber-900 space-y-0.5">
             <li>Abra o WhatsApp no celular</li>
             <li>Configurações (⚙️) → Aparelhos conectados</li>
-            <li>Toque em "Conectar um aparelho"</li>
+            <li>Toque em &ldquo;Conectar um aparelho&rdquo;</li>
             <li>Aponte a câmera para o QR Code</li>
           </ol>
         </div>
