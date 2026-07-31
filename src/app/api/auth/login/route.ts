@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     const establishment = await withRetry(() =>
       prisma.establishment.findUnique({
-        where: { id: user.establishmentId },
+        where: { id: user.establishmentId! },
         select: {
           id: true, name: true, slug: true, logo: true, description: true, defaultTheme: true,
           subscriptionStatus: true, subscriptionPlan: true,
