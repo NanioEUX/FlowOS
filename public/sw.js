@@ -1,6 +1,7 @@
-const CACHE_NAME = "pedefacil-v5"
+const CACHE_NAME = "pedefacil-v6"
 
-const urlsToCache = [
+// Recursos críticos para offline
+const PRECACHE_URLS = [
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -12,7 +13,7 @@ const urlsToCache = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   )
   self.skipWaiting()
 })
@@ -30,22 +31,52 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url)
 
+  // APIs e assets Next: nunca cachear
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/")) {
     event.respondWith(fetch(event.request))
     return
   }
 
+  // Navegação (páginas): network-first com fallback pro cache
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache)
+            })
+          }
+          return response
+        })
+        .catch(() => caches.match(event.request))
     )
     return
   }
 
+  // Imagens: cache-first
+  if (event.request.destination === "image") {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached
+        return fetch(event.request).then((response) => {
+          if (!response || response.status !== 200) return response
+          const responseToCache = response.clone()
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache)
+          })
+          return response
+        })
+      })
+    )
+    return
+  }
+
+  // Outros assets estáticos: stale-while-revalidate
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) return response
-      return fetch(event.request).then((response) => {
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request).then((response) => {
         if (!response || response.status !== 200 || response.type !== "basic") {
           return response
         }
@@ -55,12 +86,13 @@ self.addEventListener("fetch", (event) => {
         })
         return response
       })
+      return cached || fetchPromise
     })
   )
 })
 
 self.addEventListener("push", (event) => {
-  let data = { title: "PedeFácil", body: "Nova notificação", url: "/" }
+  let data = { title: "FlowOS", body: "Nova notificação", url: "/" }
   try {
     data = JSON.parse(event.data.text())
   } catch {}
@@ -69,12 +101,10 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: data.icon || "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      badge: "/icons/icon-512.png",
       vibrate: [200, 100, 200],
       data: { url: data.url },
-      actions: [
-        { action: "open", title: "Abrir" },
-      ],
+      actions: [{ action: "open", title: "Abrir" }],
     })
   )
 })
