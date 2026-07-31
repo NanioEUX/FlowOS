@@ -15,10 +15,12 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log(`[WhatsApp] [DEBUG-HIT] webhook recebido, url=${req.url}`)
     // Validação de origem: Evolution API envia o header "apikey" com a
     // chave do webhook (não a API key global). Se não bater com nenhuma
     // chave configurada, rejeita.
     const webhookKey = req.headers.get("apikey") || req.headers.get("x-api-key")
+    console.log(`[WhatsApp] [DEBUG-HIT] webhookKey presente=${!!webhookKey}`)
     if (webhookKey) {
       const validKey = await prisma.establishment.findFirst({
         where: { evolutionApiKey: webhookKey },
