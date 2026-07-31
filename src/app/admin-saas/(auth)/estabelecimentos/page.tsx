@@ -55,7 +55,9 @@ export default async function EstabelecimentosPage() {
               return (
                 <tr key={e.id} className="border-b border-zinc-100 hover:bg-zinc-50">
                   <td className="py-3 px-4">
-                    <div className="font-medium text-zinc-900">{e.name}</div>
+                    <a href={`/admin-saas/estabelecimentos/${e.id}`} className="font-medium text-zinc-900 hover:text-green-600">
+                      {e.name}
+                    </a>
                     <div className="text-xs text-zinc-500">{e.slug}</div>
                   </td>
                   <td className="py-3 px-4">
