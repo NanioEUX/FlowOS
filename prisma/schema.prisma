@@ -373,13 +373,13 @@ model User {
   canCloseRegister    Boolean              @default(false)
   isActive            Boolean              @default(true)
   mustChangePassword  Boolean              @default(false)
-  establishmentId     String
+  establishmentId     String?
+  establishment       Establishment?        @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   paidDeliveries      DeliveryPayment[]
   deliveryPerson      DeliveryPerson?
   passwordResetTokens PasswordResetToken[]
-  establishment       Establishment        @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 }
 
 model PasswordResetToken {
