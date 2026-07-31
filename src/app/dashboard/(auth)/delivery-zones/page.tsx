@@ -239,7 +239,7 @@ export default function DeliveryZonesPage() {
       {/* Adicionar zona */}
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
         <h2 className="text-lg font-semibold text-zinc-900 mb-1">➕ Nova zona de entrega</h2>
-        <p className="text-xs text-zinc-500 mb-4">Ex: "Centro" de 0 a 1km, taxa R$ 3</p>
+        <p className="text-xs text-zinc-500 mb-4">Ex: &ldquo;Centro&rdquo; de 0 a 1km, taxa R$ 3</p>
 
         <div className="grid grid-cols-7 gap-2 mb-3">
           <input
