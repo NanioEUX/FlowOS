@@ -15,7 +15,7 @@ export default function SaasAdminLogin() {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/admin-saas/login", {
+      const res = await fetch("/api/saas-admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
