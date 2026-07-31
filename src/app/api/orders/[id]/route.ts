@@ -296,6 +296,35 @@ export async function PATCH(
             await provider.sendText(order.customerPhone, template, { delay })
             console.log(`[Order PATCH] Notificação de status "${status}" enviada para ${order.customerPhone}`)
           }
+
+          // Push notification PWA
+          try {
+            const { sendPush } = await import("@/lib/push")
+            const statusEmoji: any = {
+              confirmed: "✅",
+              preparing: "👨‍🍳",
+              ready: "🎉",
+              out_for_delivery: "🛵",
+              delivered: "✨",
+              cancelled: "❌",
+            }
+            const statusTitle: any = {
+              confirmed: "Pedido confirmado!",
+              preparing: "Preparando seu pedido",
+              ready: "Pedido pronto!",
+              out_for_delivery: "Saiu pra entrega",
+              delivered: "Pedido entregue!",
+              cancelled: "Pedido cancelado",
+            }
+            await sendPush(order.establishmentId, order.customerPhone, {
+              title: `${statusEmoji[status] || "📦"} ${statusTitle[status] || "Atualização do pedido"}`,
+              body: template.substring(0, 100),
+              url: order.trackingToken ? `/pedido/${order.id}?token=${order.trackingToken}` : `/pedido/${order.id}`,
+              tag: `order-${order.id}`,
+            })
+          } catch (pushErr: any) {
+            console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
+          }
         }
       } catch (notifyErr: any) {
         console.error(`[Order PATCH] Falha ao notificar cliente: ${notifyErr.message}`)

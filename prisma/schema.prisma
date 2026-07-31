@@ -80,6 +80,9 @@ model Establishment {
   scheduledMaxAdvanceDays Int           @default(30)   // antecedência máxima em dias
 
   address             String?
+  addressLat          Float?
+  addressLng          Float?
+  deliveryRadiusKm    Int?      @default(8)
   category            String?
   instagramUrl        String?
   primaryColor        String            @default("#16a34a")
@@ -151,6 +154,8 @@ model Establishment {
   categories          Category[]
   coupons             Coupon[]
   customers           Customer[]
+  deliveryZones       DeliveryZone[]
+  pushSubscriptions   PushSubscription[]
   deliveryPayments    DeliveryPayment[]
   deliveryPeople      DeliveryPerson[]
   expenses            Expense[]
@@ -628,4 +633,40 @@ model GlobalQuickReply {
   updatedAt DateTime @updatedAt
 
   @@index([enabled, order])
+}
+
+// Subscription de Push Notification (PWA)
+model PushSubscription {
+  id              String   @id @default(cuid())
+  establishmentId String
+  // Identificador do cliente (sessionStorage gera ou phone)
+  customerKey     String   // número de telefone, sessionId, etc
+  endpoint        String   @unique
+  p256dh          String
+  auth            String
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, customerKey])
+}
+
+// Zonas de entrega por distância (taxa configurável por faixa de km)
+model DeliveryZone {
+  id              String   @id @default(cuid())
+  establishmentId String
+  name            String   // "Centro", "Bairros próximos"
+  minKm           Float    @default(0)
+  maxKm           Float    // 1, 3, 5, 8...
+  fee             Float    // R$ 3, R$ 5, R$ 7...
+  freeAbove       Float?   // null ou valor (ex: 30 = grátis acima de R$30)
+  estimatedMin    Int      @default(30) // minutos estimados
+  order           Int      @default(0)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, order])
 }

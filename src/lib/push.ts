@@ -1,55 +1,79 @@
-import webPush from "web-push"
+import webpush from "web-push"
+import { prisma } from "@/lib/prisma"
 
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!
-const vapidSubject = process.env.VAPID_SUBJECT || "mailto:admin@flowos.fs.app"
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@flowos.fs.app"
 
-if (vapidPublicKey && vapidPrivateKey) {
-  webPush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+let configured = false
+
+function ensureConfigured() {
+  if (configured) return
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+    console.warn("[Push] VAPID keys não configuradas")
+    return
+  }
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+  configured = true
 }
 
-export async function sendPushToDeliveryPerson(
-  deliveryPersonId: string,
-  title: string,
-  body: string,
+export interface PushPayload {
+  title: string
+  body: string
   url?: string
-) {
-  if (!vapidPublicKey || !vapidPrivateKey) return
+  icon?: string
+  badge?: string
+  tag?: string
+}
 
-  try {
-    // Dynamic import to avoid issues if table doesn't exist
-    const { prisma } = await import("@/lib/prisma")
+/**
+ * Envia push para todas as subscriptions do cliente/estabelecimento.
+ */
+export async function sendPush(
+  establishmentId: string,
+  customerKey: string,
+  payload: PushPayload
+): Promise<{ sent: number; failed: number }> {
+  ensureConfigured()
+  if (!configured) return { sent: 0, failed: 0 }
 
-    const subscriptions = await prisma.$queryRaw`
-      SELECT endpoint, p256dh, auth
-      FROM PushSubscription
-      WHERE deliveryPersonId = ${deliveryPersonId}
-    ` as any[]
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { establishmentId, customerKey },
+  })
 
-    for (const sub of subscriptions) {
+  if (subscriptions.length === 0) return { sent: 0, failed: 0 }
+
+  let sent = 0
+  let failed = 0
+
+  await Promise.all(
+    subscriptions.map(async (sub) => {
       try {
-        await webPush.sendNotification(
+        await webpush.sendNotification(
           {
             endpoint: sub.endpoint,
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          JSON.stringify({
-            title,
-            body,
-            url: url || "/",
-            icon: "/icon-192.png",
-          })
+          JSON.stringify(payload)
         )
+        sent++
+        await prisma.pushSubscription.update({
+          where: { id: sub.id },
+          data: { lastUsedAt: new Date() },
+        })
       } catch (e: any) {
-        // Subscription expired or invalid, remove it
+        failed++
+        // Subscription expirou: remove
         if (e.statusCode === 404 || e.statusCode === 410) {
-          await prisma.$executeRaw`
-            DELETE FROM PushSubscription WHERE endpoint = ${sub.endpoint}
-          `.catch(() => {})
+          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {})
         }
       }
-    }
-  } catch {
-    // Table might not exist yet, ignore
-  }
+    })
+  )
+
+  return { sent, failed }
+}
+
+export function getVapidPublicKey(): string | null {
+  return VAPID_PUBLIC || null
 }

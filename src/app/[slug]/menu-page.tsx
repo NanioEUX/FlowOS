@@ -11,6 +11,8 @@ import { formatCurrency } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
+import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geolocation-button"
+import { PushSubscribe } from "@/components/pwa/push-subscribe"
 
 interface Product {
   id: string
@@ -232,6 +234,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
+  const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
   const [ordering, setOrdering] = useState(false)
   const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
@@ -561,6 +564,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   function calcDeliveryFee(): number {
     if (orderType !== "delivery") return 0
+    // Se tem info de geolocalização calculada, usa ela
+    if (geoDeliveryInfo?.available) {
+      const fee = geoDeliveryInfo.fee || 0
+      const freeAbove = geoDeliveryInfo.freeAbove
+      if (freeAbove && subtotal >= freeAbove) return 0
+      return fee
+    }
     const type = establishment.deliveryFeeType || "free"
     if (type === "free") return 0
     if (type === "free_above" && subtotal >= (establishment.deliveryFreeAbove || 0)) return 0
@@ -1662,6 +1672,36 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
+      {/* Ações rápidas PWA */}
+      <div className="mx-auto max-w-3xl px-4 pt-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
+          <button
+            type="button"
+            onClick={async () => {
+              if (navigator.share) {
+                try {
+                  await navigator.share({
+                    title: establishment.name,
+                    text: `Olha o cardápio de ${establishment.name}!`,
+                    url: window.location.href,
+                  })
+                } catch {}
+              } else {
+                try {
+                  await navigator.clipboard.writeText(window.location.href)
+                  alert("Link copiado!")
+                } catch {}
+              }
+            }}
+            className="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 text-xs font-medium px-3 py-2 rounded-lg"
+          >
+            <span>🔗</span>
+            <span>Compartilhar</span>
+          </button>
+        </div>
+      </div>
+
       {/* Categories & Products */}
       <div className="mx-auto max-w-3xl px-4 py-6">
         {searchQuery ? (
@@ -2426,6 +2466,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                   ) : (
                     <>
+                      <GeolocationButton
+                        establishmentId={establishment.id}
+                        orderTotal={subtotal}
+                        onResult={(info) => setGeoDeliveryInfo(info)}
+                      />
                       <div className="flex gap-2">
                       <div className="space-y-1">
                         <label htmlFor="cep" className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
