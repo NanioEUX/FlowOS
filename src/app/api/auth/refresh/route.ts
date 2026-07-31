@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import jwt from "jsonwebtoken"
 
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
       JWT_SECRET + "-refresh",
       { expiresIn: "7d" }
     )
+
+    cookies().set("auth_token", newToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    })
 
     return NextResponse.json({
       token: newToken,
