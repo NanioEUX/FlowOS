@@ -126,6 +126,30 @@ O painel `/admin-saas` é o **centro de comando** do SaaS FlowOS. Permite ao tim
 
 ---
 
+## 🕒 Backlog / Melhorias Futuras
+
+### Push Notifications Staff
+
+- [ ] **Push pro dono** quando pedido novo (toggle "🔔 Ativar notificações do painel" no `/dashboard`)
+- [ ] **Push pro entregador** quando pedido atribuído (painel `/staff/[slug]`)
+- [ ] Toggle + indicador "disponível" pro entregador pausar notificações
+- [ ] Subscription separada do cliente (model `StaffPushSubscription`)
+- [ ] Push só pro entregador atribuído (não pra todos disponíveis)
+
+### Painel Estabelecimento — Geolocalização
+
+- [ ] UI pra configurar `addressLat`/`addressLng` do estabelecimento (botão "📍 Capturar GPS")
+- [ ] CRUD visual das `DeliveryZone` (tabela de zonas: minKm, maxKm, fee, freeAbove)
+- [ ] Configurar `deliveryRadiusKm` máximo
+
+### Outras
+
+- [ ] Badge no ícone do PWA (carrinho com N itens)
+- [ ] Confirmação de pagamento PIX via push
+- [ ] Melhorias de UX no PWA (offline order, cache inteligente)
+
+---
+
 ## 🔐 Como Criar Mais Admins SaaS
 
 ```bash

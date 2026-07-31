@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -35,6 +35,7 @@ const configSubItems = [
   { icon: Settings, label: "Geral", href: "/dashboard/config", perm: "config" },
   { icon: Users, label: "Usuários", href: "/dashboard/usuarios", perm: "usuarios" },
   { icon: CreditCard, label: "Planos", href: "/dashboard/planos", perm: "config" },
+  { icon: MapPin, label: "Zonas de Entrega", href: "/dashboard/delivery-zones", perm: "config" },
 ]
 
 interface UserData {
@@ -289,7 +290,7 @@ export default function DashboardLayout({
                 onClick={() => setConfigOpen(!configOpen)}
                 className={cn(
                   "sidebar-item w-full",
-                  (pathname === "/dashboard/config" || pathname === "/dashboard/usuarios" || pathname === "/dashboard/planos") ? "active" : ""
+                  (pathname === "/dashboard/config" || pathname === "/dashboard/usuarios" || pathname === "/dashboard/planos" || pathname === "/dashboard/delivery-zones") ? "active" : ""
                 )}
               >
                 <Settings className="h-[18px] w-[18px]" />
