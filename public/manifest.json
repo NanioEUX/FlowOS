@@ -2,7 +2,7 @@
   "name": "FlowOS - Cardápio Digital",
   "short_name": "FlowOS",
   "description": "Sistema de pedidos online para seu estabelecimento",
-  "start_url": "/",
+  "start_url": ".",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -14,12 +14,11 @@
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Cardápio",
       "short_name": "Cardápio",
-      "url": "/",
+      "url": "./",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
