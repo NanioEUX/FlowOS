@@ -207,6 +207,8 @@ export async function POST(req: NextRequest) {
     let responseMessage: string | null = null
     let usedAI = false
 
+    console.log(`[WhatsApp] [DEBUG] botUseAI=${establishment.botUseAI} isAIAvailable=${isAIAvailable()} parsed.text="${parsed.text}"`)
+
     if (establishment.botUseAI && isAIAvailable()) {
       const aiLimitReached = establishment.aiMessagesUsed >= establishment.aiMessagesLimit
       const needsAI = !isMenuOption(parsed.text, establishment.botMenuOptions) && !isGreeting(parsed.text)
@@ -238,7 +240,9 @@ export async function POST(req: NextRequest) {
           usedAI = false
         } else {
           try {
+            console.log(`[WhatsApp] [DEBUG] Entrando no try da IA...`)
             const context = await loadBotContext(establishment.id, parsed.phone)
+            console.log(`[WhatsApp] [DEBUG] loadBotContext retornou: ${context ? 'OK' : 'NULL'}`)
             if (context) {
               const systemPrompt = buildSystemPrompt(context)
               const aiResult = await generateAIResponse(systemPrompt, parsed.text, [], {
