@@ -574,7 +574,7 @@ model AIUsageLog {
   customerPhone   String?
   // Tokens consumidos
   inputTokens     Int
-  outputTokens    Int
+  outputTokens     Int
   totalTokens     Int
   // Custo estimado em centavos (input + output)
   costCents       Int
@@ -588,4 +588,44 @@ model AIUsageLog {
 
   @@index([establishmentId, createdAt])
   @@index([createdAt])
+}
+
+// ===== Painel Admin SaaS =====
+
+// Templates globais de prompt por categoria de estabelecimento.
+// Pizzaria, sorveteria, hamburgueria, etc.
+// Quando um Establishment é criado com `category`, herda o `promptBase`.
+// Estabelecimento pode sobrescrever via `botSystemPrompt`.
+model CategoryTemplate {
+  id               String   @id @default(cuid())
+  slug             String   @unique // "pizzaria", "sorveteria", "acai"
+  name             String   // "Pizzaria", "Sorveteria", "Açaí"
+  icon             String?  // "🍕"
+  description      String?  // descrição curta
+  tone             String   @default("casual") // "formal" | "casual" | "leve"
+  promptBase       String   // texto base do system prompt
+  defaultAgentName String   @default("Atendente")
+  defaultMenuJson  String?  // menu padrão opcional (JSON)
+  enabled          Boolean  @default(true) // se false, não permite escolher
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Respostas rápidas globais — regras que TODOS os estabelecimentos herdam.
+// Admin SaaS edita uma vez e afeta todos.
+// Antes de chamar a IA, o webhook consulta essas regras.
+model GlobalQuickReply {
+  id        String   @id @default(cuid())
+  category  String   // "cardapio", "horario", "entrega", "pagamento", "humano"
+  label     String   // "Cardápio", "Horário de funcionamento"
+  triggers  String   // palavras-chave separadas por vírgula: "cardapio,cardápio,menu,preço"
+  response  String   // texto que o bot responde
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  matchType String   @default("any") // "any" | "all" | "exact"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, order])
 }
