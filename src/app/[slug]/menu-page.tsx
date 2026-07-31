@@ -1549,8 +1549,8 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Header - Fixed */}
-      <div className="fixed top-0 left-0 right-0 z-10 border-b backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-        <div className="mx-auto max-w-3xl px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-10 border-b backdrop-blur-xl transition-colors duration-300 safe-top" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+        <div className="mx-auto max-w-3xl px-4 pt-3 pb-3">
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-center shrink-0" style={{ width: 72 }}>
               {establishment.logo ? (

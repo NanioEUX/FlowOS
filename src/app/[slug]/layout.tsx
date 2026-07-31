@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     },
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: establishment.name,
     },
     other: {

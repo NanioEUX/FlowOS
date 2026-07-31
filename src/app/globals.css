@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+@supports (padding: max(0px)) {
+  .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @layer base {
