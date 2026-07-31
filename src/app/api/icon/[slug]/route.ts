@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { readFile } from "fs/promises"
+import path from "path"
 
 /**
  * Retorna o ícone PWA dinâmico do estabelecimento.
- * - Se tem logo: redireciona pra ela
- * - Se não tem: retorna fallback FlowOS com cor primária
+ * - Se tem logo: serve a imagem diretamente (proxy)
+ * - Se não tem: serve fallback FlowOS
  */
 export async function GET(req: Request, { params }: { params: { slug: string } }) {
   const establishment = await prisma.establishment.findUnique({
@@ -12,15 +14,44 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     select: { logo: true, name: true, primaryColor: true },
   })
 
-  if (!establishment) {
-    return NextResponse.redirect(new URL("/icons/icon-192.png", req.url))
+  if (!establishment?.logo) {
+    return serveFallback()
   }
 
-  // Se tem logo do estabelecimento, redireciona pra ela
-  if (establishment.logo) {
-    return NextResponse.redirect(establishment.logo)
+  const logo = establishment.logo
+  let buffer: Buffer | null = null
+  let contentType = "image/png"
+
+  try {
+    if (logo.startsWith("http")) {
+      // URL externa: busca e faz proxy
+      const res = await fetch(logo)
+      if (!res.ok) throw new Error("fetch failed")
+      buffer = Buffer.from(await res.arrayBuffer())
+      contentType = res.headers.get("content-type") || "image/png"
+    } else if (logo.startsWith("/")) {
+      // Caminho local em /public
+      const filePath = path.join(process.cwd(), "public", logo)
+      buffer = await readFile(filePath)
+      if (logo.endsWith(".svg")) contentType = "image/svg+xml"
+      else if (logo.endsWith(".jpg") || logo.endsWith(".jpeg")) contentType = "image/jpeg"
+      else if (logo.endsWith(".webp")) contentType = "image/webp"
+    } else {
+      throw new Error("invalid logo path")
+    }
+  } catch (e) {
+    console.warn(`[Icon] falha ao carregar logo ${logo}:`, e)
+    return serveFallback()
   }
 
-  // Sem logo: usa FlowOS fallback
-  return NextResponse.redirect(new URL("/icons/icon-192.png", req.url))
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=3600, immutable",
+    },
+  })
+}
+
+function serveFallback() {
+  return NextResponse.redirect(new URL("/icons/icon-192.png", process.env.NEXT_PUBLIC_APP_URL || "https://flowoshub.com"))
 }
