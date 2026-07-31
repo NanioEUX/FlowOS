@@ -15,12 +15,10 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log(`[WhatsApp] [DEBUG-HIT-V3] webhook recebido, url=${req.url}`)
     // Validação de origem: Evolution API envia o header "apikey" com a
     // chave do webhook (não a API key global). Se não bater com nenhuma
     // chave configurada, rejeita.
     const webhookKey = req.headers.get("apikey") || req.headers.get("x-api-key")
-    console.log(`[WhatsApp] [DEBUG-HIT-V3] webhookKey presente=${!!webhookKey}`)
     if (webhookKey) {
       const validKey = await prisma.establishment.findFirst({
         where: { evolutionApiKey: webhookKey },
@@ -132,12 +130,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Mensagem de ${parsed.phone}: "${parsed.text}"`)
 
-    // ===== MARCADOR VISÍVEL: confirma que código novo está rodando =====
-    if (parsed.text?.toLowerCase().includes("ping")) {
-      await provider.sendText(parsed.phone, "🏓 PONG V3 - código novo ativo!", { delay: 500 })
-      return NextResponse.json({ success: true, pong: true })
-    }
-
     if (!establishment.botEnabled) {
       console.log(`[WhatsApp] Bot desabilitado para ${establishment.id}`)
       return NextResponse.json({ success: true, botDisabled: true })
@@ -215,8 +207,6 @@ export async function POST(req: NextRequest) {
     let responseMessage: string | null = null
     let usedAI = false
 
-    console.log(`[WhatsApp] [DEBUG] botUseAI=${establishment.botUseAI} isAIAvailable=${isAIAvailable()} parsed.text="${parsed.text}"`)
-
     if (establishment.botUseAI && isAIAvailable()) {
       const aiLimitReached = establishment.aiMessagesUsed >= establishment.aiMessagesLimit
       const needsAI = !isMenuOption(parsed.text, establishment.botMenuOptions) && !isGreeting(parsed.text)
@@ -248,9 +238,7 @@ export async function POST(req: NextRequest) {
           usedAI = false
         } else {
           try {
-            console.log(`[WhatsApp] [DEBUG] Entrando no try da IA...`)
             const context = await loadBotContext(establishment.id, parsed.phone)
-            console.log(`[WhatsApp] [DEBUG] loadBotContext retornou: ${context ? 'OK' : 'NULL'}`)
             if (context) {
               const systemPrompt = buildSystemPrompt(context)
               const aiResult = await generateAIResponse(systemPrompt, parsed.text, [], {
