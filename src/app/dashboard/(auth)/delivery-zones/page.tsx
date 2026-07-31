@@ -1,7 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
+
+function useEstablishmentId(): string | null {
+  const [id, setId] = useState<string | null>(null)
+  useEffect(() => {
+    fetch("/api/establishments/me")
+      .then((r) => r.json())
+      .then((data) => setId(data?.id || null))
+      .catch(() => {})
+  }, [])
+  return id
+}
 
 interface DeliveryZone {
   id: string
@@ -16,8 +26,7 @@ interface DeliveryZone {
 }
 
 export default function DeliveryZonesPage() {
-  const { user } = useAuth()
-  const establishmentId = user?.establishmentId
+  const establishmentId = useEstablishmentId()
 
   const [zones, setZones] = useState<DeliveryZone[]>([])
   const [establishment, setEstablishment] = useState<any>(null)
