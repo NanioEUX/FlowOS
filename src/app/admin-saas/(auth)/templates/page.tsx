@@ -5,9 +5,6 @@ export const dynamic = "force-dynamic"
 export default async function TemplatesPage() {
   const templates = await prisma.categoryTemplate.findMany({
     orderBy: [{ order: "asc" }, { name: "asc" }],
-    include: {
-      _count: { select: { id: true } },
-    },
   })
 
   const establishmentsByCategory = await prisma.establishment.groupBy({
