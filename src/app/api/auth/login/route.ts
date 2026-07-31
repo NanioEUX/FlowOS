@@ -37,6 +37,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
 
+    // Usuário SaaS admin não tem establishmentId
+    if (user.role === "saas_admin") {
+      return NextResponse.json({ error: "Use o painel admin SaaS" }, { status: 403 })
+    }
+
+    if (!user.establishmentId) {
+      return NextResponse.json({ error: "Usuário sem estabelecimento vinculado" }, { status: 403 })
+    }
+
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
