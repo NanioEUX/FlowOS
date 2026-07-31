@@ -100,12 +100,6 @@ export async function POST(req: NextRequest) {
       }, { status: 404 })
     }
 
-    // ===== MARCADOR VISÍVEL: confirma que código novo está rodando =====
-    if (parsed.text?.toLowerCase().includes("ping")) {
-      await provider.sendText(parsed.phone, "🏓 PONG V3 - código novo ativo!", { delay: 500 })
-      return NextResponse.json({ success: true, pong: true })
-    }
-
     if (!establishment.whatsappAutomationEnabled) {
       console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Automação desabilitada (não pagou plano)`)
       return NextResponse.json({
@@ -137,6 +131,12 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Mensagem de ${parsed.phone}: "${parsed.text}"`)
+
+    // ===== MARCADOR VISÍVEL: confirma que código novo está rodando =====
+    if (parsed.text?.toLowerCase().includes("ping")) {
+      await provider.sendText(parsed.phone, "🏓 PONG V3 - código novo ativo!", { delay: 500 })
+      return NextResponse.json({ success: true, pong: true })
+    }
 
     if (!establishment.botEnabled) {
       console.log(`[WhatsApp] Bot desabilitado para ${establishment.id}`)
