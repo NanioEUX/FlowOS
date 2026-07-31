@@ -46,10 +46,31 @@ export async function loadBotContext(
 
   if (!establishment || !establishment.botEnabled) return null
 
+  // Busca template da categoria (se houver) para fallback do prompt
+  let categoryTemplate: {
+    promptBase: string
+    defaultAgentName: string
+    defaultMenuJson: string | null
+  } | null = null
+  if (establishment.category) {
+    categoryTemplate = await prisma.categoryTemplate.findUnique({
+      where: { slug: establishment.category },
+      select: {
+        promptBase: true,
+        defaultAgentName: true,
+        defaultMenuJson: true,
+      },
+    })
+  }
+
   let menuOptions: Array<{ id: string; label: string; response: string }> = []
   if (establishment.botMenuOptions) {
     try {
       menuOptions = JSON.parse(establishment.botMenuOptions)
+    } catch {}
+  } else if (categoryTemplate?.defaultMenuJson) {
+    try {
+      menuOptions = JSON.parse(categoryTemplate.defaultMenuJson)
     } catch {}
   }
 
@@ -108,13 +129,13 @@ export async function loadBotContext(
   }
 
   return {
-    agentName: establishment.botAgentName || "Atendente",
+    agentName: establishment.botAgentName || categoryTemplate?.defaultAgentName || "Atendente",
     establishmentName: establishment.name,
     establishmentSlug: establishment.slug,
     greeting: establishment.botGreeting || "",
     tone: establishment.botTone || "casual",
     faq: establishment.botFAQ || "",
-    customPrompt: establishment.botSystemPrompt || "",
+    customPrompt: establishment.botSystemPrompt || categoryTemplate?.promptBase || "",
     menuOptions,
     businessHours,
     products,

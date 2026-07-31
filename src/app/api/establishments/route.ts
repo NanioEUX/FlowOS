@@ -37,6 +37,21 @@ export async function POST(req: NextRequest) {
     const now = new Date()
     const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
+    // Auto-preenche botSystemPrompt e botAgentName com base na categoria
+    let botSystemPrompt: string | null = null
+    let botAgentName: string | null = "Atendente"
+    let botTone: string | null = "casual"
+    if (category) {
+      const template = await prisma.categoryTemplate.findUnique({
+        where: { slug: category },
+      })
+      if (template) {
+        botSystemPrompt = template.promptBase
+        botAgentName = template.defaultAgentName
+        botTone = template.tone
+      }
+    }
+
     const establishment = await prisma.establishment.create({
       data: {
         name, slug, email, password: hashedPassword, phone, category, address,
@@ -44,6 +59,9 @@ export async function POST(req: NextRequest) {
         trialEndsAt: trialEnds,
         subscriptionStatus: "trial",
         subscriptionPlan: "starter",
+        botSystemPrompt,
+        botAgentName,
+        botTone,
       },
     })
 

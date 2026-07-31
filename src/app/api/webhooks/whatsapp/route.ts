@@ -4,6 +4,7 @@ import { getWhatsAppProvider } from "@/lib/whatsapp"
 import { generateBotResponse } from "@/lib/whatsapp/bot"
 import { generateAIResponse, isAIAvailable } from "@/lib/whatsapp/ai/openai"
 import { loadBotContext, buildSystemPrompt } from "@/lib/whatsapp/ai/prompt"
+import { matchGlobalQuickReply, fillQuickReplyPlaceholders } from "@/lib/whatsapp/quick-replies"
 import {
   isOpenNow,
   formatBusinessHoursForMessage,
@@ -207,7 +208,14 @@ export async function POST(req: NextRequest) {
     let responseMessage: string | null = null
     let usedAI = false
 
-    if (establishment.botUseAI && isAIAvailable()) {
+    // Tenta resposta rápida global ANTES da IA (economiza tokens)
+    const quickReply = await matchGlobalQuickReply(parsed.text, establishment.id)
+    if (quickReply) {
+      const filledText = await fillQuickReplyPlaceholders(quickReply.text, establishment.id)
+      responseMessage = filledText
+      usedAI = false
+      console.log(`[WhatsApp] Quick reply global: ${quickReply.label}`)
+    } else if (establishment.botUseAI && isAIAvailable()) {
       const aiLimitReached = establishment.aiMessagesUsed >= establishment.aiMessagesLimit
       const needsAI = !isMenuOption(parsed.text, establishment.botMenuOptions) && !isGreeting(parsed.text)
 
