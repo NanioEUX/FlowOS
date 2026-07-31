@@ -15,12 +15,12 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log(`[WhatsApp] [DEBUG-HIT] webhook recebido, url=${req.url}`)
+    console.log(`[WhatsApp] [DEBUG-HIT-V3] webhook recebido, url=${req.url}`)
     // Validação de origem: Evolution API envia o header "apikey" com a
     // chave do webhook (não a API key global). Se não bater com nenhuma
     // chave configurada, rejeita.
     const webhookKey = req.headers.get("apikey") || req.headers.get("x-api-key")
-    console.log(`[WhatsApp] [DEBUG-HIT] webhookKey presente=${!!webhookKey}`)
+    console.log(`[WhatsApp] [DEBUG-HIT-V3] webhookKey presente=${!!webhookKey}`)
     if (webhookKey) {
       const validKey = await prisma.establishment.findFirst({
         where: { evolutionApiKey: webhookKey },
@@ -98,6 +98,12 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "Instância não encontrada",
       }, { status: 404 })
+    }
+
+    // ===== MARCADOR VISÍVEL: confirma que código novo está rodando =====
+    if (parsed.text?.toLowerCase().includes("ping")) {
+      await provider.sendText(parsed.phone, "🏓 PONG V3 - código novo ativo!", { delay: 500 })
+      return NextResponse.json({ success: true, pong: true })
     }
 
     if (!establishment.whatsappAutomationEnabled) {
