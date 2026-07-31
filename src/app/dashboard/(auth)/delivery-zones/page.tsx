@@ -2,15 +2,23 @@
 
 import { useState, useEffect } from "react"
 
-function useEstablishmentId(): string | null {
+function useEstablishmentId(): { id: string | null; error: string | null } {
   const [id, setId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     fetch("/api/establishments/me")
-      .then((r) => r.json())
-      .then((data) => setId(data?.id || null))
-      .catch(() => {})
+      .then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) {
+          setError(data.error || "Erro")
+          return
+        }
+        setId(data?.id || null)
+        if (!data?.id) setError("Você precisa estar vinculado a um estabelecimento")
+      })
+      .catch((e) => setError(e.message))
   }, [])
-  return id
+  return { id, error }
 }
 
 interface DeliveryZone {
@@ -26,7 +34,7 @@ interface DeliveryZone {
 }
 
 export default function DeliveryZonesPage() {
-  const establishmentId = useEstablishmentId()
+  const { id: establishmentId, error: authError } = useEstablishmentId()
 
   const [zones, setZones] = useState<DeliveryZone[]>([])
   const [establishment, setEstablishment] = useState<any>(null)
@@ -163,7 +171,16 @@ export default function DeliveryZonesPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-zinc-500">Carregando...</div>
+    return (
+      <div className="p-8">
+        <p className="text-zinc-500">Carregando...</p>
+        {authError && (
+          <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 max-w-md">
+            ⚠️ {authError}. Faça login como admin de um estabelecimento.
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
