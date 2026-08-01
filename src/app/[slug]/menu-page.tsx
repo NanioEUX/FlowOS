@@ -13,6 +13,8 @@ import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
 import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geolocation-button"
 import { PushSubscribe } from "@/components/pwa/push-subscribe"
+import { InstallButton } from "@/components/pwa/install-button"
+import { InstallPromptToast } from "@/components/pwa/install-prompt-toast"
 
 interface Product {
   id: string
@@ -245,6 +247,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [trackingInput, setTrackingInput] = useState("")
   const [trackingSending, setTrackingSending] = useState(false)
   const [statusAlert, setStatusAlert] = useState<string | null>(null)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const trackingEndRef = useRef<HTMLDivElement>(null)
   const prevStatusRef = useRef<string | null>(null)
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
@@ -1043,6 +1046,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         orderTotal: total,
       })
 
+      const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
+      if (!installPromptShown) {
+        localStorage.setItem(`pedefacil-install-prompted-${establishment.slug}`, "1")
+        setTimeout(() => setShowInstallPrompt(true), 2500)
+      }
+
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 
       if (data.order?.id && data.trackingUrl) {
@@ -1673,33 +1682,8 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Ações rápidas PWA */}
-      <div className="mx-auto max-w-3xl px-4 pt-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-          <button
-            type="button"
-            onClick={async () => {
-              if (navigator.share) {
-                try {
-                  await navigator.share({
-                    title: establishment.name,
-                    text: `Olha o cardápio de ${establishment.name}!`,
-                    url: window.location.href,
-                  })
-                } catch {}
-              } else {
-                try {
-                  await navigator.clipboard.writeText(window.location.href)
-                  alert("Link copiado!")
-                } catch {}
-              }
-            }}
-            className="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 text-xs font-medium px-3 py-2 rounded-lg"
-          >
-            <span>🔗</span>
-            <span>Compartilhar</span>
-          </button>
-        </div>
+      <div className="hidden">
+        <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
       </div>
 
       {/* Categories & Products */}
@@ -2032,6 +2016,17 @@ onPaymentConfirmed={handlePaymentSuccess}
                 >
                   Editar dados
                 </button>
+
+                <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Notificações</p>
+                    <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
+                  </div>
+                  <div className="pt-2 border-t" style={{ borderColor: theme.borderSubtle }}>
+                    <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: theme.textMutedMore }}>Aplicativo</p>
+                    <InstallButton />
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -3840,6 +3835,8 @@ function PaymentModal({
           ) : null}
         </div>
       </div>
+
+      <InstallPromptToast show={showInstallPrompt} />
     </div>
   )
 }

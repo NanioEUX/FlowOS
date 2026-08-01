@@ -1,4 +1,3 @@
-import { InstallPWA } from "@/components/pwa/install-pwa"
 import { prisma } from "@/lib/prisma"
 import type { Metadata } from "next"
 
@@ -33,10 +32,5 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default function PublicSlugLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {children}
-      <InstallPWA />
-    </>
-  )
+  return <>{children}</>
 }
