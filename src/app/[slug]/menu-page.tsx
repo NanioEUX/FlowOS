@@ -3238,6 +3238,8 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
       )}
+
+      <InstallPromptToast show={showInstallPrompt} />
     </div>
   )
 }
@@ -3835,8 +3837,6 @@ function PaymentModal({
           ) : null}
         </div>
       </div>
-
-      <InstallPromptToast show={showInstallPrompt} />
     </div>
   )
 }
