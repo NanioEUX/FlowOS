@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
-import { EditBotConfig } from "./edit-bot-config"
 
 export const dynamic = "force-dynamic"
 
@@ -15,15 +14,10 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
       category: true,
       subscriptionStatus: true,
       subscriptionPlan: true,
-      evolutionInstanceName: true,
       whatsappNumber: true,
+      evolutionInstanceName: true,
       botEnabled: true,
       botUseAI: true,
-      botAgentName: true,
-      botTone: true,
-      botFAQ: true,
-      botSystemPrompt: true,
-      botGreeting: true,
       aiMessagesUsed: true,
       aiMessagesLimit: true,
       createdAt: true,
@@ -45,7 +39,7 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
         <h2 className="text-lg font-bold text-zinc-900 mb-4">Informações</h2>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <Info label="Email" value={e.email} />
-          <Info label="WhatsApp" value={e.whatsappNumber || "—"} />
+          <Info label="WhatsApp" value={e.whatsappNumber || "—" } />
           <Info label="Instância Evolution" value={e.evolutionInstanceName || "não conectada"} />
           <Info label="Plano" value={e.subscriptionPlan || "trial"} />
           <Info label="Status" value={e.subscriptionStatus || "—"} />
@@ -53,22 +47,6 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
           <Info label="Bot ativo" value={e.botEnabled ? "Sim" : "Não"} />
           <Info label="IA (mês)" value={`${e.aiMessagesUsed} / ${e.aiMessagesLimit}`} />
         </div>
-      </div>
-
-      {/* Editor de IA */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
-        <h2 className="text-lg font-bold text-zinc-900 mb-1">Configuração de IA</h2>
-        <p className="text-sm text-zinc-500 mb-4">Sobrescreve o prompt da categoria do template</p>
-        <EditBotConfig
-          id={e.id}
-          initial={{
-            botAgentName: e.botAgentName || "",
-            botTone: e.botTone || "casual",
-            botFAQ: e.botFAQ || "",
-            botSystemPrompt: e.botSystemPrompt || "",
-            botGreeting: e.botGreeting || "",
-          }}
-        />
       </div>
 
       {/* Link para painel técnico */}
