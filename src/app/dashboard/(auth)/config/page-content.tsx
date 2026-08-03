@@ -222,6 +222,19 @@ export default function ConfigPage() {
   const hookEstablishmentId = useEstablishmentId()
   const searchParamsEstablishmentId = searchParams.get("establishment")
   const establishmentId = searchParamsEstablishmentId || hookEstablishmentId
+
+  const [isSaasAdmin, setIsSaasAdmin] = useState(false)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("pedefacil-user")
+      if (stored) {
+        const u = JSON.parse(stored)
+        if (u.role === "saas_admin") setIsSaasAdmin(true)
+      }
+    } catch {}
+  }, [])
+
+  const SaasOnly = ({ children }: { children: React.ReactNode }) => isSaasAdmin ? <>{children}</> : null
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showKey, setShowKey] = useState(false)
@@ -1228,6 +1241,7 @@ export default function ConfigPage() {
             <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
             <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
 
+            <SaasOnly>
             <div className={`rounded-lg border p-4 ${whatsappAutomationEnabled ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -1286,7 +1300,9 @@ export default function ConfigPage() {
                 <p className="text-xs text-zinc-400">Quando atingido, o bot volta pro menu fixo. Reset automático todo dia 1º.</p>
               </div>
             )}
+            </SaasOnly>
 
+            <SaasOnly>
             <div className="space-y-1">
               <label className="block text-sm font-medium text-zinc-700">Provedor WhatsApp</label>
               <select
@@ -1299,6 +1315,7 @@ export default function ConfigPage() {
                 <option value="meta">Meta Cloud (em breve)</option>
               </select>
             </div>
+            </SaasOnly>
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-zinc-700">Número WhatsApp (com DDD)</label>
@@ -1312,6 +1329,7 @@ export default function ConfigPage() {
               <p className="text-xs text-zinc-400">Formato: 55 (Brasil) + DDD + número. Ex: 5511999999999</p>
             </div>
 
+            <SaasOnly>
             {whatsappProvider === "evolution" && (
               <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
                 <h4 className="text-sm font-semibold text-zinc-700">Evolution API</h4>
@@ -1348,6 +1366,7 @@ export default function ConfigPage() {
                 <p className="text-xs text-zinc-400">Webhook para configurar na Evolution: <code>https://seu-dominio.com/api/webhooks/whatsapp</code></p>
               </div>
             )}
+            </SaasOnly>
 
             {whatsappProvider === "meta" && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -1400,6 +1419,7 @@ export default function ConfigPage() {
                       <p className="mt-1 text-xs text-zinc-400">Deixe vazio para usar mensagem padrão.</p>
                     </div>
 
+                    <SaasOnly>
                     <div>
                       <label className="block text-sm font-medium text-zinc-700">Opções do menu (JSON)</label>
                       <textarea
@@ -1410,6 +1430,7 @@ export default function ConfigPage() {
                       />
                       <p className="mt-1 text-xs text-zinc-400">Formato: array de objetos com <code>id</code>, <code>label</code> e <code>response</code> (menu, cardapio, atendente ou texto livre).</p>
                     </div>
+                    </SaasOnly>
 
                     <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                       <input
@@ -1454,6 +1475,7 @@ export default function ConfigPage() {
                           <p className="mt-1 text-xs text-zinc-400">Regras específicas do seu estabelecimento que a IA deve considerar.</p>
                         </div>
 
+                        <SaasOnly>
                         <div>
                           <label className="block text-sm font-medium text-zinc-700">Prompt customizado (avançado)</label>
                           <textarea
@@ -1465,6 +1487,7 @@ export default function ConfigPage() {
                           />
                           <p className="mt-1 text-xs text-zinc-400">Adicionado ao final do prompt do sistema. Use com cuidado.</p>
                         </div>
+                        </SaasOnly>
                       </div>
                     )}
 
@@ -1543,6 +1566,7 @@ export default function ConfigPage() {
                       )}
                     </div>
 
+                    <SaasOnly>
                     {/* Delay typing */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
                       <h5 className="text-sm font-semibold text-zinc-700">⌨️ Delay entre mensagens</h5>
@@ -1574,6 +1598,7 @@ export default function ConfigPage() {
                         </div>
                       </div>
                     </div>
+                    </SaasOnly>
 
                     {/* Fora de horário */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
