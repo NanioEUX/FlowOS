@@ -521,48 +521,14 @@ export default function ConfigPage() {
     }
   }
 
-  const [activeSection, setActiveSection] = useState("section-dados")
+  const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp">("geral")
 
-  const sectionNav = [
-    { id: "section-dados", label: "Dados", group: "Geral" },
-    { id: "section-asaas", label: "Integração Asaas", group: "Geral" },
-    { id: "section-tipos", label: "Tipos de Pedido", group: "Pedidos" },
-    { id: "section-mesas", label: "Mesas", group: "Pedidos" },
-    { id: "section-taxa-servico", label: "Taxa de Serviço", group: "Pedidos" },
-    { id: "section-taxa-entrega", label: "Taxa de Entrega", group: "Pedidos" },
-    { id: "section-formas", label: "Formas de Pagamento", group: "Pedidos" },
-    { id: "section-limite", label: "Limite na Entrega", group: "Pedidos" },
-    { id: "section-bloqueio", label: "Bloqueios", group: "Pedidos" },
-    { id: "section-agendamento", label: "Agendamento", group: "Pedidos" },
-    { id: "section-horarios", label: "Horários", group: "Pedidos" },
-    { id: "section-whatsapp-conexao", label: "Conexão WhatsApp", group: "WhatsApp" },
-    { id: "section-whatsapp-bot", label: "Bot de Atendimento", group: "WhatsApp" },
+  const groups = [
+    { id: "geral" as const, label: "Geral", desc: "Dados, horários e agendamento" },
+    { id: "pedidos" as const, label: "Pedidos", desc: "Tipos, mesas, taxas e bloqueios" },
+    { id: "pagamentos" as const, label: "Pagamentos", desc: "Asaas, formas e limites" },
+    { id: "whatsapp" as const, label: "WhatsApp & Bot", desc: "Conexão e atendimento" },
   ]
-
-  const groupedNav: { [key: string]: typeof sectionNav } = {}
-  sectionNav.forEach((s) => {
-    if (!groupedNav[s.group]) groupedNav[s.group] = []
-    groupedNav[s.group].push(s)
-  })
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setActiveSection(e.target.id)
-            break
-          }
-        }
-      },
-      { rootMargin: "-100px 0px -60% 0px", threshold: 0 }
-    )
-    for (const s of sectionNav) {
-      const el = document.getElementById(s.id)
-      if (el) observer.observe(el)
-    }
-    return () => observer.disconnect()
-  }, [])
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -570,37 +536,45 @@ export default function ConfigPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
         <aside className="hidden lg:block">
-          <nav className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
-            {Object.entries(groupedNav).map(([group, items]) => (
-              <div key={group}>
-                <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  {group}
+          <nav className="sticky top-4 space-y-1">
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setActiveGroup(g.id)}
+                className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
+                  activeGroup === g.id
+                    ? "bg-zinc-900 text-white"
+                    : "text-zinc-700 hover:bg-zinc-100"
+                }`}
+              >
+                <p className={`text-sm font-medium ${activeGroup === g.id ? "text-white" : "text-zinc-900"}`}>
+                  {g.label}
                 </p>
-                <ul className="space-y-0.5">
-                  {items.map((s) => (
-                    <li key={s.id}>
-                      <a
-                        href={`#${s.id}`}
-                        className={`block rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                          activeSection === s.id
-                            ? "bg-zinc-900 text-white font-medium"
-                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                        }`}
-                      >
-                        {s.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                <p className={`text-[10px] mt-0.5 ${activeGroup === g.id ? "text-zinc-300" : "text-zinc-500"}`}>
+                  {g.desc}
+                </p>
+              </button>
             ))}
           </nav>
         </aside>
 
         <div>
+          <div className="mb-4 lg:hidden">
+            <select
+              value={activeGroup}
+              onChange={(e) => setActiveGroup(e.target.value as any)}
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
+            >
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.label}</option>
+              ))}
+            </select>
+          </div>
+
       <form onSubmit={handleSave} className="space-y-4">
         {/* Dados do Estabelecimento */}
-        <Card id="section-dados">
+        <Card id="section-dados" className={activeGroup !== "geral" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Dados do Estabelecimento</h3>
             <div className="space-y-1">
@@ -653,7 +627,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Pagamentos */}
-        <Card id="section-asaas">
+        <Card id="section-asaas" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-5">
             <div>
               <h3 className="font-semibold text-zinc-900">Pagamentos</h3>
@@ -866,7 +840,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Tipos de Pedido */}
-        <Card id="section-tipos">
+        <Card id="section-tipos" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Tipos de Pedido</h3>
             <p className="text-sm text-zinc-500">Habilite ou desabilite os tipos de pedido disponíveis no cardápio.</p>
@@ -896,7 +870,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Configuração de Mesas */}
-        <Card id="section-mesas">
+        <Card id="section-mesas" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Mesas</h3>
             <p className="text-sm text-zinc-500">Quantidade de mesas fixas disponíveis no caixa. As mesas são numeradas de 1 a N.</p>
@@ -915,7 +889,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Taxa de Serviço */}
-        <Card id="section-taxa-servico">
+        <Card id="section-taxa-servico" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Taxa de Serviço</h3>
             <p className="text-sm text-zinc-500">Cobrança adicional sobre o subtotal. Só se aplica a vendas presenciais em mesa.</p>
@@ -1004,7 +978,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Taxa de Entrega */}
-        <Card id="section-taxa-entrega">
+        <Card id="section-taxa-entrega" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Taxa de Entrega</h3>
             <p className="text-sm text-zinc-500">Configure como a taxa de entrega é calculada.</p>
@@ -1067,7 +1041,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Formas de Pagamento */}
-        <Card id="section-formas">
+        <Card id="section-formas" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Formas de Pagamento</h3>
             <p className="text-sm text-zinc-500">Quais formas de pagamento o cliente vê na hora de fechar o pedido.</p>
@@ -1107,7 +1081,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Limite de Pagamento na Entrega */}
-        <Card id="section-limite">
+        <Card id="section-limite" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Limite de Pagamento na Entrega</h3>
             <p className="text-sm text-zinc-500">Defina um valor máximo para pedidos pagos na entrega. Pedidos acima desse valor só podem ser pagos online.</p>
@@ -1147,7 +1121,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Bloqueio por cancelamentos */}
-        <Card id="section-bloqueio">
+        <Card id="section-bloqueio" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Bloqueio por cancelamentos</h3>
             <p className="text-sm text-zinc-500">Quando um cliente cancela pedidos com frequência, o pagamento na entrega é bloqueado automaticamente. Pedidos online (PIX/Cartão) continuam liberados.</p>
@@ -1213,7 +1187,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* WhatsApp Connection */}
-        <Card id="section-whatsapp-conexao">
+        <Card id="section-whatsapp-conexao" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Conexão WhatsApp</h3>
             <p className="text-sm text-zinc-500">Conecte seu número de WhatsApp escaneando o QR Code abaixo. Não precisa acessar o Evolution.</p>
@@ -1249,7 +1223,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* WhatsApp + Bot */}
-        <Card id="section-whatsapp-bot">
+        <Card id="section-whatsapp-bot" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
             <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
@@ -1691,7 +1665,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Agendamento de Pedidos (Encomendas) */}
-        <Card id="section-agendamento">
+        <Card id="section-agendamento" className={activeGroup !== "geral" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
               📦 Agendamento de Pedidos
@@ -1738,7 +1712,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Horário de Funcionamento */}
-        <Card id="section-horarios">
+        <Card id="section-horarios" className={activeGroup !== "geral" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
               <Clock className="h-4 w-4" />
