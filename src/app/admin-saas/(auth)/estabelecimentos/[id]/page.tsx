@@ -56,7 +56,7 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
       </div>
 
       {/* Editor de IA */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
         <h2 className="text-lg font-bold text-zinc-900 mb-1">Configuração de IA</h2>
         <p className="text-sm text-zinc-500 mb-4">Sobrescreve o prompt da categoria do template</p>
         <EditBotConfig
@@ -69,6 +69,20 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
             botGreeting: e.botGreeting || "",
           }}
         />
+      </div>
+
+      {/* Link para painel técnico */}
+      <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-6">
+        <h2 className="text-lg font-bold text-zinc-900 mb-1">Configurações técnicas</h2>
+        <p className="text-sm text-zinc-500 mb-4">
+          Provedor de WhatsApp, credenciais, templates de bot e demais opções avançadas.
+        </p>
+        <a
+          href={`/admin-saas/estabelecimentos/${e.id}/whatsapp-tech`}
+          className="inline-flex items-center gap-2 bg-white border border-zinc-300 hover:border-green-600 hover:text-green-700 text-zinc-900 px-4 py-2 rounded-lg text-sm font-medium"
+        >
+          Abrir painel técnico de WhatsApp →
+        </a>
       </div>
     </div>
   )
