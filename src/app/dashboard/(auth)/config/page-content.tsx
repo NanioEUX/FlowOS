@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -521,13 +521,86 @@ export default function ConfigPage() {
     }
   }
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold text-zinc-900">Configurações</h2>
+  const [activeSection, setActiveSection] = useState("section-dados")
 
+  const sectionNav = [
+    { id: "section-dados", label: "Dados", group: "Geral" },
+    { id: "section-asaas", label: "Integração Asaas", group: "Geral" },
+    { id: "section-tipos", label: "Tipos de Pedido", group: "Pedidos" },
+    { id: "section-mesas", label: "Mesas", group: "Pedidos" },
+    { id: "section-taxa-servico", label: "Taxa de Serviço", group: "Pedidos" },
+    { id: "section-taxa-entrega", label: "Taxa de Entrega", group: "Pedidos" },
+    { id: "section-formas", label: "Formas de Pagamento", group: "Pedidos" },
+    { id: "section-limite", label: "Limite na Entrega", group: "Pedidos" },
+    { id: "section-bloqueio", label: "Bloqueios", group: "Pedidos" },
+    { id: "section-agendamento", label: "Agendamento", group: "Pedidos" },
+    { id: "section-horarios", label: "Horários", group: "Pedidos" },
+    { id: "section-whatsapp-conexao", label: "Conexão WhatsApp", group: "WhatsApp" },
+    { id: "section-whatsapp-bot", label: "Bot de Atendimento", group: "WhatsApp" },
+  ]
+
+  const groupedNav: { [key: string]: typeof sectionNav } = {}
+  sectionNav.forEach((s) => {
+    if (!groupedNav[s.group]) groupedNav[s.group] = []
+    groupedNav[s.group].push(s)
+  })
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setActiveSection(e.target.id)
+            break
+          }
+        }
+      },
+      { rootMargin: "-100px 0px -60% 0px", threshold: 0 }
+    )
+    for (const s of sectionNav) {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <h2 className="mb-6 text-2xl font-bold text-zinc-900">Configurações</h2>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
+        <aside className="hidden lg:block">
+          <nav className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
+            {Object.entries(groupedNav).map(([group, items]) => (
+              <div key={group}>
+                <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  {group}
+                </p>
+                <ul className="space-y-0.5">
+                  {items.map((s) => (
+                    <li key={s.id}>
+                      <a
+                        href={`#${s.id}`}
+                        className={`block rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                          activeSection === s.id
+                            ? "bg-zinc-900 text-white font-medium"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                        }`}
+                      >
+                        {s.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        <div>
       <form onSubmit={handleSave} className="space-y-4">
         {/* Dados do Estabelecimento */}
-        <Card>
+        <Card id="section-dados">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Dados do Estabelecimento</h3>
             <div className="space-y-1">
@@ -580,7 +653,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Pagamentos */}
-        <Card>
+        <Card id="section-asaas">
           <CardContent className="p-6 space-y-5">
             <div>
               <h3 className="font-semibold text-zinc-900">Pagamentos</h3>
@@ -793,7 +866,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Tipos de Pedido */}
-        <Card>
+        <Card id="section-tipos">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Tipos de Pedido</h3>
             <p className="text-sm text-zinc-500">Habilite ou desabilite os tipos de pedido disponíveis no cardápio.</p>
@@ -823,7 +896,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Configuração de Mesas */}
-        <Card>
+        <Card id="section-mesas">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Mesas</h3>
             <p className="text-sm text-zinc-500">Quantidade de mesas fixas disponíveis no caixa. As mesas são numeradas de 1 a N.</p>
@@ -842,7 +915,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Taxa de Serviço */}
-        <Card>
+        <Card id="section-taxa-servico">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Taxa de Serviço</h3>
             <p className="text-sm text-zinc-500">Cobrança adicional sobre o subtotal. Só se aplica a vendas presenciais em mesa.</p>
@@ -931,7 +1004,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Taxa de Entrega */}
-        <Card>
+        <Card id="section-taxa-entrega">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Taxa de Entrega</h3>
             <p className="text-sm text-zinc-500">Configure como a taxa de entrega é calculada.</p>
@@ -994,7 +1067,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Formas de Pagamento */}
-        <Card>
+        <Card id="section-formas">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Formas de Pagamento</h3>
             <p className="text-sm text-zinc-500">Quais formas de pagamento o cliente vê na hora de fechar o pedido.</p>
@@ -1034,7 +1107,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Limite de Pagamento na Entrega */}
-        <Card>
+        <Card id="section-limite">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Limite de Pagamento na Entrega</h3>
             <p className="text-sm text-zinc-500">Defina um valor máximo para pedidos pagos na entrega. Pedidos acima desse valor só podem ser pagos online.</p>
@@ -1074,7 +1147,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Bloqueio por cancelamentos */}
-        <Card>
+        <Card id="section-bloqueio">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Bloqueio por cancelamentos</h3>
             <p className="text-sm text-zinc-500">Quando um cliente cancela pedidos com frequência, o pagamento na entrega é bloqueado automaticamente. Pedidos online (PIX/Cartão) continuam liberados.</p>
@@ -1140,7 +1213,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* WhatsApp Connection */}
-        <Card>
+        <Card id="section-whatsapp-conexao">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Conexão WhatsApp</h3>
             <p className="text-sm text-zinc-500">Conecte seu número de WhatsApp escaneando o QR Code abaixo. Não precisa acessar o Evolution.</p>
@@ -1176,7 +1249,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* WhatsApp + Bot */}
-        <Card>
+        <Card id="section-whatsapp-bot">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
             <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
@@ -1618,7 +1691,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Agendamento de Pedidos (Encomendas) */}
-        <Card>
+        <Card id="section-agendamento">
           <CardContent className="p-6 space-y-4">
             <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
               📦 Agendamento de Pedidos
@@ -1665,7 +1738,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Horário de Funcionamento */}
-        <Card>
+        <Card id="section-horarios">
           <CardContent className="p-6 space-y-4">
             <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
               <Clock className="h-4 w-4" />
@@ -1729,6 +1802,17 @@ export default function ConfigPage() {
           {saved && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
         </div>
       </form>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="fixed bottom-6 right-6 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg transition-opacity hover:bg-zinc-800"
+        aria-label="Voltar ao topo"
+      >
+        <ArrowUp className="h-4 w-4" />
+      </button>
     </div>
   )
 }
