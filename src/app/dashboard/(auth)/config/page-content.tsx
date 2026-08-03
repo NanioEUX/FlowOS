@@ -1665,7 +1665,7 @@ export default function ConfigPage() {
         </Card>
 
         {/* Agendamento de Pedidos (Encomendas) */}
-        <Card id="section-agendamento" className={activeGroup !== "geral" ? "hidden" : ""}>
+        <Card id="section-agendamento" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
               📦 Agendamento de Pedidos
