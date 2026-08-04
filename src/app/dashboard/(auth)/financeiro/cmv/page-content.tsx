@@ -123,7 +123,7 @@ export default function CmvPageContent() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             {s.ordersWithoutRecipe} pedido(s) sem ficha técnica cadastrada. Cadastre os insumos em{" "}
-            <strong>Cardápio → produto → "Vincular insumos"</strong> pra calcular o CMV corretamente.
+            <strong>Cardápio → produto → &ldquo;Vincular insumos&rdquo;</strong> pra calcular o CMV corretamente.
           </p>
         </div>
       )}
