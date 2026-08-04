@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createPaymentLink } from "@/lib/integrations/asaas"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
+import { computeOrderItemCosts } from "@/lib/cmv"
 
 import crypto from "crypto"
 
@@ -240,6 +241,27 @@ export async function POST(req: NextRequest) {
         },
       })
     })
+
+    // Snapshot CMV (custo de mercadoria vendida) — calculado a partir dos
+    // insumos vinculados via ficha técnica (ProductStockLink). Itens sem
+    // ficha técnica ficam com custo 0.
+    try {
+      const { costs } = await computeOrderItemCosts(parsedItems)
+      if (costs.length > 0) {
+        await prisma.orderItemCost.createMany({
+          data: costs.map((c) => ({
+            orderId: order.id,
+            productId: c.productId,
+            productName: c.productName,
+            quantity: c.quantity,
+            unitCostCents: c.unitCostCents,
+            totalCostCents: c.totalCostCents,
+          })),
+        })
+      }
+    } catch (e) {
+      console.error("[Orders POST] Falha ao gravar CMV snapshot:", e)
+    }
 
     // Increment coupon usedCount
     if (couponId) {

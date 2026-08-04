@@ -288,6 +288,7 @@ model Order {
   deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
   establishment     Establishment   @relation(fields: [establishmentId], references: [id])
   messages          OrderMessage[]
+  itemCosts         OrderItemCost[]
 
   @@unique([establishmentId, orderNumber])
   @@index([establishmentId, createdAt])
@@ -297,6 +298,20 @@ model Order {
   @@index([establishmentId, deliveryPersonId])
   @@index([establishmentId, isScheduled, deliveryDate])
   @@index([paymentId])
+}
+
+model OrderItemCost {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String?
+  productName     String
+  quantity        Float
+  unitCostCents   Int
+  totalCostCents  Int
+  createdAt       DateTime      @default(now())
+
+  @@index([orderId])
 }
 
 model StockCategory {

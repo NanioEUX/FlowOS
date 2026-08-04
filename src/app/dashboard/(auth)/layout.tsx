@@ -23,6 +23,7 @@ const financeiroSubItems = [
   { icon: BarChart3, label: "DRE", href: "/dashboard/financeiro" },
   { icon: DollarSign, label: "Despesas", href: "/dashboard/financeiro/despesas" },
   { icon: Wallet, label: "Fluxo de Caixa", href: "/dashboard/financeiro/fluxo-caixa" },
+  { icon: Package, label: "CMV", href: "/dashboard/financeiro/cmv" },
   { icon: FileText, label: "Relatórios", href: "/dashboard/financeiro/relatorios", perm: "relatorios" },
 ]
 
