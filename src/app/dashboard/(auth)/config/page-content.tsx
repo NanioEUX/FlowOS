@@ -1464,15 +1464,17 @@ export default function ConfigPage() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-zinc-700">FAQ / Regras da casa</label>
+                          <label className="block text-sm font-medium text-zinc-700">Regras do seu estabelecimento</label>
                           <textarea
-                            placeholder="Ex: Temos estacionamento próprio. Não aceitamos troco para R$ 100. Delivery só até 22h."
+                            placeholder={`Escreva aqui como o atendente deve se comportar no seu negócio.\n\nExemplos:\n- Sempre pergunte sabores, quantidade e se é pra viagem ou entrega\n- Sugira a promoção: leve 1kg e ganhe 100g\n- Ofereça adicionais: calda, granulado, chantilly\n- Aceito encomendas para datas futuras`}
                             value={botFAQ}
                             onChange={(e) => setBotFAQ(e.target.value)}
-                            rows={4}
+                            rows={6}
                             className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                           />
-                          <p className="mt-1 text-xs text-zinc-400">Regras específicas do seu estabelecimento que a IA deve considerar.</p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Tudo que você escrever aqui vira instrução que o atendente segue no WhatsApp. Escreva em linguagem simples, como se estivesse explicando para um funcionário novo.
+                          </p>
                         </div>
 
                         <SaasOnly>
