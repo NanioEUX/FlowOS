@@ -377,6 +377,7 @@ model ProductStockLink {
   productId   String
   stockItemId String
   quantity    Float
+  unit        String    @default("un") // "g" | "kg" | "ml" | "L" | "un"
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 

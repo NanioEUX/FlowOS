@@ -84,7 +84,7 @@ export default function CardapioPage() {
     sendToPrep: false,
   })
   const [stockItems, setStockItems] = useState<any[]>([])
-  const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string }[]>([])
+  const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
 
   // Aparência state
   const [form, setForm] = useState({
@@ -278,10 +278,10 @@ export default function CardapioPage() {
     if (productId) {
       for (const link of productLinks) {
         if (link.stockItemId && parseFloat(link.quantity) > 0) {
-          await fetchAuth("/api/stock/links", {
+          await fetchAuth("/api/products/links", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId, stockItemId: link.stockItemId, quantity: parseFloat(link.quantity) }),
+            body: JSON.stringify({ productId, stockItemId: link.stockItemId, quantity: parseFloat(link.quantity), unit: link.unit || "un" }),
           })
         }
       }
@@ -343,7 +343,7 @@ export default function CardapioPage() {
       sendToPrep: product.sendToPrep || false,
     })
     const links = (product as any).stockLinks || []
-    setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity) })))
+      setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
     setShowProductForm(true)
   }
 
@@ -1255,6 +1255,23 @@ export default function CardapioPage() {
                                   }
                                   className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
                                 />
+                                <select
+                                  value={link.unit}
+                                  onChange={(e) =>
+                                    setProductLinks(
+                                      productLinks.map((l) =>
+                                        l.stockItemId === link.stockItemId ? { ...l, unit: e.target.value } : l
+                                      )
+                                    )
+                                  }
+                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                >
+                                  <option value="g">g</option>
+                                  <option value="kg">kg</option>
+                                  <option value="ml">ml</option>
+                                  <option value="L">L</option>
+                                  <option value="un">un</option>
+                                </select>
                                 <button
                                   type="button"
                                   onClick={() => setProductLinks(productLinks.filter((l) => l.stockItemId !== link.stockItemId))}
@@ -1271,7 +1288,9 @@ export default function CardapioPage() {
                         value=""
                         onChange={(v) => {
                           if (v && !productLinks.find((l) => l.stockItemId === v)) {
-                            setProductLinks([...productLinks, { stockItemId: v, quantity: "1" }])
+                            const item = stockItems.find((s) => s.id === v)
+                            const defaultUnit = item?.unit || "un"
+                            setProductLinks([...productLinks, { stockItemId: v, quantity: "1", unit: defaultUnit }])
                           }
                         }}
                         options={stockItems.filter((s) => !productLinks.find((l) => l.stockItemId === s.id)).map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}

@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const authUser = await verifyAuth(req)
     if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
-    const { stockItemId, productId, quantity } = await req.json()
+    const { stockItemId, productId, quantity, unit } = await req.json()
     if (!stockItemId || !productId || !quantity) {
       return NextResponse.json({ error: "stockItemId, productId e quantity obrigatórios" }, { status: 400 })
     }
@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
 
     const link = await prisma.productStockLink.upsert({
       where: { productId_stockItemId: { productId, stockItemId } },
-      update: { quantity: parseFloat(quantity) },
-      create: { productId, stockItemId, quantity: parseFloat(quantity) },
+      update: { quantity: parseFloat(quantity), unit: unit || "un" },
+      create: { productId, stockItemId, quantity: parseFloat(quantity), unit: unit || "un" },
     })
 
     return NextResponse.json(link)

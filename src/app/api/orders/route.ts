@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { createPaymentLink } from "@/lib/integrations/asaas"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 import { computeOrderItemCosts } from "@/lib/cmv"
+import { convertQuantity } from "@/lib/units"
 
 import crypto from "crypto"
 
@@ -405,10 +406,13 @@ export async function POST(req: NextRequest) {
           // BOM links: product made of multiple stock items
           const links = await prisma.productStockLink.findMany({ where: { productId: item.productId } })
           for (const link of links) {
-            const deduction = link.quantity * item.quantity
             const stockItem = await prisma.stockItem.findUnique({ where: { id: link.stockItemId } })
             if (stockItem) {
-              const newQty = stockItem.quantity - deduction
+              // Converte quantidade da unidade do link pra unidade do StockItem
+              const linkUnit = link.unit || "un"
+              const deductionInLinkUnit = link.quantity * item.quantity
+              const deductionInStockUnit = convertQuantity(deductionInLinkUnit, linkUnit, stockItem.unit) ?? deductionInLinkUnit
+              const newQty = stockItem.quantity - deductionInStockUnit
               await prisma.stockItem.update({
                 where: { id: link.stockItemId },
                 data: { quantity: newQty },
@@ -416,8 +420,8 @@ export async function POST(req: NextRequest) {
               await prisma.stockMovement.create({
                 data: {
                   type: "exit",
-                  quantity: deduction,
-                  notes: `Pedido ${order.id}`,
+                  quantity: deductionInStockUnit,
+                  notes: `Pedido ${order.id} - ${deductionInLinkUnit}${linkUnit}`,
                   itemId: link.stockItemId,
                 },
               })

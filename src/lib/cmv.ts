@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { convertQuantity } from "@/lib/units"
 
 export interface ParsedItem {
   id?: string
@@ -48,7 +49,7 @@ export async function computeOrderItemCosts(items: ParsedItem[]): Promise<{
 
     const links = await prisma.productStockLink.findMany({
       where: { productId },
-      include: { stockItem: { select: { unitCost: true } } },
+      include: { stockItem: { select: { unitCost: true, unit: true } } },
     })
 
     if (links.length === 0) {
@@ -63,7 +64,14 @@ export async function computeOrderItemCosts(items: ParsedItem[]): Promise<{
       continue
     }
 
-    const unitCost = links.reduce((sum, link) => sum + link.quantity * link.stockItem.unitCost, 0)
+    // Para cada link, converte da unidade do link pra unidade do StockItem
+    // antes de multiplicar pelo custo unitário. Se incompatível, usa como está.
+    const unitCost = links.reduce((sum, link) => {
+      const linkUnit = link.unit || "un"
+      const stockUnit = link.stockItem.unit || "un"
+      const qtyInStockUnit = convertQuantity(link.quantity, linkUnit, stockUnit) ?? link.quantity
+      return sum + qtyInStockUnit * link.stockItem.unitCost
+    }, 0)
     const unitCostCents = Math.round(unitCost * 100)
     const totalCostCents = unitCostCents * quantity
 
