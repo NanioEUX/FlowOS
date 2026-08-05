@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 
+export const dynamic = "force-dynamic"
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: params.id },
+      include: {
+        stockLinks: true,
+        stockItem: true,
+      },
+    })
+    if (!product) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
+    }
+    return NextResponse.json(product)
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }

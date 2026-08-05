@@ -289,11 +289,9 @@ export default function CardapioPage() {
 
     toast("Produto salvo com sucesso!", "success")
     // NÃO fecha o modal — mantém aberto pra ver o que salvou.
-    // Recarrega dados em background.
-    await loadData()
-    // Atualiza editingProduct com dados novos pra não perder alterações subsequentes
+    // Atualiza editingProduct com dados novos (cache: no-store evita cache de 30s)
     if (productId) {
-      const res = await fetchAuth(`/api/products/${productId}`)
+      const res = await fetchAuth(`/api/products/${productId}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setEditingProduct(data)
@@ -301,6 +299,7 @@ export default function CardapioPage() {
         setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
       }
     }
+    await loadData()
   }
 
   function handleDeleteProduct(id: string, name: string) {
@@ -340,6 +339,8 @@ export default function CardapioPage() {
   }
 
   function editProduct(product: Product) {
+    // Usa dados do produto da lista pra abrir rápido, mas força refetch em background
+    // pra garantir que stockLinks estão atualizados (evita cache de 30s do /api/categories)
     setEditingProduct(product)
     setProductForm({
       name: product.name,
@@ -352,8 +353,18 @@ export default function CardapioPage() {
       sendToPrep: product.sendToPrep || false,
     })
     const links = (product as any).stockLinks || []
-      setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+    setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
     setShowProductForm(true)
+    // Refetch em background pra atualizar stockLinks (cache: no-store evita o cache de 30s)
+    fetchAuth(`/api/products/${product.id}`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return
+        setEditingProduct(data)
+        const freshLinks = (data as any).stockLinks || []
+        setProductLinks(freshLinks.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+      })
+      .catch(() => {})
   }
 
   function openNewProduct(categoryId: string) {
@@ -1085,9 +1096,9 @@ export default function CardapioPage() {
 
       {/* Product Modal */}
       {showProductForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
-          <Card className="w-full max-w-lg my-8">
-            <CardContent className="p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
+          <Card className="w-full max-w-lg my-8 max-h-[calc(100vh-4rem)] flex flex-col">
+            <CardContent className="p-6 overflow-y-auto flex-1">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">
                   {editingProduct ? "Editar Produto" : "Novo Produto"}
