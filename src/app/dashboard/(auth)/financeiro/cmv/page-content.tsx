@@ -5,7 +5,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { formatCurrency } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
-import { Package, TrendingUp, DollarSign, Percent, AlertTriangle } from "lucide-react"
+import { Package, TrendingUp, DollarSign, Percent, AlertTriangle, Settings, Check, Loader2 } from "lucide-react"
 
 type Period = "today" | "7days" | "30days" | "all"
 
@@ -15,16 +15,49 @@ export default function CmvPageContent() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>("30days")
   const [estConfig, setEstConfig] = useState<{ targetMarginPercent: number | null; marginFormula: string }>({ targetMarginPercent: null, marginFormula: "selling" })
+  const [showConfig, setShowConfig] = useState(false)
+  const [marginInput, setMarginInput] = useState("")
+  const [formulaInput, setFormulaInput] = useState<"selling" | "cost">("selling")
+  const [savingMargin, setSavingMargin] = useState(false)
+  const [marginSaved, setMarginSaved] = useState(false)
 
   useEffect(() => {
     if (!establishmentId) return
     fetchAuth(`/api/establishments?id=${establishmentId}`)
       .then((r) => r.json())
       .then((d) => {
-        if (!d.error) setEstConfig({ targetMarginPercent: d.targetMarginPercent ?? null, marginFormula: d.marginFormula || "selling" })
+        if (!d.error) {
+          const m = d.targetMarginPercent ?? null
+          const f = d.marginFormula || "selling"
+          setEstConfig({ targetMarginPercent: m, marginFormula: f })
+          setMarginInput(m != null ? String(m) : "")
+          setFormulaInput(f as "selling" | "cost")
+        }
       })
       .catch(() => {})
   }, [establishmentId])
+
+  async function saveMarginConfig() {
+    if (!establishmentId) return
+    setSavingMargin(true)
+    try {
+      const res = await fetchAuth(`/api/establishments/${establishmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetMarginPercent: marginInput ? Number(marginInput) : null,
+          marginFormula: formulaInput,
+        }),
+      })
+      if (res.ok) {
+        setEstConfig({ targetMarginPercent: marginInput ? Number(marginInput) : null, marginFormula: formulaInput })
+        setMarginSaved(true)
+        setTimeout(() => setMarginSaved(false), 2000)
+      }
+    } catch {} finally {
+      setSavingMargin(false)
+    }
+  }
 
   function calcSuggestedPrice(cost: number): number | null {
     if (!estConfig.targetMarginPercent || cost <= 0) return null
@@ -138,22 +171,82 @@ export default function CmvPageContent() {
         </Card>
       </div>
 
-      {estConfig.targetMarginPercent != null && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-zinc-500">Margem alvo</p>
-                <p className="text-lg font-bold text-green-600">{estConfig.targetMarginPercent}%</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-zinc-500">Fórmula</p>
-                <p className="text-sm font-medium text-zinc-700">{estConfig.marginFormula === "selling" ? "Sobre o preço de venda" : "Markup (sobre o custo)"}</p>
-              </div>
+      {/* Config de Margem */}
+      <Card>
+        <CardContent className="p-4">
+          <button
+            onClick={() => setShowConfig(!showConfig)}
+            className="flex w-full items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-zinc-500" />
+              <span className="text-sm font-semibold text-zinc-900">Configurar margem alvo</span>
+              {estConfig.targetMarginPercent != null && !showConfig && (
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  {estConfig.targetMarginPercent}% · {estConfig.marginFormula === "selling" ? "sobre preço" : "markup"}
+                </span>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <span className="text-xs text-zinc-400">{showConfig ? "▲" : "▼"}</span>
+          </button>
+          {showConfig && (
+            <div className="mt-4 space-y-4 border-t border-zinc-100 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Fórmula de cálculo</label>
+                <div className="mt-2 space-y-2">
+                  <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${formulaInput === "selling" ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"}`}>
+                    <input type="radio" name="cmvFormula" checked={formulaInput === "selling"} onChange={() => setFormulaInput("selling")} className="text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">Margem sobre preço de venda</p>
+                      <p className="text-xs text-zinc-500">Preço = Custo ÷ (1 − margem%). Ex: custo R$ 5, margem 60% → R$ 12,50</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${formulaInput === "cost" ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"}`}>
+                    <input type="radio" name="cmvFormula" checked={formulaInput === "cost"} onChange={() => setFormulaInput("cost")} className="text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">Markup (margem sobre o custo)</p>
+                      <p className="text-xs text-zinc-500">Preço = Custo × (1 + margem%). Ex: custo R$ 5, margem 60% → R$ 8,00</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-zinc-700">Margem alvo (%)</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      placeholder="Ex: 60"
+                      value={marginInput}
+                      onChange={(e) => setMarginInput(e.target.value)}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 pr-8 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">%</span>
+                  </div>
+                </div>
+                <button
+                  onClick={saveMarginConfig}
+                  disabled={savingMargin}
+                  className="flex h-10 items-center gap-2 rounded-lg bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  {savingMargin ? <Loader2 className="h-4 w-4 animate-spin" /> : marginSaved ? <Check className="h-4 w-4" /> : null}
+                  {marginSaved ? "Salvo!" : "Salvar"}
+                </button>
+              </div>
+              {marginInput && (
+                <p className="text-xs text-zinc-500">
+                  {formulaInput === "selling"
+                    ? `Preço sugerido = Custo ÷ (1 − ${Number(marginInput) / 100}) = Custo ÷ ${(1 - Number(marginInput) / 100).toFixed(2)}`
+                    : `Preço sugerido = Custo × (1 + ${Number(marginInput) / 100}) = Custo × ${(1 + Number(marginInput) / 100).toFixed(2)}`}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {s.ordersWithoutRecipe > 0 && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
