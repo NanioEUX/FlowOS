@@ -276,14 +276,24 @@ export default function CardapioPage() {
     }
 
     if (productId) {
-      for (const link of productLinks) {
-        if (link.stockItemId && parseFloat(link.quantity) > 0) {
-          await fetchAuth("/api/products/links", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId, stockItemId: link.stockItemId, quantity: parseFloat(link.quantity), unit: link.unit || "un" }),
-          })
-        }
+      // Estratégia: deleta todos os links existentes e recria do zero.
+      // Garante consistência entre o estado da UI e o banco.
+      try {
+        await fetchAuth(`/api/products/${productId}/stock-links/reset`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            links: productLinks
+              .filter((l) => l.stockItemId && parseFloat(l.quantity) > 0)
+              .map((l) => ({
+                stockItemId: l.stockItemId,
+                quantity: parseFloat(l.quantity),
+                unit: l.unit || "un",
+              })),
+          }),
+        })
+      } catch (e) {
+        console.error("Erro ao salvar links:", e)
       }
     }
 
