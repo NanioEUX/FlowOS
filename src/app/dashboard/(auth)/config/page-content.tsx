@@ -336,6 +336,8 @@ export default function ConfigPage() {
     { day: "Sábado", open: "09:00", close: "23:00", active: true },
     { day: "Domingo", open: "00:00", close: "00:00", active: false },
   ])
+  const [targetMarginPercent, setTargetMarginPercent] = useState("")
+  const [marginFormula, setMarginFormula] = useState<"selling" | "cost">("selling")
 
   useEffect(() => {
     if (!establishmentId) return
@@ -427,6 +429,8 @@ export default function ConfigPage() {
           if (data.businessHours) {
             try { setBusinessHours(JSON.parse(data.businessHours)) } catch {}
           }
+          setTargetMarginPercent(data.targetMarginPercent != null ? String(data.targetMarginPercent) : "")
+          setMarginFormula(data.marginFormula || "selling")
         }
       })
   }, [establishmentId])
@@ -498,6 +502,8 @@ export default function ConfigPage() {
           scheduledMaxAdvanceDays: Number(scheduledMaxAdvanceDays) || 30,
           whatsappAutomationEnabled,
           aiMessagesLimit,
+          targetMarginPercent: targetMarginPercent ? Number(targetMarginPercent) : null,
+          marginFormula,
         }),
       })
 
@@ -1733,6 +1739,76 @@ export default function ConfigPage() {
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
                 />
                 <p className="mt-1 text-xs text-zinc-400">Cliente não pode agendar pra mais do que esse prazo.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CMV & Margem */}
+        <Card id="section-cmv" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+              📊 CMV & Margem
+            </h3>
+            <p className="text-sm text-zinc-500">
+              Configure a margem de lucro alvo. O sistema usa o custo da ficha técnica pra sugerir o preço de venda dos produtos.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Fórmula de cálculo</label>
+                <div className="mt-2 space-y-2">
+                  <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${marginFormula === "selling" ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"}`}>
+                    <input
+                      type="radio"
+                      name="marginFormula"
+                      value="selling"
+                      checked={marginFormula === "selling"}
+                      onChange={() => setMarginFormula("selling")}
+                      className="text-green-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">Margem sobre preço de venda (padrão)</p>
+                      <p className="text-xs text-zinc-500">Preço = Custo ÷ (1 − margem%). Ex: custo R$ 5, margem 60% → preço R$ 12,50</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${marginFormula === "cost" ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"}`}>
+                    <input
+                      type="radio"
+                      name="marginFormula"
+                      value="cost"
+                      checked={marginFormula === "cost"}
+                      onChange={() => setMarginFormula("cost")}
+                      className="text-green-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">Markup (margem sobre o custo)</p>
+                      <p className="text-xs text-zinc-500">Preço = Custo × (1 + margem%). Ex: custo R$ 5, margem 60% → preço R$ 8,00</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Margem alvo (%)</label>
+                <div className="relative mt-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    placeholder="Ex: 60"
+                    value={targetMarginPercent}
+                    onChange={(e) => setTargetMarginPercent(e.target.value)}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 pr-8 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">%</span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {targetMarginPercent ? (
+                    marginFormula === "selling"
+                      ? `Preço sugerido = Custo ÷ (1 − ${Number(targetMarginPercent) / 100}) = Custo ÷ ${(1 - Number(targetMarginPercent) / 100).toFixed(2)}`
+                      : `Preço sugerido = Custo × (1 + ${Number(targetMarginPercent) / 100}) = Custo × ${(1 + Number(targetMarginPercent) / 100).toFixed(2)}`
+                  ) : "Sem margem definida — preço sugerido não será calculado."}
+                </p>
               </div>
             </div>
           </CardContent>

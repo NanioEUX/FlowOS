@@ -142,6 +142,8 @@ model Establishment {
   closedTitle         String?
   defaultTheme        String            @default("dark")
   expenseCategories   String            @default("[\"fixa\",\"variavel\",\"motoboy\",\"insumo\",\"salario\",\"aluguel\",\"energia\",\"agua\",\"internet\",\"imposto\",\"manutencao\",\"marketing\",\"outro\"]")
+  targetMarginPercent Float?
+  marginFormula       String            @default("selling")
   asaasCustomerId     String?
   asaasSubscriptionId String?
   nextPaymentAt       DateTime?

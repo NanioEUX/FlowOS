@@ -14,6 +14,26 @@ export default function CmvPageContent() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>("30days")
+  const [estConfig, setEstConfig] = useState<{ targetMarginPercent: number | null; marginFormula: string }>({ targetMarginPercent: null, marginFormula: "selling" })
+
+  useEffect(() => {
+    if (!establishmentId) return
+    fetchAuth(`/api/establishments?id=${establishmentId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.error) setEstConfig({ targetMarginPercent: d.targetMarginPercent ?? null, marginFormula: d.marginFormula || "selling" })
+      })
+      .catch(() => {})
+  }, [establishmentId])
+
+  function calcSuggestedPrice(cost: number): number | null {
+    if (!estConfig.targetMarginPercent || cost <= 0) return null
+    const m = estConfig.targetMarginPercent / 100
+    if (estConfig.marginFormula === "selling") {
+      return m >= 1 ? null : cost / (1 - m)
+    }
+    return cost * (1 + m)
+  }
 
   useEffect(() => {
     if (!establishmentId) return
@@ -118,6 +138,23 @@ export default function CmvPageContent() {
         </Card>
       </div>
 
+      {estConfig.targetMarginPercent != null && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-zinc-500">Margem alvo</p>
+                <p className="text-lg font-bold text-green-600">{estConfig.targetMarginPercent}%</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-zinc-500">Fórmula</p>
+                <p className="text-sm font-medium text-zinc-700">{estConfig.marginFormula === "selling" ? "Sobre o preço de venda" : "Markup (sobre o custo)"}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {s.ordersWithoutRecipe > 0 && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -175,15 +212,24 @@ export default function CmvPageContent() {
         <CardContent className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-zinc-900">Top produtos por custo</h3>
           <div className="space-y-2">
-            {topProducts.map((p: any, i: number) => (
-              <div key={i} className="flex items-center justify-between border-t border-zinc-100 pt-2">
-                <div>
-                  <p className="text-sm font-medium text-zinc-900">{p.productName}</p>
-                  <p className="text-xs text-zinc-500">{p.quantity} unidade(s)</p>
+            {topProducts.map((p: any, i: number) => {
+              const unitCost = p.quantity > 0 ? p.totalCostCents / 100 / p.quantity : 0
+              const suggested = calcSuggestedPrice(unitCost)
+              return (
+                <div key={i} className="flex items-center justify-between border-t border-zinc-100 pt-2">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900">{p.productName}</p>
+                    <p className="text-xs text-zinc-500">{p.quantity} unidade(s) · Custo unitário: {formatCurrency(unitCost)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-zinc-900">{formatCurrency(p.totalCostCents / 100)}</p>
+                    {suggested != null && (
+                      <p className="text-xs text-green-600">Sugestão: {formatCurrency(suggested)}</p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-zinc-900">{formatCurrency(p.totalCostCents / 100)}</p>
-              </div>
-            ))}
+              )
+            })}
             {topProducts.length === 0 && (
               <p className="py-4 text-center text-sm text-zinc-500">
                 Sem ficha técnica cadastrada. Cadastre os insumos nos produtos.

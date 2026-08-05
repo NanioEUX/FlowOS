@@ -90,6 +90,7 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+  const [estMarginConfig, setEstMarginConfig] = useState<{ targetMarginPercent: number | null; marginFormula: string }>({ targetMarginPercent: null, marginFormula: "selling" })
 
   // Custo automático da ficha técnica (info only — não editável)
   const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
@@ -107,6 +108,15 @@ export default function CardapioPage() {
     }
     return { fichaTecnicaCost: cost, hasUnitError: unitError }
   }, [productLinks, stockItems])
+
+  const suggestedPrice = useMemo(() => {
+    if (!estMarginConfig.targetMarginPercent || fichaTecnicaCost <= 0) return null
+    const m = estMarginConfig.targetMarginPercent / 100
+    if (estMarginConfig.marginFormula === "selling") {
+      return m >= 1 ? null : fichaTecnicaCost / (1 - m)
+    }
+    return fichaTecnicaCost * (1 + m)
+  }, [fichaTecnicaCost, estMarginConfig])
 
   // Aparência state
   const [form, setForm] = useState({
@@ -172,6 +182,7 @@ export default function CardapioPage() {
       })
       setColorsPublished(data.colorsPublished || false)
       setEstablishmentSlug(data.slug || "")
+      setEstMarginConfig({ targetMarginPercent: data.targetMarginPercent ?? null, marginFormula: data.marginFormula || "selling" })
     }
     setLoading(false)
   }
@@ -1221,6 +1232,12 @@ export default function CardapioPage() {
                         <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
                       </div>
                     )}
+                    {suggestedPrice != null && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
+                        <p className="text-xs text-green-600">Preço sugerido ({estMarginConfig.targetMarginPercent}% de margem)</p>
+                        <p className="text-sm font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
+                      </div>
+                    )}
                     {hasUnitError && (
                       <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5">
                         <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis no estoque — o custo pode estar incompleto. Verifique as unidades dos insumos.</p>
@@ -1485,6 +1502,12 @@ export default function CardapioPage() {
                       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
                         <p className="text-xs text-zinc-500">Custo total da ficha técnica</p>
                         <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      </div>
+                    )}
+                    {suggestedPrice != null && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
+                        <p className="text-xs text-green-600">Preço sugerido ({estMarginConfig.targetMarginPercent}% de margem)</p>
+                        <p className="text-sm font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
                       </div>
                     )}
                     {hasUnitError && (

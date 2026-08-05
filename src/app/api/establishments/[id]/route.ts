@@ -43,7 +43,8 @@ const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover
   "botFallbackMessage",
   "botTemplateOrderConfirmed", "botTemplateOrderPreparing", "botTemplateOrderReady", "botTemplateOrderDelivering", "botTemplateOrderDelivered", "botTemplateOrderCancelled", "botTemplateOrderScheduled",
   "scheduledMinHours", "scheduledPrepMinutes", "scheduledMaxAdvanceDays",
-  "whatsappAutomationEnabled", "whatsappAutomationActivatedAt", "whatsappAutomationPriceCents", "aiMessagesLimit"]
+  "whatsappAutomationEnabled", "whatsappAutomationActivatedAt", "whatsappAutomationPriceCents", "aiMessagesLimit",
+  "targetMarginPercent", "marginFormula"]
 
 export async function PATCH(
   req: NextRequest,
