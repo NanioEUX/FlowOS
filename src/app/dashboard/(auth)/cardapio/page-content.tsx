@@ -27,7 +27,6 @@ interface Product {
   order: number
   badge: string | null
   categoryId: string
-  stockItemId: string | null
 }
 
 interface Category {
@@ -83,7 +82,6 @@ export default function CardapioPage() {
     categoryId: "",
     image: "",
     badge: "",
-    stockItemId: "",
     sendToPrep: false,
     availableOnline: true,
     availablePresencial: true,
@@ -271,7 +269,8 @@ export default function CardapioPage() {
     formData.append("categoryId", productForm.categoryId)
     formData.append("establishmentId", establishmentId)
     if (productForm.badge) formData.append("badge", productForm.badge)
-    if (productForm.stockItemId) formData.append("stockItemId", productForm.stockItemId)
+    const firstLink = productLinks.find((l) => l.stockItemId && parseFloat(l.quantity) > 0)
+    if (firstLink) formData.append("stockItemId", firstLink.stockItemId)
     formData.append("sendToPrep", String(productForm.sendToPrep))
     formData.append("availableOnline", String(productForm.availableOnline))
     formData.append("availablePresencial", String(productForm.availablePresencial))
@@ -316,7 +315,7 @@ export default function CardapioPage() {
             price: parseFloat(productForm.price),
             image: productForm.image || null,
             badge: productForm.badge || null,
-            stockItemId: productForm.stockItemId || null,
+            stockItemId: productLinks.find((l) => l.stockItemId && parseFloat(l.quantity) > 0)?.stockItemId || null,
             sendToPrep: productForm.sendToPrep,
             availableOnline: productForm.availableOnline,
             availablePresencial: productForm.availablePresencial,
@@ -423,7 +422,6 @@ export default function CardapioPage() {
       categoryId: product.categoryId,
       image: product.image || "",
       badge: product.badge || "",
-      stockItemId: product.stockItemId || "",
       sendToPrep: product.sendToPrep || false,
       availableOnline: (product as any).availableOnline ?? true,
       availablePresencial: (product as any).availablePresencial ?? true,
@@ -453,7 +451,7 @@ export default function CardapioPage() {
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", stockItemId: "", sendToPrep: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
     setProductTab("basico")
     setShowProductForm(true)
@@ -709,7 +707,7 @@ export default function CardapioPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-zinc-900">{product.name}</p>
                               {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
-                              {product.stockItemId && <Badge variant="success">Vendável</Badge>}
+                              {(product as any).stockLinks?.length > 0 && <Badge variant="success">Vendável</Badge>}
                               {getBadgeDisplay(product.badge)}
                             </div>
                             {product.description && (
@@ -1481,21 +1479,7 @@ export default function CardapioPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-zinc-700">
-                        Vincular ao Estoque (venda direta)
-                      </label>
-                      <SearchableSelect
-                        value={productForm.stockItemId}
-                        onChange={(v) => setProductForm({ ...productForm, stockItemId: v })}
-                        options={[{ value: "", label: "Nenhum (sem controle de estoque)" }, ...stockItems.map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))]}
-                        placeholder="Buscar item de estoque..."
-                      />
-                      <p className="mt-1 text-xs text-zinc-400">
-                        Selecione um item do estoque para debitar automaticamente ao vender
-                      </p>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">
-                        Vincular Insumos (receita)
+                        Insumos da receita
                       </label>
                       {stockItems.length === 0 ? (
                         <p className="text-xs text-zinc-400">Cadastre insumos no estoque primeiro</p>
