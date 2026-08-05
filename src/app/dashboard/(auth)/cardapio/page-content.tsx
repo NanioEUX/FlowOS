@@ -631,10 +631,23 @@ export default function CardapioPage() {
                           setMarginCatId(cat.id)
                           setMarginCatPercent(cat.targetMarginPercent != null ? String(cat.targetMarginPercent) : "")
                         }}
-                        className={`p-1 rounded transition-colors ${cat.targetMarginPercent != null ? "text-green-600 hover:text-green-700" : "text-zinc-400 hover:text-zinc-600"}`}
-                        title={cat.targetMarginPercent != null ? `Margem: ${cat.targetMarginPercent}%` : "Configurar margem"}
+                        className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                          cat.targetMarginPercent != null
+                            ? "bg-green-50 text-green-700 hover:bg-green-100"
+                            : "text-zinc-400 hover:text-zinc-600"
+                        }`}
                       >
-                        <Percent className="h-4 w-4" />
+                        {cat.targetMarginPercent != null ? (
+                          <>
+                            <Percent className="h-3 w-3" />
+                            Margem de venda {cat.targetMarginPercent}%
+                          </>
+                        ) : (
+                          <>
+                            <Percent className="h-3 w-3" />
+                            Adicionar
+                          </>
+                        )}
                       </button>
                       <Button size="sm" variant="ghost" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
