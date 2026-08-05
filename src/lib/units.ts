@@ -19,7 +19,7 @@ export function formatQuantity(qty: number, unit: string): string {
 /**
  * Converte uma quantidade de uma unidade pra outra.
  * Suporta: g<->kg, ml<->L, un (sem conversão).
- * Retorna null se as unidades forem incompatíveis.
+ * Retorna null se as unidades forem incompatíveis (ex: g vs L, un vs kg).
  */
 export function convertQuantity(
   qty: number,

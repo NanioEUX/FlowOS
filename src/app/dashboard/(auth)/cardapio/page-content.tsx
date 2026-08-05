@@ -92,16 +92,20 @@ export default function CardapioPage() {
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
 
   // Custo automático da ficha técnica (info only — não editável)
-  const fichaTecnicaCost = useMemo(() => {
-    return productLinks.reduce((sum, link) => {
+  const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
+    let cost = 0
+    let unitError = false
+    for (const link of productLinks) {
       const item = stockItems.find((s) => s.id === link.stockItemId)
-      if (!item) return sum
+      if (!item) continue
       const qty = Number(link.quantity) || 0
       const linkUnit = link.unit || "un"
       const stockUnit = item.unit || "un"
-      const qtyInStockUnit = convertQuantity(qty, linkUnit, stockUnit) ?? qty
-      return sum + qtyInStockUnit * (item.unitCost || 0)
-    }, 0)
+      const converted = convertQuantity(qty, linkUnit, stockUnit)
+      if (converted === null) { unitError = true; continue }
+      cost += converted * (item.unitCost || 0)
+    }
+    return { fichaTecnicaCost: cost, hasUnitError: unitError }
   }, [productLinks, stockItems])
 
   // Aparência state
@@ -1199,19 +1203,27 @@ export default function CardapioPage() {
                     </div>
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Preço de venda</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="29.90"
-                        value={productForm.price}
-                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">R$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="29,90"
+                          value={productForm.price}
+                          onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                          className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        />
+                      </div>
                     </div>
                     {fichaTecnicaCost > 0 && (
                       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
                         <p className="text-xs text-zinc-500">Custo (ficha técnica)</p>
                         <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      </div>
+                    )}
+                    {hasUnitError && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5">
+                        <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis no estoque — o custo pode estar incompleto. Verifique as unidades dos insumos.</p>
                       </div>
                     )}
                     {/* Image */}
@@ -1473,6 +1485,11 @@ export default function CardapioPage() {
                       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
                         <p className="text-xs text-zinc-500">Custo total da ficha técnica</p>
                         <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      </div>
+                    )}
+                    {hasUnitError && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5">
+                        <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis — o custo pode estar incompleto. Verifique se as unidades dos insumos são compatíveis com as do estoque.</p>
                       </div>
                     )}
                   </div>
