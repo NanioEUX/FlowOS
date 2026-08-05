@@ -222,7 +222,6 @@ model Category {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   products        Product[]
   targetMarginPercent Float?
-  marginFormula       String?    @default("selling")
 }
 
 model Product {

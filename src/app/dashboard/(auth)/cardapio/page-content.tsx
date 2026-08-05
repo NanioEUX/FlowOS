@@ -36,7 +36,6 @@ interface Category {
   order: number
   products: Product[]
   targetMarginPercent?: number | null
-  marginFormula?: string | null
 }
 
 const BADGE_OPTIONS = [
@@ -92,7 +91,6 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
-  const [estMarginConfig, setEstMarginConfig] = useState<{ targetMarginPercent: number | null; marginFormula: string }>({ targetMarginPercent: null, marginFormula: "selling" })
 
   // Custo automático da ficha técnica (info only — não editável)
   const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
@@ -117,10 +115,7 @@ export default function CardapioPage() {
     const m = cat?.targetMarginPercent
     if (!m) return null
     const margin = m / 100
-    if ((cat.marginFormula || "selling") === "selling") {
-      return margin >= 1 ? null : fichaTecnicaCost / (1 - margin)
-    }
-    return fichaTecnicaCost * (1 + margin)
+    return margin >= 1 ? null : fichaTecnicaCost / (1 - margin)
   }, [fichaTecnicaCost, productForm.categoryId, categories])
 
   // Aparência state
@@ -152,7 +147,6 @@ export default function CardapioPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: "category" | "product"; id: string; name: string; productCount?: number }>({ open: false, type: "category", id: "", name: "" })
   const [marginCatId, setMarginCatId] = useState<string | null>(null)
   const [marginCatPercent, setMarginCatPercent] = useState("")
-  const [marginCatFormula, setMarginCatFormula] = useState<"selling" | "cost">("selling")
   const [savingMarginCat, setSavingMarginCat] = useState(false)
 
   async function loadData() {
@@ -191,7 +185,6 @@ export default function CardapioPage() {
       })
       setColorsPublished(data.colorsPublished || false)
       setEstablishmentSlug(data.slug || "")
-      setEstMarginConfig({ targetMarginPercent: data.targetMarginPercent ?? null, marginFormula: data.marginFormula || "selling" })
     }
     setLoading(false)
   }
@@ -237,7 +230,6 @@ export default function CardapioPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         targetMarginPercent: marginCatPercent ? Number(marginCatPercent) : null,
-        marginFormula: marginCatFormula,
       }),
     })
     setMarginCatId(null)
@@ -250,10 +242,7 @@ export default function CardapioPage() {
     const m = category.targetMarginPercent
     if (!m || cost <= 0) return null
     const margin = m / 100
-    if ((category.marginFormula || "selling") === "selling") {
-      return margin >= 1 ? null : cost / (1 - margin)
-    }
-    return cost * (1 + margin)
+    return margin >= 1 ? null : cost / (1 - margin)
   }
 
   function handleDeleteCategory(id: string, name: string, productCount: number) {
@@ -643,7 +632,6 @@ export default function CardapioPage() {
                         onClick={() => {
                           setMarginCatId(cat.id)
                           setMarginCatPercent(cat.targetMarginPercent != null ? String(cat.targetMarginPercent) : "")
-                          setMarginCatFormula((cat.marginFormula || "selling") as "selling" | "cost")
                         }}
                         className={`p-1 rounded transition-colors ${cat.targetMarginPercent != null ? "text-green-600 hover:text-green-700" : "text-zinc-400 hover:text-zinc-600"}`}
                         title={cat.targetMarginPercent != null ? `Margem: ${cat.targetMarginPercent}%` : "Configurar margem"}
@@ -665,14 +653,7 @@ export default function CardapioPage() {
 
                   {marginCatId === cat.id && (
                     <div className="flex flex-wrap items-end gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 mb-2">
-                      <div className="flex items-center gap-2">
-                        <Percent className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-zinc-700">Margem:</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setMarginCatFormula("selling")} className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${marginCatFormula === "selling" ? "bg-green-600 text-white" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"}`}>Sobre preço</button>
-                        <button onClick={() => setMarginCatFormula("cost")} className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${marginCatFormula === "cost" ? "bg-green-600 text-white" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"}`}>Markup</button>
-                      </div>
+                        <span className="text-sm font-medium text-zinc-700">Margem de venda:</span>
                       <div className="relative">
                         <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>

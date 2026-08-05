@@ -41,10 +41,7 @@ export default function CmvPageContent() {
     const m = cat?.targetMarginPercent
     if (!m) return null
     const margin = m / 100
-    if ((cat.marginFormula || "selling") === "selling") {
-      return margin >= 1 ? null : cost / (1 - margin)
-    }
-    return cost * (1 + margin)
+    return margin >= 1 ? null : cost / (1 - margin)
   }
 
   useEffect(() => {
@@ -154,7 +151,7 @@ export default function CmvPageContent() {
         <div className="flex flex-wrap gap-2">
           {categories.filter((c: any) => c.targetMarginPercent != null).map((c: any) => (
             <span key={c.id} className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-              {c.name}: {c.targetMarginPercent}% · {c.marginFormula === "selling" ? "sobre preço" : "markup"}
+              {c.name}: {c.targetMarginPercent}%
             </span>
           ))}
         </div>
