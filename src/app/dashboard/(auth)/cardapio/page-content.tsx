@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink } from "lucide-react"
@@ -14,6 +14,7 @@ import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { SearchableSelect } from "@/components/searchable-select"
+import { convertQuantity } from "@/lib/units"
 
 interface Product {
   id: string
@@ -69,6 +70,7 @@ export default function CardapioPage() {
   const [establishmentSlug, setEstablishmentSlug] = useState<string>("")
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showProductForm, setShowProductForm] = useState(false)
+  const [productTab, setProductTab] = useState<"basico" | "onde" | "ficha">("basico")
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
@@ -82,9 +84,25 @@ export default function CardapioPage() {
     badge: "",
     stockItemId: "",
     sendToPrep: false,
+    availableOnline: true,
+    availablePresencial: true,
+    availableWhatsapp: true,
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+
+  // Custo automático da ficha técnica (info only — não editável)
+  const fichaTecnicaCost = useMemo(() => {
+    return productLinks.reduce((sum, link) => {
+      const item = stockItems.find((s) => s.id === link.stockItemId)
+      if (!item) return sum
+      const qty = Number(link.quantity) || 0
+      const linkUnit = link.unit || "un"
+      const stockUnit = item.unit || "un"
+      const qtyInStockUnit = convertQuantity(qty, linkUnit, stockUnit) ?? qty
+      return sum + qtyInStockUnit * (item.unitCost || 0)
+    }, 0)
+  }, [productLinks, stockItems])
 
   // Aparência state
   const [form, setForm] = useState({
@@ -215,6 +233,9 @@ export default function CardapioPage() {
     if (productForm.badge) formData.append("badge", productForm.badge)
     if (productForm.stockItemId) formData.append("stockItemId", productForm.stockItemId)
     formData.append("sendToPrep", String(productForm.sendToPrep))
+    formData.append("availableOnline", String(productForm.availableOnline))
+    formData.append("availablePresencial", String(productForm.availablePresencial))
+    formData.append("availableWhatsapp", String(productForm.availableWhatsapp))
 
     // Handle image
     if (productForm.image && productForm.image.startsWith("data:")) {
@@ -257,6 +278,9 @@ export default function CardapioPage() {
             badge: productForm.badge || null,
             stockItemId: productForm.stockItemId || null,
             sendToPrep: productForm.sendToPrep,
+            availableOnline: productForm.availableOnline,
+            availablePresencial: productForm.availablePresencial,
+            availableWhatsapp: productForm.availableWhatsapp,
             establishmentId,
             categoryId: productForm.categoryId,
             order: maxOrder,
@@ -361,9 +385,13 @@ export default function CardapioPage() {
       badge: product.badge || "",
       stockItemId: product.stockItemId || "",
       sendToPrep: product.sendToPrep || false,
+      availableOnline: (product as any).availableOnline ?? true,
+      availablePresencial: (product as any).availablePresencial ?? true,
+      availableWhatsapp: (product as any).availableWhatsapp ?? true,
     })
     const links = (product as any).stockLinks || []
     setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+    setProductTab("basico")
     setShowProductForm(true)
     // Refetch em background pra atualizar stockLinks (cache: no-store evita o cache de 30s)
     fetchAuth(`/api/products/${product.id}`, { cache: "no-store" })
@@ -373,14 +401,21 @@ export default function CardapioPage() {
         setEditingProduct(data)
         const freshLinks = (data as any).stockLinks || []
         setProductLinks(freshLinks.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+        setProductForm((prev) => ({
+          ...prev,
+          availableOnline: data.availableOnline ?? true,
+          availablePresencial: data.availablePresencial ?? true,
+          availableWhatsapp: data.availableWhatsapp ?? true,
+        }))
       })
       .catch(() => {})
   }
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", stockItemId: "", sendToPrep: false })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", stockItemId: "", sendToPrep: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
+    setProductTab("basico")
     setShowProductForm(true)
   }
 
@@ -1117,244 +1152,331 @@ export default function CardapioPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input
-                    placeholder="Ex: Pizza Calabresa"
-                    value={productForm.name}
-                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Descrição</label>
-                  <textarea
-                    placeholder="Ex: Molho, mussarela, calabresa..."
-                    value={productForm.description}
-                    onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                    rows={2}
-                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Preço</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="29.90"
-                    value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
+              <div className="space-y-3">
+                {/* Tab Navigation */}
+                <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
+                  {([
+                    { key: "basico", label: "Básico" },
+                    { key: "onde", label: "Onde aparece" },
+                    { key: "ficha", label: "Ficha técnica" },
+                  ] as const).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setProductTab(tab.key)}
+                      className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        productTab === tab.key
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-700"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Image */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">
-                    <ImageIcon className="mr-1 inline h-3 w-3" />
-                    Imagem do Produto
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
-                      <Upload className="h-4 w-4" />
-                      <span>Selecionar foto</span>
+                {/* Aba Básico */}
+                {productTab === "basico" && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-zinc-700">Nome</label>
                       <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const reader = new FileReader()
-                          reader.onloadend = () => {
-                            const img = new window.Image()
-                            img.onload = () => {
-                              const MAX = 600
-                              let w = img.width, h = img.height
-                              if (w > MAX || h > MAX) {
-                                if (w > h) { h = Math.round(h * MAX / w); w = MAX }
-                                else { w = Math.round(w * MAX / h); h = MAX }
-                              }
-                              const canvas = document.createElement("canvas")
-                              canvas.width = w
-                              canvas.height = h
-                              canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
-                              const compressed = canvas.toDataURL("image/jpeg", 0.7)
-                              setProductForm({ ...productForm, image: compressed })
-                            }
-                            img.src = reader.result as string
-                          }
-                          reader.readAsDataURL(file)
-                        }}
+                        placeholder="Ex: Pizza Calabresa"
+                        value={productForm.name}
+                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                       />
-                    </label>
-                    {productForm.image && (
-                      <button
-                        type="button"
-                        onClick={() => setProductForm({ ...productForm, image: "" })}
-                        className="text-xs text-red-500 hover:text-red-400"
-                      >
-                        Remover
-                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-zinc-700">Descrição</label>
+                      <textarea
+                        placeholder="Ex: Molho, mussarela, calabresa..."
+                        value={productForm.description}
+                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                        rows={2}
+                        className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-zinc-700">Preço de venda</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="29.90"
+                        value={productForm.price}
+                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                    </div>
+                    {fichaTecnicaCost > 0 && (
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
+                        <p className="text-xs text-zinc-500">Custo (ficha técnica)</p>
+                        <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      </div>
                     )}
+                    {/* Image */}
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">
+                        <ImageIcon className="mr-1 inline h-3 w-3" />
+                        Imagem do Produto
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
+                          <Upload className="h-4 w-4" />
+                          <span>Selecionar foto</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              const reader = new FileReader()
+                              reader.onloadend = () => {
+                                const img = new window.Image()
+                                img.onload = () => {
+                                  const MAX = 600
+                                  let w = img.width, h = img.height
+                                  if (w > MAX || h > MAX) {
+                                    if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+                                    else { w = Math.round(w * MAX / h); h = MAX }
+                                  }
+                                  const canvas = document.createElement("canvas")
+                                  canvas.width = w
+                                  canvas.height = h
+                                  canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
+                                  const compressed = canvas.toDataURL("image/jpeg", 0.7)
+                                  setProductForm({ ...productForm, image: compressed })
+                                }
+                                img.src = reader.result as string
+                              }
+                              reader.readAsDataURL(file)
+                            }}
+                          />
+                        </label>
+                        {productForm.image && (
+                          <button
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, image: "" })}
+                            className="text-xs text-red-500 hover:text-red-400"
+                          >
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
+                      <input
+                        placeholder="https://exemplo.com/foto.jpg"
+                        value={productForm.image.startsWith("data:") ? "" : productForm.image}
+                        onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      />
+                      {productForm.image && (
+                        <img
+                          src={productForm.image}
+                          alt="Preview"
+                          className="mt-2 h-20 w-20 rounded-lg object-cover"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
-                  <input
-                    placeholder="https://exemplo.com/foto.jpg"
-                    value={productForm.image.startsWith("data:") ? "" : productForm.image}
-                    onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  {productForm.image && (
-                    <img
-                      src={productForm.image}
-                      alt="Preview"
-                      className="mt-2 h-20 w-20 rounded-lg object-cover"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
-                  )}
-                </div>
+                )}
 
-                {/* Badge */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
-                  <div className="flex flex-wrap gap-2">
-                    {BADGE_OPTIONS.map((opt) => (
+                {/* Aba Onde aparece */}
+                {productTab === "onde" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Categoria</label>
+                      <SearchableSelect
+                        value={productForm.categoryId}
+                        onChange={(v) => setProductForm({ ...productForm, categoryId: v })}
+                        options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                        placeholder="Selecionar categoria..."
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
+                      <div className="flex flex-wrap gap-2">
+                        {BADGE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, badge: productForm.badge === opt.value ? "" : opt.value })}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                              productForm.badge === opt.value
+                                ? "border-green-600 bg-green-600/10 text-green-600"
+                                : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                            }`}
+                          >
+                            {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Flags de disponibilidade */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Disponibilidade</p>
+                      {([
+                        { key: "availableOnline", emoji: "🌐", title: "Cardápio online", desc: "Aparece no cardápio público" },
+                        { key: "availablePresencial", emoji: "🪑", title: "Pedidos presenciais/mesa", desc: "Aparece no caixa e mesa" },
+                        { key: "availableWhatsapp", emoji: "💬", title: "WhatsApp/bot", desc: "Aparece no atendimento por WhatsApp" },
+                      ] as const).map((flag) => (
+                        <div
+                          key={flag.key}
+                          className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                            (productForm as any)[flag.key]
+                              ? "border-green-200 bg-green-50"
+                              : "border-zinc-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">{flag.emoji}</span>
+                            <div>
+                              <p className="text-sm font-medium text-zinc-900">{flag.title}</p>
+                              <p className="text-xs text-zinc-500">{flag.desc}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, [flag.key]: !(productForm as any)[flag.key] })}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              (productForm as any)[flag.key] ? "bg-green-500" : "bg-zinc-300"
+                            }`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              (productForm as any)[flag.key] ? "translate-x-6" : "translate-x-1"
+                            }`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Enviar para preparo */}
+                    <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                      productForm.sendToPrep ? "border-orange-300 bg-orange-50" : "border-zinc-200"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">👨‍🍳</span>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900">Enviar para preparo</p>
+                          <p className="text-xs text-zinc-500">Aparece no módulo Pedidos para a cozinha</p>
+                        </div>
+                      </div>
                       <button
-                        key={opt.value}
                         type="button"
-                        onClick={() => setProductForm({ ...productForm, badge: opt.value })}
-                        className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          productForm.badge === opt.value
-                            ? "border-green-600 bg-green-600/10 text-green-600"
-                            : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                        onClick={() => setProductForm({ ...productForm, sendToPrep: !productForm.sendToPrep })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          productForm.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
                         }`}
                       >
-                        {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
-                        {opt.label}
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          productForm.sendToPrep ? "translate-x-6" : "translate-x-1"
+                        }`} />
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Stock Item Link (direct sale) */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">
-                    Vincular ao Estoque (venda direta)
-                  </label>
-                  <SearchableSelect
-                    value={productForm.stockItemId}
-                    onChange={(v) => setProductForm({ ...productForm, stockItemId: v })}
-                    options={[{ value: "", label: "Nenhum (sem controle de estoque)" }, ...stockItems.map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))]}
-                    placeholder="Buscar item de estoque..."
-                  />
-                  <p className="mt-1 text-xs text-zinc-400">
-                    Selecione um item do estoque para debitar automaticamente ao vender
-                  </p>
-                </div>
-
-                {/* BOM Links */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">
-                    Vincular Insumos (receita)
-                  </label>
-                  {stockItems.length === 0 ? (
-                    <p className="text-xs text-zinc-400">Cadastre insumos no estoque primeiro</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {productLinks.length > 0 && (
-                        <div className="space-y-1.5">
-                          {productLinks.map((link) => {
-                            const item = stockItems.find((s) => s.id === link.stockItemId)
-                            if (!item) return null
-                            return (
-                              <div key={link.stockItemId} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
-                                <span className="flex-1 text-xs text-zinc-700">{item.name}</span>
-                                <input
-                                  type="number"
-                                  min="0.01"
-                                  step="0.01"
-                                  value={link.quantity}
-                                  onChange={(e) =>
-                                    setProductLinks(
-                                      productLinks.map((l) =>
-                                        l.stockItemId === link.stockItemId ? { ...l, quantity: e.target.value } : l
-                                      )
-                                    )
-                                  }
-                                  className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
-                                />
-                                <select
-                                  value={link.unit}
-                                  onChange={(e) =>
-                                    setProductLinks(
-                                      productLinks.map((l) =>
-                                        l.stockItemId === link.stockItemId ? { ...l, unit: e.target.value } : l
-                                      )
-                                    )
-                                  }
-                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                >
-                                  <option value="g">g</option>
-                                  <option value="kg">kg</option>
-                                  <option value="ml">ml</option>
-                                  <option value="L">L</option>
-                                  <option value="un">un</option>
-                                </select>
-                                <button
-                                  type="button"
-                                  onClick={() => setProductLinks(productLinks.filter((l) => l.stockItemId !== link.stockItemId))}
-                                  className="text-zinc-400 hover:text-red-500"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            )
-                          })}
+                {/* Aba Ficha técnica */}
+                {productTab === "ficha" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">
+                        Vincular ao Estoque (venda direta)
+                      </label>
+                      <SearchableSelect
+                        value={productForm.stockItemId}
+                        onChange={(v) => setProductForm({ ...productForm, stockItemId: v })}
+                        options={[{ value: "", label: "Nenhum (sem controle de estoque)" }, ...stockItems.map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))]}
+                        placeholder="Buscar item de estoque..."
+                      />
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Selecione um item do estoque para debitar automaticamente ao vender
+                      </p>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">
+                        Vincular Insumos (receita)
+                      </label>
+                      {stockItems.length === 0 ? (
+                        <p className="text-xs text-zinc-400">Cadastre insumos no estoque primeiro</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {productLinks.length > 0 && (
+                            <div className="space-y-1.5">
+                              {productLinks.map((link) => {
+                                const item = stockItems.find((s) => s.id === link.stockItemId)
+                                if (!item) return null
+                                return (
+                                  <div key={link.stockItemId} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
+                                    <span className="flex-1 text-xs text-zinc-700">{item.name}</span>
+                                    <input
+                                      type="number"
+                                      min="0.01"
+                                      step="0.01"
+                                      value={link.quantity}
+                                      onChange={(e) =>
+                                        setProductLinks(
+                                          productLinks.map((l) =>
+                                            l.stockItemId === link.stockItemId ? { ...l, quantity: e.target.value } : l
+                                          )
+                                        )
+                                      }
+                                      className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
+                                    />
+                                    <select
+                                      value={link.unit}
+                                      onChange={(e) =>
+                                        setProductLinks(
+                                          productLinks.map((l) =>
+                                            l.stockItemId === link.stockItemId ? { ...l, unit: e.target.value } : l
+                                          )
+                                        )
+                                      }
+                                      className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                    >
+                                      <option value="g">g</option>
+                                      <option value="kg">kg</option>
+                                      <option value="ml">ml</option>
+                                      <option value="L">L</option>
+                                      <option value="un">un</option>
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => setProductLinks(productLinks.filter((l) => l.stockItemId !== link.stockItemId))}
+                                      className="text-zinc-400 hover:text-red-500"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                          <SearchableSelect
+                            value=""
+                            onChange={(v) => {
+                              if (v && !productLinks.find((l) => l.stockItemId === v)) {
+                                const item = stockItems.find((s) => s.id === v)
+                                const defaultUnit = item?.unit || "un"
+                                setProductLinks([...productLinks, { stockItemId: v, quantity: "1", unit: defaultUnit }])
+                              }
+                            }}
+                            options={stockItems.filter((s) => !productLinks.find((l) => l.stockItemId === s.id)).map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}
+                            placeholder="Adicionar insumo..."
+                          />
                         </div>
                       )}
-                      <SearchableSelect
-                        value=""
-                        onChange={(v) => {
-                          if (v && !productLinks.find((l) => l.stockItemId === v)) {
-                            const item = stockItems.find((s) => s.id === v)
-                            const defaultUnit = item?.unit || "un"
-                            setProductLinks([...productLinks, { stockItemId: v, quantity: "1", unit: defaultUnit }])
-                          }
-                        }}
-                        options={stockItems.filter((s) => !productLinks.find((l) => l.stockItemId === s.id)).map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}
-                        placeholder="Adicionar insumo..."
-                      />
                     </div>
-                  )}
-                </div>
-
-                {/* Send to prep */}
-                <div className={`flex items-center justify-between rounded-lg border px-4 py-3 ${
-                  productForm.sendToPrep
-                    ? "border-orange-300 bg-orange-50"
-                    : "border-zinc-200"
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">👨‍🍳</span>
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900">Enviar para preparo</p>
-                      <p className="text-xs text-zinc-500">Aparece no módulo Pedidos para a cozinha</p>
-                    </div>
+                    {fichaTecnicaCost > 0 && (
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
+                        <p className="text-xs text-zinc-500">Custo total da ficha técnica</p>
+                        <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setProductForm({ ...productForm, sendToPrep: !productForm.sendToPrep })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      productForm.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      productForm.sendToPrep ? "translate-x-6" : "translate-x-1"
-                    }`} />
-                  </button>
-                </div>
+                )}
 
                 <div className="flex gap-2 pt-2">
                   <Button

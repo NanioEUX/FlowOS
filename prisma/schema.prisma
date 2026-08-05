@@ -231,6 +231,9 @@ model Product {
   image           String?
   isAvailable     Boolean            @default(true)
   sendToPrep      Boolean            @default(false)
+  availableOnline     Boolean        @default(true)
+  availablePresencial Boolean        @default(true)
+  availableWhatsapp   Boolean        @default(true)
   order           Int                @default(0)
   badge           String?
   categoryId      String
