@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   const dayMap = new Map<string, { revenueCents: number; costCents: number; orderCount: number }>()
 
   // Por produto (top que mais gerou custo)
-  const productMap = new Map<string, { productName: string; quantity: number; totalCostCents: number }>()
+  const productMap = new Map<string, { productId: string | null; productName: string; quantity: number; totalCostCents: number }>()
 
   // Detalhe de itens
   const itemCosts = await prisma.orderItemCost.findMany({
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
   for (const ic of itemCosts) {
     const key = ic.productId || ic.productName
     if (!productMap.has(key)) {
-      productMap.set(key, { productName: ic.productName, quantity: 0, totalCostCents: 0 })
+      productMap.set(key, { productId: ic.productId, productName: ic.productName, quantity: 0, totalCostCents: 0 })
     }
     const p = productMap.get(key)!
     p.quantity += ic.quantity
@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.totalCostCents - a.totalCostCents)
     .slice(0, 20)
     .map((p) => ({
+      productId: p.productId,
       productName: p.productName,
       quantity: p.quantity,
       totalCostCents: p.totalCostCents,

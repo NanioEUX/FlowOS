@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -35,6 +35,8 @@ interface Category {
   name: string
   order: number
   products: Product[]
+  targetMarginPercent?: number | null
+  marginFormula?: string | null
 }
 
 const BADGE_OPTIONS = [
@@ -110,13 +112,16 @@ export default function CardapioPage() {
   }, [productLinks, stockItems])
 
   const suggestedPrice = useMemo(() => {
-    if (!estMarginConfig.targetMarginPercent || fichaTecnicaCost <= 0) return null
-    const m = estMarginConfig.targetMarginPercent / 100
-    if (estMarginConfig.marginFormula === "selling") {
-      return m >= 1 ? null : fichaTecnicaCost / (1 - m)
+    if (fichaTecnicaCost <= 0) return null
+    const cat = categories.find((c) => c.id === productForm.categoryId)
+    const m = cat?.targetMarginPercent
+    if (!m) return null
+    const margin = m / 100
+    if ((cat.marginFormula || "selling") === "selling") {
+      return margin >= 1 ? null : fichaTecnicaCost / (1 - margin)
     }
-    return fichaTecnicaCost * (1 + m)
-  }, [fichaTecnicaCost, estMarginConfig])
+    return fichaTecnicaCost * (1 + margin)
+  }, [fichaTecnicaCost, productForm.categoryId, categories])
 
   // Aparência state
   const [form, setForm] = useState({
@@ -145,6 +150,10 @@ export default function CardapioPage() {
   const [colorsPublished, setColorsPublished] = useState(false)
   const [savingColors, setSavingColors] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: "category" | "product"; id: string; name: string; productCount?: number }>({ open: false, type: "category", id: "", name: "" })
+  const [marginCatId, setMarginCatId] = useState<string | null>(null)
+  const [marginCatPercent, setMarginCatPercent] = useState("")
+  const [marginCatFormula, setMarginCatFormula] = useState<"selling" | "cost">("selling")
+  const [savingMarginCat, setSavingMarginCat] = useState(false)
 
   async function loadData() {
     if (!establishmentId) return
@@ -218,6 +227,33 @@ export default function CardapioPage() {
     setEditingCategoryName("")
     toast("Categoria renomeada", "success")
     loadData()
+  }
+
+  async function saveMarginCategory() {
+    if (!marginCatId) return
+    setSavingMarginCat(true)
+    await fetchAuth(`/api/categories/${marginCatId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetMarginPercent: marginCatPercent ? Number(marginCatPercent) : null,
+        marginFormula: marginCatFormula,
+      }),
+    })
+    setMarginCatId(null)
+    setSavingMarginCat(false)
+    toast("Margem salva", "success")
+    loadData()
+  }
+
+  function getCategorySuggestedPrice(category: any, cost: number): number | null {
+    const m = category.targetMarginPercent
+    if (!m || cost <= 0) return null
+    const margin = m / 100
+    if ((category.marginFormula || "selling") === "selling") {
+      return margin >= 1 ? null : cost / (1 - margin)
+    }
+    return cost * (1 + margin)
   }
 
   function handleDeleteCategory(id: string, name: string, productCount: number) {
@@ -603,6 +639,17 @@ export default function CardapioPage() {
                       </h3>
                     )}
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setMarginCatId(cat.id)
+                          setMarginCatPercent(cat.targetMarginPercent != null ? String(cat.targetMarginPercent) : "")
+                          setMarginCatFormula((cat.marginFormula || "selling") as "selling" | "cost")
+                        }}
+                        className={`p-1 rounded transition-colors ${cat.targetMarginPercent != null ? "text-green-600 hover:text-green-700" : "text-zinc-400 hover:text-zinc-600"}`}
+                        title={cat.targetMarginPercent != null ? `Margem: ${cat.targetMarginPercent}%` : "Configurar margem"}
+                      >
+                        <Percent className="h-4 w-4" />
+                      </button>
                       <Button size="sm" variant="ghost" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
                         Adicionar
@@ -615,6 +662,27 @@ export default function CardapioPage() {
                       </button>
                     </div>
                   </div>
+
+                  {marginCatId === cat.id && (
+                    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Percent className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-zinc-700">Margem:</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setMarginCatFormula("selling")} className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${marginCatFormula === "selling" ? "bg-green-600 text-white" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"}`}>Sobre preço</button>
+                        <button onClick={() => setMarginCatFormula("cost")} className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${marginCatFormula === "cost" ? "bg-green-600 text-white" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"}`}>Markup</button>
+                      </div>
+                      <div className="relative">
+                        <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                      </div>
+                      <Button size="sm" onClick={saveMarginCategory} disabled={savingMarginCat}>
+                        {savingMarginCat ? "..." : "Salvar"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setMarginCatId(null)}>Cancelar</Button>
+                    </div>
+                  )}
 
                   {sorted.length === 0 ? (
                     <p className="py-4 text-center text-sm text-zinc-400">
@@ -669,9 +737,29 @@ export default function CardapioPage() {
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="font-bold text-green-600">
-                              {formatCurrency(product.price)}
-                            </span>
+                            <div className="text-right">
+                              <span className="font-bold text-green-600">
+                                {formatCurrency(product.price)}
+                              </span>
+                              {(() => {
+                                const links = (product as any).stockLinks || []
+                                if (links.length === 0 || !cat.targetMarginPercent) return null
+                                let cost = 0
+                                for (const link of links) {
+                                  const item = stockItems.find((s: any) => s.id === link.stockItemId)
+                                  if (!item) continue
+                                  const qty = Number(link.quantity) || 0
+                                  const linkUnit = link.unit || "un"
+                                  const stockUnit = item.unit || "un"
+                                  const converted = convertQuantity(qty, linkUnit, stockUnit)
+                                  if (converted === null) continue
+                                  cost += converted * (item.unitCost || 0)
+                                }
+                                const suggested = getCategorySuggestedPrice(cat, cost)
+                                if (!suggested) return null
+                                return <p className="text-[10px] text-green-600 font-medium">Sug: {formatCurrency(suggested)}</p>
+                              })()}
+                            </div>
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
@@ -1234,7 +1322,7 @@ export default function CardapioPage() {
                     )}
                     {suggestedPrice != null && (
                       <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
-                        <p className="text-xs text-green-600">Preço sugerido ({estMarginConfig.targetMarginPercent}% de margem)</p>
+                        <p className="text-xs text-green-600">Preço sugerido</p>
                         <p className="text-sm font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
                       </div>
                     )}
@@ -1506,7 +1594,7 @@ export default function CardapioPage() {
                     )}
                     {suggestedPrice != null && (
                       <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
-                        <p className="text-xs text-green-600">Preço sugerido ({estMarginConfig.targetMarginPercent}% de margem)</p>
+                        <p className="text-xs text-green-600">Preço sugerido</p>
                         <p className="text-sm font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
                       </div>
                     )}
