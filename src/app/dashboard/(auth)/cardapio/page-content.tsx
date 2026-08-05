@@ -118,7 +118,7 @@ export default function CardapioPage() {
     if (!establishmentId) return
     setLoading(true)
     const [catRes, stockRes, estRes] = await Promise.all([
-      fetchAuth(`/api/categories?establishmentId=${establishmentId}`),
+      fetchAuth(`/api/categories?establishmentId=${establishmentId}`, { cache: "no-store" }),
       fetchAuth(`/api/stock?establishmentId=${establishmentId}`),
       fetchAuth(`/api/establishments?id=${establishmentId}`),
     ])
@@ -287,11 +287,20 @@ export default function CardapioPage() {
       }
     }
 
-    setShowProductForm(false)
-    setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId: "", image: "", badge: "", stockItemId: "", sendToPrep: false })
-    setProductLinks([])
-    loadData()
+    toast("Produto salvo com sucesso!", "success")
+    // NÃO fecha o modal — mantém aberto pra ver o que salvou.
+    // Recarrega dados em background.
+    await loadData()
+    // Atualiza editingProduct com dados novos pra não perder alterações subsequentes
+    if (productId) {
+      const res = await fetchAuth(`/api/products/${productId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setEditingProduct(data)
+        const links = (data as any).stockLinks || []
+        setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+      }
+    }
   }
 
   function handleDeleteProduct(id: string, name: string) {
@@ -1333,6 +1342,13 @@ export default function CardapioPage() {
                     onClick={() => { setShowProductForm(false); setEditingProduct(null) }}
                   >
                     Cancelar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => { setShowProductForm(false); setEditingProduct(null) }}
+                  >
+                    Fechar
                   </Button>
                   <Button className="flex-1" onClick={saveProduct}>
                     {editingProduct ? "Salvar" : "Adicionar"}
