@@ -1749,107 +1749,184 @@ export default function CardapioPage() {
                       <p className="mb-3 text-xs text-zinc-400">
                         Configure opções extras que o cliente pode selecionar ao pedir este produto.
                       </p>
-                      {productAdditionalOptions.length > 0 && (
-                        <div className="space-y-3">
-                          {productAdditionalOptions.map((opt, idx) => (
-                            <div key={idx} className="rounded-lg border border-zinc-200 bg-white p-3 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={opt.groupName}
-                                  onChange={(e) => {
-                                    const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, groupName: e.target.value }
-                                    setProductAdditionalOptions(updated)
-                                  }}
-                                  placeholder="Nome do grupo (ex: Ponto da carne)"
-                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setProductAdditionalOptions(productAdditionalOptions.filter((_, i) => i !== idx))}
-                                  className="text-zinc-400 hover:text-red-500"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={opt.name}
-                                  onChange={(e) => {
-                                    const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, name: e.target.value }
-                                    setProductAdditionalOptions(updated)
-                                  }}
-                                  placeholder="Nome (ex: Bacon)"
-                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                />
-                                <div className="relative">
-                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.50"
-                                    value={opt.price}
-                                    onChange={(e) => {
-                                      const updated = [...productAdditionalOptions]
-                                      updated[idx] = { ...opt, price: e.target.value }
-                                      setProductAdditionalOptions(updated)
+                      {(() => {
+                        // Agrupar opções por groupName
+                        const groups: Record<string, { items: typeof productAdditionalOptions; groupIdx: number }> = {}
+                        productAdditionalOptions.forEach((opt, idx) => {
+                          const group = opt.groupName || "default"
+                          if (!groups[group]) groups[group] = { items: [], groupIdx: 0 }
+                          groups[group].items.push(opt)
+                          groups[group].groupIdx = idx
+                        })
+
+                        const groupEntries = Object.entries(groups)
+                        if (groupEntries.length === 0) return null
+
+                        return (
+                          <div className="space-y-3">
+                            {groupEntries.map(([groupName, { items }], gIdx) => {
+                              const firstItem = items[0]
+                              const isRequired = firstItem?.selectionType === "required"
+                              const groupIdx = productAdditionalOptions.indexOf(firstItem)
+                              return (
+                                <div key={gIdx} className="rounded-lg border border-zinc-200 bg-white overflow-hidden">
+                                  {/* Cabeçalho do grupo */}
+                                  <div className="flex items-center gap-2 bg-zinc-50 px-3 py-2 border-b border-zinc-200">
+                                    <input
+                                      type="text"
+                                      value={groupName === "default" ? "" : groupName}
+                                      onChange={(e) => {
+                                        const updated = [...productAdditionalOptions]
+                                        items.forEach((item) => {
+                                          const i = updated.indexOf(item)
+                                          updated[i] = { ...item, groupName: e.target.value }
+                                        })
+                                        setProductAdditionalOptions(updated)
+                                      }}
+                                      placeholder="Nome do grupo (ex: Ponto da carne)"
+                                      className="h-7 flex-1 rounded border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-700 focus:border-green-600 focus:outline-none"
+                                    />
+                                    <select
+                                      value={firstItem?.inputType || "radio"}
+                                      onChange={(e) => {
+                                        const updated = [...productAdditionalOptions]
+                                        items.forEach((item) => {
+                                          const i = updated.indexOf(item)
+                                          updated[i] = { ...item, inputType: e.target.value }
+                                        })
+                                        setProductAdditionalOptions(updated)
+                                      }}
+                                      className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                    >
+                                      <option value="radio">Seleção</option>
+                                      <option value="quantity">Quantidade (+/-)</option>
+                                    </select>
+                                    <select
+                                      value={firstItem?.selectionType || "single"}
+                                      onChange={(e) => {
+                                        const updated = [...productAdditionalOptions]
+                                        items.forEach((item) => {
+                                          const i = updated.indexOf(item)
+                                          updated[i] = { ...item, selectionType: e.target.value }
+                                        })
+                                        setProductAdditionalOptions(updated)
+                                      }}
+                                      className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                    >
+                                      <option value="single">Única</option>
+                                      <option value="multiple">Múltipla</option>
+                                      <option value="required">Obrigatória</option>
+                                    </select>
+                                    {isRequired && (
+                                      <span className="rounded bg-green-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OBRIGATÓRIO</span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = productAdditionalOptions.filter((_, i) => !items.includes(productAdditionalOptions[i]))
+                                        setProductAdditionalOptions(updated)
+                                      }}
+                                      className="text-zinc-400 hover:text-red-500"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                  {/* Subtítulo do grupo */}
+                                  <div className="px-3 py-2 border-b border-zinc-100">
+                                    <input
+                                      type="text"
+                                      value={firstItem?.headerText || ""}
+                                      onChange={(e) => {
+                                        const updated = [...productAdditionalOptions]
+                                        items.forEach((item) => {
+                                          const i = updated.indexOf(item)
+                                          updated[i] = { ...item, headerText: e.target.value }
+                                        })
+                                        setProductAdditionalOptions(updated)
+                                      }}
+                                      placeholder="Subtítulo (ex: Escolha 1)"
+                                      className="h-7 w-full rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-500 focus:border-green-600 focus:outline-none"
+                                    />
+                                  </div>
+                                  {/* Itens do grupo */}
+                                  <div className="divide-y divide-zinc-100">
+                                    {items.map((item, iIdx) => {
+                                      const itemIdx = productAdditionalOptions.indexOf(item)
+                                      return (
+                                        <div key={itemIdx} className="flex items-center gap-2 px-3 py-2">
+                                          <input
+                                            type="text"
+                                            value={item.name}
+                                            onChange={(e) => {
+                                              const updated = [...productAdditionalOptions]
+                                              updated[itemIdx] = { ...item, name: e.target.value }
+                                              setProductAdditionalOptions(updated)
+                                            }}
+                                            placeholder="Nome (ex: Ao ponto)"
+                                            className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                          />
+                                          <div className="relative">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              step="0.50"
+                                              value={item.price}
+                                              onChange={(e) => {
+                                                const updated = [...productAdditionalOptions]
+                                                updated[itemIdx] = { ...item, price: e.target.value }
+                                                setProductAdditionalOptions(updated)
+                                              }}
+                                              className="h-7 w-20 rounded border border-zinc-200 bg-white pl-7 pr-1 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
+                                            />
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...productAdditionalOptions]
+                                              updated.splice(itemIdx, 1)
+                                              setProductAdditionalOptions(updated)
+                                            }}
+                                            className="text-zinc-400 hover:text-red-500"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                  {/* Botão adicionar item */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setProductAdditionalOptions([...productAdditionalOptions, {
+                                        name: "",
+                                        price: "0",
+                                        selectionType: firstItem?.selectionType || "single",
+                                        inputType: firstItem?.inputType || "radio",
+                                        groupName: groupName === "default" ? "" : groupName,
+                                        headerText: firstItem?.headerText || "",
+                                        maxSelection: firstItem?.maxSelection || ""
+                                      }])
                                     }}
-                                    className="h-7 w-20 rounded border border-zinc-200 bg-white pl-7 pr-1 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
-                                  />
+                                    className="flex w-full items-center justify-center gap-1 border-t border-zinc-200 bg-zinc-50 py-2 text-xs text-green-600 hover:bg-zinc-100 hover:text-green-700"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    Adicionar item
+                                  </button>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <select
-                                  value={opt.inputType}
-                                  onChange={(e) => {
-                                    const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, inputType: e.target.value }
-                                    setProductAdditionalOptions(updated)
-                                  }}
-                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                >
-                                  <option value="radio">Seleção</option>
-                                  <option value="quantity">Quantidade (+/-)</option>
-                                </select>
-                                <select
-                                  value={opt.selectionType}
-                                  onChange={(e) => {
-                                    const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, selectionType: e.target.value }
-                                    setProductAdditionalOptions(updated)
-                                  }}
-                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                >
-                                  <option value="single">Única</option>
-                                  <option value="multiple">Múltipla</option>
-                                  <option value="required">Obrigatória</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={opt.headerText}
-                                  onChange={(e) => {
-                                    const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, headerText: e.target.value }
-                                    setProductAdditionalOptions(updated)
-                                  }}
-                                  placeholder="Subtítulo (ex: Escolha 1)"
-                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                       <button
                         type="button"
                         onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "" }])}
                         className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
                       >
                         <Plus className="h-3 w-3" />
-                        Adicionar opção
+                        Adicionar grupo
                       </button>
                     </div>
                   </div>
