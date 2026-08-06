@@ -1822,7 +1822,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               return (
                 <div key={cat.id} className="mb-6">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.name}</p>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {filtered.map((product) => (
                       <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
                     ))}
@@ -1842,7 +1842,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 id={`cat-${cat.id}`}
                 className={`mb-8 ${!isActive ? "hidden" : ""}`}
               >
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
                   ))}
@@ -4198,51 +4198,53 @@ function PaymentModal({
 
 function ProductCard({ product, onAdd, theme, disabled, isAdded }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean }) {
   return (
-    <div className={`flex items-center gap-4 rounded-2xl p-3 transition-all duration-300 backdrop-blur-sm ${disabled ? "opacity-50" : ""}`} style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+    <div className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`} style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
       <div className="relative">
         {product.image ? (
           <img
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className={`h-24 w-24 flex-shrink-0 rounded-xl object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
+            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
           />
         ) : (
-          <div className={`flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
+          <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
             <svg className="h-8 w-8" style={{ color: theme.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
           </div>
         )}
         {product.badge && (
-          <span className="absolute -top-1.5 -left-1.5 badge-fire text-[9px] font-bold text-white px-2 py-0.5 rounded-full shadow-md">
+          <span className="absolute top-2 left-2 badge-fire text-[9px] font-bold text-white px-2 py-0.5 rounded-full shadow-md">
             {product.badge === "mais_vendido" && "🔥 Mais Pedido"}
             {product.badge === "novo" && "🆕 Novo"}
             {product.badge === "promocao" && "🏷️ OFF"}
           </span>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm" style={{ color: theme.text }}>{product.name}</h3>
+      <div className="p-2.5">
+        <h3 className="font-semibold text-xs leading-tight" style={{ color: theme.text }}>{product.name}</h3>
         {product.description && (
-          <p className="mt-0.5 text-xs line-clamp-2" style={{ color: theme.textMuted }}>{product.description}</p>
+          <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
-        <p className="mt-1.5 font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
+          <button
+            onClick={() => onAdd(product)}
+            aria-label={`Adicionar ${product.name} ao carrinho`}
+            className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+            style={{
+              backgroundColor: isAdded ? "#22c55e" : theme.primary,
+              boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
+            }}
+            disabled={disabled}
+          >
+            {isAdded ? (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
       </div>
-      <button
-        onClick={() => onAdd(product)}
-        aria-label={`Adicionar ${product.name} ao carrinho`}
-        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white font-bold text-lg transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
-        style={{
-          backgroundColor: isAdded ? "#22c55e" : theme.primary,
-          boxShadow: isAdded ? "0 0 25px rgba(34,197,94,0.5)" : `0 4px 12px ${theme.shadowPrimary}`,
-        }}
-        disabled={disabled}
-      >
-        {isAdded ? (
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-        ) : (
-          <Plus className="h-5 w-5" />
-        )}
-      </button>
     </div>
   )
 }
