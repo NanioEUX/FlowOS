@@ -239,6 +239,7 @@ model Product {
   availablePresencial Boolean        @default(true)
   availableWhatsapp   Boolean        @default(true)
   onSale          Boolean            @default(false)
+  promoPrice      Float?
   order           Int                @default(0)
   badge           String?
   categoryId      String

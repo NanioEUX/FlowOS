@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
+  const productSelect = { id: true, name: true, price: true, image: true, badge: true, description: true, onSale: true, promoPrice: true }
+
   // 1. Mais Vendidos - top 10 products by order count (last 30 days)
   const orders = await prisma.order.findMany({
     where: {
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest) {
   const maisVendidos = topSellingIds.length > 0
     ? await prisma.product.findMany({
         where: { id: { in: topSellingIds }, isAvailable: true },
-        select: { id: true, name: true, price: true, image: true, badge: true, description: true },
+        select: productSelect,
       })
     : []
 
@@ -55,7 +57,7 @@ export async function GET(req: NextRequest) {
       isAvailable: true,
       createdAt: { gte: sevenDaysAgo },
     },
-    select: { id: true, name: true, price: true, image: true, badge: true, description: true },
+    select: productSelect,
     orderBy: { createdAt: "desc" },
     take: 10,
   })
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
       isAvailable: true,
       onSale: true,
     },
-    select: { id: true, name: true, price: true, image: true, badge: true, description: true },
+    select: productSelect,
     take: 10,
   })
 
@@ -76,7 +78,7 @@ export async function GET(req: NextRequest) {
     where: { establishmentId, active: true },
     include: {
       items: {
-        include: { product: { select: { id: true, name: true, price: true, image: true } } },
+        include: { product: { select: { id: true, name: true, price: true, image: true, onSale: true, promoPrice: true } } },
       },
     },
     take: 5,

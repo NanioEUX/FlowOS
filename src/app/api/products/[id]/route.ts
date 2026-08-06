@@ -48,8 +48,8 @@ export async function PATCH(
         }
         if (value === "null" || value === "undefined") {
           data[key] = null
-        } else if (key === "price") {
-          data[key] = parseFloat(value as string)
+        } else         if (key === "price" || key === "promoPrice") {
+          data[key] = value === "null" ? null : parseFloat(value as string)
         } else if (booleanFields.includes(key)) {
           data[key] = value === "true" || value === "1"
         } else {

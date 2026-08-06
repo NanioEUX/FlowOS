@@ -861,7 +861,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
+      return [...prev, { id: product.id, name: product.name, price: (product as any).promoPrice && (product as any).onSale ? (product as any).promoPrice : product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
@@ -2077,13 +2077,22 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </span>
                       )}
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</span>
+                        <div className="flex items-center gap-1.5">
+                          {(product as any).promoPrice && (product as any).onSale ? (
+                            <>
+                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-sm font-bold text-green-600">{formatCurrency((product as any).promoPrice)}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</span>
+                          )}
+                        </div>
                         <button
                           onClick={() => {
                             addToCart({
                               id: product.id,
                               name: product.name,
-                              price: product.price,
+                              price: (product as any).promoPrice && (product as any).onSale ? (product as any).promoPrice : product.price,
                               image: product.image,
                             } as any)
                           }}
@@ -3660,7 +3669,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </span>
                   )}
                 </div>
-                <p className="font-bold text-xl mt-3" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
+                <div className="flex items-center gap-2 mt-3">
+                  {(selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (
+                    <>
+                      <span className="text-sm line-through text-zinc-400">{formatCurrency(selectedProduct.price)}</span>
+                      <p className="font-bold text-xl text-green-600">{formatCurrency((selectedProduct as any).promoPrice)}</p>
+                    </>
+                  ) : (
+                    <p className="font-bold text-xl" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
+                  )}
+                </div>
               </div>
 
               {/* Quantity */}
@@ -3775,7 +3793,8 @@ onPaymentConfirmed={handlePaymentSuccess}
               <button
                 onClick={() => {
                   const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
-                  const unitPrice = selectedProduct.price + optionsPrice
+                  const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
+                  const unitPrice = basePrice + optionsPrice
                   setCart((prev) => {
                     const existing = prev.find((item) => item.id === selectedProduct.id)
                     if (existing) {
@@ -3793,7 +3812,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 style={{ backgroundColor: theme.primary }}
               >
                 <Plus className="w-5 h-5" />
-                Adicionar · {formatCurrency((selectedProduct.price + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
+                Adicionar · {formatCurrency((((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
               </button>
             </div>
           </div>
@@ -3820,7 +3839,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <div>
                   <h2 className="font-bold text-gray-900">{bottomSheetProduct.name}</h2>
                   {bottomSheetProduct.description && <p className="text-xs text-gray-500">{bottomSheetProduct.description}</p>}
-                  <p className="font-bold text-sm mt-1" style={{ color: theme.primary }}>{formatCurrency(bottomSheetProduct.price)}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {(bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (
+                      <>
+                        <span className="text-xs text-zinc-400 line-through">{formatCurrency(bottomSheetProduct.price)}</span>
+                        <p className="font-bold text-sm text-green-600">{formatCurrency((bottomSheetProduct as any).promoPrice)}</p>
+                      </>
+                    ) : (
+                      <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(bottomSheetProduct.price)}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3884,7 +3912,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setCart((prev) => {
                     const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                     if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: [] } as CartItem]
+                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: [] } as CartItem]
                   })
                   setBottomSheetProduct(null)
                   setAddedItemId(bottomSheetProduct.id)
@@ -3896,7 +3924,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 style={{ backgroundColor: theme.primary }}
               >
                 <Plus className="w-5 h-5" />
-                Adicionar ao pedido — {formatCurrency(bottomSheetProduct.price)}
+                Adicionar ao pedido — {formatCurrency((bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price)}
               </button>
             </div>
           </div>

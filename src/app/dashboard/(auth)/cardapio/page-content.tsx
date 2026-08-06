@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -43,7 +43,6 @@ const BADGE_OPTIONS = [
   { value: "", label: "Nenhum", icon: null },
   { value: "mais_vendido", label: "Mais Vendido", icon: Star, color: "text-amber-500 bg-amber-500/10" },
   { value: "novo", label: "Novo", icon: Sparkles, color: "text-blue-500 bg-green-600/10" },
-  { value: "promocao", label: "Promoção", icon: Tag, color: "text-red-500 bg-red-500/10" },
 ]
 
 function getBadgeDisplay(badge: string | null) {
@@ -87,12 +86,17 @@ export default function CardapioPage() {
     badge: "",
     sendToPrep: false,
     onSale: false,
+    promoPrice: "",
     availableOnline: true,
     availablePresencial: true,
     availableWhatsapp: true,
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+  const [promoModal, setPromoModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentOnSale: boolean; currentPromoPrice: number | null }>({
+    open: false, productId: "", productName: "", currentPrice: 0, currentOnSale: false, currentPromoPrice: null
+  })
+  const [promoForm, setPromoForm] = useState({ adjustPrice: false, promoPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
 
   // Custo automático da ficha técnica (info only — não editável)
@@ -368,6 +372,11 @@ export default function CardapioPage() {
     if (firstLink) formData.append("stockItemId", firstLink.stockItemId)
     formData.append("sendToPrep", String(productForm.sendToPrep))
     formData.append("onSale", String(productForm.onSale))
+    if (productForm.onSale && productForm.promoPrice) {
+      formData.append("promoPrice", productForm.promoPrice)
+    } else if (!productForm.onSale) {
+      formData.append("promoPrice", "null")
+    }
     formData.append("availableOnline", String(productForm.availableOnline))
     formData.append("availablePresencial", String(productForm.availablePresencial))
     formData.append("availableWhatsapp", String(productForm.availableWhatsapp))
@@ -542,12 +551,59 @@ export default function CardapioPage() {
 
   async function toggleOnSale(productId: string, currentValue: boolean) {
     if (!establishmentId) return
-    const newValue = !currentValue
+    if (currentValue) {
+      // Desativando promoção — direto
+      try {
+        const res = await fetchAuth(`/api/products/${productId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onSale: false, promoPrice: null }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          toast(err.error || "Erro ao atualizar produto", "error")
+          return
+        }
+        setCategories((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            products: cat.products.map((p) =>
+              p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+            ),
+          }))
+        )
+        toast("Produto removido das promoções", "success")
+      } catch (err) {
+        toast("Erro ao atualizar produto", "error")
+      }
+    } else {
+      // Ativando promoção — abre modal
+      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+      if (product) {
+        setPromoModal({
+          open: true,
+          productId: product.id,
+          productName: product.name,
+          currentPrice: product.price,
+          currentOnSale: (product as any).onSale || false,
+          currentPromoPrice: (product as any).promoPrice || null,
+        })
+        setPromoForm({ adjustPrice: false, promoPrice: "" })
+      }
+    }
+  }
+
+  async function confirmPromoActivation() {
+    const { productId } = promoModal
+    const data: any = { onSale: true }
+    if (promoForm.adjustPrice && promoForm.promoPrice) {
+      data.promoPrice = parseFloat(promoForm.promoPrice)
+    }
     try {
       const res = await fetchAuth(`/api/products/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ onSale: newValue }),
+        body: JSON.stringify(data),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -558,11 +614,12 @@ export default function CardapioPage() {
         prev.map((cat) => ({
           ...cat,
           products: cat.products.map((p) =>
-            p.id === productId ? { ...p, onSale: newValue } : p
+            p.id === productId ? { ...p, onSale: true, promoPrice: data.promoPrice || null } : p
           ),
         }))
       )
-      toast(newValue ? "Produto em promoção" : "Produto removido das promoções", "success")
+      setPromoModal({ ...promoModal, open: false })
+      toast("Produto em promoção!", "success")
     } catch (err) {
       toast("Erro ao atualizar produto", "error")
     }
@@ -581,6 +638,7 @@ export default function CardapioPage() {
       badge: product.badge || "",
       sendToPrep: product.sendToPrep || false,
       onSale: (product as any).onSale ?? false,
+      promoPrice: (product as any).promoPrice ? String((product as any).promoPrice) : "",
       availableOnline: (product as any).availableOnline ?? true,
       availablePresencial: (product as any).availablePresencial ?? true,
       availableWhatsapp: (product as any).availableWhatsapp ?? true,
@@ -626,7 +684,7 @@ export default function CardapioPage() {
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
     setProductAdditionalOptions([])
     setProductTab("basico")
@@ -1610,26 +1668,6 @@ export default function CardapioPage() {
                         placeholder="Selecionar categoria..."
                       />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
-                      <div className="flex flex-wrap gap-2">
-                        {BADGE_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setProductForm({ ...productForm, badge: productForm.badge === opt.value ? "" : opt.value })}
-                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                              productForm.badge === opt.value
-                                ? "border-green-600 bg-green-600/10 text-green-600"
-                                : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
-                            }`}
-                          >
-                            {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                     {/* Flags de disponibilidade */}
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Disponibilidade</p>
@@ -1691,27 +1729,47 @@ export default function CardapioPage() {
                       </button>
                     </div>
                     {/* Em Promoção */}
-                    <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                    <div className={`rounded-lg border px-4 py-3 transition-colors ${
                       productForm.onSale ? "border-green-300 bg-green-50" : "border-zinc-200"
                     }`}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">💰</span>
-                        <div>
-                          <p className="text-sm font-medium text-zinc-900">Em Promoção</p>
-                          <p className="text-xs text-zinc-500">Aparece no story &quot;Promoções&quot;</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">💰</span>
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">Em Promoção</p>
+                            <p className="text-xs text-zinc-500">Aparece no story &quot;Promoções&quot;</p>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setProductForm({ ...productForm, onSale: !productForm.onSale, promoPrice: !productForm.onSale ? productForm.promoPrice : "" })}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            productForm.onSale ? "bg-green-500" : "bg-zinc-300"
+                          }`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            productForm.onSale ? "translate-x-6" : "translate-x-1"
+                          }`} />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setProductForm({ ...productForm, onSale: !productForm.onSale })}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          productForm.onSale ? "bg-green-500" : "bg-zinc-300"
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          productForm.onSale ? "translate-x-6" : "translate-x-1"
-                        }`} />
-                      </button>
+                      {productForm.onSale && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <label className="text-sm text-zinc-600">Preço original: <span className="font-semibold">{formatCurrency(parseFloat(productForm.price) || 0)}</span></label>
+                          <span className="text-zinc-400">→</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-zinc-500">R$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              placeholder="0,00"
+                              value={productForm.promoPrice}
+                              onChange={(e) => setProductForm({ ...productForm, promoPrice: e.target.value })}
+                              className="h-8 w-24 rounded-lg border border-green-300 bg-white px-2 text-sm font-semibold text-green-700 focus:border-green-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1810,6 +1868,26 @@ export default function CardapioPage() {
                         <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis — o custo pode estar incompleto. Verifique se as unidades dos insumos são compatíveis com as do estoque.</p>
                       </div>
                     )}
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
+                      <div className="flex flex-wrap gap-2">
+                        {BADGE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, badge: productForm.badge === opt.value ? "" : opt.value })}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                              productForm.badge === opt.value
+                                ? "border-green-600 bg-green-600/10 text-green-600"
+                                : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                            }`}
+                          >
+                            {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2104,6 +2182,74 @@ export default function CardapioPage() {
               </Button>
               <Button className="flex-1" onClick={confirmPriceUpdate}>
                 Aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {promoModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <h3 className="text-lg font-semibold text-zinc-900">Ativar Promoção</h3>
+              </div>
+              <button onClick={() => setPromoModal({ ...promoModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <p className="mb-3 text-sm text-zinc-600">
+                Produto: <span className="font-semibold">{promoModal.productName}</span>
+              </p>
+              <p className="mb-4 text-sm text-zinc-600">
+                Preço atual: <span className="font-semibold">{formatCurrency(promoModal.currentPrice)}</span>
+              </p>
+              <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors cursor-pointer ${
+                promoForm.adjustPrice ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={promoForm.adjustPrice}
+                  onChange={(e) => setPromoForm({ ...promoForm, adjustPrice: e.target.checked, promoPrice: "" })}
+                  className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                />
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">Ajustar preço promocional</p>
+                  <p className="text-xs text-zinc-500">Define um preço menor para esta promoção</p>
+                </div>
+              </label>
+              {promoForm.adjustPrice && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                  <span className="text-sm text-zinc-600">Preço promo:</span>
+                  <span className="text-sm text-zinc-500">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={promoModal.currentPrice - 0.01}
+                    placeholder="0,00"
+                    value={promoForm.promoPrice}
+                    onChange={(e) => setPromoForm({ ...promoForm, promoPrice: e.target.value })}
+                    className="h-9 w-28 rounded-lg border border-green-300 bg-white px-3 text-sm font-semibold text-green-700 focus:border-green-500 focus:outline-none"
+                    autoFocus
+                  />
+                  {promoForm.promoPrice && parseFloat(promoForm.promoPrice) > 0 && (
+                    <span className="text-xs text-green-600">
+                      (-{Math.round((1 - parseFloat(promoForm.promoPrice) / promoModal.currentPrice) * 100)}%)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 border-t border-zinc-200 px-6 py-4">
+              <Button variant="outline" className="flex-1" onClick={() => setPromoModal({ ...promoModal, open: false })}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={confirmPromoActivation}>
+                Ativar
               </Button>
             </div>
           </div>
