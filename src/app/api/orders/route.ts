@@ -156,6 +156,16 @@ export async function POST(req: NextRequest) {
 
       if (customer) {
         customerId = customer.id
+        // Calculate real totalSpent from delivered orders (excluding this new order)
+        const deliveredAgg = await prisma.order.aggregate({
+          where: {
+            customerId: customer.id,
+            status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
+          },
+          _sum: { total: true },
+        })
+        const deliveredTotal = (deliveredAgg._sum.total || 0) + calculatedTotal
+
         let pointsDelta = 0
         if (useLoyalty && loyaltyPointsUsed > 0) {
           pointsDelta -= loyaltyPointsUsed
@@ -165,15 +175,14 @@ export async function POST(req: NextRequest) {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
               let basePoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
-              // Apply tier multiplier
+              // Apply tier multiplier based on real delivered totals
               let tierMultiplier = 1
               if (establishment.tierConfig) {
                 try {
                   const tc = JSON.parse(establishment.tierConfig)
                   if (tc.enabled && tc.tiers?.length) {
-                    const newTotalSpent = (customer.totalSpent || 0) + calculatedTotal
                     const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-                    const currentTier = sortedTiers.find((t: any) => newTotalSpent >= (t.minSpent || 0))
+                    const currentTier = sortedTiers.find((t: any) => deliveredTotal >= (t.minSpent || 0))
                     tierMultiplier = currentTier?.multiplier || 1
                   }
                 } catch {}
@@ -182,15 +191,13 @@ export async function POST(req: NextRequest) {
             }
           } catch {}
         }
-        // Calculate new totalSpent to determine tier
-        const newTotalSpent = (customer.totalSpent || 0) + calculatedTotal
         let newTier = customer.tier || "bronze"
         if (establishment.tierConfig) {
           try {
             const tc = JSON.parse(establishment.tierConfig)
             if (tc.enabled && tc.tiers?.length) {
               const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-              const matchedTier = sortedTiers.find((t: any) => newTotalSpent >= (t.minSpent || 0))
+              const matchedTier = sortedTiers.find((t: any) => deliveredTotal >= (t.minSpent || 0))
               if (matchedTier) newTier = matchedTier.name.toLowerCase()
             }
           } catch {}

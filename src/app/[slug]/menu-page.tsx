@@ -72,6 +72,8 @@ interface CustomerData {
   totalSpent: number
   loyaltyPoints: number
   tier: string
+  realTotalSpent?: number
+  realTotalOrders?: number
 }
 
 interface Props {
@@ -2307,7 +2309,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
                       <p className="text-sm font-medium text-amber-400 flex items-center gap-1">
-                        <Star className="h-3 w-3" />{customerLoyaltyPoints} cash = {formatCurrency(customerLoyaltyPoints)}
+                        <Star className="h-3 w-3" />{customerData?.loyaltyPoints || customerLoyaltyPoints} cash = {formatCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints)}
                       </p>
                     </div>
                   )}
@@ -2318,7 +2320,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                         {(() => {
                           const tiers = parsedTierConfig.tiers || []
                           const asc = [...tiers].sort((a: any, b: any) => (a.minSpent || 0) - (b.minSpent || 0))
-                          const totalSpent = customerData?.totalSpent || 0
+                          const totalSpent = (customerData?.realTotalSpent ?? customerData?.totalSpent) || 0
                           const currentObj = [...asc].reverse().find((t: any) => totalSpent >= (t.minSpent || 0)) || asc[0]
                           const currentIdx = asc.findIndex((t: any) => t.name === currentObj?.name)
                           const nextTier = currentIdx < asc.length - 1 ? asc[currentIdx + 1] : null

@@ -30,7 +30,21 @@ export async function GET(req: NextRequest) {
       where: { phone, establishmentId },
       orderBy: { createdAt: "desc" },
     })
-    return NextResponse.json(customer || { notFound: true })
+    if (!customer) return NextResponse.json({ notFound: true })
+
+    // Calculate real totalSpent and totalOrders from delivered orders only
+    const deliveredOrders = await prisma.order.aggregate({
+      where: {
+        customerId: customer.id,
+        status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
+      },
+      _sum: { total: true },
+      _count: true,
+    })
+    const realTotalSpent = deliveredOrders._sum.total || 0
+    const realTotalOrders = deliveredOrders._count || 0
+
+    return NextResponse.json({ ...customer, realTotalSpent, realTotalOrders })
   }
 
   // List all customers: requires auth
