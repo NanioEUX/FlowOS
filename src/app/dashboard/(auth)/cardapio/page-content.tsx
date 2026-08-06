@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -57,7 +57,7 @@ function getBadgeDisplay(badge: string | null) {
   )
 }
 
-type Tab = "produtos" | "aparencia" | "cores"
+type Tab = "produtos" | "destaques" | "stories" | "aparencia" | "cores"
 
 export default function CardapioPage() {
   const searchParams = useSearchParams()
@@ -98,6 +98,27 @@ export default function CardapioPage() {
   })
   const [promoForm, setPromoForm] = useState({ adjustPrice: false, promoPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
+
+  // Destaques state
+  const [banners, setBanners] = useState<any[]>([])
+  const [editingBanner, setEditingBanner] = useState<any>(null)
+  const [showBannerForm, setShowBannerForm] = useState(false)
+  const [bannerForm, setBannerForm] = useState({ title: "", subtitle: "", ctaText: "Ver mais", ctaType: "scroll", ctaTarget: "", gradientFrom: "from-blue-500", gradientTo: "to-purple-500", image: "" })
+  const [savingBanner, setSavingBanner] = useState(false)
+  const [deleteBannerConfirm, setDeleteBannerConfirm] = useState<string | null>(null)
+  const [bannerStories, setBannerStories] = useState<{ id: string; name: string }[]>([])
+  const [bannerCategories, setBannerCategories] = useState<{ id: string; name: string }[]>([])
+
+  // Stories state
+  const [stories, setStories] = useState<any[]>([])
+  const [autoStories, setAutoStories] = useState<any[]>([])
+  const [editingStory, setEditingStory] = useState<any>(null)
+  const [showStoryForm, setShowStoryForm] = useState(false)
+  const [storyForm, setStoryForm] = useState({ name: "", emoji: "🔥", gradientFrom: "from-red-500", gradientTo: "to-orange-500", type: "manual" as "auto" | "manual", autoType: "" })
+  const [savingStory, setSavingStory] = useState(false)
+  const [allProducts, setAllProducts] = useState<{ id: string; name: string; price: number; image: string | null }[]>([])
+  const [productSearch, setProductSearch] = useState("")
+  const [deleteStoryConfirm, setDeleteStoryConfirm] = useState<string | null>(null)
 
   // Custo automático da ficha técnica (info only — não editável)
   const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
@@ -197,9 +218,58 @@ export default function CardapioPage() {
     setLoading(false)
   }
 
+  async function loadBanners() {
+    if (!establishmentId) return
+    try {
+      const res = await fetchAuth(`/api/admin/banners?establishmentId=${establishmentId}`)
+      if (res.ok) setBanners(await res.json())
+    } catch {}
+  }
+
+  async function loadBannerRefs() {
+    if (!establishmentId) return
+    try {
+      const [storiesRes, catsRes] = await Promise.all([
+        fetchAuth(`/api/admin/stories?establishmentId=${establishmentId}`),
+        fetchAuth(`/api/categories?establishmentId=${establishmentId}`),
+      ])
+      if (storiesRes.ok) setBannerStories((await storiesRes.json()).map((s: any) => ({ id: s.id, name: s.name })))
+      if (catsRes.ok) setBannerCategories((await catsRes.json()).map((c: any) => ({ id: c.id, name: c.name })))
+    } catch {}
+  }
+
+  async function loadStoriesData() {
+    if (!establishmentId) return
+    try {
+      const res = await fetchAuth(`/api/admin/stories?establishmentId=${establishmentId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStories(data.filter((s: any) => s.type === "manual"))
+        setAutoStories(data.filter((s: any) => s.type === "auto"))
+      }
+    } catch {}
+    try {
+      const res = await fetchAuth(`/api/categories?establishmentId=${establishmentId}`)
+      if (res.ok) {
+        const cats = await res.json()
+        setAllProducts(cats.flatMap((c: any) => c.products || []))
+      }
+    } catch {}
+  }
+
   useEffect(() => {
     loadData()
   }, [establishmentId])
+
+  useEffect(() => {
+    if (activeTab === "destaques") {
+      loadBanners()
+      loadBannerRefs()
+    }
+    if (activeTab === "stories") {
+      loadStoriesData()
+    }
+  }, [activeTab, establishmentId])
 
   async function addCategory() {
     if (!newCategoryName.trim() || !establishmentId) return
@@ -716,6 +786,143 @@ export default function CardapioPage() {
     loadData()
   }
 
+  // === BANNER FUNCTIONS ===
+  const GRADIENT_OPTIONS = [
+    { from: "from-blue-500", to: "to-purple-500", label: "Azul/Roxo" },
+    { from: "from-orange-500", to: "to-red-500", label: "Laranja/Vermelho" },
+    { from: "from-green-500", to: "to-emerald-500", label: "Verde" },
+    { from: "from-purple-500", to: "to-pink-500", label: "Roxo/Rosa" },
+    { from: "from-yellow-500", to: "to-orange-500", label: "Amarelo/Laranja" },
+    { from: "from-teal-500", to: "to-cyan-500", label: "Teal/Ciano" },
+    { from: "from-red-500", to: "to-pink-500", label: "Vermelho/Rosa" },
+    { from: "from-indigo-500", to: "to-blue-500", label: "Índigo/Azul" },
+  ]
+  const BANNER_CTA_OPTIONS = [
+    { value: "scroll", label: "Rolar para cardápio", icon: "📜" },
+    { value: "story", label: "Abrir story", icon: "📱" },
+    { value: "category", label: "Abrir categoria", icon: "📂" },
+    { value: "link", label: "Link externo", icon: "🔗" },
+  ]
+
+  async function handleSaveBanner() {
+    if (!bannerForm.title.trim()) { toast("Título obrigatório", "error"); return }
+    setSavingBanner(true)
+    try {
+      const body = { title: bannerForm.title, subtitle: bannerForm.subtitle || null, ctaText: bannerForm.ctaText || null, ctaType: bannerForm.ctaType, ctaTarget: bannerForm.ctaTarget || null, gradientFrom: bannerForm.gradientFrom, gradientTo: bannerForm.gradientTo, image: bannerForm.image || null, establishmentId }
+      let res
+      if (editingBanner) {
+        res = await fetchAuth(`/api/admin/banners/${editingBanner.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      } else {
+        res = await fetchAuth("/api/admin/banners", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      }
+      if (res.ok) {
+        toast(editingBanner ? "Banner atualizado!" : "Banner criado!", "success")
+        setShowBannerForm(false); setEditingBanner(null)
+        setBannerForm({ title: "", subtitle: "", ctaText: "Ver mais", ctaType: "scroll", ctaTarget: "", gradientFrom: "from-blue-500", gradientTo: "to-purple-500", image: "" })
+        loadBanners()
+      } else { const err = await res.json(); toast(err.error || "Erro ao salvar", "error") }
+    } catch { toast("Erro ao salvar", "error") }
+    setSavingBanner(false)
+  }
+
+  async function handleDeleteBanner(id: string) {
+    try { const res = await fetchAuth(`/api/admin/banners/${id}`, { method: "DELETE" }); if (res.ok) { toast("Banner removido!", "success"); loadBanners() } } catch { toast("Erro ao deletar", "error") }
+    setDeleteBannerConfirm(null)
+  }
+
+  async function toggleBannerActive(banner: any) {
+    try { await fetchAuth(`/api/admin/banners/${banner.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: !banner.active }) }); loadBanners() } catch {}
+  }
+
+  async function moveBannerOrder(banner: any, direction: "up" | "down") {
+    const idx = banners.findIndex((b) => b.id === banner.id)
+    if (direction === "up" && idx > 0) {
+      const other = banners[idx - 1]
+      await fetchAuth(`/api/admin/banners/${banner.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: other.order }) })
+      await fetchAuth(`/api/admin/banners/${other.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: banner.order }) })
+      loadBanners()
+    } else if (direction === "down" && idx < banners.length - 1) {
+      const other = banners[idx + 1]
+      await fetchAuth(`/api/admin/banners/${banner.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: other.order }) })
+      await fetchAuth(`/api/admin/banners/${other.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: banner.order }) })
+      loadBanners()
+    }
+  }
+
+  // === STORY FUNCTIONS ===
+  const STORY_EMOJI_OPTIONS = ["🔥", "🎁", "✨", "💰", "🥗", "🚫", "🍕", "🍔", "🍣", "🍰", "☕", "🍺", "🥤", "🎉", "⭐", "💝", "🌿", "💪"]
+  const STORY_GRADIENT_OPTIONS = [
+    { from: "from-red-500", to: "to-orange-500", label: "Vermelho/Laranja" },
+    { from: "from-yellow-500", to: "to-amber-500", label: "Amarelo/Âmbar" },
+    { from: "from-blue-500", to: "to-indigo-500", label: "Azul/Índigo" },
+    { from: "from-purple-500", to: "to-pink-500", label: "Roxo/Rosa" },
+    { from: "from-green-500", to: "to-emerald-500", label: "Verde/Emerald" },
+    { from: "from-teal-500", to: "to-cyan-500", label: "Teal/Ciano" },
+    { from: "from-orange-500", to: "to-red-500", label: "Laranja/Vermelho" },
+    { from: "from-pink-500", to: "to-rose-500", label: "Rosa/Rose" },
+  ]
+  const AUTO_TYPE_OPTIONS = [
+    { value: "maisVendidos", label: "Mais Vendidos", icon: "🔥" },
+    { value: "lancamentos", label: "Lançamentos", icon: "✨" },
+    { value: "promocoes", label: "Promoções", icon: "💰" },
+  ]
+
+  async function handleSaveStory() {
+    if (!storyForm.name.trim()) { toast("Nome obrigatório", "error"); return }
+    setSavingStory(true)
+    try {
+      const body = { name: storyForm.name, emoji: storyForm.emoji, gradientFrom: storyForm.gradientFrom, gradientTo: storyForm.gradientTo, type: storyForm.type, autoType: storyForm.type === "auto" ? storyForm.autoType : null, establishmentId }
+      let res
+      if (editingStory) {
+        res = await fetchAuth(`/api/admin/stories/${editingStory.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      } else {
+        res = await fetchAuth("/api/admin/stories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      }
+      if (res.ok) {
+        toast(editingStory ? "Story atualizado!" : "Story criado!", "success")
+        setShowStoryForm(false); setEditingStory(null)
+        setStoryForm({ name: "", emoji: "🔥", gradientFrom: "from-red-500", gradientTo: "to-orange-500", type: "manual", autoType: "" })
+        loadStoriesData()
+      } else { const err = await res.json(); toast(err.error || "Erro ao salvar", "error") }
+    } catch { toast("Erro ao salvar", "error") }
+    setSavingStory(false)
+  }
+
+  async function handleDeleteStory(id: string) {
+    try { const res = await fetchAuth(`/api/admin/stories/${id}`, { method: "DELETE" }); if (res.ok) { toast("Story removido!", "success"); loadStoriesData() } } catch { toast("Erro ao deletar", "error") }
+    setDeleteStoryConfirm(null)
+  }
+
+  async function toggleStoryActive(story: any) {
+    try { await fetchAuth(`/api/admin/stories/${story.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: !story.active }) }); loadStoriesData() } catch {}
+  }
+
+  async function moveStoryOrder(story: any, direction: "up" | "down") {
+    const allItems = [...autoStories, ...stories]
+    const idx = allItems.findIndex((s) => s.id === story.id)
+    if (direction === "up" && idx > 0) {
+      const other = allItems[idx - 1]
+      await fetchAuth(`/api/admin/stories/${story.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: other.order }) })
+      await fetchAuth(`/api/admin/stories/${other.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: story.order }) })
+      loadStoriesData()
+    } else if (direction === "down" && idx < allItems.length - 1) {
+      const other = allItems[idx + 1]
+      await fetchAuth(`/api/admin/stories/${story.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: other.order }) })
+      await fetchAuth(`/api/admin/stories/${other.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: story.order }) })
+      loadStoriesData()
+    }
+  }
+
+  async function addProductToStory(storyId: string, productId: string) {
+    try { const res = await fetchAuth(`/api/admin/stories/${storyId}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) }); if (res.ok) loadStoriesData() } catch {}
+  }
+
+  async function removeProductFromStory(storyId: string, productId: string) {
+    try { const res = await fetchAuth(`/api/admin/stories/${storyId}/items?productId=${productId}`, { method: "DELETE" }); if (res.ok) loadStoriesData() } catch {}
+  }
+
+  const filteredProducts = allProducts.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+
   async function saveAppearance() {
     if (!establishmentId) return
     setSavingAppearance(true)
@@ -789,29 +996,51 @@ export default function CardapioPage() {
       <div className="flex gap-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
         <button
           onClick={() => setActiveTab("produtos")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "produtos"
               ? "bg-white text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
           <UtensilsCrossed className="h-4 w-4" />
-          Produtos
+          Produto
         </button>
         <button
-          onClick={() => setActiveTab("aparencia")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === "aparencia"
+          onClick={() => setActiveTab("destaques")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "destaques"
               ? "bg-white text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
           <ImageIcon className="h-4 w-4" />
+          Destaques
+        </button>
+        <button
+          onClick={() => setActiveTab("stories")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "stories"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Eye className="h-4 w-4" />
+          Stories
+        </button>
+        <button
+          onClick={() => setActiveTab("aparencia")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "aparencia"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
           Aparência
         </button>
         <button
           onClick={() => setActiveTab("cores")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "cores"
               ? "bg-white text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-500"
@@ -1063,6 +1292,342 @@ export default function CardapioPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Destaques Tab */}
+      {activeTab === "destaques" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Configure o carrossel de banners do cardápio</p>
+            <Button onClick={() => { setEditingBanner(null); setBannerForm({ title: "", subtitle: "", ctaText: "Ver mais", ctaType: "scroll", ctaTarget: "", gradientFrom: "from-blue-500", gradientTo: "to-purple-500", image: "" }); setShowBannerForm(true) }}>
+              <Plus className="mr-1 h-4 w-4" /> Novo Banner
+            </Button>
+          </div>
+
+          {banners.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-12 text-center">
+              <span className="text-4xl block mb-3">🖼️</span>
+              <p className="text-sm font-medium text-zinc-600">Nenhum banner configurado</p>
+              <p className="text-xs text-zinc-400 mt-1">Crie banners para o carrossel do cardápio</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {banners.map((banner: any, idx: number) => (
+                <div key={banner.id} className={`rounded-xl border overflow-hidden transition-all ${banner.active ? "bg-white border-zinc-200" : "bg-zinc-50 border-zinc-100 opacity-60"}`}>
+                  <div className={`h-24 bg-gradient-to-br ${banner.gradientFrom} ${banner.gradientTo} relative flex items-end p-4`}>
+                    {banner.image && <img src={banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                    <div className="relative z-10">
+                      <h3 className="text-white font-bold text-sm drop-shadow">{banner.title}</h3>
+                      {banner.subtitle && <p className="text-white/80 text-[11px] drop-shadow">{banner.subtitle}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      <button onClick={() => moveBannerOrder(banner, "up")} disabled={idx === 0} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
+                      <button onClick={() => moveBannerOrder(banner, "down")} disabled={idx === banners.length - 1} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-zinc-500">CTA: {banner.ctaText} → {BANNER_CTA_OPTIONS.find((c) => c.value === banner.ctaType)?.label}</p>
+                    </div>
+                    <button onClick={() => toggleBannerActive(banner)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${banner.active ? "bg-green-500" : "bg-zinc-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${banner.active ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                    <button onClick={() => { setEditingBanner(banner); setBannerForm({ title: banner.title, subtitle: banner.subtitle || "", ctaText: banner.ctaText || "Ver mais", ctaType: banner.ctaType, ctaTarget: banner.ctaTarget || "", gradientFrom: banner.gradientFrom, gradientTo: banner.gradientTo, image: banner.image || "" }); setShowBannerForm(true) }} className="text-zinc-400 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => setDeleteBannerConfirm(banner.id)} className="text-zinc-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Banner Form Modal */}
+          {showBannerForm && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+              <div className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 sticky top-0 bg-white z-10">
+                  <h3 className="text-lg font-semibold text-zinc-900">{editingBanner ? "Editar Banner" : "Novo Banner"}</h3>
+                  <button onClick={() => { setShowBannerForm(false); setEditingBanner(null) }} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+                </div>
+                <div className="px-6 py-4 space-y-5">
+                  <div className={`rounded-xl h-32 bg-gradient-to-br ${bannerForm.gradientFrom} ${bannerForm.gradientTo} relative flex items-end p-4 overflow-hidden`}>
+                    {bannerForm.image && <img src={bannerForm.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                    <div className="relative z-10">
+                      <h3 className="text-white font-bold drop-shadow">{bannerForm.title || "Título do banner"}</h3>
+                      {bannerForm.subtitle && <p className="text-white/80 text-xs drop-shadow">{bannerForm.subtitle}</p>}
+                      {bannerForm.ctaText && <span className="inline-block mt-2 bg-white text-xs font-bold px-3 py-1 rounded-full drop-shadow" style={{ color: "#333" }}>{bannerForm.ctaText} →</span>}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Título</label>
+                    <input value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} placeholder="Ex: Promoções imperdíveis" className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Subtítulo</label>
+                    <input value={bannerForm.subtitle} onChange={(e) => setBannerForm({ ...bannerForm, subtitle: e.target.value })} placeholder="Ex: Economize em produtos selecionados" className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cores</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {GRADIENT_OPTIONS.map((g) => (
+                        <button key={g.from} type="button" onClick={() => setBannerForm({ ...bannerForm, gradientFrom: g.from, gradientTo: g.to })} className={`h-10 rounded-lg bg-gradient-to-br ${g.from} ${g.to} transition-all ${bannerForm.gradientFrom === g.from ? "ring-2 ring-green-500 ring-offset-2 scale-105" : "hover:scale-105"}`} title={g.label} />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de fundo (opcional)</label>
+                    <input value={bannerForm.image} onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })} placeholder="https://exemplo.com/banner.jpg" className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Texto do botão</label>
+                    <input value={bannerForm.ctaText} onChange={(e) => setBannerForm({ ...bannerForm, ctaText: e.target.value })} placeholder="Ver Ofertas" className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Ação do botão</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {BANNER_CTA_OPTIONS.map((opt) => (
+                        <button key={opt.value} type="button" onClick={() => setBannerForm({ ...bannerForm, ctaType: opt.value, ctaTarget: "" })} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left ${bannerForm.ctaType === opt.value ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
+                          <span>{opt.icon}</span> {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {bannerForm.ctaType === "story" && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Story</label>
+                      <select value={bannerForm.ctaTarget} onChange={(e) => setBannerForm({ ...bannerForm, ctaTarget: e.target.value })} className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none">
+                        <option value="">Selecionar story...</option>
+                        {bannerStories.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {bannerForm.ctaType === "category" && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Categoria</label>
+                      <select value={bannerForm.ctaTarget} onChange={(e) => setBannerForm({ ...bannerForm, ctaTarget: e.target.value })} className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none">
+                        <option value="">Selecionar categoria...</option>
+                        {bannerCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {bannerForm.ctaType === "link" && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">URL</label>
+                      <input value={bannerForm.ctaTarget} onChange={(e) => setBannerForm({ ...bannerForm, ctaTarget: e.target.value })} placeholder="https://..." className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 border-t border-zinc-200 px-6 py-4 sticky bottom-0 bg-white">
+                  <button onClick={() => { setShowBannerForm(false); setEditingBanner(null) }} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
+                  <button onClick={handleSaveBanner} disabled={savingBanner} className="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {savingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {editingBanner ? "Salvar" : "Criar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Banner Delete Confirm */}
+          {deleteBannerConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+                <h3 className="text-lg font-semibold text-zinc-900 mb-2">Remover banner?</h3>
+                <p className="text-sm text-zinc-500 mb-6">Essa ação não pode ser desfeita.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteBannerConfirm(null)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
+                  <button onClick={() => handleDeleteBanner(deleteBannerConfirm)} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Remover</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Stories Tab */}
+      {activeTab === "stories" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Configure os stories circulares do cardápio</p>
+            <Button onClick={() => { setEditingStory(null); setStoryForm({ name: "", emoji: "🔥", gradientFrom: "from-red-500", gradientTo: "to-orange-500", type: "manual", autoType: "" }); setShowStoryForm(true) }}>
+              <Plus className="mr-1 h-4 w-4" /> Novo Story
+            </Button>
+          </div>
+
+          {/* Auto Stories Section */}
+          {autoStories.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <h4 className="text-sm font-semibold text-zinc-700">Stories Automáticos</h4>
+                </div>
+                <p className="text-xs text-zinc-400 mb-3">Gerenciados automaticamente pelo sistema</p>
+                <div className="space-y-2">
+                  {autoStories.map((story: any) => (
+                    <div key={story.id} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5">
+                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center text-lg`}>{story.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-900">{story.name}</p>
+                        <p className="text-[11px] text-zinc-400">{AUTO_TYPE_OPTIONS.find((a) => a.value === story.autoType)?.label || story.autoType}</p>
+                      </div>
+                      <button onClick={() => toggleStoryActive(story)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${story.active ? "bg-green-500" : "bg-zinc-300"}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${story.active ? "translate-x-4.5" : "translate-x-0.5"}`} style={{ transform: story.active ? "translateX(18px)" : "translateX(2px)" }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Manual Stories */}
+          {stories.length === 0 && autoStories.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-12 text-center">
+              <span className="text-4xl block mb-3">📱</span>
+              <p className="text-sm font-medium text-zinc-600">Nenhum story configurado</p>
+              <p className="text-xs text-zinc-400 mt-1">Crie stories para aparecerem no cardápio do cliente</p>
+            </div>
+          ) : stories.length > 0 ? (
+            <div className="space-y-2">
+              {stories.map((story: any, idx: number) => (
+                <div key={story.id} className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${story.active ? "bg-white border-zinc-200" : "bg-zinc-50 border-zinc-100 opacity-60"}`}>
+                  <div className="flex flex-col gap-0.5">
+                    <button onClick={() => moveStoryOrder(story, "up")} disabled={idx === 0} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
+                    <button onClick={() => moveStoryOrder(story, "down")} disabled={idx === stories.length - 1} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center text-lg`}>{story.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-900 truncate">{story.name}</p>
+                    <p className="text-[11px] text-zinc-400">{story.items?.length || 0} produto(s)</p>
+                  </div>
+                  <button onClick={() => toggleStoryActive(story)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${story.active ? "bg-green-500" : "bg-zinc-300"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${story.active ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                  <button onClick={() => { setEditingStory(story); setStoryForm({ name: story.name, emoji: story.emoji, gradientFrom: story.gradientFrom, gradientTo: story.gradientTo, type: story.type, autoType: story.autoType || "" }); setShowStoryForm(true) }} className="text-zinc-400 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => setDeleteStoryConfirm(story.id)} className="text-zinc-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Story Form Modal */}
+          {showStoryForm && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+              <div className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 sticky top-0 bg-white z-10">
+                  <h3 className="text-lg font-semibold text-zinc-900">{editingStory ? "Editar Story" : "Novo Story"}</h3>
+                  <button onClick={() => { setShowStoryForm(false); setEditingStory(null) }} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+                </div>
+                <div className="px-6 py-4 space-y-5">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Nome</label>
+                    <input value={storyForm.name} onChange={(e) => setStoryForm({ ...storyForm, name: e.target.value })} placeholder="Ex: Fits, Sem Lactose..." className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Emoji</label>
+                    <div className="flex flex-wrap gap-2">
+                      {STORY_EMOJI_OPTIONS.map((em) => (
+                        <button key={em} type="button" onClick={() => setStoryForm({ ...storyForm, emoji: em })} className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${storyForm.emoji === em ? "bg-green-100 ring-2 ring-green-500 scale-110" : "bg-zinc-100 hover:bg-zinc-200"}`}>{em}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cores</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {STORY_GRADIENT_OPTIONS.map((g) => (
+                        <button key={g.from} type="button" onClick={() => setStoryForm({ ...storyForm, gradientFrom: g.from, gradientTo: g.to })} className={`h-10 rounded-lg bg-gradient-to-br ${g.from} ${g.to} transition-all ${storyForm.gradientFrom === g.from ? "ring-2 ring-green-500 ring-offset-2 scale-105" : "hover:scale-105"}`} title={g.label} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3">
+                    <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${storyForm.gradientFrom} ${storyForm.gradientTo} flex items-center justify-center text-2xl shadow-md`}>{storyForm.emoji}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-900">{storyForm.name || "Nome do story"}</p>
+                      <p className="text-[11px] text-zinc-400">Preview no cardápio</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Tipo</label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setStoryForm({ ...storyForm, type: "manual" })} className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${storyForm.type === "manual" ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
+                        📋 Manual
+                      </button>
+                      <button type="button" onClick={() => setStoryForm({ ...storyForm, type: "auto" })} className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${storyForm.type === "auto" ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
+                        🤖 Automático
+                      </button>
+                    </div>
+                  </div>
+                  {storyForm.type === "auto" && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Tipo automático</label>
+                      <div className="space-y-2">
+                        {AUTO_TYPE_OPTIONS.map((opt) => (
+                          <button key={opt.value} type="button" onClick={() => setStoryForm({ ...storyForm, autoType: opt.value })} className={`w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${storyForm.autoType === opt.value ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}>
+                            <span className="text-lg">{opt.icon}</span> {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {storyForm.type === "manual" && editingStory && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">Produtos no story</label>
+                      {editingStory.items && editingStory.items.length > 0 && (
+                        <div className="space-y-1 mb-3">
+                          {editingStory.items.map((item: any) => (
+                            <div key={item.product.id} className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
+                              {item.product.image ? <img src={item.product.image} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <div className="h-8 w-8 rounded-lg bg-zinc-100 flex items-center justify-center text-xs">📦</div>}
+                              <span className="flex-1 text-sm font-medium text-zinc-700 truncate">{item.product.name}</span>
+                              <button onClick={() => removeProductFromStory(editingStory.id, item.product.id)} className="text-zinc-400 hover:text-red-500"><X className="h-4 w-4" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="relative mb-2">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Buscar produto para adicionar..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm focus:border-green-600 focus:outline-none" />
+                      </div>
+                      {productSearch && (
+                        <div className="max-h-40 overflow-y-auto rounded-lg border border-zinc-200">
+                          {filteredProducts.filter((p) => !editingStory.items?.some((i: any) => i.product.id === p.id)).slice(0, 10).map((product) => (
+                            <button key={product.id} onClick={() => { addProductToStory(editingStory.id, product.id); setProductSearch("") }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 border-b border-zinc-100 last:border-0">
+                              {product.image ? <img src={product.image} alt="" className="h-7 w-7 rounded-lg object-cover" /> : <div className="h-7 w-7 rounded-lg bg-zinc-100 flex items-center justify-center text-[10px]">📦</div>}
+                              <span className="text-sm text-zinc-700 truncate">{product.name}</span>
+                            </button>
+                          ))}
+                          {filteredProducts.filter((p) => !editingStory.items?.some((i: any) => i.product.id === p.id)).length === 0 && (
+                            <p className="px-3 py-2 text-xs text-zinc-400">Nenhum produto encontrado</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 border-t border-zinc-200 px-6 py-4 sticky bottom-0 bg-white">
+                  <button onClick={() => { setShowStoryForm(false); setEditingStory(null) }} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
+                  <button onClick={handleSaveStory} disabled={savingStory} className="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {savingStory ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {editingStory ? "Salvar" : "Criar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Story Delete Confirm */}
+          {deleteStoryConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+                <h3 className="text-lg font-semibold text-zinc-900 mb-2">Remover story?</h3>
+                <p className="text-sm text-zinc-500 mb-6">Essa ação não pode ser desfeita.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteStoryConfirm(null)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
+                  <button onClick={() => handleDeleteStory(deleteStoryConfirm)} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Remover</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Aparência Tab */}

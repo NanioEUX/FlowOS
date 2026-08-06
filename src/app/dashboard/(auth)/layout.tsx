@@ -30,8 +30,6 @@ const financeiroSubItems = [
 const marketingSubItems = [
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
   { icon: Star, label: "Fidelidade", href: "/dashboard/fidelidade", perm: "config" },
-  { icon: Image, label: "Destaques", href: "/dashboard/destaques", perm: "cardapio" },
-  { icon: Eye, label: "Stories", href: "/dashboard/stories", perm: "cardapio" },
 ]
 
 const configSubItems = [
