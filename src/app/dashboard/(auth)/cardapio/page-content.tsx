@@ -1698,7 +1698,7 @@ export default function CardapioPage() {
                         <span className="text-xl">💰</span>
                         <div>
                           <p className="text-sm font-medium text-zinc-900">Em Promoção</p>
-                          <p className="text-xs text-zinc-500">Aparece no story "Promoções"</p>
+                          <p className="text-xs text-zinc-500">Aparece no story &quot;Promoções&quot;</p>
                         </div>
                       </div>
                       <button
