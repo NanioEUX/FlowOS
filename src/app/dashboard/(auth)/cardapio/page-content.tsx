@@ -1375,7 +1375,36 @@ export default function CardapioPage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de fundo (opcional)</label>
-                    <input value={bannerForm.image} onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })} placeholder="https://exemplo.com/banner.jpg" className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
+                    {bannerForm.image ? (
+                      <div className="relative">
+                        <img src={bannerForm.image} alt="Preview" className="h-32 w-full rounded-lg object-cover" />
+                        <button type="button" onClick={() => setBannerForm({ ...bannerForm, image: "" })} className="absolute top-2 right-2 rounded-lg bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-400 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-colors">
+                        <Upload className="h-5 w-5" />
+                        <span>Selecionar imagem</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast("Imagem máxima de 5MB", "error")
+                              return
+                            }
+                            const reader = new FileReader()
+                            reader.onloadend = () => setBannerForm({ ...bannerForm, image: reader.result as string })
+                            reader.readAsDataURL(file)
+                          }}
+                        />
+                      </label>
+                    )}
+                    <p className="mt-1 text-xs text-zinc-400">Máx. 5MB. Formatos: JPG, PNG, WebP</p>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-zinc-700">Texto do botão</label>
