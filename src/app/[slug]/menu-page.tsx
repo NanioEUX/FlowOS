@@ -1757,30 +1757,31 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           )}
         </div>
-        {/* Banner */}
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
-            <div className="relative z-10">
-              <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-              <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-              <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-              <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
-                Ver Cardápio →
-              </button>
-            </div>
-          </div>
-          <div className="flex justify-center gap-1.5 mt-2">
-            <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          </div>
-        </div>
       </div>
 
-      {/* Spacer */}
-      <div className="h-[380px]" />
+      {/* Spacer for fixed header + stories + categories */}
+      <div className="h-[200px]" />
+
+      {/* Banner - SCROLLS with page */}
+      <div className="mx-auto max-w-3xl px-4 pb-3">
+        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
+          <div className="relative z-10">
+            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
+            <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
+            <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
+            <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
+              Ver Cardápio →
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-center gap-1.5 mt-2">
+          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+        </div>
+      </div>
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
