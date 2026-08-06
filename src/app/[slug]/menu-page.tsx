@@ -232,6 +232,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectedProductQty, setSelectedProductQty] = useState(1)
+  const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
@@ -1824,7 +1827,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.name}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {filtered.map((product) => (
-                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
+                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
                     ))}
                   </div>
                 </div>
@@ -1844,7 +1847,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               >
                 <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
                   ))}
                 </div>
               </div>
@@ -3493,6 +3496,189 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       <InstallPromptToast show={showInstallPrompt} />
 
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
+          <div className="absolute inset-x-0 bottom-0 top-12 bg-white rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out" }}>
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-gray-300"></div>
+            </div>
+
+            {/* Close button */}
+            <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Image */}
+              {selectedProduct.image ? (
+                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-56 object-cover" />
+              ) : (
+                <div className="w-full h-56 flex items-center justify-center bg-gray-100">
+                  <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                </div>
+              )}
+
+              {/* Product Info */}
+              <div className="px-5 py-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h2 className="font-bold text-lg" style={{ color: theme.text }}>{selectedProduct.name}</h2>
+                    {selectedProduct.description && (
+                      <p className="text-sm mt-1" style={{ color: theme.textMuted }}>{selectedProduct.description}</p>
+                    )}
+                  </div>
+                  {selectedProduct.badge && (
+                    <span className="badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-full ml-2">
+                      {selectedProduct.badge === "mais_vendido" && "🔥 Mais Pedido"}
+                      {selectedProduct.badge === "novo" && "🆕 Novo"}
+                      {selectedProduct.badge === "promocao" && "🏷️ OFF"}
+                    </span>
+                  )}
+                </div>
+                <p className="font-bold text-xl mt-3" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
+              </div>
+
+              {/* Quantity */}
+              <div className="px-5 pb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: theme.textMutedMore }}>Quantidade</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => setSelectedProductQty(Math.max(1, selectedProductQty - 1))}
+                    className="w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors"
+                    style={{ borderColor: theme.borderInputColor, color: theme.text }}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-8 text-center text-lg font-bold" style={{ color: theme.text }}>{selectedProductQty}</span>
+                  <button
+                    onClick={() => setSelectedProductQty(selectedProductQty + 1)}
+                    className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-white transition-colors"
+                    style={{ borderColor: theme.primary, backgroundColor: theme.primary }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Additional Options */}
+              {(() => {
+                const options = (selectedProduct as any).additionalOptions || []
+                if (options.length === 0) return null
+                const groups: Record<string, any[]> = {}
+                options.forEach((opt: any) => {
+                  const group = opt.groupName || "default"
+                  if (!groups[group]) groups[group] = []
+                  groups[group].push(opt)
+                })
+                return (
+                  <div className="px-5 pb-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: theme.textMutedMore }}>Adicionais</p>
+                    {Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
+                      const firstOpt = groupOptions[0]
+                      const isRequired = firstOpt?.selectionType === "required"
+                      return (
+                        <div key={groupIdx} className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="text-sm font-semibold" style={{ color: theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
+                              {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
+                            </div>
+                            {isRequired && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
+                          </div>
+                          <div className="border rounded-xl overflow-hidden" style={{ borderColor: theme.borderInputColor }}>
+                            {groupOptions.map((opt: any, optIdx: number) => {
+                              const selectedOpt = selectedProductOptions.find((o) => o.name === opt.name)
+                              const isSelected = !!selectedOpt
+                              const qty = selectedOpt?.quantity || 0
+
+                              if (opt.inputType === "quantity") {
+                                return (
+                                  <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0" style={{ borderColor: theme.borderInputColor }}>
+                                    <div className="flex-1">
+                                      <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
+                                      {opt.price > 0 && <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {qty > 0 && (
+                                        <>
+                                          <button onClick={() => {
+                                            const newQty = qty - 1
+                                            if (newQty <= 0) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
+                                            else setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: newQty } : o))
+                                          }} className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor }}>
+                                            <Minus className="w-3 h-3" style={{ color: theme.text }} />
+                                          </button>
+                                          <span className="w-5 text-center text-xs font-medium" style={{ color: theme.text }}>{qty}</span>
+                                        </>
+                                      )}
+                                      <button onClick={() => {
+                                        if (isSelected) setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: o.quantity + 1 } : o))
+                                        else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                                      }} className="w-7 h-7 rounded-full border flex items-center justify-center text-white" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}>
+                                        <Plus className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return (
+                                <label key={optIdx} onClick={() => {
+                                  if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
+                                  else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                                }} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors" style={{ borderColor: theme.borderInputColor, backgroundColor: isSelected ? `${theme.primary}10` : "transparent" }}>
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-green-500 bg-green-500" : ""}`} style={!isSelected ? { borderColor: theme.borderInputColor } : {}}>
+                                      {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                                    </div>
+                                    <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
+                                  </div>
+                                  {opt.price > 0 && <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Fixed bottom button */}
+            <div className="px-5 pb-6 pt-3 border-t flex-shrink-0" style={{ borderColor: theme.borderInputColor }}>
+              <button
+                onClick={() => {
+                  const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
+                  const unitPrice = selectedProduct.price + optionsPrice
+                  setCart((prev) => {
+                    const existing = prev.find((item) => item.id === selectedProduct.id)
+                    if (existing) {
+                      return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
+                    }
+                    return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
+                  })
+                  setSelectedProduct(null)
+                  setAddedItemId(selectedProduct.id)
+                  setTimeout(() => setAddedItemId(null), 800)
+                  setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
+                  setTimeout(() => setCartToast(null), 3000)
+                }}
+                className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                style={{ backgroundColor: theme.primary }}
+              >
+                <Plus className="w-5 h-5" />
+                Adicionar · {formatCurrency((selectedProduct.price + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Sheet for Additional Options */}
       {bottomSheetProduct && (
         <div className="fixed inset-0 z-50">
@@ -4196,9 +4382,13 @@ function PaymentModal({
   )
 }
 
-function ProductCard({ product, onAdd, theme, disabled, isAdded }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean }) {
+function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   return (
-    <div className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`} style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+    <div
+      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
+      style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+      onClick={() => onSelect?.(product)}
+    >
       <div className="relative">
         {product.image ? (
           <img
@@ -4228,7 +4418,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded }: { product: Pr
         <div className="flex items-center justify-between mt-2">
           <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
           <button
-            onClick={() => onAdd(product)}
+            onClick={(e) => { e.stopPropagation(); onAdd(product); }}
             aria-label={`Adicionar ${product.name} ao carrinho`}
             className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
             style={{
