@@ -1747,7 +1747,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div className="h-[120px]" />
+      <div className="h-[150px]" />
 
       {/* Stories / Destaques */}
       <div className="mx-auto max-w-3xl px-4 py-3">
