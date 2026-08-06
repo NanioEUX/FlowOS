@@ -253,6 +253,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [activeStory, setActiveStory] = useState<string | null>(null)
   const [storyProducts, setStoryProducts] = useState<any[]>([])
   const [storyCombos, setStoryCombos] = useState<any[]>([])
+  const [bannerSlide, setBannerSlide] = useState(0)
+  const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -549,6 +551,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
     loadStories()
   }, [establishment.id])
+
+  // Banner carousel auto-advance
+  useEffect(() => {
+    bannerIntervalRef.current = setInterval(() => {
+      setBannerSlide((prev) => (prev + 1) % 3)
+    }, 4000)
+    return () => { if (bannerIntervalRef.current) clearInterval(bannerIntervalRef.current) }
+  }, [])
 
   const openStory = (type: string) => {
     setActiveStory(type)
@@ -1742,20 +1752,20 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
             {[
-              { id: "maisVendidos", label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", hasData: storiesData.maisVendidos.length > 0 },
-              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", hasData: storiesData.combos.length > 0 },
-              { id: "lancamentos", label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", hasData: storiesData.lancamentos.length > 0 },
-              { id: "promocoes", label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", hasData: storiesData.promocoes.length > 0 },
+              { id: "maisVendidos", label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-500 via-orange-500 to-yellow-500", hasData: storiesData.maisVendidos.length > 0 },
+              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-500 via-amber-500 to-orange-500", hasData: storiesData.combos.length > 0 },
+              { id: "lancamentos", label: "Lançamentos", emoji: "✨", gradient: "from-blue-500 via-indigo-500 to-purple-500", hasData: storiesData.lancamentos.length > 0 },
+              { id: "promocoes", label: "Promoções", emoji: "💰", gradient: "from-green-500 via-emerald-500 to-teal-500", hasData: storiesData.promocoes.length > 0 },
             ].map((story) => (
-              <button key={story.id} onClick={() => story.hasData && openStory(story.id)} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-                <div className={`rounded-full p-[3px] ${!story.hasData ? "bg-gray-300" : ""}`} style={story.hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
-                  <div className="w-14 h-14 rounded-full bg-white p-0.5">
-                    <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
-                      {story.emoji}
+              <button key={story.id} onClick={() => story.hasData && openStory(story.id)} className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
+                <div className={`rounded-full p-[3px] ${!story.hasData ? "bg-gray-300 opacity-40" : ""}`} style={story.hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}66, ${theme.primary})` } : {}}>
+                  <div className="w-[62px] h-[62px] rounded-full p-[2px] bg-white">
+                    <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center`}>
+                      <span className="text-2xl drop-shadow-sm">{story.emoji}</span>
                     </div>
                   </div>
                 </div>
-                <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
+                <span className="text-[10px] font-semibold max-w-[68px] text-center leading-tight" style={{ color: theme.textMuted }}>{story.label}</span>
               </button>
             ))}
           </div>
@@ -1791,24 +1801,57 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header + stories + categories */}
       <div className="h-[260px]" />
 
-      {/* Banner - scrolls */}
+      {/* Banner Carousel - scrolls */}
       <div className="mx-auto max-w-3xl px-4 pb-3">
-        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
-          <div className="relative z-10">
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-            <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-            <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-            <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
-              Ver Cardápio →
-            </button>
+        <div className="relative rounded-2xl overflow-hidden" style={{ minHeight: "160px" }}>
+          {/* Slides */}
+          <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${bannerSlide * 100}%)` }}>
+            {/* Slide 1 */}
+            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}bb)` }}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2" />
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
+                <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
+                <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
+                <button onClick={() => { const el = document.getElementById("category-all"); el?.scrollIntoView({ behavior: "smooth" }) }} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: theme.primary }}>
+                  Ver Cardápio <span className="text-sm">→</span>
+                </button>
+              </div>
+            </div>
+            {/* Slide 2 - Promoções */}
+            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)" }}>
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+              <div className="absolute bottom-0 left-8 w-24 h-24 bg-white/10 rounded-full translate-y-1/2" />
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Ofertas</span>
+                <h2 className="text-lg font-bold mt-2 leading-tight">Promoções imperdíveis</h2>
+                <p className="text-xs text-white/80 mt-1">Economize em produtos selecionados</p>
+                <button onClick={() => openStory("promocoes")} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: "#ef4444" }}>
+                  Ver Ofertas <span className="text-sm">→</span>
+                </button>
+              </div>
+            </div>
+            {/* Slide 3 - Combos */}
+            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}>
+              <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full -translate-y-1/3 translate-x-1/3" />
+              <div className="absolute bottom-0 right-4 w-28 h-28 bg-white/10 rounded-full translate-y-1/2" />
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Combos</span>
+                <h2 className="text-lg font-bold mt-2 leading-tight">Combos do Dia</h2>
+                <p className="text-xs text-white/80 mt-1">Monte seu combo e economize</p>
+                <button onClick={() => openStory("combos")} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: "#6366f1" }}>
+                  Ver Combos <span className="text-sm">→</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex justify-center gap-1.5 mt-2">
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+          {/* Dots */}
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <button key={i} onClick={() => { setBannerSlide(i); if (bannerIntervalRef.current) { clearInterval(bannerIntervalRef.current); bannerIntervalRef.current = setInterval(() => setBannerSlide((p) => (p + 1) % 3), 4000) } }} className={`rounded-full transition-all duration-300 ${bannerSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: bannerSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1901,6 +1944,31 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Floating Cart Bar */}
       {cart.length > 0 && !showCart && !showPaymentModal && (
         <div className="fixed bottom-20 left-0 right-0 z-30 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
+          {/* Free shipping progress */}
+          {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
+            <div className="mb-2 rounded-xl px-4 py-2.5 backdrop-blur-xl border" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                  {subtotal >= establishment.deliveryFreeAbove
+                    ? "🎉 Frete Grátis!"
+                    : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
+                  }
+                </span>
+                <span className="text-[11px] font-bold" style={{ color: theme.primary }}>
+                  {formatCurrency(establishment.deliveryFreeAbove)}
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
+                    backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.primary,
+                  }}
+                />
+              </div>
+            </div>
+          )}
           <button
             onClick={openCart}
             className="w-full rounded-2xl px-4 py-3 flex items-center justify-between text-white transition-all active:scale-[0.98]"
@@ -4532,6 +4600,7 @@ function PaymentModal({
 }
 
 function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
+  const hasPromo = (product as any).promoPrice && (product as any).onSale
   return (
     <div
       className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
@@ -4552,10 +4621,14 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
           </div>
         )}
         {product.badge && (
-          <span className="absolute top-2 left-2 badge-fire text-[9px] font-bold text-white px-2 py-0.5 rounded-full shadow-md">
-            {product.badge === "mais_vendido" && "🔥 Mais Pedido"}
-            {product.badge === "novo" && "🆕 Novo"}
-            {product.badge === "promocao" && "🏷️ OFF"}
+          <span className="absolute top-2 left-2 badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+            {product.badge === "mais_vendido" && <><span>🔥</span><span>Mais Pedido</span></>}
+            {product.badge === "novo" && <><span>✨</span><span>Novo</span></>}
+          </span>
+        )}
+        {hasPromo && (
+          <span className="absolute top-2 right-2 text-[10px] font-bold text-white px-2 py-1 rounded-lg shadow-md bg-green-500 flex items-center gap-1">
+            <span>%</span><span>OFF</span>
           </span>
         )}
       </div>
@@ -4564,12 +4637,19 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
         {product.description && (
           <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
-        <div className="flex items-center justify-between mt-2">
-          <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
+        <div className="flex items-end justify-between mt-2">
+          <div className="flex flex-col">
+            {hasPromo && (
+              <span className="text-[10px] line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+            )}
+            <p className="font-bold text-sm" style={{ color: hasPromo ? "#22c55e" : theme.primary }}>
+              {hasPromo ? formatCurrency((product as any).promoPrice) : formatCurrency(product.price)}
+            </p>
+          </div>
           <button
             onClick={(e) => { e.stopPropagation(); onAdd(product); }}
             aria-label={`Adicionar ${product.name} ao carrinho`}
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
             style={{
               backgroundColor: isAdded ? "#22c55e" : theme.primary,
               boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
@@ -4577,9 +4657,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             disabled={disabled}
           >
             {isAdded ? (
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             ) : (
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-4 w-4" />
             )}
           </button>
         </div>
