@@ -808,15 +808,54 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setTimeout(() => setCartToast(null), 3000)
   }
 
-  function toggleCartItemOption(itemId: string, option: { name: string; price: number }) {
+  function toggleCartItemOption(itemId: string, option: { name: string; price: number; quantity?: number }) {
     setCart((prev) => prev.map((item) => {
       if (item.id !== itemId) return item
       const currentOptions = item.additionalOptions || []
-      const isSelected = currentOptions.some((o: { name: string; price: number }) => o.name === option.name)
-      const newOptions = isSelected
-        ? currentOptions.filter((o: { name: string; price: number }) => o.name !== option.name)
-        : [...currentOptions, option]
-      const optionsPrice = newOptions.reduce((sum, o) => sum + o.price, 0)
+      const isSelected = currentOptions.some((o) => o.name === option.name)
+      
+      let newOptions
+      if (option.quantity !== undefined) {
+        // Quantity mode - add or remove
+        if (isSelected) {
+          const existing = currentOptions.find((o) => o.name === option.name)
+          if (existing && existing.quantity + option.quantity > 0) {
+            newOptions = currentOptions.map((o) => o.name === option.name ? { ...o, quantity: o.quantity + option.quantity } : o)
+          } else {
+            newOptions = currentOptions.filter((o) => o.name !== option.name)
+          }
+        } else {
+          newOptions = [...currentOptions, { name: option.name, price: option.price, quantity: option.quantity || 1 }]
+        }
+      } else {
+        // Radio mode - toggle
+        newOptions = isSelected
+          ? currentOptions.filter((o) => o.name !== option.name)
+          : [...currentOptions, { name: option.name, price: option.price, quantity: 1 }]
+      }
+      
+      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
+      const basePrice = (item as any).basePrice || item.price
+      return {
+        ...item,
+        additionalOptions: newOptions,
+        price: basePrice + optionsPrice,
+        basePrice: basePrice,
+      }
+    }))
+  }
+
+  function updateCartItemOptionQuantity(itemId: string, optionName: string, delta: number) {
+    setCart((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item
+      const currentOptions = item.additionalOptions || []
+      const newOptions = currentOptions.map((o) => {
+        if (o.name !== optionName) return o
+        const newQty = o.quantity + delta
+        return newQty > 0 ? { ...o, quantity: newQty } : o
+      }).filter((o) => o.quantity > 0)
+      
+      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
       const basePrice = (item as any).basePrice || item.price
       return {
         ...item,
@@ -2319,32 +2358,88 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {/* Additional Options */}
                     {hasOptions && !isFromPendingOrder && (
-                      <div className="mt-2 space-y-1.5 pl-13">
-                        {productOptions.map((opt: any, idx: number) => {
-                          const isSelected = (item.additionalOptions || []).some((o: { name: string; price: number }) => o.name === opt.name)
-                          const isRequired = opt.selectionType === "required"
-                          return (
-                            <label key={idx} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
-                              <div className="flex items-center gap-2">
-                                <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
-                                  {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                </div>
-                                <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
-                                {isRequired && <span className="text-[10px] text-red-500">*</span>}
+                      <div className="mt-2 space-y-3 pl-13">
+                        {(() => {
+                          // Group options by groupName
+                          const groups: Record<string, any[]> = {}
+                          productOptions.forEach((opt: any) => {
+                            const group = opt.groupName || "default"
+                            if (!groups[group]) groups[group] = []
+                            groups[group].push(opt)
+                          })
+                          
+                          return Object.entries(groups).map(([groupName, options], groupIdx) => {
+                            const firstOpt = options[0]
+                            const isRequired = firstOpt?.selectionType === "required"
+                            return (
+                              <div key={groupIdx} className="space-y-1">
+                                {groupName !== "default" && (
+                                  <div className="mb-1">
+                                    <p className="text-xs font-medium" style={{ color: theme.text }}>{groupName}</p>
+                                    {firstOpt?.headerText && (
+                                      <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>
+                                    )}
+                                    {isRequired && (
+                                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded" style={{ backgroundColor: theme.primary, color: "white" }}>OBRIGATÓRIO</span>
+                                    )}
+                                  </div>
+                                )}
+                                {options.map((opt: any, idx: number) => {
+                                  const selectedOpt = (item.additionalOptions || []).find((o: { name: string; price: number; quantity: number }) => o.name === opt.name)
+                                  const isSelected = !!selectedOpt
+                                  const quantity = selectedOpt?.quantity || 0
+                                  
+                                  if (opt.inputType === "quantity") {
+                                    return (
+                                      <div key={idx} className="flex items-center justify-between py-1 px-2">
+                                        <div className="flex-1">
+                                          <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
+                                          {opt.price > 0 && (
+                                            <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {quantity > 0 && (
+                                            <>
+                                              <button onClick={() => updateCartItemOptionQuantity(item.id, opt.name, -1)} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ border: `1px solid ${theme.borderInputColor}` }}>
+                                                <Minus className="h-3 w-3" style={{ color: theme.text }} />
+                                              </button>
+                                              <span className="w-4 text-center text-xs font-medium" style={{ color: theme.text }}>{quantity}</span>
+                                            </>
+                                          )}
+                                          <button onClick={() => toggleCartItemOption(item.id, { name: opt.name, price: opt.price, quantity: 1 })} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ border: `1px solid ${theme.borderInputColor}` }}>
+                                            <Plus className="h-3 w-3" style={{ color: theme.text }} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+                                  
+                                  return (
+                                    <label key={idx} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
+                                      <div className="flex items-center gap-2">
+                                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
+                                          {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                        </div>
+                                        <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
+                                      </div>
+                                      {opt.price > 0 && (
+                                        <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
+                                      )}
+                                    </label>
+                                  )
+                                })}
                               </div>
-                              {opt.price > 0 && (
-                                <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
-                              )}
-                            </label>
-                          )
-                        })}
+                            )
+                          })
+                        })()}
                       </div>
                     )}
-                    {/* Show selected options */}
+                    {/* Show selected options summary */}
                     {!isFromPendingOrder && (item.additionalOptions || []).length > 0 && (
                       <div className="mt-1.5 pl-13">
                         <p className="text-[10px]" style={{ color: theme.textMuted }}>
-                          {(item.additionalOptions || []).map((o: { name: string; price: number }) => o.name).join(", ")}
+                          {(item.additionalOptions || []).map((o: { name: string; price: number; quantity: number }) => o.quantity > 1 ? `${o.name} x${o.quantity}` : o.name).join(", ")}
                         </p>
                       </div>
                     )}

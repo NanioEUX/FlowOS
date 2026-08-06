@@ -256,7 +256,12 @@ model AdditionalOption {
   name            String
   price           Float              @default(0)
   selectionType   String             @default("single") // single, multiple, required
+  inputType       String             @default("radio") // radio, quantity
+  groupName       String?            // "Qual o ponto do seu hambúrguer?"
+  headerText      String?            // "Escolha 1 opção"
+  maxSelection    Int?               // limite de seleções (null = sem limite)
   order           Int                @default(0)
+  groupOrder      Int                @default(0) // ordem do grupo
   productId       String
   establishmentId String
   createdAt       DateTime           @default(now())

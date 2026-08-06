@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, price, selectionType, productId, establishmentId } = body
+    const { name, price, selectionType, inputType, groupName, headerText, maxSelection, productId, establishmentId } = body
 
     if (!name || !productId || !establishmentId) {
       return NextResponse.json({ error: "name, productId e establishmentId obrigatórios" }, { status: 400 })
@@ -45,12 +45,23 @@ export async function POST(req: NextRequest) {
       select: { order: true },
     })
 
+    const maxGroupOrder = await prisma.additionalOption.findFirst({
+      where: { productId, groupName: groupName || null },
+      orderBy: { groupOrder: "desc" },
+      select: { groupOrder: true },
+    })
+
     const option = await prisma.additionalOption.create({
       data: {
         name,
         price: price || 0,
         selectionType: selectionType || "single",
+        inputType: inputType || "radio",
+        groupName: groupName || null,
+        headerText: headerText || null,
+        maxSelection: maxSelection || null,
         order: (maxOrder?.order || 0) + 1,
+        groupOrder: (maxGroupOrder?.groupOrder || 0),
         productId,
         establishmentId,
       },

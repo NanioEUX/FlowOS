@@ -91,7 +91,7 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
-  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string }[]>([])
+  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
 
   // Custo automático da ficha técnica (info only — não editável)
   const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
@@ -472,6 +472,10 @@ export default function CardapioPage() {
               name: opt.name,
               price: parseFloat(opt.price) || 0,
               selectionType: opt.selectionType,
+              inputType: opt.inputType,
+              groupName: opt.groupName || null,
+              headerText: opt.headerText || null,
+              maxSelection: opt.maxSelection ? parseInt(opt.maxSelection) : null,
               productId,
               establishmentId,
             }),
@@ -577,6 +581,10 @@ export default function CardapioPage() {
               name: opt.name,
               price: String(opt.price),
               selectionType: opt.selectionType,
+              inputType: opt.inputType || "radio",
+              groupName: opt.groupName || "",
+              headerText: opt.headerText || "",
+              maxSelection: opt.maxSelection ? String(opt.maxSelection) : "",
             })))
           })
           .catch(() => {})
@@ -1742,62 +1750,102 @@ export default function CardapioPage() {
                         Configure opções extras que o cliente pode selecionar ao pedir este produto.
                       </p>
                       {productAdditionalOptions.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {productAdditionalOptions.map((opt, idx) => (
-                            <div key={idx} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
-                              <input
-                                type="text"
-                                value={opt.name}
-                                onChange={(e) => {
-                                  const updated = [...productAdditionalOptions]
-                                  updated[idx] = { ...opt, name: e.target.value }
-                                  setProductAdditionalOptions(updated)
-                                }}
-                                placeholder="Nome (ex: Bacon)"
-                                className="h-7 flex-1 rounded border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                              />
-                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                            <div key={idx} className="rounded-lg border border-zinc-200 bg-white p-3 space-y-2">
+                              <div className="flex items-center gap-2">
                                 <input
-                                  type="number"
-                                  min="0"
-                                  step="0.50"
-                                  value={opt.price}
+                                  type="text"
+                                  value={opt.groupName}
                                   onChange={(e) => {
                                     const updated = [...productAdditionalOptions]
-                                    updated[idx] = { ...opt, price: e.target.value }
+                                    updated[idx] = { ...opt, groupName: e.target.value }
                                     setProductAdditionalOptions(updated)
                                   }}
-                                  className="h-7 w-20 rounded border border-zinc-200 bg-white pl-7 pr-1 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
+                                  placeholder="Nome do grupo (ex: Ponto da carne)"
+                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setProductAdditionalOptions(productAdditionalOptions.filter((_, i) => i !== idx))}
+                                  className="text-zinc-400 hover:text-red-500"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={opt.name}
+                                  onChange={(e) => {
+                                    const updated = [...productAdditionalOptions]
+                                    updated[idx] = { ...opt, name: e.target.value }
+                                    setProductAdditionalOptions(updated)
+                                  }}
+                                  placeholder="Nome (ex: Bacon)"
+                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                />
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.50"
+                                    value={opt.price}
+                                    onChange={(e) => {
+                                      const updated = [...productAdditionalOptions]
+                                      updated[idx] = { ...opt, price: e.target.value }
+                                      setProductAdditionalOptions(updated)
+                                    }}
+                                    className="h-7 w-20 rounded border border-zinc-200 bg-white pl-7 pr-1 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={opt.inputType}
+                                  onChange={(e) => {
+                                    const updated = [...productAdditionalOptions]
+                                    updated[idx] = { ...opt, inputType: e.target.value }
+                                    setProductAdditionalOptions(updated)
+                                  }}
+                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                >
+                                  <option value="radio">Seleção</option>
+                                  <option value="quantity">Quantidade (+/-)</option>
+                                </select>
+                                <select
+                                  value={opt.selectionType}
+                                  onChange={(e) => {
+                                    const updated = [...productAdditionalOptions]
+                                    updated[idx] = { ...opt, selectionType: e.target.value }
+                                    setProductAdditionalOptions(updated)
+                                  }}
+                                  className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                >
+                                  <option value="single">Única</option>
+                                  <option value="multiple">Múltipla</option>
+                                  <option value="required">Obrigatória</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={opt.headerText}
+                                  onChange={(e) => {
+                                    const updated = [...productAdditionalOptions]
+                                    updated[idx] = { ...opt, headerText: e.target.value }
+                                    setProductAdditionalOptions(updated)
+                                  }}
+                                  placeholder="Subtítulo (ex: Escolha 1)"
+                                  className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
                                 />
                               </div>
-                              <select
-                                value={opt.selectionType}
-                                onChange={(e) => {
-                                  const updated = [...productAdditionalOptions]
-                                  updated[idx] = { ...opt, selectionType: e.target.value }
-                                  setProductAdditionalOptions(updated)
-                                }}
-                                className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                              >
-                                <option value="single">Única</option>
-                                <option value="multiple">Múltipla</option>
-                                <option value="required">Obrigatória</option>
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => setProductAdditionalOptions(productAdditionalOptions.filter((_, i) => i !== idx))}
-                                className="text-zinc-400 hover:text-red-500"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
                             </div>
                           ))}
                         </div>
                       )}
                       <button
                         type="button"
-                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single" }])}
+                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "" }])}
                         className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
                       >
                         <Plus className="h-3 w-3" />
