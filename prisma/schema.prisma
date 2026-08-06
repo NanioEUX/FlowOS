@@ -237,6 +237,7 @@ model Product {
   availableOnline     Boolean        @default(true)
   availablePresencial Boolean        @default(true)
   availableWhatsapp   Boolean        @default(true)
+  onSale          Boolean            @default(false)
   order           Int                @default(0)
   badge           String?
   categoryId      String

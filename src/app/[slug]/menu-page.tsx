@@ -247,6 +247,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const userClosedPaymentModalRef = useRef(false)
+
+  // Stories data
+  const [storiesData, setStoriesData] = useState<{ maisVendidos: any[]; lancamentos: any[]; promocoes: any[] }>({ maisVendidos: [], lancamentos: [], promocoes: [] })
+  const [activeStory, setActiveStory] = useState<string | null>(null)
+  const [storyProducts, setStoryProducts] = useState<any[]>([])
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -529,6 +534,28 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setActiveCategory("all")
     }
   }, [sortedCategories])
+
+  // Fetch stories data
+  useEffect(() => {
+    async function loadStories() {
+      try {
+        const res = await fetch(`/api/stories?establishmentId=${establishment.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setStoriesData(data)
+        }
+      } catch {}
+    }
+    loadStories()
+  }, [establishment.id])
+
+  const openStory = (type: string) => {
+    setActiveStory(type)
+    if (type === "maisVendidos") setStoryProducts(storiesData.maisVendidos)
+    else if (type === "lancamentos") setStoryProducts(storiesData.lancamentos)
+    else if (type === "promocoes") setStoryProducts(storiesData.promocoes)
+    else setStoryProducts([])
+  }
 
   const fullAddress = cepAddress
     ? `${cepAddress.logradouro}, ${customer.address || "s/n"} - ${cepAddress.bairro}, ${cepAddress.localidade} - ${cepAddress.uf}`
@@ -1712,14 +1739,13 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
             {[
-              { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
-              { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
-              { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
-              { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
-              { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
-            ].map((story, i) => (
-              <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-                <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
+              { id: "maisVendidos", label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", hasData: storiesData.maisVendidos.length > 0 },
+              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", hasData: false },
+              { id: "lancamentos", label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", hasData: storiesData.lancamentos.length > 0 },
+              { id: "promocoes", label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", hasData: storiesData.promocoes.length > 0 },
+            ].map((story) => (
+              <button key={story.id} onClick={() => story.hasData && openStory(story.id)} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
+                <div className={`rounded-full p-[3px] ${!story.hasData ? "bg-gray-300" : ""}`} style={story.hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
                   <div className="w-14 h-14 rounded-full bg-white p-0.5">
                     <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
                       {story.emoji}
@@ -1950,6 +1976,70 @@ onPaymentConfirmed={handlePaymentSuccess}
               <User className="h-5 w-5" />
               <span className="text-[10px] font-medium">Perfil</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Story Modal */}
+      {activeStory && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage }}>
+          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: theme.borderSubtle }}>
+            <h2 className="text-lg font-bold" style={{ color: theme.text }}>
+              {activeStory === "maisVendidos" && "🔥 Mais Vendidos"}
+              {activeStory === "combos" && "🎁 Combos do Dia"}
+              {activeStory === "lancamentos" && "✨ Lançamentos"}
+              {activeStory === "promocoes" && "💰 Promoções"}
+            </h2>
+            <button onClick={() => { setActiveStory(null); setStoryProducts([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }}>
+              <X className="h-5 w-5" style={{ color: theme.text }} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {storyProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <span className="text-4xl mb-4">📭</span>
+                <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum produto encontrado</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {storyProducts.map((product) => (
+                  <div key={product.id} className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: theme.bgCard }}>
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="w-full h-32 object-cover" />
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center" style={{ backgroundColor: theme.bgCard }}>
+                        <Package className="h-10 w-10" style={{ color: theme.textMutedMore }} />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{product.name}</p>
+                      {product.badge && (
+                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                          {product.badge}
+                        </span>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</span>
+                        <button
+                          onClick={() => {
+                            addToCart({
+                              id: product.id,
+                              name: product.name,
+                              price: product.price,
+                              image: product.image,
+                            } as any)
+                          }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: theme.primary }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
