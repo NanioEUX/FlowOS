@@ -1944,51 +1944,50 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Floating Cart Bar */}
       {cart.length > 0 && !showCart && !showPaymentModal && (
         <div className="fixed bottom-20 left-0 right-0 z-30 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
-          {/* Free shipping progress */}
-          {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
-            <div className="mb-2 rounded-xl px-4 py-2.5 backdrop-blur-xl border" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-medium" style={{ color: theme.textMuted }}>
-                  {subtotal >= establishment.deliveryFreeAbove
-                    ? "🎉 Frete Grátis!"
-                    : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
-                  }
-                </span>
-                <span className="text-[11px] font-bold" style={{ color: theme.primary }}>
-                  {formatCurrency(establishment.deliveryFreeAbove)}
-                </span>
-              </div>
-              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
-                    backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.primary,
-                  }}
-                />
-              </div>
-            </div>
-          )}
           <button
             onClick={openCart}
-            className="w-full rounded-2xl px-4 py-3 flex items-center justify-between text-white transition-all active:scale-[0.98]"
+            className="w-full rounded-2xl px-4 py-3 text-white transition-all active:scale-[0.98] overflow-hidden"
             style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 -4px 20px ${theme.shadowPrimary}` }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-bold block">Ver Sacola</span>
+                  <span className="text-xs text-white/80">{totalItems} {totalItems === 1 ? "item" : "itens"}</span>
+                </div>
               </div>
-              <div className="text-left">
-                <span className="text-sm font-bold block">Ver Sacola</span>
-                <span className="text-xs text-white/80">{totalItems} {totalItems === 1 ? "item" : "itens"}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm">{formatCurrency(total)}</span>
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm">{formatCurrency(total)}</span>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+            {/* Free shipping progress inside cart bar */}
+            {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
+              <div className="mt-2.5 pt-2.5 border-t border-white/20">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-medium text-white/90">
+                    {subtotal >= establishment.deliveryFreeAbove
+                      ? "🎉 Frete Grátis!"
+                      : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
+                    }
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/20">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
+                      backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : "white",
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </button>
         </div>
       )}
@@ -2148,7 +2147,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <div className="flex items-center gap-1.5">
                           {(product as any).promoPrice && (product as any).onSale ? (
                             <>
-                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-sm text-zinc-400 line-through">{formatCurrency(product.price)}</span>
                               <span className="text-sm font-bold text-green-600">{formatCurrency((product as any).promoPrice)}</span>
                             </>
                           ) : (
@@ -3910,7 +3909,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="flex items-center gap-2 mt-1">
                     {(bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (
                       <>
-                        <span className="text-xs text-zinc-400 line-through">{formatCurrency(bottomSheetProduct.price)}</span>
+                        <span className="text-sm text-zinc-400 line-through">{formatCurrency(bottomSheetProduct.price)}</span>
                         <p className="font-bold text-sm text-green-600">{formatCurrency((bottomSheetProduct as any).promoPrice)}</p>
                       </>
                     ) : (
@@ -4601,6 +4600,7 @@ function PaymentModal({
 
 function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   const hasPromo = (product as any).promoPrice && (product as any).onSale
+  const discountPct = hasPromo ? Math.round((1 - (product as any).promoPrice / product.price) * 100) : 0
   return (
     <div
       className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
@@ -4626,9 +4626,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             {product.badge === "novo" && <><span>✨</span><span>Novo</span></>}
           </span>
         )}
-        {hasPromo && (
-          <span className="absolute top-2 right-2 text-[10px] font-bold text-white px-2 py-1 rounded-lg shadow-md bg-green-500 flex items-center gap-1">
-            <span>%</span><span>OFF</span>
+        {hasPromo && discountPct > 0 && (
+          <span className="absolute top-2 right-2 text-[11px] font-bold text-white px-2 py-1 rounded-lg shadow-md bg-green-500">
+            {discountPct}% OFF
           </span>
         )}
       </div>
@@ -4640,7 +4640,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
         <div className="flex items-end justify-between mt-2">
           <div className="flex flex-col">
             {hasPromo && (
-              <span className="text-[10px] line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+              <span className="text-xs line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
             )}
             <p className="font-bold text-sm" style={{ color: hasPromo ? "#22c55e" : theme.primary }}>
               {hasPromo ? formatCurrency((product as any).promoPrice) : formatCurrency(product.price)}
