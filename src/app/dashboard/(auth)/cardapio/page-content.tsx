@@ -108,6 +108,7 @@ export default function CardapioPage() {
   const [deleteBannerConfirm, setDeleteBannerConfirm] = useState<string | null>(null)
   const [bannerStories, setBannerStories] = useState<{ id: string; name: string }[]>([])
   const [bannerCategories, setBannerCategories] = useState<{ id: string; name: string }[]>([])
+  const [uploadingBanner, setUploadingBanner] = useState(false)
 
   // Stories state
   const [stories, setStories] = useState<any[]>([])
@@ -1383,28 +1384,41 @@ export default function CardapioPage() {
                         </button>
                       </div>
                     ) : (
-                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-400 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-colors">
-                        <Upload className="h-5 w-5" />
-                        <span>Selecionar imagem</span>
+                      <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed bg-zinc-50 px-4 py-6 text-sm transition-colors ${uploadingBanner ? "border-green-300 text-green-500" : "border-zinc-200 text-zinc-400 hover:border-green-500 hover:bg-green-50 hover:text-green-600"}`}>
+                        {uploadingBanner ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                        <span>{uploadingBanner ? "Enviando..." : "Selecionar imagem"}</span>
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
                           className="hidden"
-                          onChange={(e) => {
+                          disabled={uploadingBanner}
+                          onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (!file) return
-                            if (file.size > 5 * 1024 * 1024) {
-                              toast("Imagem máxima de 5MB", "error")
+                            if (file.size > 2 * 1024 * 1024) {
+                              toast("Imagem máxima de 2MB", "error")
                               return
                             }
-                            const reader = new FileReader()
-                            reader.onloadend = () => setBannerForm({ ...bannerForm, image: reader.result as string })
-                            reader.readAsDataURL(file)
+                            setUploadingBanner(true)
+                            try {
+                              const fd = new FormData()
+                              fd.append("file", file)
+                              const res = await fetch("/api/upload", { method: "POST", body: fd })
+                              const data = await res.json()
+                              if (res.ok && data.url) {
+                                setBannerForm({ ...bannerForm, image: data.url })
+                              } else {
+                                toast(data.error || "Erro ao enviar imagem", "error")
+                              }
+                            } catch {
+                              toast("Erro ao enviar imagem", "error")
+                            }
+                            setUploadingBanner(false)
                           }}
                         />
                       </label>
                     )}
-                    <p className="mt-1 text-xs text-zinc-400">Máx. 5MB. Formatos: JPG, PNG, WebP</p>
+                    <p className="mt-1 text-xs text-zinc-400">Máx. 2MB. Formatos: JPG, PNG, WebP. Convertido automaticamente para WebP.</p>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-zinc-700">Texto do botão</label>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyAuth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { compressAndUploadImage } from "@/lib/image-upload"
+
+export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,14 +17,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Arquivo obrigatório" }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString("base64")
-    const mime = file.type || "image/jpeg"
-    const dataUrl = `data:${mime};base64,${base64}`
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Formato não suportado. Use JPG, PNG ou WebP" }, { status: 400 })
+    }
 
-    // Save to a temporary product-image record and return the ID
-    // For now, just return the data URL (same as before but via FormData)
-    return NextResponse.json({ url: dataUrl })
+    const result = await compressAndUploadImage(file)
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
+
+    return NextResponse.json({ url: result.url })
   } catch (error) {
     console.error("[UPLOAD]", error)
     return NextResponse.json({ error: "Erro no upload" }, { status: 500 })
