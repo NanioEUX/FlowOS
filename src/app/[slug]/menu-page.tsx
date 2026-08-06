@@ -828,7 +828,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function getProductOptions(productId: string): any[] {
-    for (const cat of categories) {
+    for (const cat of establishment.categories) {
       const product = cat.products.find((p: any) => p.id === productId)
       if (product) {
         return (product as any).additionalOptions || []
