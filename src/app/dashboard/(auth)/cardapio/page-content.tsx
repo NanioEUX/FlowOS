@@ -72,7 +72,7 @@ export default function CardapioPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showProductForm, setShowProductForm] = useState(false)
   const [priceUpdateModal, setPriceUpdateModal] = useState<{ open: boolean; category: any | null; products: any[]; rounding: string }>({ open: false, category: null, products: [], rounding: "none" })
-  const [productTab, setProductTab] = useState<"basico" | "onde" | "ficha">("basico")
+  const [productTab, setProductTab] = useState<"basico" | "onde" | "ficha" | "adicionais">("basico")
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
@@ -91,6 +91,7 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string }[]>([])
 
   // Custo automático da ficha técnica (info only — não editável)
   const { fichaTecnicaCost, hasUnitError } = useMemo(() => {
@@ -450,6 +451,35 @@ export default function CardapioPage() {
       } catch (e) {
         console.error("Erro ao salvar links:", e)
       }
+
+      // Salvar adicionais
+      try {
+        // Deletar adicionais existentes
+        const existingOptions = await fetchAuth(`/api/additional-options?productId=${productId}`)
+        if (existingOptions.ok) {
+          const existing = await existingOptions.json()
+          for (const opt of existing) {
+            await fetchAuth(`/api/additional-options?id=${opt.id}`, { method: "DELETE" })
+          }
+        }
+        // Criar novos adicionais
+        for (const opt of productAdditionalOptions) {
+          if (!opt.name.trim()) continue
+          await fetchAuth("/api/additional-options", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: opt.name,
+              price: parseFloat(opt.price) || 0,
+              selectionType: opt.selectionType,
+              productId,
+              establishmentId,
+            }),
+          })
+        }
+      } catch (e) {
+        console.error("Erro ao salvar adicionais:", e)
+      }
     }
 
     toast("Produto salvo com sucesso!", "success")
@@ -521,9 +551,10 @@ export default function CardapioPage() {
     })
     const links = (product as any).stockLinks || []
     setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
+    setProductAdditionalOptions([])
     setProductTab("basico")
     setShowProductForm(true)
-    // Refetch em background pra atualizar stockLinks (cache: no-store evita o cache de 30s)
+    // Refetch em background pra atualizar stockLinks e adicionais (cache: no-store evita o cache de 30s)
     fetchAuth(`/api/products/${product.id}`, { cache: "no-store" })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
@@ -537,6 +568,18 @@ export default function CardapioPage() {
           availablePresencial: data.availablePresencial ?? true,
           availableWhatsapp: data.availableWhatsapp ?? true,
         }))
+        // Carregar adicionais
+        fetchAuth(`/api/additional-options?productId=${product.id}`)
+          .then((r) => r.ok ? r.json() : [])
+          .then((options) => {
+            setProductAdditionalOptions(options.map((opt: any) => ({
+              id: opt.id,
+              name: opt.name,
+              price: String(opt.price),
+              selectionType: opt.selectionType,
+            })))
+          })
+          .catch(() => {})
       })
       .catch(() => {})
   }
@@ -545,6 +588,7 @@ export default function CardapioPage() {
     setEditingProduct(null)
     setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
+    setProductAdditionalOptions([])
     setProductTab("basico")
     setShowProductForm(true)
   }
@@ -1356,6 +1400,7 @@ export default function CardapioPage() {
                     { key: "basico", label: "Básico" },
                     { key: "onde", label: "Onde aparece" },
                     { key: "ficha", label: "Ficha técnica" },
+                    { key: "adicionais", label: "Adicionais" },
                   ] as const).map((tab) => (
                     <button
                       key={tab.key}
@@ -1683,6 +1728,82 @@ export default function CardapioPage() {
                         <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis — o custo pode estar incompleto. Verifique se as unidades dos insumos são compatíveis com as do estoque.</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Aba Adicionais */}
+                {productTab === "adicionais" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700">
+                        Itens Adicionais
+                      </label>
+                      <p className="mb-3 text-xs text-zinc-400">
+                        Configure opções extras que o cliente pode selecionar ao pedir este produto.
+                      </p>
+                      {productAdditionalOptions.length > 0 && (
+                        <div className="space-y-2">
+                          {productAdditionalOptions.map((opt, idx) => (
+                            <div key={idx} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                              <input
+                                type="text"
+                                value={opt.name}
+                                onChange={(e) => {
+                                  const updated = [...productAdditionalOptions]
+                                  updated[idx] = { ...opt, name: e.target.value }
+                                  setProductAdditionalOptions(updated)
+                                }}
+                                placeholder="Nome (ex: Bacon)"
+                                className="h-7 flex-1 rounded border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                              />
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.50"
+                                  value={opt.price}
+                                  onChange={(e) => {
+                                    const updated = [...productAdditionalOptions]
+                                    updated[idx] = { ...opt, price: e.target.value }
+                                    setProductAdditionalOptions(updated)
+                                  }}
+                                  className="h-7 w-20 rounded border border-zinc-200 bg-white pl-7 pr-1 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
+                                />
+                              </div>
+                              <select
+                                value={opt.selectionType}
+                                onChange={(e) => {
+                                  const updated = [...productAdditionalOptions]
+                                  updated[idx] = { ...opt, selectionType: e.target.value }
+                                  setProductAdditionalOptions(updated)
+                                }}
+                                className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                              >
+                                <option value="single">Única</option>
+                                <option value="multiple">Múltipla</option>
+                                <option value="required">Obrigatória</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => setProductAdditionalOptions(productAdditionalOptions.filter((_, i) => i !== idx))}
+                                className="text-zinc-400 hover:text-red-500"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single" }])}
+                        className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Adicionar opção
+                      </button>
+                    </div>
                   </div>
                 )}
 
