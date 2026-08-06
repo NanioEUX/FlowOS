@@ -171,6 +171,8 @@ model Establishment {
   suppliers           Supplier[]
   additionalOptions   AdditionalOption[]
   dailyCombos         DailyCombo[]
+  stories             Story[]
+  banners             Banner[]
   users               User[]
 }
 
@@ -253,6 +255,7 @@ model Product {
   stockLinks      ProductStockLink[]
   additionalOptions AdditionalOption[]
   comboItems      DailyComboItem[]
+  storyItems      StoryItem[]
 }
 
 model DailyCombo {
@@ -736,6 +739,56 @@ model DeliveryZone {
   enabled         Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, order])
+}
+
+model Story {
+  id              String       @id @default(cuid())
+  name            String
+  emoji           String       @default("🔥")
+  gradientFrom    String       @default("from-red-500")
+  gradientTo      String       @default("to-orange-500")
+  type            String       @default("manual") // "auto" | "manual"
+  autoType        String?      // "maisVendidos" | "lancamentos" | "promocoes"
+  order           Int          @default(0)
+  active          Boolean      @default(true)
+  establishmentId String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  items           StoryItem[]
+
+  @@index([establishmentId, order])
+}
+
+model StoryItem {
+  id        String  @id @default(cuid())
+  storyId   String
+  productId String
+  order     Int     @default(0)
+  story     Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, productId])
+}
+
+model Banner {
+  id              String       @id @default(cuid())
+  title           String
+  subtitle        String?
+  ctaText         String?      @default("Ver mais")
+  ctaType         String       @default("scroll") // "scroll" | "story" | "category" | "link"
+  ctaTarget       String?      // storyId, categoryId, ou URL
+  gradientFrom    String       @default("from-primary")
+  gradientTo      String       @default("to-primary-cc")
+  image           String?
+  order           Int          @default(0)
+  active          Boolean      @default(true)
+  establishmentId String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])

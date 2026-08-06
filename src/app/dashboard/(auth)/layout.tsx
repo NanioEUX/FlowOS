@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin, Image, Eye } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -30,6 +30,8 @@ const financeiroSubItems = [
 const marketingSubItems = [
   { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
   { icon: Star, label: "Fidelidade", href: "/dashboard/fidelidade", perm: "config" },
+  { icon: Image, label: "Destaques", href: "/dashboard/destaques", perm: "cardapio" },
+  { icon: Eye, label: "Stories", href: "/dashboard/stories", perm: "cardapio" },
 ]
 
 const configSubItems = [

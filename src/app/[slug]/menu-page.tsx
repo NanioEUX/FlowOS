@@ -249,7 +249,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const userClosedPaymentModalRef = useRef(false)
 
   // Stories data
-  const [storiesData, setStoriesData] = useState<{ maisVendidos: any[]; combos: any[]; lancamentos: any[]; promocoes: any[] }>({ maisVendidos: [], combos: [], lancamentos: [], promocoes: [] })
+  const [storiesData, setStoriesData] = useState<{ stories: any[]; combos: any[] }>({ stories: [], combos: [] })
+  const [bannersData, setBannersData] = useState<any[]>([])
   const [activeStory, setActiveStory] = useState<string | null>(null)
   const [storyProducts, setStoryProducts] = useState<any[]>([])
   const [storyCombos, setStoryCombos] = useState<any[]>([])
@@ -542,10 +543,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   useEffect(() => {
     async function loadStories() {
       try {
-        const res = await fetch(`/api/stories?establishmentId=${establishment.id}`)
-        if (res.ok) {
-          const data = await res.json()
+        const [storiesRes, bannersRes] = await Promise.all([
+          fetch(`/api/stories?establishmentId=${establishment.id}`),
+          fetch(`/api/banners?establishmentId=${establishment.id}`),
+        ])
+        if (storiesRes.ok) {
+          const data = await storiesRes.json()
           setStoriesData(data)
+        }
+        if (bannersRes.ok) {
+          const data = await bannersRes.json()
+          setBannersData(data)
         }
       } catch {}
     }
@@ -554,19 +562,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // Banner carousel auto-advance
   useEffect(() => {
+    if (bannersData.length <= 1) return
     bannerIntervalRef.current = setInterval(() => {
-      setBannerSlide((prev) => (prev + 1) % 3)
+      setBannerSlide((prev) => (prev + 1) % bannersData.length)
     }, 4000)
     return () => { if (bannerIntervalRef.current) clearInterval(bannerIntervalRef.current) }
-  }, [])
+  }, [bannersData.length])
 
-  const openStory = (type: string) => {
-    setActiveStory(type)
+  const openStory = (storyId: string) => {
+    const story = storiesData.stories.find((s: any) => s.id === storyId)
+    if (!story) return
+    setActiveStory(storyId)
     setStoryCombos([])
-    if (type === "maisVendidos") setStoryProducts(storiesData.maisVendidos)
-    else if (type === "combos") { setStoryProducts([]); setStoryCombos(storiesData.combos) }
-    else if (type === "lancamentos") setStoryProducts(storiesData.lancamentos)
-    else if (type === "promocoes") setStoryProducts(storiesData.promocoes)
+    if (story.products) setStoryProducts(story.products)
     else setStoryProducts([])
   }
 
@@ -1751,23 +1759,21 @@ onPaymentConfirmed={handlePaymentSuccess}
         {/* Stories */}
         <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {[
-              { id: "maisVendidos", label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-500 via-orange-500 to-yellow-500", hasData: storiesData.maisVendidos.length > 0 },
-              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-500 via-amber-500 to-orange-500", hasData: storiesData.combos.length > 0 },
-              { id: "lancamentos", label: "Lançamentos", emoji: "✨", gradient: "from-blue-500 via-indigo-500 to-purple-500", hasData: storiesData.lancamentos.length > 0 },
-              { id: "promocoes", label: "Promoções", emoji: "💰", gradient: "from-green-500 via-emerald-500 to-teal-500", hasData: storiesData.promocoes.length > 0 },
-            ].map((story) => (
-              <button key={story.id} onClick={() => story.hasData && openStory(story.id)} className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-                <div className={`rounded-full p-[3px] ${!story.hasData ? "bg-gray-300 opacity-40" : ""}`} style={story.hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}66, ${theme.primary})` } : {}}>
-                  <div className="w-[62px] h-[62px] rounded-full p-[2px] bg-white">
-                    <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center`}>
-                      <span className="text-2xl drop-shadow-sm">{story.emoji}</span>
+            {storiesData.stories.map((story: any) => {
+              const hasData = story.products && story.products.length > 0
+              return (
+                <button key={story.id} onClick={() => hasData && openStory(story.id)} className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
+                  <div className={`rounded-full p-[3px] ${!hasData ? "bg-gray-300 opacity-40" : ""}`} style={hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}66, ${theme.primary})` } : {}}>
+                    <div className="w-[62px] h-[62px] rounded-full p-[2px] bg-white">
+                      <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center`}>
+                        <span className="text-2xl drop-shadow-sm">{story.emoji}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <span className="text-[10px] font-semibold max-w-[68px] text-center leading-tight" style={{ color: theme.textMuted }}>{story.label}</span>
-              </button>
-            ))}
+                  <span className="text-[10px] font-semibold max-w-[68px] text-center leading-tight" style={{ color: theme.textMuted }}>{story.name}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
         {/* Categories */}
@@ -1802,58 +1808,52 @@ onPaymentConfirmed={handlePaymentSuccess}
       <div className="h-[260px]" />
 
       {/* Banner Carousel - scrolls */}
+      {bannersData.length > 0 && (
       <div className="mx-auto max-w-3xl px-4 pb-3">
         <div className="relative rounded-2xl overflow-hidden" style={{ minHeight: "160px" }}>
-          {/* Slides */}
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${bannerSlide * 100}%)` }}>
-            {/* Slide 1 */}
-            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}bb)` }}>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2" />
-              <div className="relative z-10">
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-                <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-                <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-                <button onClick={() => { const el = document.getElementById("category-all"); el?.scrollIntoView({ behavior: "smooth" }) }} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: theme.primary }}>
-                  Ver Cardápio <span className="text-sm">→</span>
-                </button>
-              </div>
-            </div>
-            {/* Slide 2 - Promoções */}
-            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)" }}>
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4" />
-              <div className="absolute bottom-0 left-8 w-24 h-24 bg-white/10 rounded-full translate-y-1/2" />
-              <div className="relative z-10">
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Ofertas</span>
-                <h2 className="text-lg font-bold mt-2 leading-tight">Promoções imperdíveis</h2>
-                <p className="text-xs text-white/80 mt-1">Economize em produtos selecionados</p>
-                <button onClick={() => openStory("promocoes")} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: "#ef4444" }}>
-                  Ver Ofertas <span className="text-sm">→</span>
-                </button>
-              </div>
-            </div>
-            {/* Slide 3 - Combos */}
-            <div className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}>
-              <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full -translate-y-1/3 translate-x-1/3" />
-              <div className="absolute bottom-0 right-4 w-28 h-28 bg-white/10 rounded-full translate-y-1/2" />
-              <div className="relative z-10">
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Combos</span>
-                <h2 className="text-lg font-bold mt-2 leading-tight">Combos do Dia</h2>
-                <p className="text-xs text-white/80 mt-1">Monte seu combo e economize</p>
-                <button onClick={() => openStory("combos")} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5" style={{ color: "#6366f1" }}>
-                  Ver Combos <span className="text-sm">→</span>
-                </button>
-              </div>
-            </div>
+            {bannersData.map((banner: any) => {
+              const handleCtaClick = () => {
+                if (banner.ctaType === "scroll") {
+                  document.getElementById("category-all")?.scrollIntoView({ behavior: "smooth" })
+                } else if (banner.ctaType === "story" && banner.ctaTarget) {
+                  openStory(banner.ctaTarget)
+                } else if (banner.ctaType === "category" && banner.ctaTarget) {
+                  setActiveCategory(banner.ctaTarget)
+                  document.getElementById("category-all")?.scrollIntoView({ behavior: "smooth" })
+                } else if (banner.ctaType === "link" && banner.ctaTarget) {
+                  window.open(banner.ctaTarget, "_blank")
+                }
+              }
+              return (
+                <div key={banner.id} className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, var(--tw-gradient-stops))` }}>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${banner.gradientFrom} ${banner.gradientTo}`} />
+                  {banner.image && <img src={banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2" />
+                  <div className="relative z-10">
+                    <h2 className="text-lg font-bold mt-2 leading-tight drop-shadow">{banner.title}</h2>
+                    {banner.subtitle && <p className="text-xs text-white/80 mt-1 drop-shadow">{banner.subtitle}</p>}
+                    {banner.ctaText && (
+                      <button onClick={handleCtaClick} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5 drop-shadow" style={{ color: "#333" }}>
+                        {banner.ctaText} <span className="text-sm">→</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          {/* Dots */}
+          {bannersData.length > 1 && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <button key={i} onClick={() => { setBannerSlide(i); if (bannerIntervalRef.current) { clearInterval(bannerIntervalRef.current); bannerIntervalRef.current = setInterval(() => setBannerSlide((p) => (p + 1) % 3), 4000) } }} className={`rounded-full transition-all duration-300 ${bannerSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: bannerSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
+            {bannersData.map((_: any, i: number) => (
+              <button key={i} onClick={() => { setBannerSlide(i); if (bannerIntervalRef.current) { clearInterval(bannerIntervalRef.current); bannerIntervalRef.current = setInterval(() => setBannerSlide((p) => (p + 1) % bannersData.length), 4000) } }} className={`rounded-full transition-all duration-300 ${bannerSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: bannerSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
             ))}
           </div>
+          )}
         </div>
       </div>
+      )}
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
@@ -2051,76 +2051,20 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Story Modal */}
-      {activeStory && (
+      {activeStory && (() => {
+        const currentStory = storiesData.stories.find((s: any) => s.id === activeStory)
+        return currentStory ? (
         <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage }}>
           <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: theme.borderSubtle }}>
             <h2 className="text-lg font-bold" style={{ color: theme.text }}>
-              {activeStory === "maisVendidos" && "🔥 Mais Vendidos"}
-              {activeStory === "combos" && "🎁 Combos do Dia"}
-              {activeStory === "lancamentos" && "✨ Lançamentos"}
-              {activeStory === "promocoes" && "💰 Promoções"}
+              {currentStory.emoji} {currentStory.name}
             </h2>
             <button onClick={() => { setActiveStory(null); setStoryProducts([]); setStoryCombos([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }}>
               <X className="h-5 w-5" style={{ color: theme.text }} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {activeStory === "combos" ? (
-              storyCombos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <span className="text-4xl mb-4">📭</span>
-                  <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum combo disponível</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {storyCombos.map((combo) => (
-                    <div key={combo.id} className="rounded-2xl overflow-hidden shadow-lg p-4" style={{ backgroundColor: theme.bgCard }}>
-                      <div className="flex items-start gap-3">
-                        {combo.image ? (
-                          <img src={combo.image} alt={combo.name} className="w-20 h-20 rounded-xl object-cover" />
-                        ) : (
-                          <div className="w-20 h-20 rounded-xl flex items-center justify-center" style={{ backgroundColor: theme.bgPage }}>
-                            <span className="text-3xl">🎁</span>
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <p className="font-semibold" style={{ color: theme.text }}>{combo.name}</p>
-                          {combo.description && (
-                            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>{combo.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {combo.items?.map((item: any) => (
-                              <span key={item.id} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
-                                {item.product?.name} {item.quantity > 1 ? `x${item.quantity}` : ""}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-lg font-bold" style={{ color: theme.primary }}>{formatCurrency(combo.price)}</span>
-                            <button
-                              onClick={() => {
-                                addToCart({
-                                  id: combo.id,
-                                  name: combo.name,
-                                  price: combo.price,
-                                  image: combo.image,
-                                  isCombo: true,
-                                  comboItems: combo.items,
-                                } as any)
-                              }}
-                              className="px-4 py-2 rounded-full text-white text-sm font-semibold"
-                              style={{ backgroundColor: theme.primary }}
-                            >
-                              Adicionar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : storyProducts.length === 0 ? (
+            {storyProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <span className="text-4xl mb-4">📭</span>
                 <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum produto encontrado</p>
@@ -2176,7 +2120,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
           </div>
         </div>
-      )}
+      ) : null})()}
 
       {/* Identify Modal */}
       {showIdentifyModal && (
