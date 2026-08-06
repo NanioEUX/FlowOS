@@ -170,6 +170,7 @@ model Establishment {
   stockItems          StockItem[]
   suppliers           Supplier[]
   additionalOptions   AdditionalOption[]
+  dailyCombos         DailyCombo[]
   users               User[]
 }
 
@@ -250,6 +251,30 @@ model Product {
   stockItem       StockItem?         @relation(fields: [stockItemId], references: [id])
   stockLinks      ProductStockLink[]
   additionalOptions AdditionalOption[]
+  comboItems      DailyComboItem[]
+}
+
+model DailyCombo {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  image           String?
+  active          Boolean         @default(true)
+  establishmentId String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  establishment   Establishment   @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  items           DailyComboItem[]
+}
+
+model DailyComboItem {
+  id        String      @id @default(cuid())
+  comboId   String
+  productId String
+  quantity  Int         @default(1)
+  combo     DailyCombo  @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AdditionalOption {

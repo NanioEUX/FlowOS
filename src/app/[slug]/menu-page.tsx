@@ -249,9 +249,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const userClosedPaymentModalRef = useRef(false)
 
   // Stories data
-  const [storiesData, setStoriesData] = useState<{ maisVendidos: any[]; lancamentos: any[]; promocoes: any[] }>({ maisVendidos: [], lancamentos: [], promocoes: [] })
+  const [storiesData, setStoriesData] = useState<{ maisVendidos: any[]; combos: any[]; lancamentos: any[]; promocoes: any[] }>({ maisVendidos: [], combos: [], lancamentos: [], promocoes: [] })
   const [activeStory, setActiveStory] = useState<string | null>(null)
   const [storyProducts, setStoryProducts] = useState<any[]>([])
+  const [storyCombos, setStoryCombos] = useState<any[]>([])
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -551,7 +552,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const openStory = (type: string) => {
     setActiveStory(type)
+    setStoryCombos([])
     if (type === "maisVendidos") setStoryProducts(storiesData.maisVendidos)
+    else if (type === "combos") { setStoryProducts([]); setStoryCombos(storiesData.combos) }
     else if (type === "lancamentos") setStoryProducts(storiesData.lancamentos)
     else if (type === "promocoes") setStoryProducts(storiesData.promocoes)
     else setStoryProducts([])
@@ -1740,7 +1743,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
             {[
               { id: "maisVendidos", label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", hasData: storiesData.maisVendidos.length > 0 },
-              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", hasData: false },
+              { id: "combos", label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", hasData: storiesData.combos.length > 0 },
               { id: "lancamentos", label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", hasData: storiesData.lancamentos.length > 0 },
               { id: "promocoes", label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", hasData: storiesData.promocoes.length > 0 },
             ].map((story) => (
@@ -1990,12 +1993,67 @@ onPaymentConfirmed={handlePaymentSuccess}
               {activeStory === "lancamentos" && "✨ Lançamentos"}
               {activeStory === "promocoes" && "💰 Promoções"}
             </h2>
-            <button onClick={() => { setActiveStory(null); setStoryProducts([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }}>
+            <button onClick={() => { setActiveStory(null); setStoryProducts([]); setStoryCombos([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }}>
               <X className="h-5 w-5" style={{ color: theme.text }} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {storyProducts.length === 0 ? (
+            {activeStory === "combos" ? (
+              storyCombos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <span className="text-4xl mb-4">📭</span>
+                  <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum combo disponível</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {storyCombos.map((combo) => (
+                    <div key={combo.id} className="rounded-2xl overflow-hidden shadow-lg p-4" style={{ backgroundColor: theme.bgCard }}>
+                      <div className="flex items-start gap-3">
+                        {combo.image ? (
+                          <img src={combo.image} alt={combo.name} className="w-20 h-20 rounded-xl object-cover" />
+                        ) : (
+                          <div className="w-20 h-20 rounded-xl flex items-center justify-center" style={{ backgroundColor: theme.bgPage }}>
+                            <span className="text-3xl">🎁</span>
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="font-semibold" style={{ color: theme.text }}>{combo.name}</p>
+                          {combo.description && (
+                            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>{combo.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {combo.items?.map((item: any) => (
+                              <span key={item.id} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                                {item.product?.name} {item.quantity > 1 ? `x${item.quantity}` : ""}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-lg font-bold" style={{ color: theme.primary }}>{formatCurrency(combo.price)}</span>
+                            <button
+                              onClick={() => {
+                                addToCart({
+                                  id: combo.id,
+                                  name: combo.name,
+                                  price: combo.price,
+                                  image: combo.image,
+                                  isCombo: true,
+                                  comboItems: combo.items,
+                                } as any)
+                              }}
+                              className="px-4 py-2 rounded-full text-white text-sm font-semibold"
+                              style={{ backgroundColor: theme.primary }}
+                            >
+                              Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : storyProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <span className="text-4xl mb-4">📭</span>
                 <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum produto encontrado</p>

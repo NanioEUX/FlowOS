@@ -71,12 +71,24 @@ export async function GET(req: NextRequest) {
     take: 10,
   })
 
+  // 4. Combos do Dia - manual configuration
+  const combos = await prisma.dailyCombo.findMany({
+    where: { establishmentId, active: true },
+    include: {
+      items: {
+        include: { product: { select: { id: true, name: true, price: true, image: true } } },
+      },
+    },
+    take: 5,
+  })
+
   return NextResponse.json({
     maisVendidos: maisVendidos.sort((a, b) => {
       const aIdx = topSellingIds.indexOf(a.id)
       const bIdx = topSellingIds.indexOf(b.id)
       return aIdx - bIdx
     }),
+    combos,
     lancamentos,
     promocoes,
   })

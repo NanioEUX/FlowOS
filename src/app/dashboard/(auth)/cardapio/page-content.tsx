@@ -24,6 +24,7 @@ interface Product {
   image: string | null
   isAvailable: boolean
   sendToPrep: boolean
+  onSale: boolean
   order: number
   badge: string | null
   categoryId: string
@@ -85,6 +86,7 @@ export default function CardapioPage() {
     image: "",
     badge: "",
     sendToPrep: false,
+    onSale: false,
     availableOnline: true,
     availablePresencial: true,
     availableWhatsapp: true,
@@ -365,6 +367,7 @@ export default function CardapioPage() {
     const firstLink = productLinks.find((l) => l.stockItemId && parseFloat(l.quantity) > 0)
     if (firstLink) formData.append("stockItemId", firstLink.stockItemId)
     formData.append("sendToPrep", String(productForm.sendToPrep))
+    formData.append("onSale", String(productForm.onSale))
     formData.append("availableOnline", String(productForm.availableOnline))
     formData.append("availablePresencial", String(productForm.availablePresencial))
     formData.append("availableWhatsapp", String(productForm.availableWhatsapp))
@@ -537,6 +540,34 @@ export default function CardapioPage() {
     }
   }
 
+  async function toggleOnSale(productId: string, currentValue: boolean) {
+    if (!establishmentId) return
+    const newValue = !currentValue
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onSale: newValue }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
+      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, onSale: newValue } : p
+          ),
+        }))
+      )
+      toast(newValue ? "Produto em promoção" : "Produto removido das promoções", "success")
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
+    }
+  }
+
   function editProduct(product: Product) {
     // Usa dados do produto da lista pra abrir rápido, mas força refetch em background
     // pra garantir que stockLinks estão atualizados (evita cache de 30s do /api/categories)
@@ -549,6 +580,7 @@ export default function CardapioPage() {
       image: product.image || "",
       badge: product.badge || "",
       sendToPrep: product.sendToPrep || false,
+      onSale: (product as any).onSale ?? false,
       availableOnline: (product as any).availableOnline ?? true,
       availablePresencial: (product as any).availablePresencial ?? true,
       availableWhatsapp: (product as any).availableWhatsapp ?? true,
@@ -594,7 +626,7 @@ export default function CardapioPage() {
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
     setProductAdditionalOptions([])
     setProductTab("basico")
@@ -924,6 +956,25 @@ export default function CardapioPage() {
                                 }`} />
                               </span>
                               {product.sendToPrep ? "Preparo" : "Sem preparo"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleOnSale(product.id, (product as any).onSale || false) }}
+                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
+                                (product as any).onSale
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-zinc-100 text-zinc-400"
+                              }`}
+                              title={(product as any).onSale ? "Em promoção (clique para remover)" : "Marcar como promoção"}
+                            >
+                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  (product as any).onSale ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </span>
+                              {(product as any).onSale ? "Promoção" : "Sem promoção"}
                             </button>
                             <button
                               onClick={() => editProduct(product)}
@@ -1636,6 +1687,29 @@ export default function CardapioPage() {
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                           productForm.sendToPrep ? "translate-x-6" : "translate-x-1"
+                        }`} />
+                      </button>
+                    </div>
+                    {/* Em Promoção */}
+                    <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                      productForm.onSale ? "border-green-300 bg-green-50" : "border-zinc-200"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">💰</span>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900">Em Promoção</p>
+                          <p className="text-xs text-zinc-500">Aparece no story "Promoções"</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, onSale: !productForm.onSale })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          productForm.onSale ? "bg-green-500" : "bg-zinc-300"
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          productForm.onSale ? "translate-x-6" : "translate-x-1"
                         }`} />
                       </button>
                     </div>
