@@ -23,7 +23,6 @@ interface Product {
   price: number
   image: string | null
   badge: string | null
-  additionalOptions?: any[]
 }
 
 interface Category {
@@ -231,10 +230,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
   const [showCart, setShowCart] = useState(false)
-  const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [selectedProductQty, setSelectedProductQty] = useState(1)
-  const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
@@ -795,12 +790,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           return
         }
       }
-    }
-
-    // If product has additional options, open bottom sheet
-    if ((product as any).additionalOptions?.length > 0) {
-      setBottomSheetProduct(product)
-      return
     }
 
     setCart((prev) => {
@@ -1650,32 +1639,27 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Header - Fixed */}
       <div className="fixed top-0 left-0 right-0 z-10 border-b backdrop-blur-xl transition-colors duration-300 safe-top" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-        <div className="mx-auto max-w-3xl px-4 py-3">
+        <div className="mx-auto max-w-3xl px-4 pt-3 pb-3">
           <div className="flex items-center gap-3">
-            {/* Logo */}
-            {establishment.logo ? (
-              <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm shrink-0" />
-            ) : (
-              <FlowOSLogo size={40} variant="icon" className="h-10 w-10 shrink-0" />
-            )}
-            {/* Name + Info */}
+            <div className="flex flex-col items-center shrink-0" style={{ width: 72 }}>
+              {establishment.logo ? (
+                <img src={establishment.logo} alt={establishment.name} className="h-14 w-14 rounded-xl object-cover shadow-sm" />
+              ) : (
+                <FlowOSLogo size={56} variant="icon" className="h-14 w-14" />
+              )}
+              {establishment.instagramUrl && (
+                <a href={normalizeUrl(establishment.instagramUrl)} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center justify-center gap-1 text-[10px] hover:opacity-70 w-full" style={{ color: theme.textMutedMore }}>
+                  <svg className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                  Siga-nos
+                </a>
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-              <div className="flex items-center gap-1.5 text-[10px]" style={{ color: theme.textMuted }}>
-                <span className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"}`}></span>
-                  {isOpen ? "Aberto" : "Fechado"}
-                </span>
-                <span>·</span>
-                <span>30-45 min</span>
-                <span>·</span>
-                <span className="flex items-center gap-0.5">
-                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                  4.8
-                </span>
-              </div>
+              {establishment.description && (
+                <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>{establishment.description}</p>
+              )}
             </div>
-            {/* User Button */}
             {(customer.phone || customerData?.phone) ? (
               <button
                 onClick={() => setShowCustomerProfile(true)}
@@ -1687,67 +1671,24 @@ onPaymentConfirmed={handlePaymentSuccess}
             ) : (
               <button
                 onClick={() => openIdentifyModal()}
-                className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse"
-                style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                className="flex items-center gap-1.5 text-xs hover:opacity-70 shrink-0 animate-pulse"
+                style={{ color: theme.textMutedMore }}
               >
-                <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                </span>
+                Identificar-se
               </button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Spacer for fixed header */}
-      <div className="h-[60px]" />
-
-      {/* Stories / Destaques */}
-      <div className="mx-auto max-w-3xl px-4 py-3">
-        <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-          {[
-            { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
-            { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
-            { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
-            { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
-            { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
-          ].map((story, i) => (
-            <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-              <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
-                <div className="w-14 h-14 rounded-full bg-white p-0.5">
-                  <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
-                    {story.emoji}
-                  </div>
-                </div>
-              </div>
-              <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Banner Carrossel */}
-      <div className="mx-auto max-w-3xl px-4 pb-3">
-        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
-          <div className="relative z-10">
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-            <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-            <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-            <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
-              Ver Cardápio →
-            </button>
-          </div>
-        </div>
-        <div className="flex justify-center gap-1.5 mt-2">
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-        </div>
-      </div>
-
-      {/* Categories + Search - Sticky */}
-      <div className="sticky top-[60px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
-        <div className="mx-auto max-w-3xl px-4 py-2">
+        {/* Category Tabs + Search */}
+        <div
+          ref={tabsRef}
+          className="mx-auto max-w-3xl px-4 pb-3"
+        >
           {searchMode ? (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
@@ -1769,25 +1710,25 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
             </div>
           ) : (
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: "none" }}>
               <button
                 onClick={() => setSearchMode(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-300 shrink-0 hover:opacity-80"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-300 shrink-0 hover:opacity-80"
                 style={{ backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
-                <Search className="h-3.5 w-3.5" />
+                <Search className="h-4 w-4" />
                 <span>Buscar</span>
               </button>
               {sortedCategories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300 shrink-0 ${
+                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
                     activeCategory === cat.id
                       ? "text-white shadow-lg"
                       : "hover:opacity-80"
                   }`}
-                  style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                  style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 20px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
                 >
                   {cat.name}
                 </button>
@@ -1796,6 +1737,9 @@ onPaymentConfirmed={handlePaymentSuccess}
           )}
         </div>
       </div>
+
+      {/* Spacer for fixed header */}
+      <div className="h-[120px]" />
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
@@ -1825,9 +1769,9 @@ onPaymentConfirmed={handlePaymentSuccess}
               return (
                 <div key={cat.id} className="mb-6">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.name}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     {filtered.map((product) => (
-                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
+                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
                     ))}
                   </div>
                 </div>
@@ -1845,9 +1789,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 id={`cat-${cat.id}`}
                 className={`mb-8 ${!isActive ? "hidden" : ""}`}
               >
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} />
                   ))}
                 </div>
               </div>
@@ -1883,37 +1827,32 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Floating Cart Bar */}
-      {cart.length > 0 && !showCart && !showPaymentModal && (
-        <div className="fixed bottom-20 left-0 right-0 z-30 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
-          <button
-            onClick={openCart}
-            className="w-full rounded-2xl px-4 py-3 flex items-center justify-between text-white transition-all active:scale-[0.98]"
-            style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 -4px 20px ${theme.shadowPrimary}` }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <span className="text-sm font-bold block">Ver Sacola</span>
-                <span className="text-xs text-white/80">{totalItems} {totalItems === 1 ? "item" : "itens"}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm">{formatCurrency(total)}</span>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
-              </div>
-            </div>
-          </button>
-        </div>
-      )}
-
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-          <div className="mx-auto max-w-3xl flex items-center justify-center gap-16 px-2 py-2">
+          <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
+            <button
+              onClick={() => setActiveTab("menu")}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
+              style={{ color: activeTab === "menu" ? theme.primary : theme.textMuted }}
+            >
+              <Utensils className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Cardápio</span>
+            </button>
+            <button
+              onClick={() => openCart()}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors relative"
+              style={{ color: cart.length > 0 ? theme.primary : theme.textMuted }}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Carrinho</span>
+              {mounted && totalItems > 0 && (
+                <span className="absolute -top-1.5 right-0.5 flex flex-col items-center justify-center rounded-full px-0.5 text-[7px] font-bold text-white leading-tight" style={{ backgroundColor: theme.primary, minWidth: "1.4rem", height: "1.4rem" }}>
+                  <span>R${Math.round(total)}</span>
+                  <span className="text-[6px] opacity-80">{totalItems}</span>
+                </span>
+              )}
+            </button>
             <button
               onClick={() => {
                 setActiveTab("orders")
@@ -3474,292 +3413,6 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       <InstallPromptToast show={showInstallPrompt} />
-
-      {/* Product Detail Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
-          <div className="absolute inset-x-0 bottom-0 top-12 bg-white rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out" }}>
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-300"></div>
-            </div>
-
-            {/* Close button */}
-            <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
-              <X className="h-4 w-4" />
-            </button>
-
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto">
-              {/* Image */}
-              {selectedProduct.image ? (
-                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-56 object-cover" />
-              ) : (
-                <div className="w-full h-56 flex items-center justify-center bg-gray-100">
-                  <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                </div>
-              )}
-
-              {/* Product Info */}
-              <div className="px-5 py-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="font-bold text-lg" style={{ color: theme.text }}>{selectedProduct.name}</h2>
-                    {selectedProduct.description && (
-                      <p className="text-sm mt-1" style={{ color: theme.textMuted }}>{selectedProduct.description}</p>
-                    )}
-                  </div>
-                  {selectedProduct.badge && (
-                    <span className="badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-full ml-2">
-                      {selectedProduct.badge === "mais_vendido" && "🔥 Mais Pedido"}
-                      {selectedProduct.badge === "novo" && "🆕 Novo"}
-                      {selectedProduct.badge === "promocao" && "🏷️ OFF"}
-                    </span>
-                  )}
-                </div>
-                <p className="font-bold text-xl mt-3" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
-              </div>
-
-              {/* Quantity */}
-              <div className="px-5 pb-4">
-                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: theme.textMutedMore }}>Quantidade</p>
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => setSelectedProductQty(Math.max(1, selectedProductQty - 1))}
-                    className="w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors"
-                    style={{ borderColor: theme.borderInputColor, color: theme.text }}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="w-8 text-center text-lg font-bold" style={{ color: theme.text }}>{selectedProductQty}</span>
-                  <button
-                    onClick={() => setSelectedProductQty(selectedProductQty + 1)}
-                    className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-white transition-colors"
-                    style={{ borderColor: theme.primary, backgroundColor: theme.primary }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Additional Options */}
-              {(() => {
-                const options = (selectedProduct as any).additionalOptions || []
-                if (options.length === 0) return null
-                const groups: Record<string, any[]> = {}
-                options.forEach((opt: any) => {
-                  const group = opt.groupName || "default"
-                  if (!groups[group]) groups[group] = []
-                  groups[group].push(opt)
-                })
-                return (
-                  <div className="px-5 pb-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: theme.textMutedMore }}>Adicionais</p>
-                    {Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
-                      const firstOpt = groupOptions[0]
-                      const isRequired = firstOpt?.selectionType === "required"
-                      return (
-                        <div key={groupIdx} className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-semibold" style={{ color: theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
-                              {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
-                            </div>
-                            {isRequired && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
-                          </div>
-                          <div className="border rounded-xl overflow-hidden" style={{ borderColor: theme.borderInputColor }}>
-                            {groupOptions.map((opt: any, optIdx: number) => {
-                              const selectedOpt = selectedProductOptions.find((o) => o.name === opt.name)
-                              const isSelected = !!selectedOpt
-                              const qty = selectedOpt?.quantity || 0
-
-                              if (opt.inputType === "quantity") {
-                                return (
-                                  <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0" style={{ borderColor: theme.borderInputColor }}>
-                                    <div className="flex-1">
-                                      <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
-                                      {opt.price > 0 && <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {qty > 0 && (
-                                        <>
-                                          <button onClick={() => {
-                                            const newQty = qty - 1
-                                            if (newQty <= 0) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
-                                            else setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: newQty } : o))
-                                          }} className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor }}>
-                                            <Minus className="w-3 h-3" style={{ color: theme.text }} />
-                                          </button>
-                                          <span className="w-5 text-center text-xs font-medium" style={{ color: theme.text }}>{qty}</span>
-                                        </>
-                                      )}
-                                      <button onClick={() => {
-                                        if (isSelected) setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: o.quantity + 1 } : o))
-                                        else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
-                                      }} className="w-7 h-7 rounded-full border flex items-center justify-center text-white" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}>
-                                        <Plus className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                )
-                              }
-                              return (
-                                <label key={optIdx} onClick={() => {
-                                  if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
-                                  else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
-                                }} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors" style={{ borderColor: theme.borderInputColor, backgroundColor: isSelected ? `${theme.primary}10` : "transparent" }}>
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-green-500 bg-green-500" : ""}`} style={!isSelected ? { borderColor: theme.borderInputColor } : {}}>
-                                      {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
-                                    </div>
-                                    <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
-                                  </div>
-                                  {opt.price > 0 && <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
-                                </label>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
-              })()}
-            </div>
-
-            {/* Fixed bottom button */}
-            <div className="px-5 pb-6 pt-3 border-t flex-shrink-0" style={{ borderColor: theme.borderInputColor }}>
-              <button
-                onClick={() => {
-                  const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
-                  const unitPrice = selectedProduct.price + optionsPrice
-                  setCart((prev) => {
-                    const existing = prev.find((item) => item.id === selectedProduct.id)
-                    if (existing) {
-                      return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
-                    }
-                    return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
-                  })
-                  setSelectedProduct(null)
-                  setAddedItemId(selectedProduct.id)
-                  setTimeout(() => setAddedItemId(null), 800)
-                  setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
-                  setTimeout(() => setCartToast(null), 3000)
-                }}
-                className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                style={{ backgroundColor: theme.primary }}
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar · {formatCurrency((selectedProduct.price + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Sheet for Additional Options */}
-      {bottomSheetProduct && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBottomSheetProduct(null)} />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[80vh] flex flex-col" style={{ animation: "slideUp 0.3s ease-out" }}>
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-gray-300"></div>
-            </div>
-            <div className="px-5 pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                {bottomSheetProduct.image ? (
-                  <img src={bottomSheetProduct.image} alt={bottomSheetProduct.name} className="w-16 h-16 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                  </div>
-                )}
-                <div>
-                  <h2 className="font-bold text-gray-900">{bottomSheetProduct.name}</h2>
-                  {bottomSheetProduct.description && <p className="text-xs text-gray-500">{bottomSheetProduct.description}</p>}
-                  <p className="font-bold text-sm mt-1" style={{ color: theme.primary }}>{formatCurrency(bottomSheetProduct.price)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1">
-              {(() => {
-                const options = bottomSheetProduct.additionalOptions || []
-                const groups: Record<string, any[]> = {}
-                options.forEach((opt: any) => {
-                  const group = opt.groupName || "default"
-                  if (!groups[group]) groups[group] = []
-                  groups[group].push(opt)
-                })
-                return Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
-                  const firstOpt = groupOptions[0]
-                  const isRequired = firstOpt?.selectionType === "required"
-                  return (
-                    <div key={groupIdx} className="mb-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">{groupName !== "default" ? groupName : "Opções"}</h3>
-                          {firstOpt?.headerText && <p className="text-[10px] text-gray-400">{firstOpt.headerText}</p>}
-                        </div>
-                        {isRequired && <span className="bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">OBRIGATÓRIO</span>}
-                      </div>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
-                        {groupOptions.map((opt: any, optIdx: number) => {
-                          if (opt.inputType === "quantity") {
-                            return (
-                              <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0">
-                                <div className="flex-1">
-                                  <span className="text-sm text-gray-700">{opt.name}</span>
-                                  {opt.price > 0 && <span className="text-[10px] text-green-600 ml-1">+{formatCurrency(opt.price)}</span>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-500"><Minus className="w-3 h-3" /></button>
-                                  <span className="w-5 text-center text-sm font-medium">0</span>
-                                  <button className="w-7 h-7 rounded-full border text-white flex items-center justify-center" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}><Plus className="w-3 h-3" /></button>
-                                </div>
-                              </div>
-                            )
-                          }
-                          return (
-                            <label key={optIdx} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50">
-                              <div className="flex items-center gap-3">
-                                <div className="w-5 h-5 rounded-full border-2 border-gray-300"></div>
-                                <span className="text-sm text-gray-700">{opt.name}</span>
-                              </div>
-                              {opt.price > 0 && <span className="text-xs text-green-600 font-medium">+{formatCurrency(opt.price)}</span>}
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })
-              })()}
-            </div>
-            <div className="px-5 pb-6 pt-2 border-t border-gray-100">
-              <button
-                onClick={() => {
-                  setCart((prev) => {
-                    const existing = prev.find((item) => item.id === bottomSheetProduct.id)
-                    if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: [] } as CartItem]
-                  })
-                  setBottomSheetProduct(null)
-                  setAddedItemId(bottomSheetProduct.id)
-                  setTimeout(() => setAddedItemId(null), 800)
-                  setCartToast({ name: bottomSheetProduct.name, image: bottomSheetProduct.image || undefined })
-                  setTimeout(() => setCartToast(null), 3000)
-                }}
-                className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                style={{ backgroundColor: theme.primary }}
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar ao pedido — {formatCurrency(bottomSheetProduct.price)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -4361,59 +4014,48 @@ function PaymentModal({
   )
 }
 
-function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
+function ProductCard({ product, onAdd, theme, disabled, isAdded }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean }) {
   return (
-    <div
-      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
-      style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-      onClick={() => onSelect?.(product)}
-    >
-      <div className="relative">
-        {product.image ? (
-          <img
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
-          />
-        ) : (
-          <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
-            <svg className="h-8 w-8" style={{ color: theme.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-          </div>
-        )}
-        {product.badge && (
-          <span className="absolute top-2 left-2 badge-fire text-[9px] font-bold text-white px-2 py-0.5 rounded-full shadow-md">
-            {product.badge === "mais_vendido" && "🔥 Mais Pedido"}
-            {product.badge === "novo" && "🆕 Novo"}
-            {product.badge === "promocao" && "🏷️ OFF"}
-          </span>
-        )}
-      </div>
-      <div className="p-2.5">
-        <h3 className="font-semibold text-xs leading-tight" style={{ color: theme.text }}>{product.name}</h3>
-        {product.description && (
-          <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
-        )}
-        <div className="flex items-center justify-between mt-2">
-          <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdd(product); }}
-            aria-label={`Adicionar ${product.name} ao carrinho`}
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
-            style={{
-              backgroundColor: isAdded ? "#22c55e" : theme.primary,
-              boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
-            }}
-            disabled={disabled}
-          >
-            {isAdded ? (
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            ) : (
-              <Plus className="h-3.5 w-3.5" />
-            )}
-          </button>
+    <div className={`flex items-center gap-4 rounded-xl p-4 transition-all duration-300 backdrop-blur-sm ${disabled ? "opacity-50" : ""}`} style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard }}>
+      {product.image ? (
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          className={`h-20 w-20 flex-shrink-0 rounded-xl object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
+        />
+      ) : (
+        <div className={`flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
+          <svg className="h-8 w-8" style={{ color: theme.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
         </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-semibold" style={{ color: theme.text }}>{product.name}</h3>
+          <ProductBadge badge={product.badge} />
+        </div>
+        {product.description && (
+          <p className="mt-0.5 text-sm line-clamp-2" style={{ color: theme.textMuted }}>{product.description}</p>
+        )}
+        <p className="mt-1 font-bold" style={{ color: theme.primary }}>{formatCurrency(product.price)}</p>
       </div>
+      <button
+        onClick={() => onAdd(product)}
+        aria-label={`Adicionar ${product.name} ao carrinho`}
+        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-white font-bold text-lg transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+        style={{
+          backgroundColor: isAdded ? "#22c55e" : theme.primary,
+          boxShadow: isAdded ? "0 0 25px rgba(34,197,94,0.5)" : `0 0 20px ${theme.shadowPrimary}`,
+          transform: isAdded ? "scale(1.15)" : "scale(1)",
+        }}
+        disabled={disabled}
+      >
+        {isAdded ? (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        ) : (
+          "+"
+        )}
+      </button>
     </div>
   )
 }
