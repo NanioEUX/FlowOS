@@ -14,7 +14,7 @@ export default async function MesaServerPage({
     where: { slug: params.slug },
     include: {
       categories: {
-        include: { products: { where: { isAvailable: true }, orderBy: { order: "asc" } } },
+        include: { products: { where: { isAvailable: true }, orderBy: { order: "asc" }, include: { additionalOptions: true } } },
         orderBy: { order: "asc" },
       },
     },

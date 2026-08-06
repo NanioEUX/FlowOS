@@ -4,6 +4,7 @@ export interface CartItem {
   price: number
   quantity: number
   image?: string | null
+  additionalOptions?: { name: string; price: number }[]
 }
 
 export interface OrderFormData {

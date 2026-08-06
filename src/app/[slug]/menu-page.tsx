@@ -229,6 +229,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
+  const [additionalOptionsModal, setAdditionalOptionsModal] = useState<{ open: boolean; product: Product | null; options: any[]; selected: { name: string; price: number }[] }>({ open: false, product: null, options: [], selected: [] })
   const [showCart, setShowCart] = useState(false)
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -791,6 +792,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         }
       }
     }
+
+    // Check if product has additional options
+    const productOptions = (product as any).additionalOptions || []
+    if (productOptions.length > 0) {
+      setAdditionalOptionsModal({
+        open: true,
+        product,
+        options: productOptions,
+        selected: [],
+      })
+      return
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {
@@ -798,13 +812,77 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1 } as CartItem]
+      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
     // Show toast
     setCartToast({ name: product.name, image: product.image || undefined })
     setTimeout(() => setCartToast(null), 3000)
+  }
+
+  function confirmAddWithOptions() {
+    if (!additionalOptionsModal.product) return
+
+    // Check if all required options are selected
+    const requiredOptions = additionalOptionsModal.options.filter((opt: any) => opt.selectionType === "required")
+    const selectedRequired = requiredOptions.filter((opt: any) =>
+      additionalOptionsModal.selected.some((s) => s.name === opt.name)
+    )
+
+    if (selectedRequired.length < requiredOptions.length) {
+      // TODO: Show error toast
+      return
+    }
+
+    const product = additionalOptionsModal.product
+    const optionsPrice = additionalOptionsModal.selected.reduce((sum, opt) => sum + opt.price, 0)
+
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id && JSON.stringify(item.additionalOptions) === JSON.stringify(additionalOptionsModal.selected))
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id && JSON.stringify(item.additionalOptions) === JSON.stringify(additionalOptionsModal.selected)
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+      return [...prev, {
+        id: product.id,
+        name: product.name,
+        price: product.price + optionsPrice,
+        image: product.image,
+        quantity: 1,
+        additionalOptions: additionalOptionsModal.selected,
+      } as CartItem]
+    })
+
+    setAddedItemId(product.id)
+    setTimeout(() => setAddedItemId(null), 800)
+    setCartToast({ name: product.name, image: product.image || undefined })
+    setTimeout(() => setCartToast(null), 3000)
+    setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })
+  }
+
+  function toggleAdditionalOption(option: { name: string; price: number }, selectionType: string) {
+    setAdditionalOptionsModal((prev) => {
+      const isSelected = prev.selected.some((s) => s.name === option.name)
+      if (selectionType === "single" || selectionType === "required") {
+        // For single/required, replace selection
+        return {
+          ...prev,
+          selected: isSelected ? [] : [option],
+        }
+      } else {
+        // For multiple, toggle
+        return {
+          ...prev,
+          selected: isSelected
+            ? prev.selected.filter((s) => s.name !== option.name)
+            : [...prev.selected, option],
+        }
+      }
+    })
   }
 
   function updateQuantity(productId: string, delta: number) {
@@ -1730,6 +1808,64 @@ onPaymentConfirmed={handlePaymentSuccess}
         )}
 
       </div>
+
+      {/* Additional Options Modal */}
+      {additionalOptionsModal.open && additionalOptionsModal.product && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })} />
+          <div className="relative w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: theme.bgModal }}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: theme.text }}>{additionalOptionsModal.product.name}</h3>
+                <p className="text-sm" style={{ color: theme.textMuted }}>{formatCurrency(additionalOptionsModal.product.price)}</p>
+              </div>
+              <button onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })} className="rounded-lg p-1" style={{ color: theme.textMuted }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-64 overflow-y-auto space-y-3">
+              {additionalOptionsModal.options.map((opt: any, idx: number) => {
+                const isSelected = additionalOptionsModal.selected.some((s) => s.name === opt.name)
+                const isRequired = opt.selectionType === "required"
+                return (
+                  <label key={idx} className={`flex items-center justify-between rounded-xl border p-3 cursor-pointer transition-all ${isSelected ? "border-green-500 bg-green-50" : "border-zinc-200"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
+                        {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium" style={{ color: theme.text }}>{opt.name}</span>
+                        {isRequired && <span className="ml-1 text-xs text-red-500">*</span>}
+                      </div>
+                    </div>
+                    {opt.price > 0 && (
+                      <span className="text-sm font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })}
+                className="flex-1 rounded-xl border py-3 text-sm font-medium transition-colors"
+                style={{ borderColor: theme.borderCard, color: theme.textMuted }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmAddWithOptions}
+                className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors"
+                style={{ backgroundColor: theme.primary }}
+              >
+                Adicionar · {formatCurrency(additionalOptionsModal.product.price + additionalOptionsModal.selected.reduce((sum, opt) => sum + opt.price, 0))}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cart Toast */}
       {cartToast && (
