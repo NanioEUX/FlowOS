@@ -1662,7 +1662,7 @@ onPaymentConfirmed={handlePaymentSuccess}
   }
 
   return (
-    <div className="min-h-screen pb-24 overflow-x-hidden transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
+    <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
       <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; }`}</style>
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -1670,7 +1670,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Header - Fixed */}
-      <div className="fixed top-0 left-0 right-0 z-10 border-b backdrop-blur-xl transition-colors duration-300 safe-top" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+      <div className="fixed top-0 left-0 right-0 z-30 border-b backdrop-blur-xl transition-colors duration-300 safe-top" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
         <div className="mx-auto max-w-3xl px-4 py-3">
           <div className="flex items-center gap-3">
             {/* Logo */}
@@ -1719,10 +1719,10 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div className="h-[60px]" />
+      <div className="h-[52px]" />
 
-      {/* Stories / Destaques - Fixed below header */}
-      <div className="sticky top-[60px] z-10 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
+      {/* Stories / Destaques - Sticky below header */}
+      <div className="sticky top-[52px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
         <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
             {[
@@ -1768,7 +1768,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       </div>
 
-      {/* Categories */}
+      {/* Categories - Sticky below banner */}
+      <div className="sticky top-[130px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
       <div className="mx-auto max-w-3xl px-4 pb-2">
         {searchMode ? (
           <div className="relative">
@@ -1822,6 +1823,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             })}
           </div>
         )}
+      </div>
       </div>
 
       {/* Closed banner */}
