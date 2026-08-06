@@ -221,6 +221,28 @@ export default function EstoquePage() {
     loadAll()
   }
 
+  async function updateStockItemPrices(item: any) {
+    if (item.productLinks.length === 0) return
+
+    const res = await fetchAuth("/api/products/update-prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stockItemId: item.id, rounding: "none" }),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      if (data.updated > 0) {
+        toast(`${data.updated} preço(s) atualizado(s)`, "success")
+        window.dispatchEvent(new Event("stock-updated"))
+      } else {
+        toast("Todos os preços já estão atualizados", "info")
+      }
+    } else {
+      toast("Erro ao atualizar preços", "error")
+    }
+  }
+
   async function saveSupplier() {
     if (!establishmentId || !supplierForm.name.trim()) return
     const body = { ...supplierForm, establishmentId }
@@ -388,6 +410,20 @@ export default function EstoquePage() {
                                 <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-bold text-green-700 ring-1 ring-inset ring-green-600/10">
                                   Vendável
                                 </span>
+                              )}
+                              {item.previousUnitCost != null && Math.abs(item.unitCost - item.previousUnitCost) > 0.01 && (
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${
+                                  item.unitCost > item.previousUnitCost
+                                    ? "bg-amber-50 text-amber-700 ring-amber-600/10"
+                                    : "bg-blue-50 text-blue-700 ring-blue-600/10"
+                                }`}>
+                                  {item.unitCost > item.previousUnitCost ? "Custo subiu" : "Custo caiu"}
+                                </span>
+                              )}
+                              {item.previousUnitCost != null && Math.abs(item.unitCost - item.previousUnitCost) > 0.01 && item.productLinks.length > 0 && (
+                                <button onClick={() => updateStockItemPrices(item)} className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-bold text-green-700 ring-1 ring-inset ring-green-600/10 hover:bg-green-100 transition-colors">
+                                  Atualizar cardápio
+                                </button>
                               )}
                             </div>
                             <p className="text-xs text-zinc-500">

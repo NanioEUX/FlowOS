@@ -222,6 +222,7 @@ model Category {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   products        Product[]
   targetMarginPercent Float?
+  priceRounding    String?    @default("none")
 }
 
 model Product {
@@ -335,6 +336,7 @@ model StockItem {
   quantity        Float              @default(0)
   minQuantity     Float              @default(0)
   unitCost        Float              @default(0)
+  previousUnitCost Float?
   supplier        String?
   supplierId      String?
   categoryId      String

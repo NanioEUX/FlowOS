@@ -35,6 +35,7 @@ interface Category {
   order: number
   products: Product[]
   targetMarginPercent?: number | null
+  priceRounding?: string | null
 }
 
 const BADGE_OPTIONS = [
@@ -145,6 +146,7 @@ export default function CardapioPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: "category" | "product"; id: string; name: string; productCount?: number }>({ open: false, type: "category", id: "", name: "" })
   const [marginCatId, setMarginCatId] = useState<string | null>(null)
   const [marginCatPercent, setMarginCatPercent] = useState("")
+  const [marginCatRounding, setMarginCatRounding] = useState("none")
   const [savingMarginCat, setSavingMarginCat] = useState(false)
 
   async function loadData() {
@@ -228,6 +230,7 @@ export default function CardapioPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         targetMarginPercent: marginCatPercent ? Number(marginCatPercent) : null,
+        priceRounding: marginCatRounding,
       }),
     })
     setMarginCatId(null)
@@ -236,11 +239,95 @@ export default function CardapioPage() {
     loadData()
   }
 
+  async function updateCategoryPrices(category: any) {
+    if (!category.targetMarginPercent) return
+
+    const links = category.products.flatMap((p: any) => (p.stockLinks || []).map((l: any) => ({ ...l, productName: p.name, productId: p.id })))
+    if (links.length === 0) {
+      toast("Nenhum insumo vinculado nesta categoria", "error")
+      return
+    }
+
+    const rounding = category.priceRounding || "none"
+    const updates: { productName: string; oldPrice: number; newPrice: number }[] = []
+
+    for (const product of category.products) {
+      const productLinks = (product as any).stockLinks || []
+      if (productLinks.length === 0) continue
+
+      let cost = 0
+      for (const link of productLinks) {
+        const item = stockItems.find((s: any) => s.id === link.stockItemId)
+        if (!item) continue
+        const qty = Number(link.quantity) || 0
+        const linkUnit = link.unit || "un"
+        const stockUnit = item.unit || "un"
+        const converted = convertQuantity(qty, linkUnit, stockUnit)
+        if (converted === null) continue
+        cost += converted * (item.unitCost || 0)
+      }
+
+      if (cost <= 0) continue
+
+      const margin = category.targetMarginPercent / 100
+      if (margin >= 1) continue
+
+      const suggested = cost / (1 - margin)
+      let rounded = suggested
+      if (rounding === "integer") {
+        rounded = Math.round(suggested)
+      } else if (rounding === "point90") {
+        const floor = Math.floor(suggested)
+        rounded = (suggested - floor <= 0.9) ? floor + 0.9 : floor + 1.9
+      } else {
+        rounded = Math.round(suggested * 100) / 100
+      }
+
+      if (Math.abs(rounded - product.price) > 0.01) {
+        updates.push({ productName: product.name, oldPrice: product.price, newPrice: rounded })
+      }
+    }
+
+    if (updates.length === 0) {
+      toast("Todos os preços já estão atualizados", "info")
+      return
+    }
+
+    if (!confirm(`Atualizar ${updates.length} preço(s)?\n\n${updates.map((u) => `${u.productName}: ${formatCurrency(u.oldPrice)} → ${formatCurrency(u.newPrice)}`).join("\n")}`)) {
+      return
+    }
+
+    const res = await fetchAuth("/api/products/update-prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categoryId: category.id, rounding }),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      toast(`${data.updated} preço(s) atualizado(s)`, "success")
+      loadData()
+    } else {
+      toast("Erro ao atualizar preços", "error")
+    }
+  }
+
   function getCategorySuggestedPrice(category: any, cost: number): number | null {
     const m = category.targetMarginPercent
     if (!m || cost <= 0) return null
     const margin = m / 100
     return margin >= 1 ? null : cost / (1 - margin)
+  }
+
+  function hasCostAlert(product: any): boolean {
+    const links = product.stockLinks || []
+    for (const link of links) {
+      const item = stockItems.find((s: any) => s.id === link.stockItemId)
+      if (item && item.previousUnitCost != null && Math.abs(item.unitCost - item.previousUnitCost) > 0.01) {
+        return true
+      }
+    }
+    return false
   }
 
   function handleDeleteCategory(id: string, name: string, productCount: number) {
@@ -630,6 +717,7 @@ export default function CardapioPage() {
                         onClick={() => {
                           setMarginCatId(cat.id)
                           setMarginCatPercent(cat.targetMarginPercent != null ? String(cat.targetMarginPercent) : "")
+                          setMarginCatRounding(cat.priceRounding || "none")
                         }}
                         className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                           cat.targetMarginPercent != null
@@ -649,6 +737,11 @@ export default function CardapioPage() {
                           </>
                         )}
                       </button>
+                      {cat.targetMarginPercent != null && (
+                        <Button size="sm" variant="ghost" onClick={() => updateCategoryPrices(cat)} className="text-xs">
+                          Atualizar preços
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
                         Adicionar
@@ -663,16 +756,24 @@ export default function CardapioPage() {
                   </div>
 
                   {marginCatId === cat.id && (
-                    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 mb-2">
+                    <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 mb-2 space-y-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="text-sm font-medium text-zinc-700">Margem de venda:</span>
-                      <div className="relative">
-                        <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                        <div className="relative">
+                          <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                        </div>
+                        <span className="text-sm font-medium text-zinc-700">Arredondamento:</span>
+                        <select value={marginCatRounding} onChange={(e) => setMarginCatRounding(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
+                          <option value="none">Nenhum</option>
+                          <option value="integer">Inteiro</option>
+                          <option value="point90">.90</option>
+                        </select>
+                        <Button size="sm" onClick={saveMarginCategory} disabled={savingMarginCat}>
+                          {savingMarginCat ? "..." : "Salvar"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setMarginCatId(null)}>Cancelar</Button>
                       </div>
-                      <Button size="sm" onClick={saveMarginCategory} disabled={savingMarginCat}>
-                        {savingMarginCat ? "..." : "Salvar"}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setMarginCatId(null)}>Cancelar</Button>
                     </div>
                   )}
 
@@ -721,6 +822,7 @@ export default function CardapioPage() {
                               <p className="font-medium text-zinc-900">{product.name}</p>
                               {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
                               {(product as any).stockLinks?.length > 0 && <Badge variant="success">Vendável</Badge>}
+                              {hasCostAlert(product) && <Badge variant="warning">Custo alterado</Badge>}
                               {getBadgeDisplay(product.badge)}
                             </div>
                             {product.description && (

@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
           order: body.order || 0,
           establishmentId: body.establishmentId,
           targetMarginPercent: body.targetMarginPercent ?? null,
+          priceRounding: body.priceRounding || "none",
         },
       })
       return NextResponse.json(cat)

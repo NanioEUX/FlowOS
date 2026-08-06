@@ -97,9 +97,11 @@ export async function POST(req: NextRequest) {
             const totalNewValue = body.quantity * newCost
             const avgCost = (totalOldValue + totalNewValue) / (item.quantity + body.quantity)
             updateData.unitCost = Math.round(avgCost * 100) / 100
+            updateData.previousUnitCost = oldCost
             costAlert = `Custo médio atualizado: R$ ${oldCost.toFixed(2)} → R$ ${updateData.unitCost.toFixed(2)} (${isHigher ? "+" : ""}${diff}%)`
           } else {
             updateData.unitCost = newCost
+            updateData.previousUnitCost = oldCost
             costAlert = `Custo atualizado: R$ ${oldCost.toFixed(2)} → R$ ${newCost.toFixed(2)} (${isHigher ? "+" : ""}${diff}%)`
           }
         }
