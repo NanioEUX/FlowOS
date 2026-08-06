@@ -1721,27 +1721,29 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div className="h-[60px]" />
 
-      {/* Stories / Destaques */}
-      <div className="mx-auto max-w-3xl px-4 pt-3 pb-2">
-        <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-          {[
-            { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
-            { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
-            { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
-            { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
-            { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
-          ].map((story, i) => (
-            <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-              <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
-                <div className="w-14 h-14 rounded-full bg-white p-0.5">
-                  <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
-                    {story.emoji}
+      {/* Stories / Destaques - Fixed below header */}
+      <div className="sticky top-[60px] z-10 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
+        <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
+          <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {[
+              { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
+              { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
+              { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
+              { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
+              { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
+            ].map((story, i) => (
+              <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
+                <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
+                  <div className="w-14 h-14 rounded-full bg-white p-0.5">
+                    <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
+                      {story.emoji}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
-            </button>
-          ))}
+                <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
