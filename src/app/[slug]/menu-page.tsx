@@ -469,7 +469,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [couponLoading, setCouponLoading] = useState(false)
 
   // Tab & search
-  const [activeCategory, setActiveCategory] = useState<string>("")
+  const [activeCategory, setActiveCategory] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -492,6 +492,27 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return aProdMatch === bProdMatch ? 0 : aProdMatch ? -1 : 1
     })
 
+  const getCategoryEmoji = (name: string): string => {
+    const lower = name.toLowerCase()
+    if (lower.includes("pizza")) return "🍕"
+    if (lower.includes("hambúrguer") || lower.includes("burger") || lower.includes("lanches")) return "🍔"
+    if (lower.includes("bebida") || lower.includes("drink")) return "🥤"
+    if (lower.includes("sobremesa") || lower.includes("doce")) return "🍰"
+    if (lower.includes("acompanhamento") || lower.includes("batata")) return "🍟"
+    if (lower.includes("combo")) return "🎁"
+    if (lower.includes("promoção") || lower.includes("oferta")) return "💰"
+    if (lower.includes("porção")) return "🍽️"
+    if (lower.includes("massa")) return "🍝"
+    if (lower.includes("salada")) return "🥗"
+    if (lower.includes("sorvete") || lower.includes("gelado")) return "🍦"
+    if (lower.includes("café")) return "☕"
+    if (lower.includes("suco")) return "🧃"
+    if (lower.includes("cerveja") || lower.includes("álcool")) return "🍺"
+    if (lower.includes("molho")) return "🫙"
+    if (lower.includes("ingrediente") || lower.includes("insumo")) return "📦"
+    return "🍽️"
+  }
+
   const filteredProducts = (cat: Category) => {
     if (!searchQuery) return cat.products
     const q = searchQuery.toLowerCase()
@@ -505,9 +526,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   useEffect(() => {
     if (!activeCategory && sortedCategories.length > 0) {
-      setActiveCategory(sortedCategories[0].id)
+      setActiveCategory("all")
     }
-  }, [sortedCategories, activeCategory])
+  }, [sortedCategories])
 
   const fullAddress = cepAddress
     ? `${cepAddress.logradouro}, ${customer.address || "s/n"} - ${cepAddress.bairro}, ${cepAddress.localidade} - ${cepAddress.uf}`
@@ -1700,54 +1721,55 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div className="h-[60px]" />
 
-      {/* Stories / Destaques */}
-      <div className="mx-auto max-w-3xl px-4 py-3">
-        <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-          {[
-            { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
-            { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
-            { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
-            { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
-            { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
-          ].map((story, i) => (
-            <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-              <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
-                <div className="w-14 h-14 rounded-full bg-white p-0.5">
-                  <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
-                    {story.emoji}
+      {/* Stories + Categories - Fixed below header */}
+      <div className="sticky top-[60px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
+        {/* Stories / Destaques */}
+        <div className="mx-auto max-w-3xl px-4 pt-3 pb-2">
+          <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {[
+              { label: "Mais Vendidos", emoji: "🔥", gradient: "from-red-400 to-orange-500", viewed: false },
+              { label: "Combos do Dia", emoji: "🎁", gradient: "from-yellow-400 to-orange-500", viewed: false },
+              { label: "Lançamentos", emoji: "✨", gradient: "from-blue-400 to-purple-500", viewed: false },
+              { label: "Promoções", emoji: "💰", gradient: "from-green-400 to-emerald-500", viewed: true },
+              { label: "Bebidas", emoji: "🥤", gradient: "from-pink-400 to-rose-500", viewed: false },
+            ].map((story, i) => (
+              <button key={i} className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
+                <div className={`rounded-full p-[3px] ${story.viewed ? "bg-gray-300" : ""}`} style={!story.viewed ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}88)` } : {}}>
+                  <div className="w-14 h-14 rounded-full bg-white p-0.5">
+                    <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradient} flex items-center justify-center text-white text-lg`}>
+                      {story.emoji}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Banner Carrossel */}
-      <div className="mx-auto max-w-3xl px-4 pb-3">
-        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
-          <div className="relative z-10">
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-            <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-            <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-            <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
-              Ver Cardápio →
-            </button>
+                <span className="text-[10px] font-medium" style={{ color: theme.textMuted }}>{story.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex justify-center gap-1.5 mt-2">
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-        </div>
-      </div>
 
-      {/* Categories + Search - Sticky */}
-      <div className="sticky top-[60px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
-        <div className="mx-auto max-w-3xl px-4 py-2">
+        {/* Banner Carrossel */}
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
+            <div className="relative z-10">
+              <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
+              <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
+              <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
+              <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
+                Ver Cardápio →
+              </button>
+            </div>
+          </div>
+          <div className="flex justify-center gap-1.5 mt-2">
+            <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="mx-auto max-w-3xl px-4 pb-2">
           {searchMode ? (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
@@ -1771,27 +1793,33 @@ onPaymentConfirmed={handlePaymentSuccess}
           ) : (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
               <button
-                onClick={() => setSearchMode(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-300 shrink-0 hover:opacity-80"
-                style={{ backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                onClick={() => setActiveCategory("all")}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${
+                  activeCategory === "all" || !activeCategory
+                    ? "text-white shadow-lg"
+                    : "hover:opacity-80"
+                }`}
+                style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
-                <Search className="h-3.5 w-3.5" />
-                <span>Buscar</span>
+                🍽️ Todos
               </button>
-              {sortedCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300 shrink-0 ${
-                    activeCategory === cat.id
-                      ? "text-white shadow-lg"
-                      : "hover:opacity-80"
-                  }`}
-                  style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-                >
-                  {cat.name}
-                </button>
-              ))}
+              {sortedCategories.map((cat) => {
+                const emoji = getCategoryEmoji(cat.name)
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${
+                      activeCategory === cat.id
+                        ? "text-white shadow-lg"
+                        : "hover:opacity-80"
+                    }`}
+                    style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                  >
+                    {emoji} {cat.name}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -1813,7 +1841,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Categories & Products */}
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto max-w-3xl px-4 py-6 pb-32">
         {searchQuery ? (
           <div>
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
@@ -1838,7 +1866,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           sortedCategories.map((cat) => {
             const products = cat.products
             if (products.length === 0) return null
-            const isActive = activeCategory === cat.id
+            const isActive = activeCategory === "all" || activeCategory === cat.id
             return (
               <div
                 key={cat.id}
@@ -1913,7 +1941,15 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-          <div className="mx-auto max-w-3xl flex items-center justify-center gap-16 px-2 py-2">
+          <div className="mx-auto max-w-3xl flex items-center justify-around px-4 py-2">
+            <button
+              onClick={() => setSearchMode(true)}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
+              style={{ color: theme.textMuted }}
+            >
+              <Search className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Buscar</span>
+            </button>
             <button
               onClick={() => {
                 setActiveTab("orders")
