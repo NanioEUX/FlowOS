@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Tag, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -71,6 +71,7 @@ export default function CardapioPage() {
   const [establishmentSlug, setEstablishmentSlug] = useState<string>("")
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showProductForm, setShowProductForm] = useState(false)
+  const [priceUpdateModal, setPriceUpdateModal] = useState<{ open: boolean; category: any | null; products: any[]; rounding: string }>({ open: false, category: null, products: [], rounding: "none" })
   const [productTab, setProductTab] = useState<"basico" | "onde" | "ficha">("basico")
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
@@ -248,8 +249,7 @@ export default function CardapioPage() {
       return
     }
 
-    const rounding = category.priceRounding || "none"
-    const updates: { productName: string; oldPrice: number; newPrice: number }[] = []
+    const updates: { productId: string; productName: string; oldPrice: number; newPrice: number }[] = []
 
     for (const product of category.products) {
       const productLinks = (product as any).stockLinks || []
@@ -273,18 +273,9 @@ export default function CardapioPage() {
       if (margin >= 1) continue
 
       const suggested = cost / (1 - margin)
-      let rounded = suggested
-      if (rounding === "integer") {
-        rounded = Math.round(suggested)
-      } else if (rounding === "point90") {
-        const floor = Math.floor(suggested)
-        rounded = (suggested - floor <= 0.9) ? floor + 0.9 : floor + 1.9
-      } else {
-        rounded = Math.round(suggested * 100) / 100
-      }
 
-      if (Math.abs(rounded - product.price) > 0.01) {
-        updates.push({ productName: product.name, oldPrice: product.price, newPrice: rounded })
+      if (Math.abs(suggested - product.price) > 0.01) {
+        updates.push({ productId: product.id, productName: product.name, oldPrice: product.price, newPrice: suggested })
       }
     }
 
@@ -293,23 +284,37 @@ export default function CardapioPage() {
       return
     }
 
-    if (!confirm(`Atualizar ${updates.length} preço(s)?\n\n${updates.map((u) => `${u.productName}: ${formatCurrency(u.oldPrice)} → ${formatCurrency(u.newPrice)}`).join("\n")}`)) {
-      return
-    }
+    setPriceUpdateModal({ open: true, category, products: updates, rounding: category.priceRounding || "none" })
+  }
+
+  async function confirmPriceUpdate() {
+    if (!priceUpdateModal.category) return
 
     const res = await fetchAuth("/api/products/update-prices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId: category.id, rounding }),
+      body: JSON.stringify({ categoryId: priceUpdateModal.category.id, rounding: priceUpdateModal.rounding }),
     })
 
     if (res.ok) {
       const data = await res.json()
       toast(`${data.updated} preço(s) atualizado(s)`, "success")
+      setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })
       loadData()
     } else {
       toast("Erro ao atualizar preços", "error")
     }
+  }
+
+  function getRoundedPrice(price: number, method: string): number {
+    if (method === "integer") {
+      return Math.round(price)
+    }
+    if (method === "point90") {
+      const floor = Math.floor(price)
+      return (price - floor <= 0.9) ? floor + 0.9 : floor + 1.9
+    }
+    return Math.round(price * 100) / 100
   }
 
   function getCategorySuggestedPrice(category: any, cost: number): number | null {
@@ -738,7 +743,8 @@ export default function CardapioPage() {
                         )}
                       </button>
                       {cat.targetMarginPercent != null && (
-                        <Button size="sm" variant="ghost" onClick={() => updateCategoryPrices(cat)} className="text-xs">
+                        <Button size="sm" variant="ghost" onClick={() => updateCategoryPrices(cat)} className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
                           Atualizar preços
                         </Button>
                       )}
@@ -763,12 +769,6 @@ export default function CardapioPage() {
                           <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
                           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
                         </div>
-                        <span className="text-sm font-medium text-zinc-700">Arredondamento:</span>
-                        <select value={marginCatRounding} onChange={(e) => setMarginCatRounding(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
-                          <option value="none">Nenhum</option>
-                          <option value="integer">Inteiro</option>
-                          <option value="point90">.90</option>
-                        </select>
                         <Button size="sm" onClick={saveMarginCategory} disabled={savingMarginCat}>
                           {savingMarginCat ? "..." : "Salvar"}
                         </Button>
@@ -1716,14 +1716,79 @@ export default function CardapioPage() {
         title={deleteConfirm.type === "category" ? "Remover categoria" : "Remover produto"}
         message={
           deleteConfirm.type === "category"
-            ? `Tem certeza que deseja remover a categoria "${deleteConfirm.name}" e seus ${deleteConfirm.productCount || 0} produtos? Esta ação não pode ser desfeita.`
-            : `Tem certeza que deseja remover o produto "${deleteConfirm.name}"? Esta ação não pode ser desfeita.`
+            ? `Tem certeza que desejar remover a categoria "${deleteConfirm.name}" e seus ${deleteConfirm.productCount || 0} produtos? Esta ação não pode ser desfeita.`
+            : `Tem certeza que desejar remover o produto "${deleteConfirm.name}"? Esta ação não pode ser desfeita.`
         }
         confirmLabel="Remover"
         variant="danger"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteConfirm({ open: false, type: "category", id: "", name: "" })}
       />
+
+      {priceUpdateModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <h3 className="text-lg font-semibold text-zinc-900">Atualizar preços</h3>
+              </div>
+              <button onClick={() => setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <p className="mb-3 text-sm text-zinc-600">
+                Categoria: <span className="font-semibold">{priceUpdateModal.category?.name}</span>
+              </p>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Arredondamento:</label>
+                <select
+                  value={priceUpdateModal.rounding}
+                  onChange={(e) => setPriceUpdateModal({ ...priceUpdateModal, rounding: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                >
+                  <option value="none">Nenhum (manter centavos)</option>
+                  <option value="integer">Inteiro (R$ 50,33 → R$ 50)</option>
+                  <option value="point90">.90 (R$ 50,33 → R$ 49,90)</option>
+                </select>
+              </div>
+              <div className="max-h-64 overflow-y-auto rounded-lg border border-zinc-200">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-zinc-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-zinc-600">Produto</th>
+                      <th className="px-3 py-2 text-right font-medium text-zinc-600">Atual</th>
+                      <th className="px-3 py-2 text-right font-medium text-zinc-600">Novo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {priceUpdateModal.products.map((p) => {
+                      const newPrice = getRoundedPrice(p.newPrice, priceUpdateModal.rounding)
+                      return (
+                        <tr key={p.productId}>
+                          <td className="px-3 py-2 text-zinc-900">{p.productName}</td>
+                          <td className="px-3 py-2 text-right text-zinc-500">{formatCurrency(p.oldPrice)}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-green-600">{formatCurrency(newPrice)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-zinc-400">{priceUpdateModal.products.length} produto(s) serão atualizados</p>
+            </div>
+            <div className="flex gap-3 border-t border-zinc-200 px-6 py-4">
+              <Button variant="outline" className="flex-1" onClick={() => setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })}>
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={confirmPriceUpdate}>
+                Aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
