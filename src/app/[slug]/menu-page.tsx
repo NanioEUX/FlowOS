@@ -809,6 +809,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function toggleCartItemOption(itemId: string, option: { name: string; price: number; quantity?: number }) {
+    const qty = option.quantity ?? 0
     setCart((prev) => prev.map((item) => {
       if (item.id !== itemId) return item
       const currentOptions = item.additionalOptions || []
@@ -819,13 +820,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         // Quantity mode - add or remove
         if (isSelected) {
           const existing = currentOptions.find((o) => o.name === option.name)
-          if (existing && existing.quantity + option.quantity > 0) {
-            newOptions = currentOptions.map((o) => o.name === option.name ? { ...o, quantity: o.quantity + option.quantity } : o)
+          if (existing && existing.quantity + qty > 0) {
+            newOptions = currentOptions.map((o) => o.name === option.name ? { ...o, quantity: o.quantity + qty } : o)
           } else {
             newOptions = currentOptions.filter((o) => o.name !== option.name)
           }
         } else {
-          newOptions = [...currentOptions, { name: option.name, price: option.price, quantity: option.quantity || 1 }]
+          newOptions = [...currentOptions, { name: option.name, price: option.price, quantity: qty || 1 }]
         }
       } else {
         // Radio mode - toggle
@@ -834,7 +835,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           : [...currentOptions, { name: option.name, price: option.price, quantity: 1 }]
       }
       
-      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
+      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * (o.quantity ?? 0)), 0)
       const basePrice = (item as any).basePrice || item.price
       return {
         ...item,
@@ -851,11 +852,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const currentOptions = item.additionalOptions || []
       const newOptions = currentOptions.map((o) => {
         if (o.name !== optionName) return o
-        const newQty = o.quantity + delta
+        const newQty = (o.quantity ?? 0) + delta
         return newQty > 0 ? { ...o, quantity: newQty } : o
-      }).filter((o) => o.quantity > 0)
+      }).filter((o) => (o.quantity ?? 0) > 0)
       
-      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
+      const optionsPrice = newOptions.reduce((sum, o) => sum + (o.price * (o.quantity ?? 0)), 0)
       const basePrice = (item as any).basePrice || item.price
       return {
         ...item,
