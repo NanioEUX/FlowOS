@@ -52,6 +52,7 @@ interface Establishment {
   instagramUrl: string | null
   businessHours: string | null
   loyaltyConfig: string | null
+  tierConfig: string | null
   pickupMessage: string | null
   deliveryMessage: string | null
   confirmationTitle: string | null
@@ -70,6 +71,7 @@ interface CustomerData {
   totalOrders: number
   totalSpent: number
   loyaltyPoints: number
+  tier: string
 }
 
 interface Props {
@@ -444,8 +446,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch { return null }
   }, [establishment.loyaltyConfig])
 
+  const parsedTierConfig = useMemo(() => {
+    try {
+      return establishment.tierConfig ? JSON.parse(establishment.tierConfig) : null
+    } catch { return null }
+  }, [establishment.tierConfig])
+
   const [useLoyalty, setUseLoyalty] = useState(false)
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0)
+  const [customerTier, setCustomerTier] = useState("bronze")
 
   const loyaltyDiscount = useMemo(() => {
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
@@ -679,6 +688,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           setCustomerData(data)
           setCustomer((prev) => ({ ...prev, name: data.name || prev.name, address: data.address || prev.address, cpf: data.cpf || prev.cpf }))
           setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
+          setCustomerTier(data.tier || "bronze")
           if (data.cep && data.address) {
             setAddressSaved(true)
           }
@@ -1673,8 +1683,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <p className="text-sm font-medium text-amber-300">
                   <Star className="inline h-4 w-4 mr-1" />
                   {useLoyalty && loyaltyDiscount > 0
-                    ? `Usado ${parsedLoyalty.redeemPoints} pontos (-${formatCurrency(loyaltyDiscount)})`
-                    : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} pontos ganhos!`}
+                    ? `Usado ${parsedLoyalty.redeemPoints} cash (-${formatCurrency(loyaltyDiscount)})`
+                    : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} cash (R$ ${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))}) ganho!`}
                 </p>
               </div>
             )}
@@ -2295,9 +2305,38 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                   {parsedLoyalty?.enabled && (
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Pontos</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
                       <p className="text-sm font-medium text-amber-400 flex items-center gap-1">
-                        <Star className="h-3 w-3" />{customerLoyaltyPoints} pontos
+                        <Star className="h-3 w-3" />{customerLoyaltyPoints} cash = {formatCurrency(customerLoyaltyPoints)}
+                      </p>
+                    </div>
+                  )}
+                  {parsedTierConfig?.enabled && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nível</p>
+                      <p className="text-sm font-medium" style={{ color: theme.text }}>
+                        {(() => {
+                          const sortedTiers = [...(parsedTierConfig.tiers || [])].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
+                          const currentTierObj = sortedTiers.find((t: any) => (customerData?.totalSpent || 0) >= (t.minSpent || 0))
+                          const currentIdx = sortedTiers.findIndex((t: any) => t.name.toLowerCase() === customerTier)
+                          const nextTier = currentIdx >= 0 ? sortedTiers[currentIdx - 1] : null
+                          const progress = nextTier ? Math.min(100, ((customerData?.totalSpent || 0) / (nextTier.minSpent || 1)) * 100) : 100
+                          return (
+                            <div>
+                              <span>{currentTierObj?.emoji || "🥉"} {currentTierObj?.name || "Bronze"} — {currentTierObj?.multiplier || 1}x cash</span>
+                              {nextTier && (
+                                <div className="mt-2">
+                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: theme.borderSubtle }}>
+                                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: currentTierObj?.color || "#CD7F32" }} />
+                                  </div>
+                                  <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>
+                                    Faltam R$ {((nextTier.minSpent || 0) - (customerData?.totalSpent || 0)).toFixed(0)} para {nextTier.emoji} {nextTier.name}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </p>
                     </div>
                   )}
@@ -2728,9 +2767,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <Star className="h-4 w-4 text-amber-400" />
                         <div>
                           <p className="text-sm font-medium" style={{ color: theme.text }}>
-                            {parsedLoyalty.redeemType === "product" ? "Trocar pontos por produto" : "Usar pontos de fidelidade"}
+                            {parsedLoyalty.redeemType === "product" ? "Trocar cash por produto" : "Usar meu cashback"}
                           </p>
-                          <p className="text-xs" style={{ color: theme.textMuted }}>{customerLoyaltyPoints} pontos disponíveis</p>
+                          <p className="text-xs" style={{ color: theme.textMuted }}>{customerLoyaltyPoints} cash = {formatCurrency(customerLoyaltyPoints)}</p>
                         </div>
                       </div>
                       <input
@@ -2744,8 +2783,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100) && (
                       <p className="mt-1 text-xs" style={{ color: theme.textMutedMore }}>
                         {parsedLoyalty.redeemType === "product"
-                          ? `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar um produto`
-                          : `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} pontos para resgatar R$ ${parsedLoyalty.redeemDiscount || 10} de desconto`}
+                          ? `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} cash para resgatar um produto`
+                          : `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} cash para resgatar R$ ${parsedLoyalty.redeemDiscount || 10} de desconto`}
                       </p>
                     )}
                     {useLoyalty && loyaltyDiscount > 0 && (
@@ -2779,7 +2818,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   )}
                   {loyaltyDiscount > 0 && (
                     <div className="flex justify-between text-sm text-amber-400">
-                      <span>Desconto (pontos)</span>
+                      <span>Desconto (cash)</span>
                       <span>-{formatCurrency(loyaltyDiscount)}</span>
                     </div>
                   )}

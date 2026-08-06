@@ -3,12 +3,32 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Star, Loader2, Save } from "lucide-react"
+import { Star, Loader2, Save, Award, Plus, Trash2, GripVertical } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { formatCurrency } from "@/lib/utils"
 import { SearchableSelect } from "@/components/searchable-select"
+
+interface Tier {
+  name: string
+  minSpent: number
+  multiplier: number
+  emoji: string
+  color: string
+}
+
+interface TierConfig {
+  enabled: boolean
+  tiers: Tier[]
+}
+
+const DEFAULT_TIERS: Tier[] = [
+  { name: "Bronze", minSpent: 0, multiplier: 1, emoji: "🥉", color: "#CD7F32" },
+  { name: "Prata", minSpent: 300, multiplier: 1.5, emoji: "🥈", color: "#C0C0C0" },
+  { name: "Ouro", minSpent: 800, multiplier: 2, emoji: "🥇", color: "#FFD700" },
+  { name: "Diamante", minSpent: 2000, multiplier: 3, emoji: "💎", color: "#B9F2FF" },
+]
 
 export default function FidelidadePageContent() {
   const searchParams = useSearchParams()
@@ -26,6 +46,10 @@ export default function FidelidadePageContent() {
     redeemType: "discount",
     redeemProductId: "",
   })
+  const [tierConfig, setTierConfig] = useState<TierConfig>({
+    enabled: false,
+    tiers: DEFAULT_TIERS,
+  })
   const [allProducts, setAllProducts] = useState<any[]>([])
 
   useEffect(() => {
@@ -37,6 +61,12 @@ export default function FidelidadePageContent() {
           try {
             const lc = JSON.parse(data.loyaltyConfig)
             setLoyaltyConfig((prev) => ({ ...prev, ...lc }))
+          } catch {}
+        }
+        if (!data.error && data.tierConfig) {
+          try {
+            const tc = JSON.parse(data.tierConfig)
+            setTierConfig((prev) => ({ ...prev, ...tc }))
           } catch {}
         }
       })
@@ -56,7 +86,10 @@ export default function FidelidadePageContent() {
       const res = await fetchAuth(`/api/establishments/${establishmentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ loyaltyConfig: JSON.stringify(loyaltyConfig) }),
+        body: JSON.stringify({
+          loyaltyConfig: JSON.stringify(loyaltyConfig),
+          tierConfig: JSON.stringify(tierConfig),
+        }),
       })
       if (res.ok) {
         setSaved(true)
@@ -69,17 +102,49 @@ export default function FidelidadePageContent() {
     }
   }
 
+  function updateTier(index: number, field: keyof Tier, value: any) {
+    setTierConfig((prev) => ({
+      ...prev,
+      tiers: prev.tiers.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    }))
+  }
+
+  function addTier() {
+    setTierConfig((prev) => ({
+      ...prev,
+      tiers: [...prev.tiers, { name: "Novo Nível", minSpent: 0, multiplier: 1, emoji: "⭐", color: "#888888" }],
+    }))
+  }
+
+  function removeTier(index: number) {
+    setTierConfig((prev) => ({
+      ...prev,
+      tiers: prev.tiers.filter((_, i) => i !== index),
+    }))
+  }
+
+  function moveTier(index: number, direction: "up" | "down") {
+    setTierConfig((prev) => {
+      const tiers = [...prev.tiers]
+      const targetIndex = direction === "up" ? index - 1 : index + 1
+      if (targetIndex < 0 || targetIndex >= tiers.length) return prev
+      ;[tiers[index], tiers[targetIndex]] = [tiers[targetIndex], tiers[index]]
+      return { ...prev, tiers }
+    })
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h2 className="text-2xl font-bold text-zinc-900">Fidelidade</h2>
 
+      {/* Loyalty Config */}
       <Card>
         <CardContent className="p-6 space-y-4">
           <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Star className="h-4 w-4" />
-            Programa de Fidelidade
+            Programa de Cashback
           </h3>
-          <p className="text-sm text-zinc-500">Clientes acumulam pontos a cada pedido e trocam por desconto ou produto.</p>
+          <p className="text-sm text-zinc-500">Clientes acumulam cash a cada pedido e usam como desconto.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
               type="checkbox"
@@ -88,14 +153,14 @@ export default function FidelidadePageContent() {
               className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
             />
             <div>
-              <span className="font-medium text-zinc-900">Ativar fidelidade</span>
-              <p className="text-xs text-zinc-500">Clientes ganham pontos a cada R$ 1 gasto</p>
+              <span className="font-medium text-zinc-900">Ativar cashback</span>
+              <p className="text-xs text-zinc-500">Clientes ganham cash a cada R$ 1 gasto</p>
             </div>
           </label>
           {loyaltyConfig.enabled && (
             <div className="rounded-lg bg-zinc-50 p-4 space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos por R$ 1</label>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Cash por R$ 1</label>
                 <input
                   type="number"
                   min="1"
@@ -128,7 +193,7 @@ export default function FidelidadePageContent() {
               {loyaltyConfig.redeemType !== "product" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cash para resgatar</label>
                     <input
                       type="number"
                       min="1"
@@ -152,7 +217,7 @@ export default function FidelidadePageContent() {
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pontos para resgatar</label>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cash para resgatar</label>
                     <input
                       type="number"
                       min="1"
@@ -175,8 +240,117 @@ export default function FidelidadePageContent() {
 
               <p className="text-xs text-zinc-400">
                 {loyaltyConfig.redeemType !== "product"
-                  ? `Ex: ${loyaltyConfig.pointsPerReal} ponto(s) por R$ 1 • ${loyaltyConfig.redeemPoints} pontos = R$ ${loyaltyConfig.redeemDiscount} de desconto`
-                  : `Ex: ${loyaltyConfig.pointsPerReal} ponto(s) por R$ 1 • ${loyaltyConfig.redeemPoints} pontos = produto selecionado`}
+                  ? `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = R$ ${loyaltyConfig.redeemDiscount} de desconto`
+                  : `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = produto selecionado`}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tier Config */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <Award className="h-4 w-4" />
+            Níveis de Fidelidade
+          </h3>
+          <p className="text-sm text-zinc-500">Níveis automáticos baseados no total gasto. Clientes em níveis mais altos ganham mais cash.</p>
+          <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+            <input
+              type="checkbox"
+              checked={tierConfig.enabled}
+              onChange={(e) => setTierConfig({ ...tierConfig, enabled: e.target.checked })}
+              className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+            />
+            <div>
+              <span className="font-medium text-zinc-900">Ativar níveis</span>
+              <p className="text-xs text-zinc-500">Clientes sobem de nível automaticamente</p>
+            </div>
+          </label>
+          {tierConfig.enabled && (
+            <div className="space-y-3">
+              {tierConfig.tiers.map((tier, index) => (
+                <div key={index} className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveTier(index, "up")}
+                      disabled={index === 0}
+                      className="text-zinc-400 hover:text-zinc-600 disabled:opacity-30"
+                    >
+                      <GripVertical className="h-3 w-3 rotate-180" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveTier(index, "down")}
+                      disabled={index === tierConfig.tiers.length - 1}
+                      className="text-zinc-400 hover:text-zinc-600 disabled:opacity-30"
+                    >
+                      <GripVertical className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={tier.emoji}
+                    onChange={(e) => updateTier(index, "emoji", e.target.value)}
+                    className="w-10 text-center text-lg"
+                  />
+                  <input
+                    type="text"
+                    value={tier.name}
+                    onChange={(e) => updateTier(index, "name", e.target.value)}
+                    className="w-28 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                  />
+                  <div className="flex-1">
+                    <label className="text-xs text-zinc-500">Mínimo gasto</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-zinc-400">R$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tier.minSpent}
+                        onChange={(e) => updateTier(index, "minSpent", Number(e.target.value))}
+                        className="w-20 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-20">
+                    <label className="text-xs text-zinc-500">Multiplicador</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.5"
+                        value={tier.multiplier}
+                        onChange={(e) => updateTier(index, "multiplier", Number(e.target.value))}
+                        className="w-14 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                      />
+                      <span className="text-xs text-zinc-400">x</span>
+                    </div>
+                  </div>
+                  <input
+                    type="color"
+                    value={tier.color}
+                    onChange={(e) => updateTier(index, "color", e.target.value)}
+                    className="h-8 w-8 cursor-pointer rounded border-0"
+                  />
+                  {tierConfig.tiers.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeTier(index)}
+                      className="text-red-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addTier}>
+                <Plus className="mr-1 h-4 w-4" /> Adicionar nível
+              </Button>
+              <p className="text-xs text-zinc-400">
+                Multiplicador: Prata ganha 1.5x mais cash, Ouro 2x, Diamante 3x
               </p>
             </div>
           )}

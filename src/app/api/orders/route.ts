@@ -164,7 +164,34 @@ export async function POST(req: NextRequest) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
-              pointsDelta += Math.floor(subtotal * (lc.pointsPerReal || 1))
+              let basePoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
+              // Apply tier multiplier
+              let tierMultiplier = 1
+              if (establishment.tierConfig) {
+                try {
+                  const tc = JSON.parse(establishment.tierConfig)
+                  if (tc.enabled && tc.tiers?.length) {
+                    const newTotalSpent = (customer.totalSpent || 0) + calculatedTotal
+                    const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
+                    const currentTier = sortedTiers.find((t: any) => newTotalSpent >= (t.minSpent || 0))
+                    tierMultiplier = currentTier?.multiplier || 1
+                  }
+                } catch {}
+              }
+              pointsDelta += Math.floor(basePoints * tierMultiplier)
+            }
+          } catch {}
+        }
+        // Calculate new totalSpent to determine tier
+        const newTotalSpent = (customer.totalSpent || 0) + calculatedTotal
+        let newTier = customer.tier || "bronze"
+        if (establishment.tierConfig) {
+          try {
+            const tc = JSON.parse(establishment.tierConfig)
+            if (tc.enabled && tc.tiers?.length) {
+              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
+              const matchedTier = sortedTiers.find((t: any) => newTotalSpent >= (t.minSpent || 0))
+              if (matchedTier) newTier = matchedTier.name.toLowerCase()
             }
           } catch {}
         }
@@ -178,16 +205,28 @@ export async function POST(req: NextRequest) {
             totalOrders: { increment: 1 },
             totalSpent: { increment: calculatedTotal },
             loyaltyPoints: { increment: pointsDelta },
+            tier: newTier,
           },
         })
       } else {
         // Create new customer
         let initialPoints = 0
+        let initialTier = "bronze"
         if (establishment.loyaltyConfig) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
               initialPoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
+            }
+          } catch {}
+        }
+        if (establishment.tierConfig) {
+          try {
+            const tc = JSON.parse(establishment.tierConfig)
+            if (tc.enabled && tc.tiers?.length) {
+              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
+              const matchedTier = sortedTiers.find((t: any) => calculatedTotal >= (t.minSpent || 0))
+              if (matchedTier) initialTier = matchedTier.name.toLowerCase()
             }
           } catch {}
         }
@@ -202,6 +241,7 @@ export async function POST(req: NextRequest) {
             totalOrders: 1,
             totalSpent: calculatedTotal,
             loyaltyPoints: initialPoints,
+            tier: initialTier,
           },
         })
         customerId = customer.id
