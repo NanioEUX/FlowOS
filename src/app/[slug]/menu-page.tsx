@@ -812,9 +812,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setCart((prev) => prev.map((item) => {
       if (item.id !== itemId) return item
       const currentOptions = item.additionalOptions || []
-      const isSelected = currentOptions.some((o) => o.name === option.name)
+      const isSelected = currentOptions.some((o: { name: string; price: number }) => o.name === option.name)
       const newOptions = isSelected
-        ? currentOptions.filter((o) => o.name !== option.name)
+        ? currentOptions.filter((o: { name: string; price: number }) => o.name !== option.name)
         : [...currentOptions, option]
       const optionsPrice = newOptions.reduce((sum, o) => sum + o.price, 0)
       const basePrice = (item as any).basePrice || item.price
@@ -2321,7 +2321,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {hasOptions && !isFromPendingOrder && (
                       <div className="mt-2 space-y-1.5 pl-13">
                         {productOptions.map((opt: any, idx: number) => {
-                          const isSelected = (item.additionalOptions || []).some((o) => o.name === opt.name)
+                          const isSelected = (item.additionalOptions || []).some((o: { name: string; price: number }) => o.name === opt.name)
                           const isRequired = opt.selectionType === "required"
                           return (
                             <label key={idx} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
@@ -2344,7 +2344,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {!isFromPendingOrder && (item.additionalOptions || []).length > 0 && (
                       <div className="mt-1.5 pl-13">
                         <p className="text-[10px]" style={{ color: theme.textMuted }}>
-                          {(item.additionalOptions || []).map((o) => o.name).join(", ")}
+                          {(item.additionalOptions || []).map((o: { name: string; price: number }) => o.name).join(", ")}
                         </p>
                       </div>
                     )}
