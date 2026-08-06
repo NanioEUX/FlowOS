@@ -2359,9 +2359,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {/* Additional Options */}
                     {hasOptions && !isFromPendingOrder && (
-                      <div className="mt-2 space-y-3 pl-13">
+                      <div className="mt-3 space-y-2 pl-13">
                         {(() => {
-                          // Group options by groupName
                           const groups: Record<string, any[]> = {}
                           productOptions.forEach((opt: any) => {
                             const group = opt.groupName || "default"
@@ -2373,18 +2372,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                             const firstOpt = options[0]
                             const isRequired = firstOpt?.selectionType === "required"
                             return (
-                              <div key={groupIdx} className="space-y-1">
+                              <div key={groupIdx} className="rounded-lg border p-3 space-y-2" style={{ borderColor: theme.borderInputColor, backgroundColor: theme.bgCard }}>
                                 {groupName !== "default" && (
                                   <div className="mb-1">
-                                    <p className="text-xs font-medium" style={{ color: theme.text }}>{groupName}</p>
+                                    <p className="text-xs font-semibold" style={{ color: theme.text }}>{groupName}</p>
                                     {firstOpt?.headerText && (
-                                      <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>
+                                      <p className="text-[10px] mt-0.5" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>
                                     )}
                                     {isRequired && (
-                                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded" style={{ backgroundColor: theme.primary, color: "white" }}>OBRIGATÓRIO</span>
+                                      <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-bold rounded" style={{ backgroundColor: theme.primary, color: "white" }}>OBRIGATÓRIO</span>
                                     )}
                                   </div>
                                 )}
+                                <div className="space-y-1">
                                 {options.map((opt: any, idx: number) => {
                                   const selectedOpt = (item.additionalOptions || []).find((o: { name: string; price: number; quantity: number }) => o.name === opt.name)
                                   const isSelected = !!selectedOpt
@@ -2417,7 +2417,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                   }
                                   
                                   return (
-                                    <label key={idx} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
+                                    <label key={idx} onClick={() => toggleCartItemOption(item.id, { name: opt.name, price: opt.price })} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
                                       <div className="flex items-center gap-2">
                                         <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
                                           {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
@@ -2430,6 +2430,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                     </label>
                                   )
                                 })}
+                                </div>
                               </div>
                             )
                           })
