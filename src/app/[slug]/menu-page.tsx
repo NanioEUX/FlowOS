@@ -2316,21 +2316,24 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nível</p>
                       <p className="text-sm font-medium" style={{ color: theme.text }}>
                         {(() => {
-                          const sortedTiers = [...(parsedTierConfig.tiers || [])].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-                          const currentTierObj = sortedTiers.find((t: any) => (customerData?.totalSpent || 0) >= (t.minSpent || 0))
-                          const currentIdx = sortedTiers.findIndex((t: any) => t.name.toLowerCase() === customerTier)
-                          const nextTier = currentIdx >= 0 ? sortedTiers[currentIdx - 1] : null
-                          const progress = nextTier ? Math.min(100, ((customerData?.totalSpent || 0) / (nextTier.minSpent || 1)) * 100) : 100
+                          const tiers = parsedTierConfig.tiers || []
+                          const asc = [...tiers].sort((a: any, b: any) => (a.minSpent || 0) - (b.minSpent || 0))
+                          const totalSpent = customerData?.totalSpent || 0
+                          const currentObj = [...asc].reverse().find((t: any) => totalSpent >= (t.minSpent || 0)) || asc[0]
+                          const currentIdx = asc.findIndex((t: any) => t.name === currentObj?.name)
+                          const nextTier = currentIdx < asc.length - 1 ? asc[currentIdx + 1] : null
+                          const progress = nextTier ? Math.min(100, (totalSpent / (nextTier.minSpent || 1)) * 100) : 100
+                          const remaining = nextTier ? Math.max(0, (nextTier.minSpent || 0) - totalSpent) : 0
                           return (
                             <div>
-                              <span>{currentTierObj?.emoji || "🥉"} {currentTierObj?.name || "Bronze"} — {currentTierObj?.multiplier || 1}x cash</span>
+                              <span>{currentObj?.emoji || "🥉"} {currentObj?.name || "Bronze"} — {currentObj?.multiplier || 1}x cash</span>
                               {nextTier && (
                                 <div className="mt-2">
                                   <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: theme.borderSubtle }}>
-                                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: currentTierObj?.color || "#CD7F32" }} />
+                                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: currentObj?.color || "#CD7F32" }} />
                                   </div>
                                   <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>
-                                    Faltam R$ {((nextTier.minSpent || 0) - (customerData?.totalSpent || 0)).toFixed(0)} para {nextTier.emoji} {nextTier.name}
+                                    {remaining > 0 ? `Faltam R$ ${remaining.toFixed(0)} para ${nextTier.emoji} ${nextTier.name}` : `${nextTier.emoji} ${nextTier.name} desbloqueado!`}
                                   </p>
                                 </div>
                               )}
