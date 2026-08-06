@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -229,7 +229,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
-  const [additionalOptionsModal, setAdditionalOptionsModal] = useState<{ open: boolean; product: Product | null; options: any[]; selected: { name: string; price: number }[] }>({ open: false, product: null, options: [], selected: [] })
   const [showCart, setShowCart] = useState(false)
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -793,18 +792,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
     }
 
-    // Check if product has additional options
-    const productOptions = (product as any).additionalOptions || []
-    if (productOptions.length > 0) {
-      setAdditionalOptionsModal({
-        open: true,
-        product,
-        options: productOptions,
-        selected: [],
-      })
-      return
-    }
-
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {
@@ -821,68 +808,33 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setTimeout(() => setCartToast(null), 3000)
   }
 
-  function confirmAddWithOptions() {
-    if (!additionalOptionsModal.product) return
-
-    // Check if all required options are selected
-    const requiredOptions = additionalOptionsModal.options.filter((opt: any) => opt.selectionType === "required")
-    const selectedRequired = requiredOptions.filter((opt: any) =>
-      additionalOptionsModal.selected.some((s) => s.name === opt.name)
-    )
-
-    if (selectedRequired.length < requiredOptions.length) {
-      // TODO: Show error toast
-      return
-    }
-
-    const product = additionalOptionsModal.product
-    const optionsPrice = additionalOptionsModal.selected.reduce((sum, opt) => sum + opt.price, 0)
-
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id && JSON.stringify(item.additionalOptions) === JSON.stringify(additionalOptionsModal.selected))
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id && JSON.stringify(item.additionalOptions) === JSON.stringify(additionalOptionsModal.selected)
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
+  function toggleCartItemOption(itemId: string, option: { name: string; price: number }) {
+    setCart((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item
+      const currentOptions = item.additionalOptions || []
+      const isSelected = currentOptions.some((o) => o.name === option.name)
+      const newOptions = isSelected
+        ? currentOptions.filter((o) => o.name !== option.name)
+        : [...currentOptions, option]
+      const optionsPrice = newOptions.reduce((sum, o) => sum + o.price, 0)
+      const basePrice = (item as any).basePrice || item.price
+      return {
+        ...item,
+        additionalOptions: newOptions,
+        price: basePrice + optionsPrice,
+        basePrice: basePrice,
       }
-      return [...prev, {
-        id: product.id,
-        name: product.name,
-        price: product.price + optionsPrice,
-        image: product.image,
-        quantity: 1,
-        additionalOptions: additionalOptionsModal.selected,
-      } as CartItem]
-    })
-
-    setAddedItemId(product.id)
-    setTimeout(() => setAddedItemId(null), 800)
-    setCartToast({ name: product.name, image: product.image || undefined })
-    setTimeout(() => setCartToast(null), 3000)
-    setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })
+    }))
   }
 
-  function toggleAdditionalOption(option: { name: string; price: number }, selectionType: string) {
-    setAdditionalOptionsModal((prev) => {
-      const isSelected = prev.selected.some((s) => s.name === option.name)
-      if (selectionType === "single" || selectionType === "required") {
-        // For single/required, replace selection
-        return {
-          ...prev,
-          selected: isSelected ? [] : [option],
-        }
-      } else {
-        // For multiple, toggle
-        return {
-          ...prev,
-          selected: isSelected
-            ? prev.selected.filter((s) => s.name !== option.name)
-            : [...prev.selected, option],
-        }
+  function getProductOptions(productId: string): any[] {
+    for (const cat of categories) {
+      const product = cat.products.find((p: any) => p.id === productId)
+      if (product) {
+        return (product as any).additionalOptions || []
       }
-    })
+    }
+    return []
   }
 
   function updateQuantity(productId: string, delta: number) {
@@ -1809,64 +1761,6 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       </div>
 
-      {/* Additional Options Modal */}
-      {additionalOptionsModal.open && additionalOptionsModal.product && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })} />
-          <div className="relative w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: theme.bgModal }}>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold" style={{ color: theme.text }}>{additionalOptionsModal.product.name}</h3>
-                <p className="text-sm" style={{ color: theme.textMuted }}>{formatCurrency(additionalOptionsModal.product.price)}</p>
-              </div>
-              <button onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })} className="rounded-lg p-1" style={{ color: theme.textMuted }}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-64 overflow-y-auto space-y-3">
-              {additionalOptionsModal.options.map((opt: any, idx: number) => {
-                const isSelected = additionalOptionsModal.selected.some((s) => s.name === opt.name)
-                const isRequired = opt.selectionType === "required"
-                return (
-                  <label key={idx} className={`flex items-center justify-between rounded-xl border p-3 cursor-pointer transition-all ${isSelected ? "border-green-500 bg-green-50" : "border-zinc-200"}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
-                        {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium" style={{ color: theme.text }}>{opt.name}</span>
-                        {isRequired && <span className="ml-1 text-xs text-red-500">*</span>}
-                      </div>
-                    </div>
-                    {opt.price > 0 && (
-                      <span className="text-sm font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
-                    )}
-                  </label>
-                )
-              })}
-            </div>
-
-            <div className="mt-4 flex gap-3">
-              <button
-                onClick={() => setAdditionalOptionsModal({ open: false, product: null, options: [], selected: [] })}
-                className="flex-1 rounded-xl border py-3 text-sm font-medium transition-colors"
-                style={{ borderColor: theme.borderCard, color: theme.textMuted }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmAddWithOptions}
-                className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors"
-                style={{ backgroundColor: theme.primary }}
-              >
-                Adicionar · {formatCurrency(additionalOptionsModal.product.price + additionalOptionsModal.selected.reduce((sum, opt) => sum + opt.price, 0))}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Cart Toast */}
       {cartToast && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 animate-slide-up">
@@ -2398,27 +2292,62 @@ onPaymentConfirmed={handlePaymentSuccess}
 {(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
                   const isPending = !!pendingOrderNumber
                   const isFromPendingOrder = isPending
+                  const productOptions = getProductOptions(item.id)
+                  const hasOptions = productOptions.length > 0
                   return (
-                  <div key={item.id} className="flex items-center gap-3 rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
-                    {item.image && (
-                      <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  <div key={item.id} className="rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
+                    <div className="flex items-center gap-3">
+                      {item.image && (
+                        <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate" style={{ color: theme.text }}>{item.name}</p>
+                        <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Additional Options */}
+                    {hasOptions && !isFromPendingOrder && (
+                      <div className="mt-2 space-y-1.5 pl-13">
+                        {productOptions.map((opt: any, idx: number) => {
+                          const isSelected = (item.additionalOptions || []).some((o) => o.name === opt.name)
+                          const isRequired = opt.selectionType === "required"
+                          return (
+                            <label key={idx} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
+                              <div className="flex items-center gap-2">
+                                <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
+                                  {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </div>
+                                <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
+                                {isRequired && <span className="text-[10px] text-red-500">*</span>}
+                              </div>
+                              {opt.price > 0 && (
+                                <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
+                              )}
+                            </label>
+                          )
+                        })}
+                      </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate" style={{ color: theme.text }}>{item.name}</p>
-                      <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency(item.price)}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                        <Plus className="h-3 w-3" />
-                      </button>
-                      <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {/* Show selected options */}
+                    {!isFromPendingOrder && (item.additionalOptions || []).length > 0 && (
+                      <div className="mt-1.5 pl-13">
+                        <p className="text-[10px]" style={{ color: theme.textMuted }}>
+                          {(item.additionalOptions || []).map((o) => o.name).join(", ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   );})}
 
@@ -2546,7 +2475,18 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
+                  {!lastOrder?.paymentLink && !pendingOrderNumber && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => setShowCart(false)}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      Continuar comprando
+                    </Button>
+                  )}
                   {lastOrder?.paymentLink ? (
                     <Button
                       size="lg"
