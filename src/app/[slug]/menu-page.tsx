@@ -1669,60 +1669,46 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
-      {/* Header - Fixed */}
-      <div className="fixed top-0 left-0 right-0 z-30 border-b backdrop-blur-xl transition-colors duration-300 safe-top" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-        <div className="mx-auto max-w-3xl px-4 py-3">
-          <div className="flex items-center gap-3">
-            {/* Logo */}
-            {establishment.logo ? (
-              <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm shrink-0" />
-            ) : (
-              <FlowOSLogo size={40} variant="icon" className="h-10 w-10 shrink-0" />
-            )}
-            {/* Name + Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-              <div className="flex items-center gap-1.5 text-[10px]" style={{ color: theme.textMuted }}>
-                <span className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"}`}></span>
-                  {isOpen ? "Aberto" : "Fechado"}
-                </span>
-                <span>·</span>
-                <span>30-45 min</span>
-                <span>·</span>
-                <span className="flex items-center gap-0.5">
-                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                  4.8
-                </span>
+      {/* Fixed Header + Stories + Categories */}
+      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderSubtle }}>
+        {/* Header */}
+        <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+          <div className="mx-auto max-w-3xl px-4 py-3">
+            <div className="flex items-center gap-3">
+              {establishment.logo ? (
+                <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm shrink-0" />
+              ) : (
+                <FlowOSLogo size={40} variant="icon" className="h-10 w-10 shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+                <div className="flex items-center gap-1.5 text-[10px]" style={{ color: theme.textMuted }}>
+                  <span className="flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"}`}></span>
+                    {isOpen ? "Aberto" : "Fechado"}
+                  </span>
+                  <span>·</span>
+                  <span>30-45 min</span>
+                  <span>·</span>
+                  <span className="flex items-center gap-0.5">
+                    <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                    4.8
+                  </span>
+                </div>
               </div>
+              {(customer.phone || customerData?.phone) ? (
+                <button onClick={() => setShowCustomerProfile(true)} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold" style={{ backgroundColor: theme.primary, color: "#ffffff" }}>
+                  {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
+                </button>
+              ) : (
+                <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                </button>
+              )}
             </div>
-            {/* User Button */}
-            {(customer.phone || customerData?.phone) ? (
-              <button
-                onClick={() => setShowCustomerProfile(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold"
-                style={{ backgroundColor: theme.primary, color: "#ffffff" }}
-              >
-                {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
-              </button>
-            ) : (
-              <button
-                onClick={() => openIdentifyModal()}
-                className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse"
-                style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-              >
-                <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-              </button>
-            )}
           </div>
         </div>
-      </div>
-
-      {/* Spacer for fixed header */}
-      <div className="h-[52px]" />
-
-      {/* Stories / Destaques - Sticky below header */}
-      <div className="sticky top-[52px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
+        {/* Stories */}
         <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
           <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
             {[
@@ -1745,86 +1731,56 @@ onPaymentConfirmed={handlePaymentSuccess}
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Banner Carrossel */}
-      <div className="mx-auto max-w-3xl px-4 pb-3">
-        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
-          <div className="relative z-10">
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
-            <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
-            <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
-            <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
-              Ver Cardápio →
-            </button>
+        {/* Categories */}
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          {searchMode ? (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
+              <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
+              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🍽️ Todos
+              </button>
+              {sortedCategories.map((cat) => {
+                const emoji = getCategoryEmoji(cat.name)
+                return (
+                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                    {emoji} {cat.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        {/* Banner Carrossel */}
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2"></div>
+            <div className="relative z-10">
+              <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Destaque</span>
+              <h2 className="text-lg font-bold mt-2 leading-tight">Confira nossos produtos</h2>
+              <p className="text-xs text-white/80 mt-1">Os melhores sabores da cidade</p>
+              <button className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors" style={{ color: theme.primary }}>
+                Ver Cardápio →
+              </button>
+            </div>
+          </div>
+          <div className="flex justify-center gap-1.5 mt-2">
+            <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
           </div>
         </div>
-        <div className="flex justify-center gap-1.5 mt-2">
-          <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-        </div>
       </div>
 
-      {/* Categories - Sticky below banner */}
-      <div className="sticky top-[130px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
-      <div className="mx-auto max-w-3xl px-4 pb-2">
-        {searchMode ? (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
-            <input
-              type="text"
-              placeholder="Buscar no cardápio..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-              className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none"
-              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-            />
-            <button
-              onClick={() => { setSearchQuery(""); setSearchMode(false) }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70"
-              style={{ color: theme.textMutedMore }}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-            <button
-              onClick={() => setActiveCategory("all")}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${
-                activeCategory === "all" || !activeCategory
-                  ? "text-white shadow-lg"
-                  : "hover:opacity-80"
-              }`}
-              style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-            >
-              🍽️ Todos
-            </button>
-            {sortedCategories.map((cat) => {
-              const emoji = getCategoryEmoji(cat.name)
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${
-                    activeCategory === cat.id
-                      ? "text-white shadow-lg"
-                      : "hover:opacity-80"
-                  }`}
-                  style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-                >
-                  {emoji} {cat.name}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-      </div>
+      {/* Spacer for fixed header + stories + categories + banner */}
+      <div className="h-[380px]" />
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
