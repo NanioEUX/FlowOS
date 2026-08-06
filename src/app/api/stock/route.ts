@@ -80,9 +80,34 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Estoque insuficiente" }, { status: 400 })
       }
 
+      let updateData: any = { quantity: newQty }
+      let costAlert = null
+
+      if (body.movementType === "entry" && body.unitCost > 0) {
+        const oldCost = item.unitCost
+        const newCost = body.unitCost
+        const costChanged = Math.abs(newCost - oldCost) > 0.01
+
+        if (costChanged) {
+          const diff = ((newCost - oldCost) / oldCost * 100).toFixed(1)
+          const isHigher = newCost > oldCost
+
+          if (body.costMethod === "average" && item.quantity > 0) {
+            const totalOldValue = item.quantity * oldCost
+            const totalNewValue = body.quantity * newCost
+            const avgCost = (totalOldValue + totalNewValue) / (item.quantity + body.quantity)
+            updateData.unitCost = Math.round(avgCost * 100) / 100
+            costAlert = `Custo médio atualizado: R$ ${oldCost.toFixed(2)} → R$ ${updateData.unitCost.toFixed(2)} (${isHigher ? "+" : ""}${diff}%)`
+          } else {
+            updateData.unitCost = newCost
+            costAlert = `Custo atualizado: R$ ${oldCost.toFixed(2)} → R$ ${newCost.toFixed(2)} (${isHigher ? "+" : ""}${diff}%)`
+          }
+        }
+      }
+
       await prisma.stockItem.update({
         where: { id: body.itemId },
-        data: { quantity: newQty },
+        data: updateData,
       })
 
       const movement = await prisma.stockMovement.create({
@@ -94,7 +119,7 @@ export async function POST(req: NextRequest) {
           itemId: body.itemId,
         },
       })
-      return NextResponse.json(movement)
+      return NextResponse.json({ ...movement, costAlert })
     }
 
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 })

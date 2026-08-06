@@ -57,7 +57,7 @@ export default function EstoquePage() {
   const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
 
   const [showMovementForm, setShowMovementForm] = useState(false)
-  const [movementForm, setMovementForm] = useState({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "" })
+  const [movementForm, setMovementForm] = useState({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "", costMethod: "average" as "average" | "immediate" })
 
   async function loadAll() {
     if (!establishmentId) return
@@ -201,15 +201,22 @@ export default function EstoquePage() {
         quantity: parseFloat(movementForm.quantity) || 0,
         unitCost: parseFloat(movementForm.unitCost) || 0,
         notes: movementForm.notes,
+        costMethod: movementForm.costMethod,
       }),
     })
     if (res.ok) {
-      toast("Movimentação registrada", "success"); window.dispatchEvent(new Event("stock-updated"))
+      const data = await res.json()
+      if (data.costAlert) {
+        toast(data.costAlert, "warning")
+      } else {
+        toast("Movimentação registrada", "success")
+      }
+      window.dispatchEvent(new Event("stock-updated"))
     } else {
       const data = await res.json()
       toast(data.error || "Erro ao registrar movimentação", "error")
     }
-    setMovementForm({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "" })
+    setMovementForm({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "", costMethod: "average" })
     setShowMovementForm(false)
     loadAll()
   }
@@ -653,7 +660,7 @@ export default function EstoquePage() {
               <div className="space-y-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Item</label>
-                  <SearchableSelect value={movementForm.itemId} onChange={(v) => setMovementForm({ ...movementForm, itemId: v })} options={items.map((i) => ({ value: i.id, label: `${i.name} (${i.quantity} ${i.unit})` }))} placeholder="Selecionar item..." />
+                  <SearchableSelect value={movementForm.itemId} onChange={(v) => { const item = items.find((i) => i.id === v); setMovementForm({ ...movementForm, itemId: v, unitCost: item ? String(item.unitCost) : "0" }) }} options={items.map((i) => ({ value: i.id, label: `${i.name} (${i.quantity} ${i.unit})` }))} placeholder="Selecionar item..." />
                 </div>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "entry" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "entry" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400"}`}>
@@ -687,6 +694,30 @@ export default function EstoquePage() {
                     />
                   </div>
                 </div>
+                {movementForm.movementType === "entry" && movementForm.itemId && (() => {
+                  const selectedItem = items.find((i) => i.id === movementForm.itemId)
+                  const newCost = parseFloat(movementForm.unitCost) || 0
+                  if (!selectedItem || newCost === 0) return null
+                  const costChanged = Math.abs(newCost - selectedItem.unitCost) > 0.01
+                  if (!costChanged) return null
+                  const diff = ((newCost - selectedItem.unitCost) / selectedItem.unitCost * 100).toFixed(1)
+                  const isHigher = newCost > selectedItem.unitCost
+                  return (
+                    <div className={`rounded-lg border px-3 py-2 text-xs ${isHigher ? "border-amber-200 bg-amber-50 text-amber-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
+                      <p className="font-medium">{isHigher ? "⚠️ Custo subiu" : "ℹ️ Custo caiu"} {diff}% (R$ {selectedItem.unitCost.toFixed(2)} → R$ {newCost.toFixed(2)})</p>
+                      <div className="mt-2 flex gap-3">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" name="costMethod" value="average" checked={movementForm.costMethod === "average"} onChange={() => setMovementForm({ ...movementForm, costMethod: "average" })} className="h-3.5 w-3.5 text-green-600" />
+                          <span>Custo Médio</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" name="costMethod" value="immediate" checked={movementForm.costMethod === "immediate"} onChange={() => setMovementForm({ ...movementForm, costMethod: "immediate" })} className="h-3.5 w-3.5 text-green-600" />
+                          <span>Atualização Imediata</span>
+                        </label>
+                      </div>
+                    </div>
+                  )
+                })()}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Observação</label>
                   <input
