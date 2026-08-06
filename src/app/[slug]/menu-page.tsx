@@ -1760,7 +1760,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header + stories + categories */}
-      <div className="h-[240px]" />
+      <div className="h-[260px]" />
 
       {/* Banner - scrolls */}
       <div className="mx-auto max-w-3xl px-4 pb-3">
