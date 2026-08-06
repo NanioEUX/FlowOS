@@ -1731,38 +1731,39 @@ onPaymentConfirmed={handlePaymentSuccess}
             ))}
           </div>
         </div>
-        {/* Categories */}
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          {searchMode ? (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
-              <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
-              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🍽️ Todos
-              </button>
-              {sortedCategories.map((cat) => {
-                const emoji = getCategoryEmoji(cat.name)
-                return (
-                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                    {emoji} {cat.name}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Spacer for fixed header + stories + categories */}
-      <div className="h-[200px]" />
+      {/* Spacer for fixed header + stories */}
+      <div className="h-[130px]" />
 
-      {/* Banner - SCROLLS with page */}
+      {/* Categories - scrolls */}
+      <div className="mx-auto max-w-3xl px-4 pb-2">
+        {searchMode ? (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
+            <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
+            <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+              🍽️ Todos
+            </button>
+            {sortedCategories.map((cat) => {
+              const emoji = getCategoryEmoji(cat.name)
+              return (
+                <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                    {emoji} {cat.name}
+                  </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Banner - scrolls */}
       <div className="mx-auto max-w-3xl px-4 pb-3">
         <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)` }}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
