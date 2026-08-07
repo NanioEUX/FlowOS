@@ -413,8 +413,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
       setShowVerifyModal(false)
       setVerifyCode("")
-      // Retry the order
-      setTimeout(() => submitOrderRef.current?.(), 100)
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
@@ -443,7 +441,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const lastOrderIdRef = useRef<string | null>(null)
   const paidOrderIdsRef = useRef(new Set<string>())
   const seenPendingOrdersRef = useRef(new Set<string>())
-  const submitOrderRef = useRef<(() => Promise<void> | void) | null>(null)
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -1108,8 +1105,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (rev === 10 || rev === 11) rev = 0
     return rev === parseInt(digits[10])
   }
-
-  submitOrderRef.current = async () => { await submitOrder() }
 
   async function submitOrder() {
     console.log("[submitOrder] ========== INICIO ==========")
@@ -2638,7 +2633,13 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
               <p className="text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Seu número</p>
               <p className="text-sm font-medium" style={{ color: theme.text }}>
-                {customer.phone ? `(${customer.phone.slice(0, 2)}) ${customer.phone.slice(2, 7)}-${customer.phone.slice(7)}` : "Não informado"}
+                {(() => {
+                  const digits = String(customer.phone || "").replace(/\D/g, "").slice(0, 11)
+                  if (!digits) return "Não informado"
+                  if (digits.length <= 2) return `(${digits}`
+                  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+                  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+                })()}
               </p>
             </div>
 
