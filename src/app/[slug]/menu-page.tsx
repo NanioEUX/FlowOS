@@ -1857,9 +1857,9 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
               {establishment.logo ? (
-                <img src={establishment.logo} alt={establishment.name} className="h-10 w-10 rounded-xl object-cover shadow-sm shrink-0" />
+                <img src={establishment.logo} alt={establishment.name} className="h-12 w-12 rounded-xl object-cover shadow-sm shrink-0" />
               ) : (
-                <FlowOSLogo size={40} variant="icon" className="h-10 w-10 shrink-0" />
+                <FlowOSLogo size={48} variant="icon" className="h-12 w-12 shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
@@ -1892,7 +1892,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div className="h-[68px]" />
+      <div style={{ height: "calc(76px + env(safe-area-inset-top, 0px))" }} />
 
       {/* Destaques - full-width carousel, 1 card at a time */}
       {featuredSections.trending.length > 0 && (() => {
@@ -2004,7 +2004,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Sticky Category Filters - sticks below header when scrolling past destaques/promo */}
-      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "52px", backgroundColor: theme.bgPage }}>
+      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "calc(68px + env(safe-area-inset-top, 0px))", backgroundColor: theme.bgPage }}>
         <div className="mx-auto max-w-3xl px-4 py-3">
           {searchMode ? (
             <div className="relative">
