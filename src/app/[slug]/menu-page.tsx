@@ -2633,8 +2633,16 @@ onPaymentConfirmed={handlePaymentSuccess}
             </button>
 
             {verifyDevCode && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                <p className="text-xs font-semibold text-amber-400">[DEV] Código: {verifyDevCode}</p>
+              <div className="mt-3 rounded-lg border-2 border-amber-500/50 bg-amber-500/15 p-4 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">DEV: código visível</p>
+                <p className="mt-1 font-mono text-3xl font-bold tracking-widest text-amber-300">{verifyDevCode}</p>
+                <button
+                  type="button"
+                  onClick={() => setVerifyCode(verifyDevCode)}
+                  className="mt-2 text-xs font-medium text-amber-400 underline hover:text-amber-300"
+                >
+                  Usar este código
+                </button>
               </div>
             )}
 
