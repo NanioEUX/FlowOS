@@ -1893,7 +1893,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div className="h-[56px]" />
 
-      {/* Hero Banner - scrolls */}
+      {/* Hero Banner - Destaque #1 - scrolls */}
       {featuredSections.trending.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-3">
           <button
@@ -1907,21 +1907,14 @@ onPaymentConfirmed={handlePaymentSuccess}
             className="relative w-full rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
             style={{ minHeight: "180px" }}
           >
-            {/* Background image */}
             {featuredSections.trending[0].image ? (
-              <img
-                src={featuredSections.trending[0].image}
-                alt={featuredSections.trending[0].name}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <img src={featuredSections.trending[0].image} alt={featuredSections.trending[0].name} className="absolute inset-0 w-full h-full object-cover" />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
             )}
-            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-            {/* Content */}
             <div className="relative z-10 flex flex-col justify-end p-5 h-[180px]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Hero</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Destaques</span>
               <h2 className="text-2xl font-black text-white leading-tight uppercase">
                 {featuredSections.trending[0].name.length > 20
                   ? featuredSections.trending[0].name.substring(0, 20) + "..."
@@ -1931,15 +1924,62 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <p className="text-xl font-bold text-white">
                   R$ {featuredSections.trending[0].price.toFixed(2).replace(".", ",")}
                 </p>
-                <span
-                  className="px-4 py-2 rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: theme.primary }}
-                >
+                <span className="px-4 py-2 rounded-full text-sm font-bold text-white" style={{ backgroundColor: theme.primary }}>
                   Comprar Agora
                 </span>
               </div>
             </div>
           </button>
+        </div>
+      )}
+
+      {/* Destaques carousel - remaining items - scrolls */}
+      {featuredSections.trending.length > 1 && (
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {featuredSections.trending.slice(1).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
+              >
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
+                  )}
+                  <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
+                  {item.originalPrice && (
+                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                      if (!product) return
+                      addToCart(product)
+                    }}
+                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
+                    aria-label="Adicionar"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={3} />
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
+                <p className="text-[11px] font-bold" style={{ color: theme.text }}>
+                  R$ {item.price.toFixed(2).replace(".", ",")}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1990,114 +2030,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                   <p className="text-[10px] font-bold mt-1" style={{ color: theme.primary }}>PROMOÇÃO IMPERDÍVEL</p>
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Lançamentos - scrolls */}
-      {featuredSections.new.length > 0 && (
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">✨</span>
-            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Lançamentos</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {featuredSections.new.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                  if (!product) return
-                  setSelectedProduct(product)
-                  setSelectedProductQty(1)
-                  setSelectedProductOptions([])
-                }}
-                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
-              >
-                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
-                  )}
-                  <div className="absolute top-1 left-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">NOVO</div>
-                  {item.originalPrice && (
-                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                      if (!product) return
-                      addToCart(product)
-                    }}
-                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
-                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
-                    aria-label="Adicionar"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={3} />
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
-                <p className="text-[11px] font-bold" style={{ color: "#16a34a" }}>
-                  R$ {item.price.toFixed(2).replace(".", ",")}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mais Pedidos - scrolls */}
-      {featuredSections.trending.length > 1 && (
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">🔥</span>
-            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Mais Pedidos</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {featuredSections.trending.slice(1).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                  if (!product) return
-                  setSelectedProduct(product)
-                  setSelectedProductQty(1)
-                  setSelectedProductOptions([])
-                }}
-                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
-              >
-                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
-                  )}
-                  <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
-                  {item.originalPrice && (
-                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                      if (!product) return
-                      addToCart(product)
-                    }}
-                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
-                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
-                    aria-label="Adicionar"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={3} />
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
-                <p className="text-[11px] font-bold" style={{ color: theme.text }}>
-                  R$ {item.price.toFixed(2).replace(".", ",")}
-                </p>
               </button>
             ))}
           </div>
