@@ -301,7 +301,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setCustomer(parsed)
+        setCustomer({ ...parsed, phone: String(parsed.phone || "").replace(/\D/g, "").slice(0, 11) })
         if (parsed.phone) {
           const digits = String(parsed.phone).replace(/\D/g, "").slice(0, 11)
           let formatted = digits
