@@ -2008,7 +2008,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {item.image ? (
                     <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgCardHover }}>🍦</div>
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                   )}
                   {item.originalPrice && (
                     <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
