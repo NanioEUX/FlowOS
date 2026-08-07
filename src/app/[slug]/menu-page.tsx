@@ -241,6 +241,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [cartToast, setCartToast] = useState<{ name: string; image?: string } | null>(null)
+  const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -1851,27 +1852,34 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
-      {/* Fixed Header - only logo, name, status */}
-      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderSubtle }}>
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage }}>
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
               {establishment.logo ? (
-                <img src={establishment.logo} alt={establishment.name} className="h-12 w-12 rounded-xl object-cover shadow-sm shrink-0" />
+                <img src={establishment.logo} alt={establishment.name} className="h-[60px] w-[60px] rounded-xl object-cover shadow-sm shrink-0" />
               ) : (
-                <FlowOSLogo size={48} variant="icon" className="h-12 w-12 shrink-0" />
+                <FlowOSLogo size={60} variant="icon" className="h-[60px] w-[60px] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-                <div className="flex items-center gap-1.5 text-[10px]" style={{ color: theme.textMuted }}>
-                  <span className="flex items-center gap-1">
+                {customerData?.whatsappVerified && (customer.name || customerData?.name) ? (
+                  <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>
+                    Olá, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                  </h1>
+                ) : (
+                  <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+                )}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${isOpen ? "#22c55e" : "#ef4444"}15`, color: isOpen ? "#22c55e" : "#ef4444" }}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"}`}></span>
                     {isOpen ? "Aberto" : "Fechado"}
                   </span>
-                  <span>·</span>
-                  <span>30-45 min</span>
-                  <span>·</span>
-                  <span className="flex items-center gap-0.5">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
+                    <Clock className="w-2.5 h-2.5" />
+                    30-45 min
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: "#f59e0b15", color: "#f59e0b" }}>
                     <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
                     4.8
                   </span>
@@ -2930,7 +2938,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                            <button onClick={() => {
                              const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
                              if (!product) return
-                             removeItem(item.id)
+                             setEditingCartItemId(item.id)
                              setSelectedProduct(product)
                              setSelectedProductQty(item.quantity)
                              setSelectedProductOptions(selectedOpts.map((o: { name: string; price: number; quantity: number }) => ({ name: o.name, price: o.price, quantity: o.quantity })))
@@ -3934,15 +3942,15 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Product Detail Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
-          <div className="absolute inset-x-0 bottom-0 top-12 bg-white rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out" }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedProduct(null); setEditingCartItemId(null) }} />
+          <div className="absolute inset-x-0 bottom-0 top-12 rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out", backgroundColor: theme.bgPage }}>
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-gray-300"></div>
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: theme.borderSubtle }}></div>
             </div>
 
             {/* Close button */}
-            <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
+            <button onClick={() => { setSelectedProduct(null); setEditingCartItemId(null) }} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
               <X className="h-4 w-4" />
             </button>
 
@@ -3952,7 +3960,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               {selectedProduct.image ? (
                 <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-56 object-cover" />
               ) : (
-                <div className="w-full h-56 flex items-center justify-center bg-gray-100">
+                <div className="w-full h-56 flex items-center justify-center" style={{ backgroundColor: theme.bgCardHover }}>
                   <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                 </div>
               )}
@@ -4101,12 +4109,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                   const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
                   const unitPrice = basePrice + optionsPrice
                   setCart((prev) => {
+                    if (editingCartItemId) {
+                      return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice } : item)
+                    }
                     const existing = prev.find((item) => item.id === selectedProduct.id)
                     if (existing) {
                       return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
                     }
                     return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
                   })
+                  setEditingCartItemId(null)
                   setSelectedProduct(null)
                   setAddedItemId(selectedProduct.id)
                   setTimeout(() => setAddedItemId(null), 800)
@@ -4117,7 +4129,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 style={{ backgroundColor: theme.primary }}
               >
                 <Plus className="w-5 h-5" />
-                Adicionar · {formatCurrency((((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
+                {editingCartItemId ? "Salvar" : "Adicionar"} · {formatCurrency((((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
               </button>
             </div>
           </div>
@@ -4128,17 +4140,17 @@ onPaymentConfirmed={handlePaymentSuccess}
       {bottomSheetProduct && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBottomSheetProduct(null)} />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[80vh] flex flex-col" style={{ animation: "slideUp 0.3s ease-out" }}>
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl max-h-[80vh] flex flex-col" style={{ animation: "slideUp 0.3s ease-out", backgroundColor: theme.bgPage }}>
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-gray-300"></div>
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: theme.borderSubtle }}></div>
             </div>
-            <div className="px-5 pb-4 border-b border-gray-100">
+            <div className="px-5 pb-4 border-b" style={{ borderColor: theme.borderSubtle }}>
               <div className="flex items-center gap-3">
                 {bottomSheetProduct.image ? (
                   <img src={bottomSheetProduct.image} alt={bottomSheetProduct.name} className="w-16 h-16 rounded-xl object-cover" />
                 ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                  <div className="w-16 h-16 rounded-xl flex items-center justify-center" style={{ backgroundColor: theme.bgCardHover }}>
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: theme.textMuted }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                   </div>
                 )}
                 <div>
@@ -4173,35 +4185,35 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div key={groupIdx} className="mb-5">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">{groupName !== "default" ? groupName : "Opções"}</h3>
-                          {firstOpt?.headerText && <p className="text-[10px] text-gray-400">{firstOpt.headerText}</p>}
+                          <h3 className="font-semibold text-sm" style={{ color: theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
+                          {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                         </div>
-                        {isRequired && <span className="bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">OBRIGATÓRIO</span>}
+                        {isRequired && <span className="text-white text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
                       </div>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="border rounded-xl overflow-hidden" style={{ borderColor: theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
                           if (opt.inputType === "quantity") {
                             return (
-                              <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0">
+                              <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0" style={{ borderColor: theme.borderInputColor }}>
                                 <div className="flex-1">
-                                  <span className="text-sm text-gray-700">{opt.name}</span>
-                                  {opt.price > 0 && <span className="text-[10px] text-green-600 ml-1">+{formatCurrency(opt.price)}</span>}
+                                  <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
+                                  {opt.price > 0 && <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <button className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-500"><Minus className="w-3 h-3" /></button>
-                                  <span className="w-5 text-center text-sm font-medium">0</span>
+                                  <button className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor, color: theme.textMuted }}><Minus className="w-3 h-3" /></button>
+                                  <span className="w-5 text-center text-sm font-medium" style={{ color: theme.text }}>0</span>
                                   <button className="w-7 h-7 rounded-full border text-white flex items-center justify-center" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}><Plus className="w-3 h-3" /></button>
                                 </div>
                               </div>
                             )
                           }
                           return (
-                            <label key={optIdx} className="flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50">
+                            <label key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer" style={{ borderColor: theme.borderInputColor }}>
                               <div className="flex items-center gap-3">
-                                <div className="w-5 h-5 rounded-full border-2 border-gray-300"></div>
-                                <span className="text-sm text-gray-700">{opt.name}</span>
+                                <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: theme.borderInputColor }}></div>
+                                <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
                               </div>
-                              {opt.price > 0 && <span className="text-xs text-green-600 font-medium">+{formatCurrency(opt.price)}</span>}
+                              {opt.price > 0 && <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
                             </label>
                           )
                         })}
@@ -4211,7 +4223,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 })
               })()}
             </div>
-            <div className="px-5 pb-6 pt-2 border-t border-gray-100">
+            <div className="px-5 pb-6 pt-2 border-t" style={{ borderColor: theme.borderInputColor }}>
               <button
                 onClick={() => {
                   setCart((prev) => {
