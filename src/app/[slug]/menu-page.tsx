@@ -134,77 +134,7 @@ function getFirstName(name: string): string {
   return name.split(" ")[0]
 }
 
-type FeaturedItem = {
-  id: string
-  name: string
-  price: number
-  originalPrice: number | null
-  image: string | null
-  badge: string | null
-  onSale: boolean
-  hasOptions: boolean
-}
 
-function FeaturedRow({
-  items,
-  variant,
-  onAdd,
-  onOpen,
-  theme,
-}: {
-  items: FeaturedItem[]
-  variant: "trending" | "new" | "promo"
-  onAdd: (item: FeaturedItem) => void
-  onOpen: (item: FeaturedItem) => void
-  theme: any
-}) {
-  return (
-    <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onOpen(item)}
-          className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
-        >
-          <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-            {item.image ? (
-              <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
-            )}
-            {variant === "trending" && (
-              <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
-            )}
-            {variant === "new" && (
-              <div className="absolute top-1 left-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">NOVO</div>
-            )}
-            {item.onSale && item.originalPrice && (
-              <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onAdd(item)
-              }}
-              className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: theme.primary, color: "#ffffff" }}
-              aria-label="Adicionar"
-            >
-              <Plus className="w-4 h-4" strokeWidth={3} />
-            </button>
-          </div>
-          <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
-          <p className="text-[11px] font-bold" style={{ color: item.onSale ? "#16a34a" : theme.text }}>
-            R$ {item.price.toFixed(2).replace(".", ",")}
-            {item.onSale && item.originalPrice && (
-              <span className="ml-1 text-[9px] font-normal line-through" style={{ color: theme.textMutedMore }}>R$ {item.originalPrice.toFixed(2).replace(".", ",")}</span>
-            )}
-          </p>
-        </button>
-      ))}
-    </div>
-  )
-}
 
 export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
@@ -1959,104 +1889,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* 3 Carrosséis horizontais: Mais Pedidos / Lançamentos / Promoções */}
-        {(featuredSections.trending.length > 0 || featuredSections.new.length > 0 || featuredSections.promo.length > 0) && (
-          <div className="mx-auto max-w-3xl px-4 pt-3 pb-2 space-y-4">
-            {featuredSections.trending.length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-1.5">
-                  <span className="text-base">🔥</span>
-                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Mais Pedidos</h2>
-                </div>
-                <FeaturedRow
-                  items={featuredSections.trending}
-                  variant="trending"
-                  theme={theme}
-                  onAdd={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    if (item.hasOptions) {
-                      setSelectedProduct(product)
-                      setSelectedProductQty(1)
-                      setSelectedProductOptions([])
-                    } else {
-                      addToCart(product)
-                    }
-                  }}
-                  onOpen={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    setSelectedProduct(product)
-                    setSelectedProductQty(1)
-                    setSelectedProductOptions([])
-                  }}
-                />
-              </div>
-            )}
-            {featuredSections.new.length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-1.5">
-                  <span className="text-base">✨</span>
-                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Lançamentos</h2>
-                </div>
-                <FeaturedRow
-                  items={featuredSections.new}
-                  variant="new"
-                  theme={theme}
-                  onAdd={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    if (item.hasOptions) {
-                      setSelectedProduct(product)
-                      setSelectedProductQty(1)
-                      setSelectedProductOptions([])
-                    } else {
-                      addToCart(product)
-                    }
-                  }}
-                  onOpen={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    setSelectedProduct(product)
-                    setSelectedProductQty(1)
-                    setSelectedProductOptions([])
-                  }}
-                />
-              </div>
-            )}
-            {featuredSections.promo.length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-1.5">
-                  <span className="text-base">💰</span>
-                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
-                </div>
-                <FeaturedRow
-                  items={featuredSections.promo}
-                  variant="promo"
-                  theme={theme}
-                  onAdd={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    if (item.hasOptions) {
-                      setSelectedProduct(product)
-                      setSelectedProductQty(1)
-                      setSelectedProductOptions([])
-                    } else {
-                      addToCart(product)
-                    }
-                  }}
-                  onOpen={(item) => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    setSelectedProduct(product)
-                    setSelectedProductQty(1)
-                    setSelectedProductOptions([])
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
+
         {/* Categories */}
         <div className="mx-auto max-w-3xl px-4 pb-3">
           {searchMode ? (
@@ -2085,8 +1918,219 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       </div>
 
-      {/* Spacer for fixed header + filters (carrosséis rolam junto) */}
-      <div className="h-[160px]" />
+      {/* Spacer for fixed header + filters */}
+      <div className="h-[100px]" />
+
+      {/* Hero Banner - scrolls */}
+      {featuredSections.trending.length > 0 && (
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <button
+            onClick={() => {
+              const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === featuredSections.trending[0].id)
+              if (!product) return
+              setSelectedProduct(product)
+              setSelectedProductQty(1)
+              setSelectedProductOptions([])
+            }}
+            className="relative w-full rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+            style={{ minHeight: "180px" }}
+          >
+            {/* Background image */}
+            {featuredSections.trending[0].image ? (
+              <img
+                src={featuredSections.trending[0].image}
+                alt={featuredSections.trending[0].name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
+            )}
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            {/* Content */}
+            <div className="relative z-10 flex flex-col justify-end p-5 h-[180px]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Hero</span>
+              <h2 className="text-2xl font-black text-white leading-tight uppercase">
+                {featuredSections.trending[0].name.length > 20
+                  ? featuredSections.trending[0].name.substring(0, 20) + "..."
+                  : featuredSections.trending[0].name}
+              </h2>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xl font-bold text-white">
+                  R$ {featuredSections.trending[0].price.toFixed(2).replace(".", ",")}
+                </p>
+                <span
+                  className="px-4 py-2 rounded-full text-sm font-bold text-white"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  Comprar Agora
+                </span>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Promoções - scrolls */}
+      {featuredSections.promo.length > 0 && (
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">💰</span>
+            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {featuredSections.promo.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform w-[260px] rounded-xl overflow-hidden text-left"
+                style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <div className="relative h-[100px] w-full">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgCardHover }}>🍦</div>
+                  )}
+                  {item.originalPrice && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
+                      {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
+                    </div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {item.originalPrice && (
+                      <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
+                        R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                    )}
+                    <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
+                      R$ {item.price.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-bold mt-1" style={{ color: theme.primary }}>PROMOÇÃO IMPERDÍVEL</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lançamentos - scrolls */}
+      {featuredSections.new.length > 0 && (
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">✨</span>
+            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Lançamentos</h2>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {featuredSections.new.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
+              >
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
+                  )}
+                  <div className="absolute top-1 left-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">NOVO</div>
+                  {item.originalPrice && (
+                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                      if (!product) return
+                      addToCart(product)
+                    }}
+                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
+                    aria-label="Adicionar"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={3} />
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
+                <p className="text-[11px] font-bold" style={{ color: "#16a34a" }}>
+                  R$ {item.price.toFixed(2).replace(".", ",")}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mais Pedidos - scrolls */}
+      {featuredSections.trending.length > 1 && (
+        <div className="mx-auto max-w-3xl px-4 pb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🔥</span>
+            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Mais Pedidos</h2>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+            {featuredSections.trending.slice(1).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
+              >
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
+                  )}
+                  <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
+                  {item.originalPrice && (
+                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                      if (!product) return
+                      addToCart(product)
+                    }}
+                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
+                    aria-label="Adicionar"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={3} />
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
+                <p className="text-[11px] font-bold" style={{ color: theme.text }}>
+                  R$ {item.price.toFixed(2).replace(".", ",")}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Banner Carousel - scrolls */}
       {bannersData.length > 0 && (
