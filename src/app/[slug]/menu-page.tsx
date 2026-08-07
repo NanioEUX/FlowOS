@@ -274,6 +274,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [storyProducts, setStoryProducts] = useState<any[]>([])
   const [storyCombos, setStoryCombos] = useState<any[]>([])
   const [bannerSlide, setBannerSlide] = useState(0)
+  const [destaqueSlide, setDestaqueSlide] = useState(0)
+  const [promoSlide, setPromoSlide] = useState(0)
   const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   // Featured products (3 seções: trending/new/promo) - substitui stories
   const [featuredSections, setFeaturedSections] = useState<{
@@ -1850,9 +1852,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
-      {/* Fixed Header + Sticky Filters */}
+      {/* Fixed Header - only logo, name, status */}
       <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderSubtle }}>
-        {/* Header */}
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
@@ -1889,7 +1890,138 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* Category Filters - inside fixed header */}
+      </div>
+
+      {/* Spacer for fixed header */}
+      <div className="h-[52px]" />
+
+      {/* Destaques - full-width carousel, 1 card at a time */}
+      {featuredSections.trending.length > 0 && (() => {
+        return (
+          <div className="mx-auto max-w-3xl px-4 pb-4">
+            <div className="relative">
+              <div className="overflow-hidden rounded-2xl">
+                <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${destaqueSlide * 100}%)` }}>
+                  {featuredSections.trending.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                        if (!product) return
+                        setSelectedProduct(product)
+                        setSelectedProductQty(1)
+                        setSelectedProductOptions([])
+                      }}
+                      className="flex-shrink-0 w-full text-left"
+                    >
+                      <div className="relative w-full rounded-2xl overflow-hidden active:scale-[0.99] transition-transform" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">TOP</div>
+                        <div className="relative z-10 flex flex-col justify-end p-5" style={{ minHeight: "200px" }}>
+                          <h2 className="text-2xl font-black text-white leading-tight uppercase drop-shadow-lg">
+                            {item.name.length > 22 ? item.name.substring(0, 22) + "..." : item.name}
+                          </h2>
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xl font-bold text-white drop-shadow">
+                              R$ {item.price.toFixed(2).replace(".", ",")}
+                            </p>
+                            <span className="px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg" style={{ backgroundColor: theme.primary }}>
+                              Comprar Agora
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {featuredSections.trending.length > 1 && (
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                  {featuredSections.trending.map((_: any, i: number) => (
+                    <button key={i} onClick={() => setDestaqueSlide(i)} className={`rounded-full transition-all duration-300 ${destaqueSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: destaqueSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Promoções - full-width carousel, 1 card at a time */}
+      {featuredSections.promo.length > 0 && (() => {
+        return (
+          <div className="mx-auto max-w-3xl px-4 pb-4">
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="text-base">💰</span>
+              <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
+            </div>
+            <div className="relative">
+              <div className="overflow-hidden rounded-2xl">
+                <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${promoSlide * 100}%)` }}>
+                  {featuredSections.promo.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                        if (!product) return
+                        setSelectedProduct(product)
+                        setSelectedProductQty(1)
+                        setSelectedProductOptions([])
+                      }}
+                      className="flex-shrink-0 w-full text-left"
+                    >
+                      <div className="relative w-full rounded-2xl overflow-hidden active:scale-[0.99] transition-transform" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        {item.originalPrice && (
+                          <div className="absolute top-3 right-3 bg-green-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-lg">
+                            {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
+                          </div>
+                        )}
+                        <div className="relative z-10 flex flex-col justify-end p-5" style={{ minHeight: "200px" }}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-green-400 mb-1">PROMOÇÃO IMPERDÍVEL</p>
+                          <h2 className="text-2xl font-black text-white leading-tight uppercase drop-shadow-lg">
+                            {item.name.length > 22 ? item.name.substring(0, 22) + "..." : item.name}
+                          </h2>
+                          <div className="flex items-center gap-3 mt-3">
+                            {item.originalPrice && (
+                              <span className="text-sm line-through text-white/50">
+                                R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                              </span>
+                            )}
+                            <p className="text-xl font-bold text-green-400 drop-shadow">
+                              R$ {item.price.toFixed(2).replace(".", ",")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {featuredSections.promo.length > 1 && (
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                  {featuredSections.promo.map((_: any, i: number) => (
+                    <button key={i} onClick={() => setPromoSlide(i)} className={`rounded-full transition-all duration-300 ${promoSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: promoSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Sticky Category Filters - sticks below header when scrolling past destaques/promo */}
+      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "52px", backgroundColor: theme.bgPage }}>
         <div className="mx-auto max-w-3xl px-4 py-3">
           {searchMode ? (
             <div className="relative">
@@ -1916,212 +2048,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           )}
         </div>
       </div>
-
-      {/* Spacer for fixed header + filters */}
-      <div className="h-[130px]" />
-
-      {/* Destaques hero - PRIMEIRO (usa promo como fallback se não tem trending) */}
-      {(featuredSections.trending.length > 0 || featuredSections.promo.length > 0) && (() => {
-        const heroItem = featuredSections.trending.length > 0
-          ? featuredSections.trending[0]
-          : featuredSections.promo[0]
-        return (
-          <div className="mx-auto max-w-3xl px-4 pb-3">
-            <button
-              onClick={() => {
-                const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === heroItem.id)
-                if (!product) return
-                setSelectedProduct(product)
-                setSelectedProductQty(1)
-                setSelectedProductOptions([])
-              }}
-              className="relative w-full rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
-              style={{ minHeight: "180px" }}
-            >
-              {heroItem.image ? (
-                <img src={heroItem.image} alt={heroItem.name} className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              <div className="relative z-10 flex flex-col justify-end p-5 h-[180px]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Destaques</span>
-                <h2 className="text-2xl font-black text-white leading-tight uppercase">
-                  {heroItem.name.length > 20
-                    ? heroItem.name.substring(0, 20) + "..."
-                    : heroItem.name}
-                </h2>
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-xl font-bold text-white">
-                    R$ {heroItem.price.toFixed(2).replace(".", ",")}
-                  </p>
-                  <span className="px-4 py-2 rounded-full text-sm font-bold text-white" style={{ backgroundColor: theme.primary }}>
-                    Comprar Agora
-                  </span>
-                </div>
-              </div>
-            </button>
-          </div>
-        )
-      })()}
-
-      {/* Destaques carousel - SEGUNDO */}
-      {featuredSections.trending.length > 1 && (
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {featuredSections.trending.slice(1).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                  if (!product) return
-                  setSelectedProduct(product)
-                  setSelectedProductQty(1)
-                  setSelectedProductOptions([])
-                }}
-                className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
-              >
-                <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
-                  )}
-                  <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
-                  {item.originalPrice && (
-                    <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                      if (!product) return
-                      addToCart(product)
-                    }}
-                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
-                    style={{ backgroundColor: theme.primary, color: "#ffffff" }}
-                    aria-label="Adicionar"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={3} />
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
-                <p className="text-[11px] font-bold" style={{ color: theme.text }}>
-                  R$ {item.price.toFixed(2).replace(".", ",")}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Promoções - TERCEIRO */}
-      {(() => {
-        const hasTrending = featuredSections.trending.length > 0
-        const promoItems = hasTrending
-          ? featuredSections.promo
-          : featuredSections.promo.slice(1)
-        if (promoItems.length === 0) return null
-        return (
-          <div className="mx-auto max-w-3xl px-4 pb-3">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-base">💰</span>
-              <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-              {promoItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                    if (!product) return
-                    setSelectedProduct(product)
-                    setSelectedProductQty(1)
-                    setSelectedProductOptions([])
-                  }}
-                  className="flex-shrink-0 active:scale-95 transition-transform w-[260px] rounded-xl overflow-hidden text-left"
-                  style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-                >
-                  <div className="relative h-[100px] w-full">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
-                    )}
-                    {item.originalPrice && (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
-                        {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      {item.originalPrice && (
-                        <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
-                          R$ {item.originalPrice.toFixed(2).replace(".", ",")}
-                        </span>
-                      )}
-                      <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
-                        R$ {item.price.toFixed(2).replace(".", ",")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] font-bold mt-1" style={{ color: theme.primary }}>PROMOÇÃO IMPERDÍVEL</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Banner Carousel - scrolls */}
-      {bannersData.length > 0 && (
-      <div className="mx-auto max-w-3xl px-4 pb-3">
-        <div className="relative rounded-2xl overflow-hidden" style={{ minHeight: "160px" }}>
-          <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${bannerSlide * 100}%)` }}>
-            {bannersData.map((banner: any) => {
-              const handleCtaClick = () => {
-                if (banner.ctaType === "scroll") {
-                  document.getElementById("category-all")?.scrollIntoView({ behavior: "smooth" })
-                } else if (banner.ctaType === "story" && banner.ctaTarget) {
-                  openStory(banner.ctaTarget)
-                } else if (banner.ctaType === "category" && banner.ctaTarget) {
-                  setActiveCategory(banner.ctaTarget)
-                  document.getElementById("category-all")?.scrollIntoView({ behavior: "smooth" })
-                } else if (banner.ctaType === "link" && banner.ctaTarget) {
-                  window.open(banner.ctaTarget, "_blank")
-                }
-              }
-              return (
-                <div key={banner.id} className="min-w-full rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, var(--tw-gradient-stops))` }}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${banner.gradientFrom} ${banner.gradientTo}`} />
-                  {banner.image && <img src={banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="absolute bottom-0 right-8 w-20 h-20 bg-white/10 rounded-full translate-y-1/2" />
-                  <div className="relative z-10">
-                    <h2 className="text-lg font-bold mt-2 leading-tight drop-shadow">{banner.title}</h2>
-                    {banner.subtitle && <p className="text-xs text-white/80 mt-1 drop-shadow">{banner.subtitle}</p>}
-                    {banner.ctaText && (
-                      <button onClick={handleCtaClick} className="mt-3 bg-white text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1.5 drop-shadow" style={{ color: "#333" }}>
-                        {banner.ctaText} <span className="text-sm">→</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          {bannersData.length > 1 && (
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-            {bannersData.map((_: any, i: number) => (
-              <button key={i} onClick={() => { setBannerSlide(i); if (bannerIntervalRef.current) { clearInterval(bannerIntervalRef.current); bannerIntervalRef.current = setInterval(() => setBannerSlide((p) => (p + 1) % bannersData.length), 4000) } }} className={`rounded-full transition-all duration-300 ${bannerSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: bannerSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
-            ))}
-          </div>
-          )}
-        </div>
-      </div>
-      )}
 
       {/* Closed banner */}
       {!isOpen && closedMessage && (
