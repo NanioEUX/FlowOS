@@ -754,7 +754,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     const timer = setTimeout(async () => {
       setIdentifying(true)
       try {
-        const res = await fetch(`/api/customers?phone=${raw}&establishmentId=${establishment.id}`)
+        // Force fresh fetch (bust cache) to ensure stale customerData isn't used
+        const res = await fetch(`/api/customers?phone=${raw}&establishmentId=${establishment.id}&_=${Date.now()}`, {
+          cache: "no-store",
+        })
         const data = await res.json()
         if (data && !data.notFound) {
           setCustomerData(data)
@@ -770,6 +773,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
           }
         } else {
           setCustomerData(null)
+          // Reset verified state too — customer deleted or never existed
+          setCustomerLoyaltyPoints(0)
+          setCustomerTier("bronze")
         }
       } catch { } finally {
         setIdentifying(false)
@@ -2515,6 +2521,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                     onClick={async () => {
                       const phoneRaw = phoneInput.replace(/\D/g, "")
                       const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+                      // Se não está verificado, exige verificação antes de salvar perfil
+                      if (!customerData?.whatsappVerified) {
+                        setEditingProfile(false)
+                        setShowCustomerProfile(false)
+                        setShowVerifyModal(true)
+                        setVerifyError("")
+                        return
+                      }
                       // Save to Supabase
                       if (customerData?.id) {
                         try {
