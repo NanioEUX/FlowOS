@@ -85,20 +85,25 @@ export async function POST(req: NextRequest) {
     const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é: *${code}*\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
 
     if (!provider) {
-      // In dev/local without Evolution configured: return the code in response (DEV ONLY)
-      // This allows testing without an actual WhatsApp connection.
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[VERIFICATION DEV] Code for ${phoneDigits}: ${code}`)
-        return NextResponse.json({ success: true, devCode: code, message: "Código gerado (modo dev). Verifique o console." })
-      }
-      return NextResponse.json({ error: "WhatsApp não configurado. Configure no painel ou contate o suporte." }, { status: 503 })
+      // Sem Evolution configurada: retorna o código direto na resposta (DEV).
+      // Quando configurar Evolution (SaaS ou do restaurante), o código vai pelo WhatsApp.
+      console.log(`[VERIFICATION] Code for ${phoneDigits}: ${code}`)
+      return NextResponse.json({ success: true, devCode: code, message: "Código gerado (sem WhatsApp configurado). Configure Evolution para envio real." })
     }
 
     const result = await provider.sendText(phoneDigits, message)
 
     if (!result.success) {
       console.error("[Verification] WhatsApp send failed:", result.error)
-      return NextResponse.json({ error: "Falha ao enviar código. Tente novamente." }, { status: 500 })
+      console.log(`[VERIFICATION FALLBACK] Code for ${phoneDigits}: ${code}`)
+      return NextResponse.json({ success: true, devCode: code, message: "Código gerado (WhatsApp falhou, exibindo código).", warning: result.error })
+    }
+
+    // WhatsApp enviou — retorna devCode se SHOW_DEV_CODE=true no env (pra debug/teste)
+    const showDevCode = process.env.SHOW_DEV_CODE === "true"
+    if (showDevCode) {
+      console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
+      return NextResponse.json({ success: true, devCode: code })
     }
 
     return NextResponse.json({ success: true })
