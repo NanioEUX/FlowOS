@@ -2406,7 +2406,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>WhatsApp</p>
-                    <p className="text-sm font-medium" style={{ color: theme.text }}>{phoneInput || customer.phone ? `(${(phoneInput || customer.phone).slice(0,2)}) ${(phoneInput || customer.phone).slice(2,7)}-${(phoneInput || customer.phone).slice(7)}` : "Não informado"}</p>
+                    <p className="text-sm font-medium" style={{ color: theme.text }}>
+                      {(() => {
+                        const digits = String(phoneInput || customer.phone || "").replace(/\D/g, "").slice(0, 11)
+                        if (!digits) return "Não informado"
+                        if (digits.length <= 2) return `(${digits}`
+                        if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+                        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>CPF</p>
