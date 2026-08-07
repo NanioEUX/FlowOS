@@ -38,25 +38,21 @@ export async function GET(req: NextRequest) {
       additionalOptions: { select: { id: true }, take: 1 },
     }
 
-    const [manualFeatured, topSold, newProducts, promoProducts] = await Promise.all([
+    const [manualFeatured, recentOrders, newProducts, promoProducts] = await Promise.all([
       prisma.product.findMany({
         where: { establishmentId, featured: true, isAvailable: true },
         orderBy: [{ featuredOrder: "asc" }, { name: "asc" }],
         take: MAX_PER_SECTION,
         select: productSelect,
       }),
-      prisma.orderItem.groupBy({
-        by: ["productId"],
+      prisma.order.findMany({
         where: {
-          order: {
-            establishmentId,
-            createdAt: { gte: since },
-            status: { in: ["delivered", "completed", "confirmed", "preparing", "ready", "delivering"] },
-          },
+          establishmentId,
+          createdAt: { gte: since },
+          status: { in: ["delivered", "completed", "confirmed", "preparing", "ready", "delivering"] },
         },
-        _sum: { quantity: true },
-        orderBy: { _sum: { quantity: "desc" } },
-        take: MAX_PER_SECTION,
+        select: { items: true },
+        take: 500,
       }),
       prisma.product.findMany({
         where: {
@@ -80,15 +76,31 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    const topIds = topSold.map((t) => t.productId)
-    const topProducts = topIds.length
+    // Conta vendas por productId a partir do JSON items
+    const salesCount = new Map<string, number>()
+    for (const order of recentOrders) {
+      try {
+        const items = JSON.parse(order.items)
+        for (const it of items) {
+          if (!it?.id) continue
+          salesCount.set(it.id, (salesCount.get(it.id) || 0) + (it.quantity || 1))
+        }
+      } catch {}
+    }
+
+    const topSoldIds = Array.from(salesCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_PER_SECTION)
+      .map(([id]) => id)
+
+    const topProducts = topSoldIds.length
       ? await prisma.product.findMany({
-          where: { id: { in: topIds }, isAvailable: true, featured: false },
+          where: { id: { in: topSoldIds }, isAvailable: true, featured: false },
           select: productSelect,
         })
       : []
 
-    const orderMap = new Map(topSold.map((t, i) => [t.productId, i]))
+    const orderMap = new Map(topSoldIds.map((id, i) => [id, i]))
     topProducts.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0))
 
     const seenTrending = new Set(manualFeatured.map((p) => p.id))
