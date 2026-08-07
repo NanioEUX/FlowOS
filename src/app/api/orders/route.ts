@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
     const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
     const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
-    const calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
+    let calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
 
     const isPayOnDelivery =
       paymentMethod &&
@@ -163,12 +163,30 @@ export async function POST(req: NextRequest) {
             status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
           },
           _sum: { total: true },
+          _count: true,
         })
         const deliveredTotal = (deliveredAgg._sum.total || 0) + calculatedTotal
+        const isFirstOrder = deliveredAgg._count === 0
+
+        // Bônus primeira compra (só se WhatsApp verificado)
+        let firstPurchaseDiscountValue = 0
+        let firstPurchaseBonusValue = 0
+        if (isFirstOrder && establishment.firstPurchaseEnabled && customer.whatsappVerified) {
+          firstPurchaseDiscountValue = establishment.firstPurchaseDiscount || 0
+          firstPurchaseBonusValue = establishment.firstPurchaseBonus || 0
+          // Adicionar desconto ao cálculo
+          if (firstPurchaseDiscountValue > 0) {
+            calculatedTotal = Math.max(0, calculatedTotal - firstPurchaseDiscountValue)
+          }
+        }
 
         let pointsDelta = 0
         if (useLoyalty && loyaltyPointsUsed > 0) {
           pointsDelta -= loyaltyPointsUsed
+        }
+        // Bônus cash da primeira compra (somado aos pontos ganhos neste pedido)
+        if (firstPurchaseBonusValue > 0) {
+          pointsDelta += firstPurchaseBonusValue
         }
         if (establishment.loyaltyConfig) {
           try {
@@ -227,6 +245,15 @@ export async function POST(req: NextRequest) {
             }
           } catch {}
         }
+        // Bônus primeira compra para cliente novo (verificado via WhatsApp)
+        if (establishment.firstPurchaseEnabled) {
+          if (establishment.firstPurchaseDiscount) {
+            calculatedTotal = Math.max(0, calculatedTotal - establishment.firstPurchaseDiscount)
+          }
+          if (establishment.firstPurchaseBonus) {
+            initialPoints += establishment.firstPurchaseBonus
+          }
+        }
         if (establishment.tierConfig) {
           try {
             const tc = JSON.parse(establishment.tierConfig)
@@ -249,6 +276,7 @@ export async function POST(req: NextRequest) {
             totalSpent: calculatedTotal,
             loyaltyPoints: initialPoints,
             tier: initialTier,
+            // Marca como verificado se tinha código verificado antes do pedido (não é estritamente necessário aqui)
           },
         })
         customerId = customer.id

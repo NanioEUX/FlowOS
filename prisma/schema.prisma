@@ -93,6 +93,9 @@ model Establishment {
   businessHours       String?           @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
   loyaltyConfig       String?           @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10}")
   tierConfig          String?           @default("{\"enabled\":false,\"tiers\":[{\"name\":\"Bronze\",\"minSpent\":0,\"multiplier\":1,\"emoji\":\"🥉\",\"color\":\"#CD7F32\"},{\"name\":\"Prata\",\"minSpent\":300,\"multiplier\":1.5,\"emoji\":\"🥈\",\"color\":\"#C0C0C0\"},{\"name\":\"Ouro\",\"minSpent\":800,\"multiplier\":2,\"emoji\":\"🥇\",\"color\":\"#FFD700\"},{\"name\":\"Diamante\",\"minSpent\":2000,\"multiplier\":3,\"emoji\":\"💎\",\"color\":\"#B9F2FF\"}]}")
+  firstPurchaseEnabled Boolean          @default(false)
+  firstPurchaseDiscount Float?          @default(5.0)
+  firstPurchaseBonus   Int              @default(50)
   isActive            Boolean           @default(true)
   asaasApiKey         String?
   asaasWalletId       String?
@@ -194,14 +197,32 @@ model Customer {
   lastOrderAt     DateTime?
   needsHuman      Boolean       @default(false)
   needsHumanAt    DateTime?
+  whatsappVerified Boolean      @default(false)
+  verifiedAt      DateTime?
   establishmentId String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   orders          Order[]
   reviews         Review[]
+  verificationCodes VerificationCode[]
 
   @@index([establishmentId, phone])
+}
+
+model VerificationCode {
+  id              String   @id @default(cuid())
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  codeHash        String
+  purpose         String   @default("whatsapp_verify")
+  attempts        Int      @default(0)
+  expiresAt       DateTime
+  used            Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([customerId, used])
+  @@index([expiresAt])
 }
 
 model DeliveryPerson {

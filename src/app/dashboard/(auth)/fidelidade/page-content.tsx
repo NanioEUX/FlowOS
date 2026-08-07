@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Star, Loader2, Save, Award, Plus, Trash2, GripVertical } from "lucide-react"
+import { Star, Loader2, Save, Award, Plus, Trash2, GripVertical, Shield } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -50,6 +50,9 @@ export default function FidelidadePageContent() {
     enabled: false,
     tiers: DEFAULT_TIERS,
   })
+  const [firstPurchaseEnabled, setFirstPurchaseEnabled] = useState(false)
+  const [firstPurchaseDiscount, setFirstPurchaseDiscount] = useState(5)
+  const [firstPurchaseBonus, setFirstPurchaseBonus] = useState(50)
   const [allProducts, setAllProducts] = useState<any[]>([])
 
   useEffect(() => {
@@ -68,6 +71,11 @@ export default function FidelidadePageContent() {
             const tc = JSON.parse(data.tierConfig)
             setTierConfig((prev) => ({ ...prev, ...tc }))
           } catch {}
+        }
+        if (!data.error) {
+          if (typeof data.firstPurchaseEnabled === "boolean") setFirstPurchaseEnabled(data.firstPurchaseEnabled)
+          if (typeof data.firstPurchaseDiscount === "number") setFirstPurchaseDiscount(data.firstPurchaseDiscount)
+          if (typeof data.firstPurchaseBonus === "number") setFirstPurchaseBonus(data.firstPurchaseBonus)
         }
       })
     fetchAuth(`/api/categories?establishmentId=${establishmentId}`)
@@ -89,6 +97,9 @@ export default function FidelidadePageContent() {
         body: JSON.stringify({
           loyaltyConfig: JSON.stringify(loyaltyConfig),
           tierConfig: JSON.stringify(tierConfig),
+          firstPurchaseEnabled,
+          firstPurchaseDiscount,
+          firstPurchaseBonus,
         }),
       })
       if (res.ok) {
@@ -353,6 +364,60 @@ export default function FidelidadePageContent() {
                 Multiplicador: Prata ganha 1.5x mais cash, Ouro 2x, Diamante 3x
               </p>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* First Purchase */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <Shield className="h-4 w-4" />
+            Bônus de Primeira Compra
+          </h3>
+          <p className="text-sm text-zinc-500">Cliente novo confirma o WhatsApp e ganha desconto + cash de bônus no primeiro pedido.</p>
+          <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+            <input
+              type="checkbox"
+              checked={firstPurchaseEnabled}
+              onChange={(e) => setFirstPurchaseEnabled(e.target.checked)}
+              className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+            />
+            <div>
+              <span className="font-medium text-zinc-900">Exigir confirmação WhatsApp na 1ª compra</span>
+              <p className="text-xs text-zinc-500">Anti-fraude: cliente valida número via código antes do primeiro pedido</p>
+            </div>
+          </label>
+          {firstPurchaseEnabled && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  value={firstPurchaseDiscount}
+                  onChange={(e) => setFirstPurchaseDiscount(Number(e.target.value))}
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Bônus cash</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={firstPurchaseBonus}
+                  onChange={(e) => setFirstPurchaseBonus(Number(e.target.value))}
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+            </div>
+          )}
+          {firstPurchaseEnabled && (
+            <p className="text-xs text-zinc-400">
+              Ex: Cliente novo confirma WhatsApp → ganha R$ {firstPurchaseDiscount.toFixed(2)} de desconto + {firstPurchaseBonus} cash de bônus na primeira compra.
+            </p>
           )}
         </CardContent>
       </Card>

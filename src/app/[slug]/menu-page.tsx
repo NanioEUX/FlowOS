@@ -53,6 +53,9 @@ interface Establishment {
   businessHours: string | null
   loyaltyConfig: string | null
   tierConfig: string | null
+  firstPurchaseEnabled: boolean
+  firstPurchaseDiscount: number | null
+  firstPurchaseBonus: number
   pickupMessage: string | null
   deliveryMessage: string | null
   confirmationTitle: string | null
@@ -72,6 +75,8 @@ interface CustomerData {
   totalSpent: number
   loyaltyPoints: number
   tier: string
+  whatsappVerified?: boolean
+  verifiedAt?: string | null
   realTotalSpent?: number
   realTotalOrders?: number
 }
@@ -241,6 +246,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [verifyCode, setVerifyCode] = useState("")
+  const [verifySending, setVerifySending] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState("")
+  const [verifyDevCode, setVerifyDevCode] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -346,6 +357,64 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setCpfError("")
     setShowIdentifyModal(true)
   }
+
+  async function sendVerificationCode() {
+    const phoneDigits = (customer.phone || phoneInput).replace(/\D/g, "")
+    if (phoneDigits.length < 10) {
+      setVerifyError("Telefone inválido")
+      return
+    }
+    setVerifySending(true)
+    setVerifyError("")
+    setVerifyDevCode("")
+    try {
+      const res = await fetch("/api/verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro ao enviar código")
+      if (data.devCode) setVerifyDevCode(data.devCode)
+    } catch (e: any) {
+      setVerifyError(e.message)
+    } finally {
+      setVerifySending(false)
+    }
+  }
+
+  async function submitVerifyCode() {
+    const phoneDigits = (customer.phone || phoneInput).replace(/\D/g, "")
+    if (!verifyCode.trim() || verifyCode.length < 4) {
+      setVerifyError("Digite o código recebido")
+      return
+    }
+    setVerifying(true)
+    setVerifyError("")
+    try {
+      const res = await fetch("/api/verification", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id, code: verifyCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Código incorreto")
+      // Refresh customer data
+      const refreshed = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}`)
+      const refreshedData = await refreshed.json()
+      if (refreshedData && !refreshedData.notFound) {
+        setCustomerData(refreshedData)
+      }
+      setShowVerifyModal(false)
+      setVerifyCode("")
+      // Retry the order
+      setTimeout(() => submitOrderRef.current?.(), 100)
+    } catch (e: any) {
+      setVerifyError(e.message)
+    } finally {
+      setVerifying(false)
+    }
+  }
   const [cep, setCep] = useState("")
   const [cepAddress, setCepAddress] = useState<any>(null)
   const [cepLoading, setCepLoading] = useState(false)
@@ -368,6 +437,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const lastOrderIdRef = useRef<string | null>(null)
   const paidOrderIdsRef = useRef(new Set<string>())
   const seenPendingOrdersRef = useRef(new Set<string>())
+  const submitOrderRef = useRef<(() => Promise<void> | void) | null>(null)
 
   // Business hours
   const parsedBusinessHours = useMemo(() => {
@@ -1027,6 +1097,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return rev === parseInt(digits[10])
   }
 
+  submitOrderRef.current = async () => { await submitOrder() }
+
   async function submitOrder() {
     console.log("[submitOrder] ========== INICIO ==========")
     console.log("[submitOrder] orderingRef:", orderingRef.current, "| skipPending:", skipPendingCheckRef.current)
@@ -1074,6 +1146,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     if (orderType === "delivery" && !addressSaved) {
       console.log("[submitOrder] RETORNO: endereco nao salvo")
       setOrderError("Salve o endereço antes de finalizar o pedido")
+      setOrdering(false)
+      orderingRef.current = false
+      return
+    }
+
+    // Verificação WhatsApp obrigatória para primeira compra
+    if (establishment.firstPurchaseEnabled && (!customerData?.whatsappVerified) && customerOrders.length === 0) {
+      console.log("[submitOrder] RETORNO: whatsapp nao verificado (primeira compra)")
+      setShowVerifyModal(true)
+      setVerifyError("")
       setOrdering(false)
       orderingRef.current = false
       return
@@ -2490,9 +2572,91 @@ onPaymentConfirmed={handlePaymentSuccess}
                 style={{ color: "#EF4444" }}
               >
                 <X className="h-4 w-4" />
-                Sair da conta
+                 Sair da conta
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Verify WhatsApp Modal (first purchase) */}
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
+                <Shield className="h-5 w-5" style={{ color: theme.accent }} />
+                Confirmar WhatsApp
+              </h2>
+              <button onClick={() => setShowVerifyModal(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
+              Por segurança, confirme seu número de WhatsApp antes de fazer seu primeiro pedido{establishment.firstPurchaseBonus > 0 ? ` e ganhe +${establishment.firstPurchaseBonus} cash de bônus` : ""}{establishment.firstPurchaseDiscount ? ` e R$ ${establishment.firstPurchaseDiscount.toFixed(2)} de desconto` : ""}.
+            </p>
+
+            <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
+              <p className="text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Seu número</p>
+              <p className="text-sm font-medium" style={{ color: theme.text }}>
+                {customer.phone ? `(${customer.phone.slice(0, 2)}) ${customer.phone.slice(2, 7)}-${customer.phone.slice(7)}` : "Não informado"}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={sendVerificationCode}
+              disabled={verifySending}
+              className="w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
+              style={{ backgroundColor: theme.primary }}
+            >
+              {verifySending ? (
+                <Loader2 className="inline h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 inline h-4 w-4" />
+              )}
+              Enviar código por WhatsApp
+            </button>
+
+            {verifyDevCode && (
+              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-xs font-semibold text-amber-400">[DEV] Código: {verifyDevCode}</p>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <label className="mb-1 block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-full rounded-lg border px-3 py-3 text-center text-2xl font-bold tracking-widest focus:outline-none focus:ring-2"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+              />
+            </div>
+
+            {verifyError && (
+              <p className="mt-2 text-sm text-red-400">{verifyError}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={submitVerifyCode}
+              disabled={verifying || verifyCode.length < 4}
+              className="mt-3 w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
+              style={{ backgroundColor: theme.accent }}
+            >
+              {verifying ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : null}
+              Confirmar e continuar
+            </button>
+
+            <p className="mt-3 text-center text-xs" style={{ color: theme.textMutedMore }}>
+              Não recebeu? Clique em &ldquo;Enviar código&rdquo; novamente.
+            </p>
           </div>
         </div>
       )}
