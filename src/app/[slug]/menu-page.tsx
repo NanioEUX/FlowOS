@@ -1850,8 +1850,9 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
-      {/* Fixed Header - only logo, name, status */}
+      {/* Fixed Header + Sticky Filters */}
       <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderSubtle }}>
+        {/* Header */}
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
@@ -1888,10 +1889,36 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
+        {/* Category Filters - inside fixed header */}
+        <div className="mx-auto max-w-3xl px-4 py-3">
+          {searchMode ? (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
+              <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
+              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🍽️ Todos
+              </button>
+              {sortedCategories.map((cat) => {
+                const emoji = getCategoryEmoji(cat.name)
+                return (
+                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                    {emoji} {cat.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Spacer for fixed header */}
-      <div className="h-[56px]" />
+      {/* Spacer for fixed header + filters */}
+      <div className="h-[130px]" />
 
       {/* Destaques hero - PRIMEIRO (usa promo como fallback se não tem trending) */}
       {(featuredSections.trending.length > 0 || featuredSections.promo.length > 0) && (() => {
@@ -2109,35 +2136,6 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Ações rápidas PWA */}
       <div className="hidden">
         <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-      </div>
-
-      {/* Sticky Category Filters */}
-      <div className="sticky top-[56px] z-20 transition-colors duration-300" style={{ backgroundColor: theme.bgPage }}>
-        <div className="mx-auto max-w-3xl px-4 py-3">
-          {searchMode ? (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
-              <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
-              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🍽️ Todos
-              </button>
-              {sortedCategories.map((cat) => {
-                const emoji = getCategoryEmoji(cat.name)
-                return (
-                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                    {emoji} {cat.name}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Categories & Products */}
