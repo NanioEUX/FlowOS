@@ -134,6 +134,78 @@ function getFirstName(name: string): string {
   return name.split(" ")[0]
 }
 
+type FeaturedItem = {
+  id: string
+  name: string
+  price: number
+  originalPrice: number | null
+  image: string | null
+  badge: string | null
+  onSale: boolean
+  hasOptions: boolean
+}
+
+function FeaturedRow({
+  items,
+  variant,
+  onAdd,
+  onOpen,
+  theme,
+}: {
+  items: FeaturedItem[]
+  variant: "trending" | "new" | "promo"
+  onAdd: (item: FeaturedItem) => void
+  onOpen: (item: FeaturedItem) => void
+  theme: any
+}) {
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onOpen(item)}
+          className="flex-shrink-0 active:scale-95 transition-transform w-[112px] text-left"
+        >
+          <div className="relative aspect-square w-full rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+            {item.image ? (
+              <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-3xl">🍦</div>
+            )}
+            {variant === "trending" && (
+              <div className="absolute top-1 left-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">TOP</div>
+            )}
+            {variant === "new" && (
+              <div className="absolute top-1 left-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">NOVO</div>
+            )}
+            {item.onSale && item.originalPrice && (
+              <div className="absolute top-1 right-1 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">-{Math.round((1 - item.price / item.originalPrice) * 100)}%</div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onAdd(item)
+              }}
+              className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+              style={{ backgroundColor: theme.primary, color: "#ffffff" }}
+              aria-label="Adicionar"
+            >
+              <Plus className="w-4 h-4" strokeWidth={3} />
+            </button>
+          </div>
+          <p className="mt-1.5 text-[11px] font-semibold truncate" style={{ color: theme.text }}>{item.name}</p>
+          <p className="text-[11px] font-bold" style={{ color: item.onSale ? "#16a34a" : theme.text }}>
+            R$ {item.price.toFixed(2).replace(".", ",")}
+            {item.onSale && item.originalPrice && (
+              <span className="ml-1 text-[9px] font-normal line-through" style={{ color: theme.textMutedMore }}>R$ {item.originalPrice.toFixed(2).replace(".", ",")}</span>
+            )}
+          </p>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
@@ -273,6 +345,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [storyCombos, setStoryCombos] = useState<any[]>([])
   const [bannerSlide, setBannerSlide] = useState(0)
   const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  // Featured products (3 seções: trending/new/promo) - substitui stories
+  const [featuredSections, setFeaturedSections] = useState<{
+    trending: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
+    new: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
+    promo: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
+  }>({ trending: [], new: [], promo: [] })
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -641,9 +719,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   useEffect(() => {
     async function loadStories() {
       try {
-        const [storiesRes, bannersRes] = await Promise.all([
+        const [storiesRes, bannersRes, featuredRes] = await Promise.all([
           fetch(`/api/stories?establishmentId=${establishment.id}`),
           fetch(`/api/banners?establishmentId=${establishment.id}`),
+          fetch(`/api/products/featured?establishmentId=${establishment.id}`),
         ])
         if (storiesRes.ok) {
           const data = await storiesRes.json()
@@ -652,6 +731,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         if (bannersRes.ok) {
           const data = await bannersRes.json()
           setBannersData(data)
+        }
+        if (featuredRes.ok) {
+          const data = await featuredRes.json()
+          setFeaturedSections(data.sections || { trending: [], new: [], promo: [] })
         }
       } catch {}
     }
@@ -1876,26 +1959,104 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* Stories */}
-        <div className="mx-auto max-w-3xl pl-6 pr-4 pt-3 pb-2">
-          <div className="flex gap-4 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {storiesData.stories.map((story: any) => {
-              const hasData = story.products && story.products.length > 0
-              return (
-                <button key={story.id} onClick={() => hasData && openStory(story.id)} className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95 transition-transform">
-                  <div className={`rounded-full p-[3px] ${!hasData ? "bg-gray-300 opacity-40" : ""}`} style={hasData ? { background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}66, ${theme.primary})` } : {}}>
-                    <div className="w-[62px] h-[62px] rounded-full p-[2px] bg-white">
-                      <div className={`w-full h-full rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center`}>
-                        <span className="text-2xl drop-shadow-sm">{story.emoji}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-semibold max-w-[68px] text-center leading-tight" style={{ color: theme.textMuted }}>{story.name}</span>
-                </button>
-              )
-            })}
+        {/* 3 Carrosséis horizontais: Mais Pedidos / Lançamentos / Promoções */}
+        {(featuredSections.trending.length > 0 || featuredSections.new.length > 0 || featuredSections.promo.length > 0) && (
+          <div className="mx-auto max-w-3xl px-4 pt-3 pb-2 space-y-4">
+            {featuredSections.trending.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="text-base">🔥</span>
+                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Mais Pedidos</h2>
+                </div>
+                <FeaturedRow
+                  items={featuredSections.trending}
+                  variant="trending"
+                  theme={theme}
+                  onAdd={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    if (item.hasOptions) {
+                      setSelectedProduct(product)
+                      setSelectedProductQty(1)
+                      setSelectedProductOptions([])
+                    } else {
+                      addToCart(product, [], 1)
+                    }
+                  }}
+                  onOpen={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }}
+                />
+              </div>
+            )}
+            {featuredSections.new.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="text-base">✨</span>
+                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Lançamentos</h2>
+                </div>
+                <FeaturedRow
+                  items={featuredSections.new}
+                  variant="new"
+                  theme={theme}
+                  onAdd={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    if (item.hasOptions) {
+                      setSelectedProduct(product)
+                      setSelectedProductQty(1)
+                      setSelectedProductOptions([])
+                    } else {
+                      addToCart(product, [], 1)
+                    }
+                  }}
+                  onOpen={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }}
+                />
+              </div>
+            )}
+            {featuredSections.promo.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="text-base">💰</span>
+                  <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
+                </div>
+                <FeaturedRow
+                  items={featuredSections.promo}
+                  variant="promo"
+                  theme={theme}
+                  onAdd={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    if (item.hasOptions) {
+                      setSelectedProduct(product)
+                      setSelectedProductQty(1)
+                      setSelectedProductOptions([])
+                    } else {
+                      addToCart(product, [], 1)
+                    }
+                  }}
+                  onOpen={(item) => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }}
+                />
+              </div>
+            )}
           </div>
-        </div>
+        )}
         {/* Categories */}
         <div className="mx-auto max-w-3xl px-4 pb-3">
           {searchMode ? (
@@ -1924,8 +2085,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       </div>
 
-      {/* Spacer for fixed header + stories + categories */}
-      <div className="h-[260px]" />
+      {/* Spacer for fixed header + filters (carrosséis rolam junto) */}
+      <div className="h-[160px]" />
 
       {/* Banner Carousel - scrolls */}
       {bannersData.length > 0 && (

@@ -103,6 +103,11 @@ export async function POST(req: NextRequest) {
 
     const result = await provider.sendText(phoneDigits, message, { delay: 1000 })
 
+    const showDevCode =
+      !result.success ||
+      process.env.SHOW_DEV_CODE === "true" ||
+      req.nextUrl.searchParams.get("debug") === "1"
+
     if (!result.success) {
       console.error("[Verification] WhatsApp send failed:", result.error)
       return NextResponse.json({
@@ -114,12 +119,12 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // WhatsApp enviou com sucesso
     console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
     return NextResponse.json({
       success: true,
       whatsappSent: true,
       messageId: result.messageId,
+      ...(showDevCode ? { devCode: code } : {}),
     })
   } catch (error) {
     console.error("[Verification POST]", error)

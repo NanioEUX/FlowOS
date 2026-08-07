@@ -265,8 +265,12 @@ model Product {
   availableWhatsapp   Boolean        @default(true)
   onSale          Boolean            @default(false)
   promoPrice      Float?
+  isNew           Boolean            @default(false)
+  newUntil        DateTime?
   order           Int                @default(0)
   badge           String?
+  featured        Boolean            @default(false)
+  featuredOrder   Int                @default(0)
   categoryId      String
   establishmentId String
   stockItemId     String?
