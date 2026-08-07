@@ -1133,9 +1133,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
 
-    // Verificação WhatsApp obrigatória para primeira compra (anti-fraude)
-    if (establishment.firstPurchaseEnabled && (!customerData?.whatsappVerified) && customerOrders.length === 0) {
-      console.log("[submitOrder] RETORNO: whatsapp nao verificado (primeira compra)")
+    // Verificação WhatsApp sempre obrigatória se cliente não está verificado
+    if (!customerData?.whatsappVerified) {
+      console.log("[submitOrder] RETORNO: whatsapp nao verificado")
       setShowVerifyModal(true)
       setVerifyError("")
       setOrdering(false)
@@ -2322,8 +2322,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
                     setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
-                    // Se ativou verificação WhatsApp e cliente não está verificado, abre modal já
-                    if (establishment.firstPurchaseEnabled && !customerData?.whatsappVerified) {
+                    // Verificação WhatsApp sempre obrigatória para novos clientes
+                    if (!customerData?.whatsappVerified) {
                       setTimeout(() => {
                         setShowVerifyModal(true)
                         setVerifyError("")
@@ -2607,7 +2607,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
-              Por segurança, confirme seu número de WhatsApp antes de fazer seu primeiro pedido{establishment.firstPurchaseBonus > 0 ? ` e ganhe +${establishment.firstPurchaseBonus} cash de bônus` : ""}{establishment.firstPurchaseDiscount ? ` e R$ ${establishment.firstPurchaseDiscount.toFixed(2)} de desconto` : ""}.
+              Confirme seu número de WhatsApp para continuar. Enviaremos um código de 6 dígitos{establishment.firstPurchaseBonus > 0 ? ` (+${establishment.firstPurchaseBonus} cash de bônus na primeira compra)` : ""}.
             </p>
 
             <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
