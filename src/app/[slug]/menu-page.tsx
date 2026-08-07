@@ -2056,7 +2056,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Categories & Products */}
-      <div className="mx-auto max-w-3xl px-4 py-6 pb-32">
+      <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
         {searchQuery ? (
           <div>
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
@@ -2127,60 +2127,35 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Floating Cart Bar */}
-      {cart.length > 0 && !showCart && !showPaymentModal && (
-        <div className="fixed bottom-20 left-0 right-0 z-30 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
-          <button
-            onClick={openCart}
-            className="w-full rounded-2xl px-4 py-3 text-white transition-all active:scale-[0.98] overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 -4px 20px ${theme.shadowPrimary}` }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <ShoppingBag className="w-5 h-5" />
-                </div>
-                <div className="text-left">
-                  <span className="text-sm font-bold block">Ver Sacola</span>
-                  <span className="text-xs text-white/80">{totalItems} {totalItems === 1 ? "item" : "itens"}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm">{formatCurrency(total)}</span>
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
-                </div>
-              </div>
+      {/* Free Shipping Progress Bar - compact, above bottom nav */}
+      {cart.length > 0 && !showCart && !showPaymentModal && orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
+        <div className="fixed bottom-[52px] left-0 right-0 z-20 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
+          <div className="rounded-t-xl px-3 py-1.5 backdrop-blur-xl" style={{ backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e20" : `${theme.primary}15`, borderBottom: `1px solid ${subtotal >= establishment.deliveryFreeAbove ? "#22c55e40" : theme.borderSubtle}` }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-medium" style={{ color: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.textMuted }}>
+                {subtotal >= establishment.deliveryFreeAbove
+                  ? "🎉 Frete Grátis!"
+                  : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
+                }
+              </span>
             </div>
-            {/* Free shipping progress inside cart bar */}
-            {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
-              <div className="mt-2.5 pt-2.5 border-t border-white/20">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-medium text-white/90">
-                    {subtotal >= establishment.deliveryFreeAbove
-                      ? "🎉 Frete Grátis!"
-                      : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
-                    }
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/20">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
-                      backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : "white",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </button>
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.borderSubtle}` }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
+                  backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.primary,
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
-          <div className="mx-auto max-w-3xl flex items-center justify-around px-4 py-2">
+          <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
               className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
@@ -2188,6 +2163,24 @@ onPaymentConfirmed={handlePaymentSuccess}
             >
               <Search className="h-5 w-5" />
               <span className="text-[10px] font-medium">Buscar</span>
+            </button>
+            <button
+              onClick={cart.length > 0 ? openCart : undefined}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors relative"
+              style={{ color: cart.length > 0 ? theme.primary : theme.textMuted }}
+            >
+              <div className="relative">
+                <ShoppingBag className="h-5 w-5" />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
+                    {totalItems}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium">Sacola</span>
+              {cart.length > 0 && (
+                <span className="text-[9px] font-bold" style={{ color: theme.primary }}>{formatCurrency(total)}</span>
+              )}
             </button>
             <button
               onClick={() => {
