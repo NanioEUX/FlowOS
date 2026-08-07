@@ -1893,7 +1893,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div className="h-[56px]" />
 
-      {/* Hero Banner - Destaque #1 - scrolls */}
+      {/* Destaques hero - PRIMEIRO */}
       {featuredSections.trending.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-3">
           <button
@@ -1933,7 +1933,7 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Destaques carousel - remaining items - scrolls */}
+      {/* Destaques carousel - SEGUNDO */}
       {featuredSections.trending.length > 1 && (
         <div className="mx-auto max-w-3xl px-4 pb-3">
           <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
@@ -1983,7 +1983,7 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Promoções - scrolls */}
+      {/* Promoções - TERCEIRO */}
       {featuredSections.promo.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-3">
           <div className="flex items-center gap-2 mb-3">
