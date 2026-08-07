@@ -1980,7 +1980,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setSelectedProductQty(1)
                       setSelectedProductOptions([])
                     } else {
-                      addToCart(product, [], 1)
+                      addToCart(product)
                     }
                   }}
                   onOpen={(item) => {
@@ -2011,7 +2011,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setSelectedProductQty(1)
                       setSelectedProductOptions([])
                     } else {
-                      addToCart(product, [], 1)
+                      addToCart(product)
                     }
                   }}
                   onOpen={(item) => {
@@ -2042,7 +2042,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setSelectedProductQty(1)
                       setSelectedProductOptions([])
                     } else {
-                      addToCart(product, [], 1)
+                      addToCart(product)
                     }
                   }}
                   onOpen={(item) => {
