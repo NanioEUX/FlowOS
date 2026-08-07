@@ -1133,29 +1133,34 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
 
-    const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-    if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
-      console.log("[submitOrder] RETORNO: CPF invalido")
-      setOrderError("CPF inválido. Verifique e tente novamente.")
+    // Verificação WhatsApp obrigatória para primeira compra (anti-fraude)
+    if (establishment.firstPurchaseEnabled && (!customerData?.whatsappVerified) && customerOrders.length === 0) {
+      console.log("[submitOrder] RETORNO: whatsapp nao verificado (primeira compra)")
+      setShowVerifyModal(true)
+      setVerifyError("")
       setOrdering(false)
       orderingRef.current = false
-      openIdentifyModal()
       return
+    }
+
+    // CPF só é obrigatório se o pagamento for online (PIX/Card) — gateways exigem
+    const paymentMethodCheck: string = paymentMethod as string
+    const isOnlinePayment = paymentMethodCheck === "pix" || paymentMethodCheck === "card" || paymentMethodCheck === "online" || paymentMethodCheck === "asaas" || paymentMethodCheck === "inter"
+    if (isOnlinePayment) {
+      const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+      if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
+        console.log("[submitOrder] RETORNO: CPF obrigatorio para pagamento online")
+        setOrderError("CPF é obrigatório para pagamento online (PIX/Cartão). Adicione na identificação.")
+        setOrdering(false)
+        orderingRef.current = false
+        openIdentifyModal()
+        return
+      }
     }
 
     if (orderType === "delivery" && !addressSaved) {
       console.log("[submitOrder] RETORNO: endereco nao salvo")
       setOrderError("Salve o endereço antes de finalizar o pedido")
-      setOrdering(false)
-      orderingRef.current = false
-      return
-    }
-
-    // Verificação WhatsApp obrigatória para primeira compra
-    if (establishment.firstPurchaseEnabled && (!customerData?.whatsappVerified) && customerOrders.length === 0) {
-      console.log("[submitOrder] RETORNO: whatsapp nao verificado (primeira compra)")
-      setShowVerifyModal(true)
-      setVerifyError("")
       setOrdering(false)
       orderingRef.current = false
       return
@@ -2228,7 +2233,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF <span className="text-[10px]" style={{ color: theme.textMutedMore }}>(opcional - só para pagamento online)</span></label>
                 <input
                   placeholder="000.000.000-00"
                   value={customer.cpf || ""}
@@ -2309,17 +2314,25 @@ onPaymentConfirmed={handlePaymentSuccess}
                   style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                 />
               </div>
-              <p className="text-[10px]" style={{ color: theme.textMutedMore }}>CPF obrigatório para gerar pagamento</p>
+              <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido. CPF só é necessário para pagamento online (PIX/Cartão).</p>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfDigits.length === 11 && isValidCpf(customer.cpf || "")) {
+                  const cpfOk = !cpfDigits || (cpfDigits.length === 11 && isValidCpf(customer.cpf || ""))
+                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
                     setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
+                    // Se ativou verificação WhatsApp e cliente não está verificado, abre modal já
+                    if (establishment.firstPurchaseEnabled && !customerData?.whatsappVerified) {
+                      setTimeout(() => {
+                        setShowVerifyModal(true)
+                        setVerifyError("")
+                      }, 300)
+                    }
                   }
                 }}
                 className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11 || !isValidCpf(customer.cpf || "")}
+                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11}
               >
                 Confirmar
               </Button>
