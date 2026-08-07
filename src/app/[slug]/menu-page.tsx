@@ -1892,7 +1892,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div className="h-[52px]" />
+      <div className="h-[68px]" />
 
       {/* Destaques - full-width carousel, 1 card at a time */}
       {featuredSections.trending.length > 0 && (() => {
