@@ -252,6 +252,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState("")
   const [verifyDevCode, setVerifyDevCode] = useState("")
+  const [whatsappSent, setWhatsappSent] = useState(false)
+  const [whatsappError, setWhatsappError] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -374,8 +376,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setVerifySending(true)
     setVerifyError("")
     setVerifyDevCode("")
+    setWhatsappSent(false)
+    setWhatsappError("")
     try {
-      const res = await fetch("/api/verification?debug=1", {
+      const res = await fetch("/api/verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -386,7 +390,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Erro ao enviar código")
-      if (data.devCode) setVerifyDevCode(data.devCode)
+      if (data.whatsappSent) {
+        setWhatsappSent(true)
+      } else if (data.devCode) {
+        setVerifyDevCode(data.devCode)
+        setWhatsappError(data.whatsappError || "WhatsApp não configurado ou falhou")
+      }
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
@@ -2686,7 +2695,9 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             {verifyDevCode && (
               <div className="mt-3 rounded-lg border-2 border-amber-500/50 bg-amber-500/15 p-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">DEV: código visível</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: whatsappSent ? "#22c55e" : "#fbbf24" }}>
+                  {whatsappSent ? "✓ Código enviado no WhatsApp" : "⚠ WhatsApp não entregou — código visível"}
+                </p>
                 <p className="mt-1 font-mono text-3xl font-bold tracking-widest text-amber-300">{verifyDevCode}</p>
                 <button
                   type="button"
@@ -2695,6 +2706,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 >
                   Usar este código
                 </button>
+                {whatsappError && (
+                  <p className="mt-1 text-[10px] text-red-400">{whatsappError}</p>
+                )}
               </div>
             )}
 
