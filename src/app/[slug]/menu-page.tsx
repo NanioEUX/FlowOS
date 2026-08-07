@@ -1893,45 +1893,50 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div className="h-[56px]" />
 
-      {/* Destaques hero - PRIMEIRO */}
-      {featuredSections.trending.length > 0 && (
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <button
-            onClick={() => {
-              const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === featuredSections.trending[0].id)
-              if (!product) return
-              setSelectedProduct(product)
-              setSelectedProductQty(1)
-              setSelectedProductOptions([])
-            }}
-            className="relative w-full rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
-            style={{ minHeight: "180px" }}
-          >
-            {featuredSections.trending[0].image ? (
-              <img src={featuredSections.trending[0].image} alt={featuredSections.trending[0].name} className="absolute inset-0 w-full h-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-            <div className="relative z-10 flex flex-col justify-end p-5 h-[180px]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Destaques</span>
-              <h2 className="text-2xl font-black text-white leading-tight uppercase">
-                {featuredSections.trending[0].name.length > 20
-                  ? featuredSections.trending[0].name.substring(0, 20) + "..."
-                  : featuredSections.trending[0].name}
-              </h2>
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xl font-bold text-white">
-                  R$ {featuredSections.trending[0].price.toFixed(2).replace(".", ",")}
-                </p>
-                <span className="px-4 py-2 rounded-full text-sm font-bold text-white" style={{ backgroundColor: theme.primary }}>
-                  Comprar Agora
-                </span>
+      {/* Destaques hero - PRIMEIRO (usa promo como fallback se não tem trending) */}
+      {(featuredSections.trending.length > 0 || featuredSections.promo.length > 0) && (() => {
+        const heroItem = featuredSections.trending.length > 0
+          ? featuredSections.trending[0]
+          : featuredSections.promo[0]
+        return (
+          <div className="mx-auto max-w-3xl px-4 pb-3">
+            <button
+              onClick={() => {
+                const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === heroItem.id)
+                if (!product) return
+                setSelectedProduct(product)
+                setSelectedProductQty(1)
+                setSelectedProductOptions([])
+              }}
+              className="relative w-full rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+              style={{ minHeight: "180px" }}
+            >
+              {heroItem.image ? (
+                <img src={heroItem.image} alt={heroItem.name} className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="relative z-10 flex flex-col justify-end p-5 h-[180px]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">Destaques</span>
+                <h2 className="text-2xl font-black text-white leading-tight uppercase">
+                  {heroItem.name.length > 20
+                    ? heroItem.name.substring(0, 20) + "..."
+                    : heroItem.name}
+                </h2>
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xl font-bold text-white">
+                    R$ {heroItem.price.toFixed(2).replace(".", ",")}
+                  </p>
+                  <span className="px-4 py-2 rounded-full text-sm font-bold text-white" style={{ backgroundColor: theme.primary }}>
+                    Comprar Agora
+                  </span>
+                </div>
               </div>
-            </div>
-          </button>
-        </div>
-      )}
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Destaques carousel - SEGUNDO */}
       {featuredSections.trending.length > 1 && (
@@ -1984,57 +1989,64 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Promoções - TERCEIRO */}
-      {featuredSections.promo.length > 0 && (
-        <div className="mx-auto max-w-3xl px-4 pb-3">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">💰</span>
-            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-            {featuredSections.promo.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                  if (!product) return
-                  setSelectedProduct(product)
-                  setSelectedProductQty(1)
-                  setSelectedProductOptions([])
-                }}
-                className="flex-shrink-0 active:scale-95 transition-transform w-[260px] rounded-xl overflow-hidden text-left"
-                style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-              >
-                <div className="relative h-[100px] w-full">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
-                  )}
-                  {item.originalPrice && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
-                      {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    {item.originalPrice && (
-                      <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
-                        R$ {item.originalPrice.toFixed(2).replace(".", ",")}
-                      </span>
+      {(() => {
+        const hasTrending = featuredSections.trending.length > 0
+        const promoItems = hasTrending
+          ? featuredSections.promo
+          : featuredSections.promo.slice(1)
+        if (promoItems.length === 0) return null
+        return (
+          <div className="mx-auto max-w-3xl px-4 pb-3">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-base">💰</span>
+              <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+              {promoItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                    if (!product) return
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }}
+                  className="flex-shrink-0 active:scale-95 transition-transform w-[260px] rounded-xl overflow-hidden text-left"
+                  style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                >
+                  <div className="relative h-[100px] w-full">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                     )}
-                    <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
-                      R$ {item.price.toFixed(2).replace(".", ",")}
-                    </span>
+                    {item.originalPrice && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
+                        {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[10px] font-bold mt-1" style={{ color: theme.primary }}>PROMOÇÃO IMPERDÍVEL</p>
-                </div>
-              </button>
-            ))}
+                  <div className="p-3">
+                    <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      {item.originalPrice && (
+                        <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
+                          R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                        </span>
+                      )}
+                      <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
+                        R$ {item.price.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold mt-1" style={{ color: theme.primary }}>PROMOÇÃO IMPERDÍVEL</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Banner Carousel - scrolls */}
       {bannersData.length > 0 && (
