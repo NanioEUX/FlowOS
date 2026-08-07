@@ -2318,13 +2318,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                 />
               </div>
               <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>Seu nome</label>
+                <label className="text-xs flex items-center justify-between" style={{ color: theme.textMuted }}>
+                  <span>Seu nome</span>
+                  {customerData?.name && (
+                    <span className="text-[10px]" style={{ color: theme.textMutedMore }}>🔒 edite em &ldquo;Meus dados&rdquo;</span>
+                  )}
+                </label>
                 <input
                   placeholder="Como quer ser chamado?"
-                  value={customer.name}
+                  value={customer.name || customerData?.name || ""}
                   onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                  readOnly={!!customerData?.name}
                   className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  style={{
+                    backgroundColor: customerData?.name ? theme.bgCard : theme.bgInput,
+                    color: theme.text,
+                    borderColor: theme.borderInput,
+                    borderWidth: 1,
+                    cursor: customerData?.name ? "not-allowed" : "text",
+                    opacity: customerData?.name ? 0.7 : 1,
+                  }}
                 />
               </div>
               <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido. CPF só é necessário para pagamento online (PIX/Cartão).</p>
@@ -2332,11 +2345,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                 onClick={async () => {
                   const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
                   const cpfOk = !cpfDigits || (cpfDigits.length === 11 && isValidCpf(customer.cpf || ""))
-                  if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
-                    setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
+                  const finalName = customer.name || customerData?.name || ""
+                  if (finalName && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
+                    setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
                     // Verificação WhatsApp SEMPRE obrigatória (anti-fraude / novo device)
-                    // Só pula se o cliente já está explicitamente verificado neste device
                     setTimeout(() => {
                       setShowVerifyModal(true)
                       setVerifyError("")
@@ -2344,7 +2357,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   }
                 }}
                 className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-                disabled={!customer.name || phoneInput.replace(/\D/g, "").length < 11}
+                disabled={!(customer.name || customerData?.name) || phoneInput.replace(/\D/g, "").length < 11}
               >
                 Confirmar
               </Button>
