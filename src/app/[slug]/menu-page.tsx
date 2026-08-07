@@ -2693,11 +2693,16 @@ onPaymentConfirmed={handlePaymentSuccess}
               Enviar código por WhatsApp
             </button>
 
+            {whatsappSent && !verifyDevCode && (
+              <div className="mt-3 rounded-lg border-2 border-green-500/50 bg-green-500/15 p-4 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-green-400">✓ Código enviado no WhatsApp</p>
+                <p className="mt-1 text-xs text-green-300">Verifique as mensagens do seu WhatsApp</p>
+              </div>
+            )}
+
             {verifyDevCode && (
               <div className="mt-3 rounded-lg border-2 border-amber-500/50 bg-amber-500/15 p-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: whatsappSent ? "#22c55e" : "#fbbf24" }}>
-                  {whatsappSent ? "✓ Código enviado no WhatsApp" : "⚠ WhatsApp não entregou — código visível"}
-                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">⚠ WhatsApp não entregou — código visível</p>
                 <p className="mt-1 font-mono text-3xl font-bold tracking-widest text-amber-300">{verifyDevCode}</p>
                 <button
                   type="button"

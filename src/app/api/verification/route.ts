@@ -114,12 +114,10 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // WhatsApp enviou com sucesso — mas ainda mostra devCode como fallback
-    // (útil durante testes ou se a Evolution não entregar de fato)
+    // WhatsApp enviou com sucesso
     console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
     return NextResponse.json({
       success: true,
-      devCode: code,
       whatsappSent: true,
       messageId: result.messageId,
     })
