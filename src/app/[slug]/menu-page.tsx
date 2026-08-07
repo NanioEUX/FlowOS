@@ -370,6 +370,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setVerifyError("Telefone inválido")
       return
     }
+    const finalName = customer.name || customerData?.name || ""
     setVerifySending(true)
     setVerifyError("")
     setVerifyDevCode("")
@@ -377,7 +378,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const res = await fetch("/api/verification?debug=1", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id }),
+        body: JSON.stringify({
+          phone: phoneDigits,
+          establishmentId: establishment.id,
+          name: finalName || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Erro ao enviar código")

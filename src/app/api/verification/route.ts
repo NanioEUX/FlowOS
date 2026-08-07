@@ -14,7 +14,7 @@ const CODE_EXPIRY_MINUTES = 5
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { phone, establishmentId } = body
+    const { phone, establishmentId, name } = body
 
     if (!phone || !establishmentId) {
       return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
@@ -32,7 +32,17 @@ export async function POST(req: NextRequest) {
 
     if (!customer) {
       customer = await prisma.customer.create({
-        data: { phone: phoneDigits, establishmentId },
+        data: {
+          phone: phoneDigits,
+          establishmentId,
+          ...(name ? { name } : {}),
+        },
+      })
+    } else if (name && !customer.name) {
+      // Update name if customer exists but doesn't have one yet
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: { name },
       })
     }
 
@@ -116,13 +126,13 @@ export async function POST(req: NextRequest) {
 
 /**
  * PUT /api/verification
- * Body: { phone: string, establishmentId: string, code: string }
- * Verifies the code, marks customer as whatsappVerified.
+ * Body: { phone: string, establishmentId: string, code: string, name?: string }
+ * Verifies the code, marks customer as whatsappVerified. Optionally updates name.
  */
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
-    const { phone, establishmentId, code } = body
+    const { phone, establishmentId, code, name } = body
 
     if (!phone || !establishmentId || !code) {
       return NextResponse.json({ error: "phone, establishmentId e code são obrigatórios" }, { status: 400 })
@@ -174,16 +184,17 @@ export async function PUT(req: NextRequest) {
       data: { used: true },
     })
 
-    // Mark customer as verified
+    // Mark customer as verified (and update name if provided)
     const updated = await prisma.customer.update({
       where: { id: customer.id },
       data: {
         whatsappVerified: true,
         verifiedAt: new Date(),
+        ...(name && !customer.name ? { name } : {}),
       },
     })
 
-    return NextResponse.json({ success: true, customer: { id: updated.id, whatsappVerified: updated.whatsappVerified } })
+    return NextResponse.json({ success: true, customer: { id: updated.id, whatsappVerified: updated.whatsappVerified, name: updated.name } })
   } catch (error) {
     console.error("[Verification PUT]", error)
     return NextResponse.json({ error: "Erro ao verificar código" }, { status: 500 })
