@@ -302,7 +302,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       try {
         const parsed = JSON.parse(saved)
         setCustomer(parsed)
-        setPhoneInput(parsed.phone || "")
+        if (parsed.phone) {
+          const digits = String(parsed.phone).replace(/\D/g, "").slice(0, 11)
+          let formatted = digits
+          if (digits.length > 2) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+          if (digits.length > 7) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+          setPhoneInput(formatted)
+        }
         if (parsed.cep && parsed.address) {
           setAddressSaved(true)
         }
@@ -1849,7 +1855,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </span>
                 </div>
               </div>
-              {(customer.phone || customerData?.phone) ? (
+              {customerData?.whatsappVerified && (customer.phone || customerData?.phone) ? (
                 <button onClick={() => setShowCustomerProfile(true)} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold" style={{ backgroundColor: theme.primary, color: "#ffffff" }}>
                   {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
                 </button>
@@ -2272,7 +2278,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 address: data.address || prev.address,
                                 cep: data.cep || prev.cep,
                               }))
-                              if (data.phone) setPhoneInput(data.phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3"))
+                              if (data.phone) {
+                                const digits = String(data.phone).replace(/\D/g, "").slice(0, 11)
+                                let formatted = digits
+                                if (digits.length > 2) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+                                if (digits.length > 7) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+                                setPhoneInput(formatted)
+                              }
                               if (data.cep) setCep(data.cep)
                             } else {
                               setCustomerData(null)
