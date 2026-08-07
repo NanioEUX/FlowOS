@@ -97,6 +97,10 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentOnSale: false, currentPromoPrice: null
   })
   const [promoForm, setPromoForm] = useState({ adjustPrice: false, promoPrice: "" })
+  const [featuredModal, setFeaturedModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentFeatured: boolean; currentBadge: string; currentDiscountPrice: number | null }>({
+    open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null
+  })
+  const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
 
   // Destaques state
@@ -695,6 +699,81 @@ export default function CardapioPage() {
     }
   }
 
+  async function toggleFeatured(productId: string, currentValue: boolean) {
+    if (!establishmentId) return
+    if (currentValue) {
+      try {
+        const res = await fetchAuth(`/api/products/${productId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          toast(err.error || "Erro ao atualizar produto", "error")
+          return
+        }
+        setCategories((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            products: cat.products.map((p) =>
+              p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
+            ),
+          }))
+        )
+        toast("Produto removido dos destaques", "success")
+      } catch (err) {
+        toast("Erro ao atualizar produto", "error")
+      }
+    } else {
+      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+      if (product) {
+        setFeaturedModal({
+          open: true,
+          productId: product.id,
+          productName: product.name,
+          currentPrice: product.price,
+          currentFeatured: (product as any).featured || false,
+          currentBadge: (product as any).badge || "",
+          currentDiscountPrice: (product as any).featuredDiscountPrice || null,
+        })
+        setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: false, discountPrice: "" })
+      }
+    }
+  }
+
+  async function confirmFeaturedActivation() {
+    const { productId } = featuredModal
+    const data: any = { featured: true, badge: featuredForm.badge || "TOP" }
+    if (featuredForm.adjustPrice && featuredForm.discountPrice) {
+      data.featuredDiscountPrice = parseFloat(featuredForm.discountPrice)
+    }
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
+      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, featured: true, badge: data.badge, featuredDiscountPrice: data.featuredDiscountPrice || null } : p
+          ),
+        }))
+      )
+      setFeaturedModal({ ...featuredModal, open: false })
+      toast("Produto em destaque!", "success")
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
+    }
+  }
+
   function editProduct(product: Product) {
     // Usa dados do produto da lista pra abrir rápido, mas força refetch em background
     // pra garantir que stockLinks estão atualizados (evita cache de 30s do /api/categories)
@@ -1262,6 +1341,25 @@ export default function CardapioPage() {
                                 }`} />
                               </span>
                               {(product as any).onSale ? "Promoção" : "Sem promoção"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFeatured(product.id, (product as any).featured || false) }}
+                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
+                                (product as any).featured
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-zinc-100 text-zinc-400"
+                              }`}
+                              title={(product as any).featured ? "Em destaque (clique para remover)" : "Marcar como destaque"}
+                            >
+                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </span>
+                              {(product as any).featured ? "Destaque" : "Sem destaque"}
                             </button>
                             <button
                               onClick={() => editProduct(product)}
@@ -2843,6 +2941,86 @@ export default function CardapioPage() {
                 Cancelar
               </Button>
               <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={confirmPromoActivation}>
+                Ativar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {featuredModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⭐</span>
+                <h3 className="text-lg font-semibold text-zinc-900">Ativar Destaque</h3>
+              </div>
+              <button onClick={() => setFeaturedModal({ ...featuredModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <p className="mb-3 text-sm text-zinc-600">
+                Produto: <span className="font-semibold">{featuredModal.productName}</span>
+              </p>
+              <p className="mb-4 text-sm text-zinc-600">
+                Preço atual: <span className="font-semibold">{formatCurrency(featuredModal.currentPrice)}</span>
+              </p>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Texto da chamada</label>
+                <input
+                  type="text"
+                  maxLength={20}
+                  placeholder="TOP"
+                  value={featuredForm.badge}
+                  onChange={(e) => setFeaturedForm({ ...featuredForm, badge: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-zinc-500">Ex: TOP, NOVO, RECOMENDADO</p>
+              </div>
+              <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors cursor-pointer ${
+                featuredForm.adjustPrice ? "border-amber-300 bg-amber-50" : "border-zinc-200 hover:bg-zinc-50"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={featuredForm.adjustPrice}
+                  onChange={(e) => setFeaturedForm({ ...featuredForm, adjustPrice: e.target.checked, discountPrice: "" })}
+                  className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                />
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">Adicionar desconto</p>
+                  <p className="text-xs text-zinc-500">O desconto aparece no card, mas NÃO vai na seção Promoções</p>
+                </div>
+              </label>
+              {featuredForm.adjustPrice && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <span className="text-sm text-zinc-600">Preço destaque:</span>
+                  <span className="text-sm text-zinc-500">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={featuredModal.currentPrice - 0.01}
+                    placeholder="0,00"
+                    value={featuredForm.discountPrice}
+                    onChange={(e) => setFeaturedForm({ ...featuredForm, discountPrice: e.target.value })}
+                    className="h-9 w-28 rounded-lg border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-700 focus:border-amber-500 focus:outline-none"
+                    autoFocus
+                  />
+                  {featuredForm.discountPrice && parseFloat(featuredForm.discountPrice) > 0 && (
+                    <span className="text-xs text-amber-600">
+                      (-{Math.round((1 - parseFloat(featuredForm.discountPrice) / featuredModal.currentPrice) * 100)}%)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 border-t border-zinc-200 px-6 py-4">
+              <Button variant="outline" className="flex-1" onClick={() => setFeaturedModal({ ...featuredModal, open: false })}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={confirmFeaturedActivation}>
                 Ativar
               </Button>
             </div>

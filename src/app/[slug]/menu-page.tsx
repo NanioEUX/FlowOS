@@ -4901,7 +4901,11 @@ function PaymentModal({
 
 function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   const hasPromo = (product as any).promoPrice && (product as any).onSale
-  const discountPct = hasPromo ? Math.round((1 - (product as any).promoPrice / product.price) * 100) : 0
+  const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+  const hasDiscount = hasPromo || hasFeaturedDiscount
+  const discountPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : null
+  const discountPct = hasDiscount && discountPrice ? Math.round((1 - discountPrice / product.price) * 100) : 0
+  const isCustomBadge = (product as any).badge && !["mais_vendido", "novo", "promoção"].includes((product as any).badge)
   return (
     <div
       className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
@@ -4921,13 +4925,22 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             <svg className="h-8 w-8" style={{ color: theme.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
           </div>
         )}
-        {product.badge && (
+        {isCustomBadge && (
           <span className="absolute top-2 left-2 badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
-            {product.badge === "mais_vendido" && <><span>🔥</span><span>Mais Pedido</span></>}
-            {product.badge === "novo" && <><span>✨</span><span>Novo</span></>}
+            <span>⭐</span><span>{(product as any).badge}</span>
           </span>
         )}
-        {hasPromo && discountPct > 0 && (
+        {!isCustomBadge && product.badge && product.badge === "mais_vendido" && (
+          <span className="absolute top-2 left-2 badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+            <span>🔥</span><span>Mais Pedido</span>
+          </span>
+        )}
+        {!isCustomBadge && product.badge && product.badge === "novo" && (
+          <span className="absolute top-2 left-2 badge-fire text-[10px] font-bold text-white px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+            <span>✨</span><span>Novo</span>
+          </span>
+        )}
+        {hasDiscount && discountPct > 0 && (
           <span className="absolute top-2 right-2 text-[11px] font-bold text-white px-2 py-1 rounded-lg shadow-md bg-green-500">
             {discountPct}% OFF
           </span>
@@ -4940,11 +4953,11 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
         )}
         <div className="flex items-end justify-between mt-2">
           <div className="flex flex-col">
-            {hasPromo && (
+            {hasDiscount && (
               <span className="text-xs line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
             )}
-            <p className="font-bold text-sm" style={{ color: hasPromo ? "#22c55e" : theme.primary }}>
-              {hasPromo ? formatCurrency((product as any).promoPrice) : formatCurrency(product.price)}
+            <p className="font-bold text-sm" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
+              {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
             </p>
           </div>
           <button

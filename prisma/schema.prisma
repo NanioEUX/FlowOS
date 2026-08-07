@@ -271,6 +271,7 @@ model Product {
   badge           String?
   featured        Boolean            @default(false)
   featuredOrder   Int                @default(0)
+  featuredDiscountPrice Float?
   categoryId      String
   establishmentId String
   stockItemId     String?

@@ -30,9 +30,11 @@ export async function GET(req: NextRequest) {
       name: true,
       price: true,
       promoPrice: true,
+      featuredDiscountPrice: true,
       image: true,
       badge: true,
       onSale: true,
+      featured: true,
       isNew: true,
       createdAt: true,
       additionalOptions: { select: { id: true }, take: 1 },
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest) {
         select: productSelect,
       }),
       prisma.product.findMany({
-        where: { establishmentId, isAvailable: true, onSale: true, promoPrice: { not: null } },
+        where: { establishmentId, isAvailable: true, onSale: true, promoPrice: { not: null }, featured: false },
         orderBy: { updatedAt: "desc" },
         take: MAX_PER_SECTION,
         select: productSelect,
@@ -111,11 +113,13 @@ export async function GET(req: NextRequest) {
       ps.map((p) => ({
         id: p.id,
         name: p.name,
-        price: p.promoPrice ?? p.price,
-        originalPrice: p.onSale ? p.price : null,
+        price: p.promoPrice ?? p.featuredDiscountPrice ?? p.price,
+        originalPrice: p.onSale ? p.price : p.featuredDiscountPrice ? p.price : null,
         image: p.image,
         badge: p.badge,
         onSale: p.onSale,
+        featured: p.featured,
+        featuredDiscountPrice: p.featuredDiscountPrice,
         hasOptions: p.additionalOptions.length > 0,
       }))
 
