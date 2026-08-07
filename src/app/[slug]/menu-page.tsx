@@ -374,7 +374,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setVerifyError("")
     setVerifyDevCode("")
     try {
-      const res = await fetch("/api/verification", {
+      const res = await fetch("/api/verification?debug=1", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id }),
@@ -2340,13 +2340,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (customer.name && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
                     setCustomer((prev) => ({ ...prev, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
-                    // Verificação WhatsApp sempre obrigatória para novos clientes
-                    if (!customerData?.whatsappVerified) {
-                      setTimeout(() => {
-                        setShowVerifyModal(true)
-                        setVerifyError("")
-                      }, 300)
-                    }
+                    // Verificação WhatsApp SEMPRE obrigatória (anti-fraude / novo device)
+                    // Só pula se o cliente já está explicitamente verificado neste device
+                    setTimeout(() => {
+                      setShowVerifyModal(true)
+                      setVerifyError("")
+                    }, 300)
                   }
                 }}
                 className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"

@@ -99,8 +99,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, devCode: code, message: "Código gerado (WhatsApp falhou, exibindo código).", warning: result.error })
     }
 
-    // WhatsApp enviou — retorna devCode se SHOW_DEV_CODE=true no env (pra debug/teste)
-    const showDevCode = process.env.SHOW_DEV_CODE === "true"
+    // WhatsApp enviou — retorna devCode se SHOW_DEV_CODE=true no env OU ?debug=1 na URL
+    const url = new URL(req.url)
+    const showDevCode = process.env.SHOW_DEV_CODE === "true" || url.searchParams.get("debug") === "1"
     if (showDevCode) {
       console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
       return NextResponse.json({ success: true, devCode: code })
