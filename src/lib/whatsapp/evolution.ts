@@ -181,7 +181,21 @@ export class EvolutionProvider implements WhatsAppProvider {
       const remoteJid = data.key?.remoteJid
       if (!remoteJid) return null
 
-      const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@g.us", "")
+      let phone = remoteJid
+        .replace("@s.whatsapp.net", "")
+        .replace("@g.us", "")
+        .replace("@lid", "")
+
+      if (data.key?.remoteJidAlt && data.key.remoteJidAlt.includes("@s.whatsapp.net")) {
+        const altPhone = data.key.remoteJidAlt.replace("@s.whatsapp.net", "")
+        if (altPhone && /^\d{10,15}$/.test(altPhone)) {
+          phone = altPhone
+        }
+      }
+
+      if (data.participant && data.participant.includes("@s.whatsapp.net")) {
+        phone = data.participant.replace("@s.whatsapp.net", "")
+      }
 
       const messageType = data.messageType
       let text = ""
