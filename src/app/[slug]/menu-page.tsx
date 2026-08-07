@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -2910,123 +2910,60 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
 {(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
-                  const isPending = !!pendingOrderNumber
-                  const isFromPendingOrder = isPending
-                  const productOptions = getProductOptions(item.id)
-                  const hasOptions = productOptions.length > 0
-                  return (
-                  <div key={item.id} className="rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
-                    <div className="flex items-center gap-3">
-                      {item.image && (
-                        <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate" style={{ color: theme.text }}>{item.name}</p>
-                        <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                          <Plus className="h-3 w-3" />
-                        </button>
-                        <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                    {/* Additional Options */}
-                    {hasOptions && !isFromPendingOrder && (
-                      <div className="mt-3 space-y-2 pl-13">
-                        {(() => {
-                          const groups: Record<string, any[]> = {}
-                          productOptions.forEach((opt: any) => {
-                            const group = opt.groupName || "default"
-                            if (!groups[group]) groups[group] = []
-                            groups[group].push(opt)
-                          })
-                          
-                          return Object.entries(groups).map(([groupName, options], groupIdx) => {
-                            const firstOpt = options[0]
-                            const isRequired = firstOpt?.selectionType === "required"
-                            return (
-                              <div key={groupIdx} className="rounded-lg border p-3 space-y-2" style={{ borderColor: theme.borderInputColor, backgroundColor: theme.bgCard }}>
-                                {groupName !== "default" && (
-                                  <div className="mb-1">
-                                    <p className="text-xs font-semibold" style={{ color: theme.text }}>{groupName}</p>
-                                    {firstOpt?.headerText && (
-                                      <p className="text-[10px] mt-0.5" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>
-                                    )}
-                                    {isRequired && (
-                                      <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-bold rounded" style={{ backgroundColor: theme.primary, color: "white" }}>OBRIGATÓRIO</span>
-                                    )}
-                                  </div>
-                                )}
-                                <div className="space-y-1">
-                                {options.map((opt: any, idx: number) => {
-                                  const selectedOpt = (item.additionalOptions || []).find((o: { name: string; price: number; quantity: number }) => o.name === opt.name)
-                                  const isSelected = !!selectedOpt
-                                  const quantity = selectedOpt?.quantity || 0
-                                  
-                                  if (opt.inputType === "quantity") {
-                                    return (
-                                      <div key={idx} className="flex items-center justify-between py-1 px-2">
-                                        <div className="flex-1">
-                                          <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
-                                          {opt.price > 0 && (
-                                            <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {quantity > 0 && (
-                                            <>
-                                              <button onClick={() => updateCartItemOptionQuantity(item.id, opt.name, -1)} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ border: `1px solid ${theme.borderInputColor}` }}>
-                                                <Minus className="h-3 w-3" style={{ color: theme.text }} />
-                                              </button>
-                                              <span className="w-4 text-center text-xs font-medium" style={{ color: theme.text }}>{quantity}</span>
-                                            </>
-                                          )}
-                                          <button onClick={() => toggleCartItemOption(item.id, { name: opt.name, price: opt.price, quantity: 1 })} className="flex h-6 w-6 items-center justify-center rounded-full" style={{ border: `1px solid ${theme.borderInputColor}` }}>
-                                            <Plus className="h-3 w-3" style={{ color: theme.text }} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )
-                                  }
-                                  
-                                  return (
-                                    <label key={idx} onClick={() => toggleCartItemOption(item.id, { name: opt.name, price: opt.price })} className="flex items-center justify-between cursor-pointer py-1 px-2 rounded-md transition-colors" style={{ backgroundColor: isSelected ? `${theme.primary}15` : "transparent" }}>
-                                      <div className="flex items-center gap-2">
-                                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
-                                          {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                        </div>
-                                        <span className="text-xs" style={{ color: theme.text }}>{opt.name}</span>
-                                      </div>
-                                      {opt.price > 0 && (
-                                        <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>
-                                      )}
-                                    </label>
-                                  )
-                                })}
-                                </div>
-                              </div>
-                            )
-                          })
-                        })()}
-                      </div>
-                    )}
-                    {/* Show selected options summary */}
-                    {!isFromPendingOrder && (item.additionalOptions || []).length > 0 && (
-                      <div className="mt-1.5 pl-13">
-                        <p className="text-[10px]" style={{ color: theme.textMuted }}>
-                          {(item.additionalOptions || []).map((o: { name: string; price: number; quantity: number }) => o.quantity > 1 ? `${o.name} x${o.quantity}` : o.name).join(", ")}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  );})}
+                   const isPending = !!pendingOrderNumber
+                   const isFromPendingOrder = isPending
+                   const productOptions = getProductOptions(item.id)
+                   const hasOptions = productOptions.length > 0
+                   const selectedOpts = (item.additionalOptions || [])
+                   return (
+                   <div key={item.id} className="rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
+                     <div className="flex items-center gap-3">
+                       {item.image && (
+                         <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                       )}
+                       <div className="flex-1 min-w-0">
+                         <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                         <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
+                       </div>
+                       <div className="flex items-center gap-1.5 flex-shrink-0">
+                         {!isFromPendingOrder && hasOptions && (
+                           <button onClick={() => {
+                             const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                             if (!product) return
+                             removeItem(item.id)
+                             setSelectedProduct(product)
+                             setSelectedProductQty(item.quantity)
+                             setSelectedProductOptions(selectedOpts.map((o: { name: string; price: number; quantity: number }) => ({ name: o.name, price: o.price, quantity: o.quantity })))
+                           }} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMutedMore }}>
+                             <Pencil className="h-3.5 w-3.5" />
+                           </button>
+                         )}
+                         <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                           <Minus className="h-3 w-3" />
+                         </button>
+                         <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
+                         <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                           <Plus className="h-3 w-3" />
+                         </button>
+                         <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
+                           <X className="h-3 w-3" />
+                         </button>
+                       </div>
+                     </div>
+                     {/* Selected options as chips */}
+                     {!isFromPendingOrder && selectedOpts.length > 0 && (
+                       <div className="flex flex-wrap gap-1.5 mt-2 pl-[52px]">
+                         {selectedOpts.map((o: { name: string; price: number; quantity: number }, i: number) => (
+                           <span key={i} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                             {o.name}
+                             {o.quantity > 1 && <span>×{o.quantity}</span>}
+                             {o.price > 0 && <span>+{formatCurrency(o.price * o.quantity)}</span>}
+                           </span>
+                         ))}
+                       </div>
+                     )}
+                   </div>
+                   );})}
 
                 {!lastOrder?.paymentLink && !pendingOrderNumber && (
                   <button
