@@ -133,6 +133,8 @@ export class EvolutionProvider implements WhatsAppProvider {
       const normalizedPhone = this.normalizePhone(phone)
       const url = `${this.config.baseUrl}/message/sendText/${this.config.instanceName}`
 
+      console.log(`[Evolution] Sending to ${normalizedPhone} via ${this.config.baseUrl}`)
+
       const response = await fetch(url, {
         method: "POST",
         headers: this.getHeaders(),
@@ -143,17 +145,26 @@ export class EvolutionProvider implements WhatsAppProvider {
         }),
       })
 
+      const responseText = await response.text()
+
       if (!response.ok) {
-        const errorText = await response.text()
-        return { success: false, error: `Evolution API error: ${response.status} - ${errorText}` }
+        console.error(`[Evolution] Error ${response.status}:`, responseText)
+        return { success: false, error: `Evolution API error: ${response.status} - ${responseText}` }
       }
 
-      const data = await response.json().catch(() => null)
+      let data: any = null
+      try {
+        data = JSON.parse(responseText)
+      } catch {
+        console.warn(`[Evolution] Non-JSON response:`, responseText.slice(0, 200))
+      }
+      console.log(`[Evolution] Success, messageId:`, data?.key?.id || data?.messageId)
       return {
         success: true,
         messageId: data?.key?.id || data?.messageId,
       }
     } catch (error: any) {
+      console.error(`[Evolution] Exception:`, error.message)
       return { success: false, error: error.message }
     }
   }

@@ -103,21 +103,21 @@ export async function POST(req: NextRequest) {
 
     const result = await provider.sendText(phoneDigits, message)
 
+    console.log(`[Verification] Send attempt to ${phoneDigits} via ${establishment.whatsappProvider}:`, {
+      success: result.success,
+      error: result.error,
+      messageId: result.messageId,
+    })
+
     if (!result.success) {
       console.error("[Verification] WhatsApp send failed:", result.error)
       console.log(`[VERIFICATION FALLBACK] Code for ${phoneDigits}: ${code}`)
       return NextResponse.json({ success: true, devCode: code, message: "Código gerado (WhatsApp falhou, exibindo código).", warning: result.error })
     }
 
-    // WhatsApp enviou — retorna devCode se SHOW_DEV_CODE=true no env OU ?debug=1 na URL
-    const url = new URL(req.url)
-    const showDevCode = process.env.SHOW_DEV_CODE === "true" || url.searchParams.get("debug") === "1"
-    if (showDevCode) {
-      console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
-      return NextResponse.json({ success: true, devCode: code })
-    }
-
-    return NextResponse.json({ success: true })
+    // WhatsApp enviou — sempre retorna devCode por enquanto pra debug
+    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
+    return NextResponse.json({ success: true, devCode: code })
   } catch (error) {
     console.error("[Verification POST]", error)
     return NextResponse.json({ error: "Erro ao gerar código" }, { status: 500 })
