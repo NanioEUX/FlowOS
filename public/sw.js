@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v9"
+const CACHE_NAME = "pedefacil-v10"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -26,6 +26,12 @@ self.addEventListener("activate", (event) => {
       )
     }).then(() => self.clients.claim())
   )
+})
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting()
+  }
 })
 
 self.addEventListener("fetch", (event) => {

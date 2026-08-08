@@ -2,6 +2,8 @@
 
 import { useEffect } from "react"
 
+const SW_VERSION = "v10"
+
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -9,8 +11,23 @@ export function ServiceWorkerRegister() {
 
     const register = async () => {
       try {
-        const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" })
+        const reg = await navigator.serviceWorker.register(`/sw.js?v=${SW_VERSION}`, { scope: "/" })
         console.log("[PWA] Service Worker registrado:", reg.scope)
+
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing
+          if (!newWorker) return
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "activated") {
+              console.log("[PWA] Novo SW ativo, recarregando...")
+              window.location.reload()
+            }
+          })
+        })
+
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: "SKIP_WAITING" })
+        }
       } catch (err) {
         console.warn("[PWA] Falha ao registrar SW:", err)
       }
