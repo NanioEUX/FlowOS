@@ -737,7 +737,7 @@ export default function CardapioPage() {
           currentBadge: (product as any).badge || "",
           currentDiscountPrice: (product as any).featuredDiscountPrice || null,
         })
-        setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: true, discountPrice: "" })
+        setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: false, discountPrice: "" })
       }
     }
   }
@@ -3020,7 +3020,7 @@ export default function CardapioPage() {
               <Button variant="outline" className="flex-1" onClick={() => setFeaturedModal({ ...featuredModal, open: false })}>
                 Cancelar
               </Button>
-              <Button className="flex-1 bg-amber-600 hover:bg-amber-700" disabled={!featuredForm.discountPrice || parseFloat(featuredForm.discountPrice) <= 0} onClick={confirmFeaturedActivation}>
+              <Button className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={confirmFeaturedActivation}>
                 Ativar
               </Button>
             </div>
