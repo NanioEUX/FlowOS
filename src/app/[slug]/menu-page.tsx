@@ -3943,14 +3943,14 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Push notification toast — above bottom nav */}
       {pushNotification && (
         <div
-          className="fixed bottom-16 left-3 right-3 z-[55] animate-slideUp pointer-events-none"
+          className="fixed bottom-16 left-3 right-3 z-[60] animate-slideUp pointer-events-none"
         >
           <div
-            className="mx-auto max-w-md rounded-2xl p-3 flex items-center gap-3 pointer-events-auto shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+            className="mx-auto max-w-md rounded-2xl p-3 flex items-center gap-3 pointer-events-auto"
             style={{
-              backgroundColor: theme.bgCard,
-              border: `1px solid ${theme.primary}40`,
-              boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${theme.primary}30`,
+              backgroundColor: theme.bgPage === "#0a0a0f" ? "#27272a" : "#ffffff",
+              border: `1px solid ${theme.bgPage === "#0a0a0f" ? "#3f3f46" : "#e5e7eb"}`,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)",
             }}
             onClick={() => setPushNotification(null)}
           >
