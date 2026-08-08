@@ -683,6 +683,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => { if (bannerIntervalRef.current) clearInterval(bannerIntervalRef.current) }
   }, [bannersData.length])
 
+  // Destaques carousel auto-advance
+  const destaqueIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    if (featuredSections.trending.length <= 1) return
+    destaqueIntervalRef.current = setInterval(() => {
+      setDestaqueSlide((prev) => (prev + 1) % featuredSections.trending.length)
+    }, 4000)
+    return () => { if (destaqueIntervalRef.current) clearInterval(destaqueIntervalRef.current) }
+  }, [featuredSections.trending.length])
+
   const openStory = (storyId: string) => {
     const story = storiesData.stories.find((s: any) => s.id === storyId)
     if (!story) return
