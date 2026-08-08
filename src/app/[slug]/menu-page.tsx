@@ -2050,9 +2050,6 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* PWA Push Auto-Subscribe */}
-      <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-
       {/* Categories & Products */}
       <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
         {searchQuery ? (

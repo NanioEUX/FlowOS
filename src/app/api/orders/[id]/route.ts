@@ -250,6 +250,7 @@ export async function PATCH(
 
     // Notificar cliente via WhatsApp quando o status mudar (templates do bot v2)
     if (status && status !== order.status && order.customerPhone) {
+      console.log(`[Order PATCH] Status mudou de "${order.status}" para "${status}" - notificando ${order.customerPhone}`)
       try {
         const establishment = await prisma.establishment.findUnique({
           where: { id: order.establishmentId },
@@ -280,7 +281,8 @@ export async function PATCH(
           cancelled: establishment?.botTemplateOrderCancelled,
         }
         const template = templateMap[status]
-        if (template && establishment?.botEnabled) {
+        console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 40) + '...' : 'EMPTY/NULL'}`)
+        if (template) {
           const provider = getWhatsAppProvider({
             whatsappProvider: establishment.whatsappProvider,
             evolutionBaseUrl: establishment.evolutionBaseUrl,
@@ -288,43 +290,45 @@ export async function PATCH(
             evolutionInstanceName: establishment.evolutionInstanceName,
             whatsappNumber: establishment.whatsappNumber,
           })
+          console.log(`[Order PATCH] Provider: ${provider ? 'OK' : 'NULL'}`)
           if (provider) {
             const delay = randomTypingDelay(
               establishment.botTypingDelayMinMs || 1500,
               establishment.botTypingDelayMaxMs || 3500
             )
-            await provider.sendText(order.customerPhone, template, { delay })
-            console.log(`[Order PATCH] Notificação de status "${status}" enviada para ${order.customerPhone}`)
+            const result = await provider.sendText(order.customerPhone, template, { delay })
+            console.log(`[Order PATCH] WhatsApp enviado para "${status}":`, JSON.stringify(result))
           }
+        }
 
-          // Push notification PWA
-          try {
-            const { sendPush } = await import("@/lib/push")
-            const statusEmoji: any = {
-              confirmed: "✅",
-              preparing: "👨‍🍳",
-              ready: "🎉",
-              out_for_delivery: "🛵",
-              delivered: "✨",
-              cancelled: "❌",
-            }
-            const statusTitle: any = {
-              confirmed: "Pedido confirmado!",
-              preparing: "Preparando seu pedido",
-              ready: "Pedido pronto!",
-              out_for_delivery: "Saiu pra entrega",
-              delivered: "Pedido entregue!",
-              cancelled: "Pedido cancelado",
-            }
-            await sendPush(order.establishmentId, order.customerPhone, {
-              title: `${statusEmoji[status] || "📦"} ${statusTitle[status] || "Atualização do pedido"}`,
-              body: template.substring(0, 100),
-              url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
-              tag: `order-${order.id}`,
-            })
-          } catch (pushErr: any) {
-            console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
+        // Push notification PWA (sempre, independente de template)
+        try {
+          const { sendPush } = await import("@/lib/push")
+          const statusEmoji: any = {
+            confirmed: "✅",
+            preparing: "👨‍🍳",
+            ready: "🎉",
+            out_for_delivery: "🛵",
+            delivered: "✨",
+            cancelled: "❌",
           }
+          const statusTitle: any = {
+            confirmed: "Pedido confirmado!",
+            preparing: "Preparando seu pedido",
+            ready: "Pedido pronto!",
+            out_for_delivery: "Saiu pra entrega",
+            delivered: "Pedido entregue!",
+            cancelled: "Pedido cancelado",
+          }
+          const pushBody = template ? template.substring(0, 100) : statusTitle[status] || "Atualização do pedido"
+          await sendPush(order.establishmentId, order.customerPhone, {
+            title: `${statusEmoji[status] || "📦"} ${statusTitle[status] || "Atualização do pedido"}`,
+            body: pushBody,
+            url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
+            tag: `order-${order.id}`,
+          })
+        } catch (pushErr: any) {
+          console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
         }
       } catch (notifyErr: any) {
         console.error(`[Order PATCH] Falha ao notificar cliente: ${notifyErr.message}`)
@@ -348,7 +352,7 @@ export async function PATCH(
             botTemplateOrderScheduled: true,
           },
         })
-        if (establishment?.botTemplateOrderScheduled && establishment.botEnabled) {
+        if (establishment?.botTemplateOrderScheduled) {
           const provider = getWhatsAppProvider({
             whatsappProvider: establishment.whatsappProvider,
             evolutionBaseUrl: establishment.evolutionBaseUrl,

@@ -2,24 +2,6 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { TrackingPage } from "./tracking-page"
 import { redirect } from "next/navigation"
-import type { Metadata } from "next"
-
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string }
-}): Promise<Metadata> {
-  const order = await prisma.order.findFirst({
-    where: { trackingToken: params.id },
-    select: { establishment: { select: { name: true, logo: true } }, orderNumber: true },
-  })
-  if (!order) return { title: "Pedido" }
-  const num = (order as any).orderNumber || params.id.substring(0, 8).toUpperCase()
-  return {
-    title: `${order.establishment.name} - Pedido #${num}`,
-    icons: { icon: order.establishment.logo || "/favicon.svg" },
-  }
-}
 
 const allStatusSteps = [
   { key: "pending", label: "Pedido recebido", icon: "📥" },
