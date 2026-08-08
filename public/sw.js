@@ -113,11 +113,14 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close()
   const url = event.notification.data?.url || "/"
   event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
-      const existingClient = clients.find((c) => c.url.includes(self.location.origin))
-      if (existingClient) {
-        existingClient.navigate(url)
-        existingClient.focus()
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      // 1. Find a PWA standalone window first
+      let target = clients.find((c) => c.url.includes(self.location.origin))
+      // 2. If no PWA client, find any client
+      if (!target) target = clients[0]
+      if (target) {
+        target.focus()
+        target.navigate(url)
       } else {
         self.clients.openWindow(url)
       }

@@ -204,6 +204,18 @@ export function TrackingPage({ order, statusSteps }: Props) {
       <div className="mx-auto max-w-lg px-4">
         {/* Header */}
         <div className="mb-6 text-center">
+          {order.establishment.logo ? (
+            <img
+              src={order.establishment.logo}
+              alt={order.establishment.name}
+              className="mx-auto mb-3 h-14 w-14 rounded-full object-cover shadow-md"
+            />
+          ) : (
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-700 shadow-md">
+              {order.establishment.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <p className="text-xs font-medium text-zinc-400 mb-1">{order.establishment.name}</p>
           <div className="mb-2 text-4xl">
             {cancelled ? "😢" : statusIcons[order.status] || "📋"}
           </div>
