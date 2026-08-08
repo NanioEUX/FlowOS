@@ -282,7 +282,7 @@ export async function PATCH(
           cancelled: establishment?.botTemplateOrderCancelled,
         }
         const template = templateMap[status]
-        console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 40) + '...' : 'EMPTY/NULL'}`)
+        console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 50) : 'EMPTY/NULL'} | provider: ${establishment?.whatsappProvider} | baseUrl: ${establishment?.evolutionBaseUrl ? 'SET' : 'MISSING'}`)
         if (template && establishment) {
           const provider = getWhatsAppProvider({
             whatsappProvider: establishment.whatsappProvider,
@@ -297,8 +297,9 @@ export async function PATCH(
               establishment.botTypingDelayMinMs || 1500,
               establishment.botTypingDelayMaxMs || 3500
             )
+            console.log(`[Order PATCH] Enviando WhatsApp "${status}" para ${order.customerPhone} com delay ${delay}ms...`)
             const result = await provider.sendText(order.customerPhone, template, { delay })
-            console.log(`[Order PATCH] WhatsApp enviado para "${status}":`, JSON.stringify(result))
+            console.log(`[Order PATCH] WhatsApp "${status}" resultado:`, JSON.stringify(result))
           }
         }
 
@@ -331,13 +332,16 @@ export async function PATCH(
           }
           const orderNum = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
           const pushBody = statusBody[status] || template?.substring(0, 100) || "Atualização do pedido"
-          await sendPush(order.establishmentId, order.customerPhone, {
-            title: `${statusEmoji[status] || "📦"} Pedido #${orderNum} — ${statusTitle[status] || "Atualização"}`,
+          const pushTitle = `${statusEmoji[status] || "📦"} Pedido #${orderNum} — ${statusTitle[status] || "Atualização"}`
+          console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" phone=${order.customerPhone}`)
+          const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
+            title: pushTitle,
             body: pushBody,
             icon: establishment?.logo || undefined,
             url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
             tag: `order-${order.id}`,
           })
+          console.log(`[Order PATCH] Push "${status}" resultado: sent=${pushResult.sent} failed=${pushResult.failed}`)
         } catch (pushErr: any) {
           console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
         }
