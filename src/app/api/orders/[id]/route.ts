@@ -308,7 +308,7 @@ export async function PATCH(
           const { sendPush } = await import("@/lib/push")
           const customerName = order.customerName?.split(" ")[0] || "Cliente"
           const pushBody = `Olá ${customerName}! ${template || "Atualização do pedido."}`
-          const pushTitle = establishment?.name || "Pedido"
+          const pushTitle = ""
           console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" body="${pushBody}" phone=${order.customerPhone}`)
           const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
             title: pushTitle,
