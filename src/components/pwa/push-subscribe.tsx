@@ -7,7 +7,8 @@ const STORAGE_KEY = "pwa-push-subscribed"
 export function PushSubscribe({ establishmentId, customerKey }: { establishmentId: string; customerKey: string }) {
   const [supported, setSupported] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default")
-  const [subscribed, setSubscribed] = useState(false)
+  const [enabled, setEnabled] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -17,32 +18,25 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     }
     setSupported(true)
     setPermission(Notification.permission)
-    setSubscribed(localStorage.getItem(STORAGE_KEY) === "1")
+    setEnabled(localStorage.getItem(STORAGE_KEY) === "1")
   }, [])
 
-  // Auto-subscribe when permission is already granted and not yet subscribed
+  // Auto-subscribe when permission is already granted and flag says enabled
   useEffect(() => {
-    if (!supported || subscribed || permission !== "granted") return
+    if (!supported || !enabled || permission !== "granted") return
     autoSubscribe()
-  }, [supported, subscribed, permission])
+  }, [supported, enabled, permission])
 
   async function autoSubscribe() {
     try {
       const reg = await navigator.serviceWorker.ready
       const existing = await reg.pushManager.getSubscription()
       if (existing) {
-        // Already subscribed to push manager, just save to server
         await fetch("/api/push/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            establishmentId,
-            customerKey,
-            subscription: existing.toJSON(),
-          }),
+          body: JSON.stringify({ establishmentId, customerKey, subscription: existing.toJSON() }),
         })
-        localStorage.setItem(STORAGE_KEY, "1")
-        setSubscribed(true)
         return
       }
 
@@ -59,78 +53,82 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
       await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          establishmentId,
-          customerKey,
-          subscription: subscription.toJSON(),
-        }),
+        body: JSON.stringify({ establishmentId, customerKey, subscription: subscription.toJSON() }),
       })
-
-      localStorage.setItem(STORAGE_KEY, "1")
-      setSubscribed(true)
     } catch (e) {
       console.error("[Push] auto-subscribe error:", e)
     }
   }
 
-  async function unsubscribe() {
+  async function toggleNotifications() {
+    if (loading) return
+    setLoading(true)
     try {
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.getSubscription()
-      if (sub) {
-        await fetch("/api/push/subscribe", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        })
-        await sub.unsubscribe()
-      }
-      localStorage.removeItem(STORAGE_KEY)
-      setSubscribed(false)
-    } catch (e) {
-      console.error("[Push] unsubscribe error:", e)
-    }
-  }
-
-  async function requestAndSubscribe() {
-    try {
-      const perm = await Notification.requestPermission()
-      setPermission(perm)
-      if (perm === "granted") {
+      if (enabled) {
+        // DESATIVAR
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) {
+          await fetch("/api/push/subscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          })
+          await sub.unsubscribe()
+        }
+        localStorage.removeItem(STORAGE_KEY)
+        setEnabled(false)
+      } else {
+        // ATIVAR
+        if (permission === "denied") {
+          setLoading(false)
+          return
+        }
+        if (permission === "default") {
+          const perm = await Notification.requestPermission()
+          setPermission(perm)
+          if (perm !== "granted") {
+            setLoading(false)
+            return
+          }
+        }
+        localStorage.setItem(STORAGE_KEY, "1")
+        setEnabled(true)
         await autoSubscribe()
       }
     } catch (e) {
-      console.error("[Push] request error:", e)
+      console.error("[Push] toggle error:", e)
+    } finally {
+      setLoading(false)
     }
   }
 
   if (!supported || permission === "denied") return null
 
-  if (permission === "default") {
-    return (
-      <button
-        onClick={requestAndSubscribe}
-        className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-medium px-3 py-2 rounded-lg transition-all"
+  return (
+    <button
+      onClick={toggleNotifications}
+      disabled={loading}
+      className="flex items-center justify-between w-full rounded-lg p-3 transition-all"
+      style={{ backgroundColor: enabled ? "rgba(34,197,94,0.1)" : "rgba(0,0,0,0.03)" }}
+    >
+      <div className="flex items-center gap-2">
+        <span>{enabled ? "🔔" : "🔕"}</span>
+        <span className="text-sm font-medium" style={{ color: enabled ? "#16a34a" : "#71717a" }}>
+          {loading ? "Processando..." : enabled ? "Notificações ativas" : "Notificações desativadas"}
+        </span>
+      </div>
+      <div
+        className="relative h-6 w-11 rounded-full transition-colors"
+        style={{ backgroundColor: enabled ? "#22c55e" : "#d4d4d8" }}
       >
-        <span>🔔</span>
-        <span>Ativar notificações</span>
-      </button>
-    )
-  }
-
-  if (permission === "granted" && subscribed) {
-    return (
-      <button
-        onClick={unsubscribe}
-        className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-medium px-3 py-2 rounded-lg transition-all"
-      >
-        <span>🔕</span>
-        <span>Desativar notificações</span>
-      </button>
-    )
-  }
-
-  return null
+        <div
+          className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+          style={{ transform: enabled ? "translateX(22px)" : "translateX(2px)" }}
+        />
+      </div>
+    </button>
+  )
 }
 
 function urlBase64ToUint8Array(base64String: string) {
