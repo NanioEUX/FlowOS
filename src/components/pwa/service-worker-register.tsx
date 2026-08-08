@@ -10,11 +10,7 @@ export function ServiceWorkerRegister() {
     const register = async () => {
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" })
-        console.log("[PWA] SW registrado:", reg.scope)
-
-        if (reg.waiting) {
-          reg.waiting.postMessage({ type: "SKIP_WAITING" })
-        }
+        console.log("[PWA] Service Worker registrado:", reg.scope)
       } catch (err) {
         console.warn("[PWA] Falha ao registrar SW:", err)
       }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v11"
+const CACHE_NAME = "pedefacil-v12"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -26,12 +26,6 @@ self.addEventListener("activate", (event) => {
       )
     }).then(() => self.clients.claim())
   )
-})
-
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting()
-  }
 })
 
 self.addEventListener("fetch", (event) => {
@@ -98,44 +92,36 @@ self.addEventListener("fetch", (event) => {
 })
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Nova notificação", body: "", url: "/" }
+  let data = { title: "FlowOS", body: "Nova notificação", url: "/" }
   try {
     data = JSON.parse(event.data.text())
-  } catch (e) {
-    console.error("[SW] push parse error:", e)
-  }
-
-  const title = data.title || "Nova notificação"
-  const options = {
-    body: data.body || "",
-    icon: data.icon || "/icons/icon-192.png",
-    badge: "/icons/icon-512.png",
-    vibrate: [200, 100, 200],
-    data: { url: data.url || "/", title: title, body: data.body || "", tag: data.tag },
-    tag: data.tag || "push-" + Date.now(),
-    renotify: true,
-  }
+  } catch {}
 
   event.waitUntil(
-    self.registration.showNotification(title, options).catch((err) => {
-      console.error("[SW] showNotification failed:", err)
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || "/icons/icon-192.png",
+      badge: data.badge || "/icons/icon-512.png",
+      vibrate: [200, 100, 200],
+      data: { url: data.url, title: data.title, body: data.body, tag: data.tag },
+      actions: [{ action: "open", title: "Ver pedido" }],
+      tag: data.tag,
+      renotify: true,
     })
   )
 
   // Notify all open PWA clients about the new push
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      clients.forEach((client) => {
-        client.postMessage({
-          type: "push-notification",
-          title: title,
-          body: data.body || "",
-          url: data.url || "/",
-          tag: data.tag,
-        })
+  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "push-notification",
+        title: data.title,
+        body: data.body,
+        url: data.url,
+        tag: data.tag,
       })
     })
-  )
+  })
 })
 
 self.addEventListener("notificationclick", (event) => {
@@ -156,4 +142,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   )
 })
-
