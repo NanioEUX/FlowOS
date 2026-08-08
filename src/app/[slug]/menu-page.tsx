@@ -276,7 +276,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [storyCombos, setStoryCombos] = useState<any[]>([])
   const [bannerSlide, setBannerSlide] = useState(0)
   const [destaqueSlide, setDestaqueSlide] = useState(0)
-  const [promoSlide, setPromoSlide] = useState(0)
+
+  // Auto-scroll ref for compact promo cards
+  const promoScrollRef = useRef<HTMLDivElement>(null)
   const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   // Featured products (3 seções: trending/new/promo) - substitui stories
   const [featuredSections, setFeaturedSections] = useState<{
@@ -706,14 +708,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => { if (destaqueIntervalRef.current) clearInterval(destaqueIntervalRef.current) }
   }, [featuredSections.trending.length])
 
-  // Promo carousel auto-advance
-  const promoIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  // Promo compact cards auto-scroll
+  const promoAutoScrollRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
-    if (featuredSections.promo.length <= 1) return
-    promoIntervalRef.current = setInterval(() => {
-      setPromoSlide((prev) => (prev + 1) % featuredSections.promo.length)
+    const el = promoScrollRef.current
+    if (!el || featuredSections.promo.length <= 1) return
+    let forward = true
+    promoAutoScrollRef.current = setInterval(() => {
+      if (forward) {
+        el.scrollBy({ left: 233, behavior: "smooth" })
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) forward = false
+      } else {
+        el.scrollBy({ left: -233, behavior: "smooth" })
+        if (el.scrollLeft <= 10) forward = true
+      }
     }, 4000)
-    return () => { if (promoIntervalRef.current) clearInterval(promoIntervalRef.current) }
+    return () => { if (promoAutoScrollRef.current) clearInterval(promoAutoScrollRef.current) }
   }, [featuredSections.promo.length])
 
   const openStory = (storyId: string) => {
@@ -2018,70 +2028,58 @@ onPaymentConfirmed={handlePaymentSuccess}
         )
       })()}
 
-      {/* Promoções - full-width carousel, 1 card at a time */}
+      {/* Promoções - compact cards, horizontal scroll */}
       {featuredSections.promo.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-4">
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">💰</span>
             <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
           </div>
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl">
-              <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${promoSlide * 100}%)` }}>
-                {featuredSections.promo.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                      if (!product) return
-                      setSelectedProduct(product)
-                      setSelectedProductQty(1)
-                      setSelectedProductOptions([])
-                    }}
-                    className="flex-shrink-0 w-full text-left"
-                  >
-                    <div className="relative w-full rounded-2xl overflow-hidden active:scale-[0.99] transition-transform" style={{ minHeight: "180px", backgroundColor: theme.bgCard }}>
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-5xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                      {item.originalPrice && (
-                        <div className="absolute top-3 right-3 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
-                          {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
-                        </div>
-                      )}
-                      <div className="relative z-10 flex flex-col justify-end p-5" style={{ minHeight: "180px" }}>
-                        <h3 className="text-xl font-black text-white leading-tight drop-shadow-lg">{item.name}</h3>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-2">
-                            {item.originalPrice && (
-                              <span className="text-sm line-through text-white/60">
-                                R$ {item.originalPrice.toFixed(2).replace(".", ",")}
-                              </span>
-                            )}
-                            <span className="text-lg font-bold text-green-400 drop-shadow">
-                              R$ {item.price.toFixed(2).replace(".", ",")}
-                            </span>
-                          </div>
-                          <span className="px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg" style={{ backgroundColor: theme.primary }}>
-                            Comprar Agora
-                          </span>
-                        </div>
-                      </div>
+          <div
+            ref={promoScrollRef}
+            className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+          >
+            {featuredSections.promo.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
+                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <div className="relative h-[90px] w-full">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
+                  )}
+                  {item.originalPrice && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
+                      {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            {featuredSections.promo.length > 1 && (
-              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                {featuredSections.promo.map((_: any, i: number) => (
-                  <button key={i} onClick={() => setPromoSlide(i)} className={`rounded-full transition-all duration-300 ${promoSlide === i ? "w-5 h-1.5" : "w-1.5 h-1.5"}`} style={{ backgroundColor: promoSlide === i ? "white" : "rgba(255,255,255,0.4)" }} />
-                ))}
-              </div>
-            )}
+                  )}
+                </div>
+                <div className="p-2.5">
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {item.originalPrice && (
+                      <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
+                        R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                    )}
+                    <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
+                      R$ {item.price.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
