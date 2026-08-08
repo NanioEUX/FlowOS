@@ -2037,7 +2037,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Sticky Category Filters - sticks below header when scrolling past destaques/promo */}
-      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "calc(68px + env(safe-area-inset-top, 0px))", backgroundColor: theme.bgPage }}>
+      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "calc(92px + env(safe-area-inset-top, 0px))", backgroundColor: theme.bgPage }}>
         <div className="mx-auto max-w-3xl px-4 py-3">
           {searchMode ? (
             <div className="relative">
