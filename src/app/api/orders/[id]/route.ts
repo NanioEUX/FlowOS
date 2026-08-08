@@ -319,7 +319,7 @@ export async function PATCH(
             await sendPush(order.establishmentId, order.customerPhone, {
               title: `${statusEmoji[status] || "📦"} ${statusTitle[status] || "Atualização do pedido"}`,
               body: template.substring(0, 100),
-              url: order.trackingToken ? `/pedido/${order.id}?token=${order.trackingToken}` : `/pedido/${order.id}`,
+              url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
               tag: `order-${order.id}`,
             })
           } catch (pushErr: any) {

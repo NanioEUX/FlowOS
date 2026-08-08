@@ -73,6 +73,25 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     }
   }
 
+  async function unsubscribe() {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      localStorage.removeItem(STORAGE_KEY)
+      setSubscribed(false)
+    } catch (e) {
+      console.error("[Push] unsubscribe error:", e)
+    }
+  }
+
   async function requestAndSubscribe() {
     try {
       const perm = await Notification.requestPermission()
@@ -85,10 +104,8 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     }
   }
 
-  // If not supported, denied, or already subscribed — render nothing
-  if (!supported || permission === "denied" || subscribed) return null
+  if (!supported || permission === "denied") return null
 
-  // If permission is "default" (not yet asked), show a prompt button
   if (permission === "default") {
     return (
       <button
@@ -97,6 +114,18 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
       >
         <span>🔔</span>
         <span>Ativar notificações</span>
+      </button>
+    )
+  }
+
+  if (permission === "granted" && subscribed) {
+    return (
+      <button
+        onClick={unsubscribe}
+        className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-medium px-3 py-2 rounded-lg transition-all"
+      >
+        <span>🔕</span>
+        <span>Desativar notificações</span>
       </button>
     )
   }
