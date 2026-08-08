@@ -163,6 +163,7 @@ export async function PATCH(
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
         ...(status === "out_for_delivery" && { assignedAt: new Date() }),
+        ...(status === "delivered" && { deliveredAt: new Date() }),
         ...(autoConfirmPayment && { paymentStatus: "paid" }),
       },
     })

@@ -52,6 +52,7 @@ interface OrderData {
   paymentLink: string | null
   notes: string | null
   deliveryPerson: string | null
+  deliveredAt: string | Date | null
   createdAt: string | Date
   establishment: {
     name: string
@@ -339,6 +340,11 @@ export function TrackingPage({ order, statusSteps }: Props) {
                       </p>
                       {isCurrent && estimatedTime && (
                         <p className="text-sm text-green-600">Tempo estimado: {estimatedTime}</p>
+                      )}
+                      {step.key === "delivered" && isCompleted && order.deliveredAt && (
+                        <p className="text-sm text-green-600">
+                          Entregue às {new Date(order.deliveredAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
                       )}
                     </div>
                   </div>
