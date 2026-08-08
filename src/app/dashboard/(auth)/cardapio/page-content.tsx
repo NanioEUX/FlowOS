@@ -654,6 +654,23 @@ export default function CardapioPage() {
       // Ativando promoção — abre modal
       const product = categories.flatMap(c => c.products).find(p => p.id === productId)
       if (product) {
+        // Se já é destaque, desativa destaque primeiro
+        if ((product as any).featured) {
+          await fetchAuth(`/api/products/${productId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
+          })
+          setCategories((prev) =>
+            prev.map((cat) => ({
+              ...cat,
+              products: cat.products.map((p) =>
+                p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
+              ),
+            }))
+          )
+          toast("Destaque desativado automaticamente", "info")
+        }
         setPromoModal({
           open: true,
           productId: product.id,
@@ -728,6 +745,23 @@ export default function CardapioPage() {
     } else {
       const product = categories.flatMap(c => c.products).find(p => p.id === productId)
       if (product) {
+        // Se já é promoção, desativa promoção primeiro
+        if ((product as any).onSale) {
+          await fetchAuth(`/api/products/${productId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ onSale: false, promoPrice: null }),
+          })
+          setCategories((prev) =>
+            prev.map((cat) => ({
+              ...cat,
+              products: cat.products.map((p) =>
+                p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+              ),
+            }))
+          )
+          toast("Promoção desativada automaticamente", "info")
+        }
         setFeaturedModal({
           open: true,
           productId: product.id,
