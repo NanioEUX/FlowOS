@@ -98,36 +98,44 @@ self.addEventListener("fetch", (event) => {
 })
 
 self.addEventListener("push", (event) => {
-  let data = { title: "FlowOS", body: "Nova notificação", url: "/" }
+  let data = { title: "Nova notificação", body: "", url: "/" }
   try {
     data = JSON.parse(event.data.text())
-  } catch {}
+  } catch (e) {
+    console.error("[SW] push parse error:", e)
+  }
+
+  const title = data.title || "Nova notificação"
+  const options = {
+    body: data.body || "",
+    icon: data.icon || "/icons/icon-192.png",
+    badge: "/icons/icon-512.png",
+    vibrate: [200, 100, 200],
+    data: { url: data.url || "/", title: title, body: data.body || "", tag: data.tag },
+    tag: data.tag || "push-" + Date.now(),
+    renotify: true,
+  }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon || "/icons/icon-192.png",
-      badge: data.badge || "/icons/icon-512.png",
-      vibrate: [200, 100, 200],
-      data: { url: data.url, title: data.title, body: data.body, tag: data.tag },
-      actions: [{ action: "open", title: "Ver pedido" }],
-      tag: data.tag,
-      renotify: true,
+    self.registration.showNotification(title, options).catch((err) => {
+      console.error("[SW] showNotification failed:", err)
     })
   )
 
   // Notify all open PWA clients about the new push
-  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-    clients.forEach((client) => {
-      client.postMessage({
-        type: "push-notification",
-        title: data.title,
-        body: data.body,
-        url: data.url,
-        tag: data.tag,
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "push-notification",
+          title: title,
+          body: data.body || "",
+          url: data.url || "/",
+          tag: data.tag,
+        })
       })
     })
-  })
+  )
 })
 
 self.addEventListener("notificationclick", (event) => {
