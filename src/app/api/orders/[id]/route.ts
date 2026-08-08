@@ -282,7 +282,7 @@ export async function PATCH(
         }
         const template = templateMap[status]
         console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 40) + '...' : 'EMPTY/NULL'}`)
-        if (template) {
+        if (template && establishment) {
           const provider = getWhatsAppProvider({
             whatsappProvider: establishment.whatsappProvider,
             evolutionBaseUrl: establishment.evolutionBaseUrl,
