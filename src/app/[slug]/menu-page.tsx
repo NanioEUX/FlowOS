@@ -3946,11 +3946,15 @@ onPaymentConfirmed={handlePaymentSuccess}
           className="fixed bottom-16 left-3 right-3 z-[55] animate-slideUp pointer-events-none"
         >
           <div
-            className="mx-auto max-w-md rounded-2xl p-3 shadow-2xl flex items-center gap-3 pointer-events-auto"
-            style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderSubtle}` }}
+            className="mx-auto max-w-md rounded-2xl p-3 flex items-center gap-3 pointer-events-auto shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+            style={{
+              backgroundColor: theme.bgCard,
+              border: `1px solid ${theme.primary}40`,
+              boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${theme.primary}30`,
+            }}
             onClick={() => setPushNotification(null)}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full text-lg shrink-0" style={{ backgroundColor: theme.primary + "15" }}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full text-lg shrink-0" style={{ backgroundColor: theme.primary + "20" }}>
               📦
             </div>
             <div className="flex-1 min-w-0">
