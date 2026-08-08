@@ -1915,7 +1915,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div style={{ height: "calc(76px + env(safe-area-inset-top, 0px))" }} />
+      <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
 
       {/* Destaques - full-width carousel, 1 card at a time */}
       {featuredSections.trending.length > 0 && (() => {
