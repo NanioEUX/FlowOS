@@ -2050,10 +2050,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Ações rápidas PWA */}
-      <div className="hidden">
-        <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-      </div>
+      {/* PWA Push Auto-Subscribe */}
+      <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
 
       {/* Categories & Products */}
       <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
@@ -2769,9 +2767,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 >
                   Usar este código
                 </button>
-                {whatsappError && (
-                  <p className="mt-1 text-[10px] text-red-400">{whatsappError}</p>
-                )}
+                <p className="mt-2 text-[10px] text-amber-500/70">Use o código acima para continuar</p>
               </div>
             )}
 

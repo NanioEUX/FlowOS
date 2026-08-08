@@ -8,7 +8,6 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
   const [supported, setSupported] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default")
   const [subscribed, setSubscribed] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -21,23 +20,35 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     setSubscribed(localStorage.getItem(STORAGE_KEY) === "1")
   }, [])
 
-  async function subscribe() {
-    if (!supported) return
-    setLoading(true)
+  // Auto-subscribe when permission is already granted and not yet subscribed
+  useEffect(() => {
+    if (!supported || subscribed || permission !== "granted") return
+    autoSubscribe()
+  }, [supported, subscribed, permission])
+
+  async function autoSubscribe() {
     try {
-      const perm = await Notification.requestPermission()
-      setPermission(perm)
-      if (perm !== "granted") return
-
       const reg = await navigator.serviceWorker.ready
-
-      // Busca VAPID public key do servidor
-      const res = await fetch("/api/push/vapid-key")
-      const { publicKey } = await res.json()
-      if (!publicKey) {
-        alert("Push não configurado no servidor")
+      const existing = await reg.pushManager.getSubscription()
+      if (existing) {
+        // Already subscribed to push manager, just save to server
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            establishmentId,
+            customerKey,
+            subscription: existing.toJSON(),
+          }),
+        })
+        localStorage.setItem(STORAGE_KEY, "1")
+        setSubscribed(true)
         return
       }
+
+      const res = await fetch("/api/push/vapid-key")
+      const { publicKey } = await res.json()
+      if (!publicKey) return
 
       const convertedKey = urlBase64ToUint8Array(publicKey)
       const subscription = await reg.pushManager.subscribe({
@@ -58,25 +69,39 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
       localStorage.setItem(STORAGE_KEY, "1")
       setSubscribed(true)
     } catch (e) {
-      console.error("[Push] erro:", e)
-    } finally {
-      setLoading(false)
+      console.error("[Push] auto-subscribe error:", e)
     }
   }
 
-  if (!supported || permission === "denied") return null
-  if (subscribed) return null
+  async function requestAndSubscribe() {
+    try {
+      const perm = await Notification.requestPermission()
+      setPermission(perm)
+      if (perm === "granted") {
+        await autoSubscribe()
+      }
+    } catch (e) {
+      console.error("[Push] request error:", e)
+    }
+  }
 
-  return (
-    <button
-      onClick={subscribe}
-      disabled={loading}
-      className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-medium px-3 py-2 rounded-lg transition-all"
-    >
-      <span>🔔</span>
-      <span>{loading ? "Ativando..." : "Receber avisos do pedido"}</span>
-    </button>
-  )
+  // If not supported, denied, or already subscribed — render nothing
+  if (!supported || permission === "denied" || subscribed) return null
+
+  // If permission is "default" (not yet asked), show a prompt button
+  if (permission === "default") {
+    return (
+      <button
+        onClick={requestAndSubscribe}
+        className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-medium px-3 py-2 rounded-lg transition-all"
+      >
+        <span>🔔</span>
+        <span>Ativar notificações</span>
+      </button>
+    )
+  }
+
+  return null
 }
 
 function urlBase64ToUint8Array(base64String: string) {
