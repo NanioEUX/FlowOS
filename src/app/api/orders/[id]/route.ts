@@ -306,34 +306,10 @@ export async function PATCH(
         // Push notification PWA (sempre, independente de template)
         try {
           const { sendPush } = await import("@/lib/push")
-          const statusEmoji: any = {
-            confirmed: "✅",
-            preparing: "👨‍🍳",
-            ready: "🎉",
-            out_for_delivery: "🛵",
-            delivered: "✨",
-            cancelled: "❌",
-          }
-          const statusTitle: any = {
-            confirmed: "Pedido confirmado!",
-            preparing: "Preparando seu pedido",
-            ready: "Pedido pronto!",
-            out_for_delivery: "Saiu pra entrega",
-            delivered: "Pedido entregue!",
-            cancelled: "Pedido cancelado",
-          }
-          const statusBody: any = {
-            confirmed: "Já estamos preparando. Prazo estimado: 30-45 min.",
-            preparing: "Seu pedido está sendo preparado com carinho.",
-            ready: "Seu pedido está pronto e aguardando retirada/entrega.",
-            out_for_delivery: "Seu pedido saiu para entrega! Previsão: 20-30 min.",
-            delivered: "Bom apetite e obrigado pela preferência!",
-            cancelled: "Seu pedido foi cancelado.",
-          }
-          const orderNum = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
-          const pushBody = statusBody[status] || template?.substring(0, 100) || "Atualização do pedido"
-          const pushTitle = `${statusEmoji[status] || "📦"} Pedido #${orderNum} — ${statusTitle[status] || "Atualização"}`
-          console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" phone=${order.customerPhone}`)
+          const customerName = order.customerName?.split(" ")[0] || "Cliente"
+          const pushBody = `Olá ${customerName}! ${template || "Atualização do pedido."}`
+          const pushTitle = establishment?.name || "Pedido"
+          console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" body="${pushBody}" phone=${order.customerPhone}`)
           const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
             title: pushTitle,
             body: pushBody,

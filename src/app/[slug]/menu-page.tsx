@@ -3940,27 +3940,23 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       <InstallPromptToast show={showInstallPrompt} />
 
-      {/* Push notification toast */}
+      {/* Push notification toast — above bottom nav */}
       {pushNotification && (
         <div
-          className="fixed top-4 left-4 right-4 z-[60] animate-slideDown"
-          onClick={() => {
-            setPushNotification(null)
-            if (pushNotification.url) window.location.href = pushNotification.url
-          }}
+          className="fixed bottom-16 left-3 right-3 z-[55] animate-slideUp pointer-events-none"
         >
           <div
-            className="mx-auto max-w-md rounded-2xl p-4 shadow-2xl cursor-pointer flex items-center gap-3"
+            className="mx-auto max-w-md rounded-2xl p-3 shadow-2xl flex items-center gap-3 pointer-events-auto"
             style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderSubtle}` }}
+            onClick={() => setPushNotification(null)}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full text-xl" style={{ backgroundColor: theme.primary + "15" }}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full text-lg shrink-0" style={{ backgroundColor: theme.primary + "15" }}>
               📦
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{pushNotification.title}</p>
               <p className="text-xs truncate" style={{ color: theme.textMuted }}>{pushNotification.body}</p>
             </div>
-            <span className="text-xs font-medium whitespace-nowrap" style={{ color: theme.primary }}>Ver</span>
           </div>
         </div>
       )}
