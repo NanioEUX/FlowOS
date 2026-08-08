@@ -303,6 +303,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [showOrdersList, setShowOrdersList] = useState(false)
   const [customerOrders, setCustomerOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
+  const [pushNotification, setPushNotification] = useState<{ title: string; body: string; url: string } | null>(null)
   const [showCustomerProfile, setShowCustomerProfile] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
@@ -1573,6 +1574,20 @@ const handlePaymentSuccess = useCallback(() => {
     loadCustomerOrders()
   }, [establishment.slug, loadCustomerOrders])
 
+  // Listen for push notifications from service worker → refresh orders + show toast
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === "push-notification") {
+        loadCustomerOrders()
+        setPushNotification({ title: event.data.title || "", body: event.data.body || "", url: event.data.url || "" })
+        setTimeout(() => setPushNotification(null), 6000)
+      }
+    }
+    navigator.serviceWorker.addEventListener("message", handleMessage)
+    return () => navigator.serviceWorker.removeEventListener("message", handleMessage)
+  }, [loadCustomerOrders])
+
   function handlePedidosClick() {
     if (lastOrder) {
       openTracking(lastOrder.orderId, lastOrder.trackingUrl)
@@ -1846,7 +1861,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
   return (
     <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
-      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; }`}</style>
+      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
@@ -3924,6 +3939,31 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       <InstallPromptToast show={showInstallPrompt} />
+
+      {/* Push notification toast */}
+      {pushNotification && (
+        <div
+          className="fixed top-4 left-4 right-4 z-[60] animate-slideDown"
+          onClick={() => {
+            setPushNotification(null)
+            if (pushNotification.url) window.location.href = pushNotification.url
+          }}
+        >
+          <div
+            className="mx-auto max-w-md rounded-2xl p-4 shadow-2xl cursor-pointer flex items-center gap-3"
+            style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderSubtle}` }}
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full text-xl" style={{ backgroundColor: theme.primary + "15" }}>
+              📦
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{pushNotification.title}</p>
+              <p className="text-xs truncate" style={{ color: theme.textMuted }}>{pushNotification.body}</p>
+            </div>
+            <span className="text-xs font-medium whitespace-nowrap" style={{ color: theme.primary }}>Ver</span>
+          </div>
+        </div>
+      )}
 
       {/* Product Detail Modal */}
       {selectedProduct && (

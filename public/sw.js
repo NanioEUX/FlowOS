@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v7"
+const CACHE_NAME = "pedefacil-v8"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -101,12 +101,27 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: data.icon || "/icons/icon-192.png",
-      badge: "/icons/icon-512.png",
+      badge: data.badge || "/icons/icon-512.png",
       vibrate: [200, 100, 200],
-      data: { url: data.url },
-      actions: [{ action: "open", title: "Abrir" }],
+      data: { url: data.url, title: data.title, body: data.body, tag: data.tag },
+      actions: [{ action: "open", title: "Ver pedido" }],
+      tag: data.tag,
+      renotify: true,
     })
   )
+
+  // Notify all open PWA clients about the new push
+  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "push-notification",
+        title: data.title,
+        body: data.body,
+        url: data.url,
+        tag: data.tag,
+      })
+    })
+  })
 })
 
 self.addEventListener("notificationclick", (event) => {

@@ -255,6 +255,7 @@ export async function PATCH(
         const establishment = await prisma.establishment.findUnique({
           where: { id: order.establishmentId },
           select: {
+            logo: true,
             whatsappProvider: true,
             evolutionBaseUrl: true,
             evolutionApiKey: true,
@@ -320,10 +321,20 @@ export async function PATCH(
             delivered: "Pedido entregue!",
             cancelled: "Pedido cancelado",
           }
-          const pushBody = template ? template.substring(0, 100) : statusTitle[status] || "Atualização do pedido"
+          const statusBody: any = {
+            confirmed: "Já estamos preparando. Prazo estimado: 30-45 min.",
+            preparing: "Seu pedido está sendo preparado com carinho.",
+            ready: "Seu pedido está pronto e aguardando retirada/entrega.",
+            out_for_delivery: "Seu pedido saiu para entrega! Previsão: 20-30 min.",
+            delivered: "Bom apetite e obrigado pela preferência!",
+            cancelled: "Seu pedido foi cancelado.",
+          }
+          const orderNum = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
+          const pushBody = statusBody[status] || template?.substring(0, 100) || "Atualização do pedido"
           await sendPush(order.establishmentId, order.customerPhone, {
-            title: `${statusEmoji[status] || "📦"} ${statusTitle[status] || "Atualização do pedido"}`,
+            title: `${statusEmoji[status] || "📦"} Pedido #${orderNum} — ${statusTitle[status] || "Atualização"}`,
             body: pushBody,
+            icon: establishment?.logo || undefined,
             url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
             tag: `order-${order.id}`,
           })
