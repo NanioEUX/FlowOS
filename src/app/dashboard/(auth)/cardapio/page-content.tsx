@@ -662,7 +662,7 @@ export default function CardapioPage() {
           currentOnSale: (product as any).onSale || false,
           currentPromoPrice: (product as any).promoPrice || null,
         })
-        setPromoForm({ adjustPrice: false, promoPrice: "" })
+        setPromoForm({ adjustPrice: true, promoPrice: "" })
       }
     }
   }
@@ -737,7 +737,7 @@ export default function CardapioPage() {
           currentBadge: (product as any).badge || "",
           currentDiscountPrice: (product as any).featuredDiscountPrice || null,
         })
-        setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: false, discountPrice: "" })
+        setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: true, discountPrice: "" })
       }
     }
   }
@@ -2940,7 +2940,7 @@ export default function CardapioPage() {
               <Button variant="outline" className="flex-1" onClick={() => setPromoModal({ ...promoModal, open: false })}>
                 Cancelar
               </Button>
-              <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={confirmPromoActivation}>
+              <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={!promoForm.promoPrice || parseFloat(promoForm.promoPrice) <= 0} onClick={confirmPromoActivation}>
                 Ativar
               </Button>
             </div>
@@ -3020,7 +3020,7 @@ export default function CardapioPage() {
               <Button variant="outline" className="flex-1" onClick={() => setFeaturedModal({ ...featuredModal, open: false })}>
                 Cancelar
               </Button>
-              <Button className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={confirmFeaturedActivation}>
+              <Button className="flex-1 bg-amber-600 hover:bg-amber-700" disabled={!featuredForm.discountPrice || parseFloat(featuredForm.discountPrice) <= 0} onClick={confirmFeaturedActivation}>
                 Ativar
               </Button>
             </div>

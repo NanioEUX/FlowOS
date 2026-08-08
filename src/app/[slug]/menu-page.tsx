@@ -648,31 +648,43 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }, [sortedCategories])
 
-  // Fetch stories data
-  useEffect(() => {
-    async function loadStories() {
-      try {
-        const [storiesRes, bannersRes, featuredRes] = await Promise.all([
-          fetch(`/api/stories?establishmentId=${establishment.id}`),
-          fetch(`/api/banners?establishmentId=${establishment.id}`),
-          fetch(`/api/products/featured?establishmentId=${establishment.id}`),
-        ])
-        if (storiesRes.ok) {
-          const data = await storiesRes.json()
-          setStoriesData(data)
-        }
-        if (bannersRes.ok) {
-          const data = await bannersRes.json()
-          setBannersData(data)
-        }
-        if (featuredRes.ok) {
-          const data = await featuredRes.json()
-          setFeaturedSections(data.sections || { trending: [], new: [], promo: [] })
-        }
-      } catch {}
-    }
-    loadStories()
+  // Fetch stories + featured data
+  const loadStories = useCallback(async () => {
+    try {
+      const [storiesRes, bannersRes, featuredRes] = await Promise.all([
+        fetch(`/api/stories?establishmentId=${establishment.id}`),
+        fetch(`/api/banners?establishmentId=${establishment.id}`),
+        fetch(`/api/products/featured?establishmentId=${establishment.id}`),
+      ])
+      if (storiesRes.ok) {
+        const data = await storiesRes.json()
+        setStoriesData(data)
+      }
+      if (bannersRes.ok) {
+        const data = await bannersRes.json()
+        setBannersData(data)
+      }
+      if (featuredRes.ok) {
+        const data = await featuredRes.json()
+        setFeaturedSections(data.sections || { trending: [], new: [], promo: [] })
+      }
+    } catch {}
   }, [establishment.id])
+
+  useEffect(() => {
+    loadStories()
+  }, [loadStories])
+
+  // Refresh featured data when user returns to the tab (admin may have changed)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadStories()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => document.removeEventListener("visibilitychange", handleVisibility)
+  }, [loadStories])
 
   // Banner carousel auto-advance
   useEffect(() => {
