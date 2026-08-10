@@ -1,4 +1,5 @@
 "use client"
+import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart } from "lucide-react"
@@ -520,6 +521,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   async function pasteVerifyCode() {
+    // Foca no campo OTP primeiro: no iOS/Android isso faz o teclado mostrar a
+    // sugestão nativa "Colar" (cola sem pedir permissão). Em seguida tenta ler
+    // o clipboard via API — na primeira vez o sistema pede permissão, depois
+    // cola direto.
+    otpInputsRef.current[0]?.focus()
     try {
       const text = await navigator.clipboard.readText()
       const digits = text.replace(/\D/g, "").slice(0, 6)
@@ -529,10 +535,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const focusIndex = Math.min(digits.length, 5)
         otpInputsRef.current[focusIndex]?.focus()
       } else {
-        setVerifyError("Nenhum código encontrado na área de transferência")
+        setVerifyError("Nenhum código encontrado. Toque e segure no campo para colar.")
       }
     } catch {
-      setVerifyError("Não foi possível acessar a área de transferência")
+      setVerifyError("Toque e segure no campo e escolha Colar para preencher o código.")
     }
   }
 
@@ -3374,6 +3380,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                   />
                 ))}
               </div>
+              <p className="mt-2 text-center text-[10px]" style={{ color: theme.textMutedMore }}>
+                Copie o código no WhatsApp e volte aqui — ele é preenchido sozinho. Se não, toque em Colar.
+              </p>
             </div>
 
             {verifyError && (
@@ -3398,6 +3407,7 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
+      <PushHeal establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
       {/* Auto-close overlay: aba aberta via link, PWA já validou */}
       {verifyAutoClosing && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: theme.overlay }}>
