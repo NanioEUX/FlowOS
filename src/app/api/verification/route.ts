@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       where: { id: establishmentId },
       select: {
         name: true,
+        slug: true,
         whatsappProvider: true,
         evolutionBaseUrl: true,
         evolutionApiKey: true,
@@ -83,6 +84,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
     }
 
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      "https://flowoshub.com"
+    const verifyLink = `${appUrl}/${establishment.slug}?code=${code}&phone=${phoneDigits}`
+
     // Send via WhatsApp (establishment's own or SaaS fallback)
     const provider = getWhatsAppProvider({
       whatsappProvider: establishment.whatsappProvider,
@@ -92,13 +99,13 @@ export async function POST(req: NextRequest) {
       whatsappNumber: establishment.whatsappNumber,
     })
 
-    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é: *${code}*\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
+    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é: *${code}*\n\nToque aqui para validar: ${verifyLink}\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
 
     if (!provider) {
       // Sem Evolution configurada: retorna o código direto na resposta (DEV).
       // Quando configurar Evolution (SaaS ou do restaurante), o código vai pelo WhatsApp.
       console.log(`[VERIFICATION] Code for ${phoneDigits}: ${code}`)
-      return NextResponse.json({ success: true, devCode: code, message: "Código gerado (sem WhatsApp configurado). Configure Evolution para envio real." })
+      return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure Evolution para envio real." })
     }
 
     const result = await provider.sendText(phoneDigits, message, { delay: 1000 })
@@ -113,6 +120,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         devCode: code,
+        verifyLink,
         whatsappSent: false,
         whatsappError: result.error,
         message: "Código gerado (WhatsApp falhou, exibindo código).",
@@ -123,6 +131,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       whatsappSent: true,
+      verifyLink,
       messageId: result.messageId,
       ...(showDevCode ? { devCode: code } : {}),
     })

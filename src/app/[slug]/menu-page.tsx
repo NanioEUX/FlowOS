@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -249,6 +249,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+  const [cartStep, setCartStep] = useState<"cart" | "payment" | "confirmation">("cart")
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [verifyCode, setVerifyCode] = useState("")
   const [verifySending, setVerifySending] = useState(false)
@@ -257,6 +258,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [verifyDevCode, setVerifyDevCode] = useState("")
   const [whatsappSent, setWhatsappSent] = useState(false)
   const [whatsappError, setWhatsappError] = useState("")
+  const [verifyAutoClosing, setVerifyAutoClosing] = useState(false)
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
+  const verifyCodeAutoSentRef = useRef(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -441,12 +445,76 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
       setShowVerifyModal(false)
       setVerifyCode("")
+      applyLocalVerified(phoneDigits)
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
       setVerifying(false)
     }
   }
+
+  async function applyLocalVerified(phoneDigits: string) {
+    try {
+      const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
+      const data = await res.json()
+      if (data && !data.notFound) {
+        setCustomerData(data)
+        setCustomer((prev) => ({
+          ...prev,
+          name: data.name || prev.name,
+          address: data.address || prev.address,
+          cpf: data.cpf || prev.cpf,
+        }))
+      }
+    } catch {}
+  }
+
+  function handleOtpChange(index: number, value: string) {
+    const digits = value.replace(/\D/g, "")
+    if (digits) {
+      const next = verifyCode.slice(0, index) + digits.slice(-1) + verifyCode.slice(index + 1)
+      setVerifyCode(next)
+      if (index < 5) otpInputsRef.current[index + 1]?.focus()
+    } else {
+      setVerifyCode(verifyCode.slice(0, index) + verifyCode.slice(index + 1))
+      if (index > 0) otpInputsRef.current[index - 1]?.focus()
+    }
+  }
+
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !verifyCode[index] && index > 0) {
+      setVerifyCode(verifyCode.slice(0, index - 1) + verifyCode.slice(index))
+      otpInputsRef.current[index - 1]?.focus()
+    }
+  }
+
+  function handleOtpPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    if (pasted) {
+      setVerifyCode(pasted)
+      const focusIndex = Math.min(pasted.length, 5)
+      otpInputsRef.current[focusIndex]?.focus()
+    }
+  }
+
+  async function pasteVerifyCode() {
+    try {
+      const text = await navigator.clipboard.readText()
+      const digits = text.replace(/\D/g, "").slice(0, 6)
+      if (digits) {
+        setVerifyCode(digits)
+        setVerifyError("")
+        const focusIndex = Math.min(digits.length, 5)
+        otpInputsRef.current[focusIndex]?.focus()
+      } else {
+        setVerifyError("Nenhum código encontrado na área de transferência")
+      }
+    } catch {
+      setVerifyError("Não foi possível acessar a área de transferência")
+    }
+  }
+
   const [cep, setCep] = useState("")
   const [cepAddress, setCepAddress] = useState<any>(null)
   const [cepLoading, setCepLoading] = useState(false)
@@ -954,6 +1022,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
     setShowCart(true)
+    setCartStep("cart")
   }
 
   async function checkAndOpenPayment(orderId: string, trackingToken: string) {
@@ -1360,8 +1429,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // orders leave the cart dirty and the customer sees stale items.
       setCart([])
       localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-      setShowCart(false)
       setChangeFor("")
+
+      // If payment link exists, close cart (payment modal will take over).
+      // Otherwise, stay in cart and show confirmation step.
+      if (data.paymentLink) {
+        setShowCart(false)
+      } else {
+        setCartStep("confirmation")
+      }
 
       setOrderResult({
         success: true,
@@ -1598,6 +1674,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }, [customer.phone, customerData?.phone, establishment.id, lastOrder?.orderId, lastOrder?.trackingUrl, establishment.slug])
 
+  // Poll customer orders periodically so the Pedidos badge updates even
+  // without push notifications (e.g. browser without service worker).
+  useEffect(() => {
+    const phone = customer.phone || customerData?.phone
+    if (!phone) return
+    const interval = setInterval(() => {
+      loadCustomerOrders()
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
+
 const handlePaymentSuccess = useCallback(() => {
     console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
     setCart([])
@@ -1630,6 +1717,194 @@ const handlePaymentSuccess = useCallback(() => {
     navigator.serviceWorker.addEventListener("message", handleMessage)
     return () => navigator.serviceWorker.removeEventListener("message", handleMessage)
   }, [loadCustomerOrders])
+
+  // Auto-foco no primeiro campo OTP ao abrir o modal de verificação
+  useEffect(() => {
+    if (showVerifyModal) {
+      setTimeout(() => otpInputsRef.current[0]?.focus(), 150)
+    }
+  }, [showVerifyModal])
+
+  // Validação automática do código quando os 6 dígitos forem preenchidos
+  useEffect(() => {
+    if (verifyCode.length === 6 && !verifying && !verifyCodeAutoSentRef.current) {
+      verifyCodeAutoSentRef.current = true
+      submitVerifyCode()
+    }
+    if (verifyCode.length < 6) verifyCodeAutoSentRef.current = false
+  }, [verifyCode, verifying])
+
+  // Heartbeat: enquanto o modal de verificação está aberto, avisa outras
+  // instâncias (PWA aberta) que o fluxo de verificação está ativo. Isso permite
+  // que a aba aberta via link decida se fecha sozinha.
+  useEffect(() => {
+    if (!showVerifyModal) return
+    const key = `flowos-verify-active-${establishment.slug}`
+    const write = () => {
+      try {
+        localStorage.setItem(key, String(Date.now()))
+      } catch {}
+    }
+    write()
+    const id = setInterval(write, 2500)
+    return () => {
+      clearInterval(id)
+      try {
+        localStorage.removeItem(key)
+      } catch {}
+    }
+  }, [showVerifyModal, establishment.slug])
+
+  // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
+  // modal aqui e atualiza os dados do cliente.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const doneKey = `flowos-verify-done-${establishment.slug}`
+    let channel: BroadcastChannel | null = null
+
+    async function onVerifiedElsewhere() {
+      setShowVerifyModal(false)
+      setVerifyError("")
+      setVerifyCode("")
+      const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+      if (phoneDigits.length >= 10) {
+        await applyLocalVerified(phoneDigits)
+      }
+      toast("Código confirmado ✓", "success")
+    }
+
+    function onStorage(e: StorageEvent) {
+      if (e.key === doneKey) onVerifiedElsewhere()
+    }
+    window.addEventListener("storage", onStorage)
+
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        channel = new BroadcastChannel(`flowos-verify-${establishment.slug}`)
+        channel.onmessage = (e) => {
+          if (e.data?.type === "verified") onVerifiedElsewhere()
+        }
+      } catch {}
+    }
+
+    return () => {
+      window.removeEventListener("storage", onStorage)
+      channel?.close()
+    }
+  }, [establishment.slug, customer.phone, customerData?.phone, phoneInput])
+
+  // Fallback: se a validação aconteceu em outra aba/PWA (via link) e esta
+  // janela não recebeu o evento cross-tab (limitação iOS), ao voltar o foco
+  // para a janela o modal fecha automaticamente.
+  useEffect(() => {
+    if (!showVerifyModal) return
+    async function checkVerifiedOnFocus() {
+      const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+      if (phoneDigits.length < 10) return
+      try {
+        const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
+        const data = await res.json()
+        if (data && !data.notFound && data.whatsappVerified) {
+          setShowVerifyModal(false)
+          setVerifyCode("")
+          toast("Código confirmado ✓", "success")
+        }
+      } catch {}
+    }
+    const onFocus = () => checkVerifiedOnFocus()
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onFocus)
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onFocus)
+    }
+  }, [showVerifyModal, establishment.id, customer.phone, customerData?.phone, phoneInput])
+
+  // Link de verificação (ex.: ?code=123456&phone=5511999999999):
+  // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get("code")
+    const phoneParam = params.get("phone")
+    if (!code) return
+
+    // Remove o código da URL imediatamente (segurança + não repetir validação)
+    const cleanUrl = window.location.pathname + (window.location.search.replace(/[?&]code=[^&]*/, "").replace(/[?&]phone=[^&]*/, ""))
+    window.history.replaceState({}, "", cleanUrl)
+
+    const phoneDigits = (phoneParam || customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+
+    if (phoneDigits.length < 10) {
+      setVerifyError("Link de verificação inválido")
+      setShowVerifyModal(true)
+      return
+    }
+
+    ;(async () => {
+      setVerifying(true)
+      setVerifyError("")
+      try {
+        const res = await fetch("/api/verification", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id, code }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Código incorreto")
+
+        // Salva o telefone confirmado no cliente local
+        setCustomer((prev) => ({ ...prev, phone: phoneDigits, name: prev.name || data.customer?.name || prev.name }))
+        try {
+          const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
+          const parsed = saved ? JSON.parse(saved) : {}
+          parsed.phone = phoneDigits
+          localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(parsed))
+        } catch {}
+
+        await applyLocalVerified(phoneDigits)
+
+        // Avisa a PWA já aberta que o código foi validado
+        try {
+          localStorage.setItem(`flowos-verify-done-${establishment.slug}`, String(Date.now()))
+        } catch {}
+        try {
+          const ch = new BroadcastChannel(`flowos-verify-${establishment.slug}`)
+          ch.postMessage({ type: "verified" })
+          ch.close()
+        } catch {}
+
+        setShowVerifyModal(false)
+        setVerifyCode("")
+
+        // Detecta se outra instância está com o modal aberto (heartbeat recente)
+        let pwaActive = false
+        try {
+          const ts = parseInt(localStorage.getItem(`flowos-verify-active-${establishment.slug}`) || "0", 10)
+          pwaActive = Date.now() - ts < 6000
+        } catch {}
+        if (pwaActive) {
+          // PWA já aberta: mostra confirmação e tenta fechar esta aba
+          setVerifyAutoClosing(true)
+          setTimeout(() => {
+            try {
+              window.close()
+            } catch {}
+            // Se o navegador bloquear o close, a página já fica logada e o
+            // usuário só precisa voltar pra PWA.
+            setVerifyAutoClosing(false)
+          }, 1200)
+        } else {
+          toast("Código confirmado ✓", "success")
+        }
+      } catch (e: any) {
+        setVerifyError(e.message)
+        setShowVerifyModal(true)
+      } finally {
+        setVerifying(false)
+      }
+    })()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handlePedidosClick() {
     if (lastOrder) {
@@ -1911,7 +2186,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage }}>
+      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
@@ -2028,21 +2303,18 @@ onPaymentConfirmed={handlePaymentSuccess}
         )
       })()}
 
-      {/* Promoções - compact cards, horizontal scroll */}
-      {featuredSections.promo.length > 0 && (
+      {/* Promoções + Último Pedido + Mais Pedidos — unified horizontal scroll row */}
+      {(featuredSections.promo.length > 0 || lastOrder?.items?.length || featuredSections.trending.length > 0) && (
         <div className="mx-auto max-w-3xl px-4 pb-4">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">💰</span>
-            <h2 className="text-sm font-bold" style={{ color: theme.text }}>Promoções</h2>
-          </div>
           <div
             ref={promoScrollRef}
             className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
           >
-            {featuredSections.promo.map((item) => (
+            {/* Promoções button-card */}
+            {featuredSections.promo.length > 0 && featuredSections.promo.map((item) => (
               <button
-                key={item.id}
+                key={`promo-${item.id}`}
                 onClick={() => {
                   const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
                   if (!product) return
@@ -2075,6 +2347,90 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                     <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
                       R$ {item.price.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+
+            {/* Último Pedido button-card */}
+            {lastOrder?.items && lastOrder.items.length > 0 && (
+              <button
+                onClick={() => {
+                  const lastItem = lastOrder.items![0]
+                  if (!lastItem) return
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === lastItem.id)
+                  if (product) {
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
+                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <div className="relative h-[90px] w-full">
+                  {lastOrder.items![0].image ? (
+                    <img src={lastOrder.items![0].image} alt={lastOrder.items![0].name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-blue-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow flex items-center gap-1">
+                    🔄 Último pedido
+                  </div>
+                </div>
+                <div className="p-2.5">
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{lastOrder.items![0].name}</h3>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm font-bold" style={{ color: theme.text }}>
+                      {formatCurrency(lastOrder.items![0].price)}
+                    </span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                      Pedir novamente
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {/* Mais Pedidos — auto-trending */}
+            {featuredSections.trending.length > 0 && featuredSections.trending.slice(0, 5).map((item) => (
+              <button
+                key={`trend-${item.id}`}
+                onClick={() => {
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
+                }}
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
+                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                <div className="relative h-[90px] w-full">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-orange-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow flex items-center gap-1">
+                    🔥 Mais pedido
+                  </div>
+                </div>
+                <div className="p-2.5">
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
+                  <div className="flex items-center justify-between mt-1">
+                    {(item as any).promoPrice && (item as any).onSale ? (
+                      <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
+                        R$ {(item as any).promoPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-bold" style={{ color: theme.text }}>
+                        R$ {item.price.toFixed(2).replace(".", ",")}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-medium" style={{ color: theme.textMutedMore }}>
+                      ⭐ {(item as any).rating || "4.8"}
                     </span>
                   </div>
                 </div>
@@ -2222,7 +2578,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader, paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -2842,17 +3198,37 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             <div className="mt-4">
-              <label className="mb-1 block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={verifyCode}
-                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="000000"
-                className="w-full rounded-lg border px-3 py-3 text-center text-2xl font-bold tracking-widest focus:outline-none focus:ring-2"
-                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-              />
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
+                <button
+                  type="button"
+                  onClick={pasteVerifyCode}
+                  className="flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline"
+                  style={{ color: theme.accent }}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Colar
+                </button>
+              </div>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpInputsRef.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
+                    maxLength={1}
+                    value={verifyCode[i] || ""}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={handleOtpPaste}
+                    aria-label={`Dígito ${i + 1} do código`}
+                    className="h-14 w-full rounded-lg border text-center text-2xl font-bold focus:outline-none focus:ring-2"
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  />
+                ))}
+              </div>
             </div>
 
             {verifyError && (
@@ -2862,7 +3238,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <button
               type="button"
               onClick={submitVerifyCode}
-              disabled={verifying || verifyCode.length < 4}
+              disabled={verifying || verifyCode.length < 6}
               className="mt-3 w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
               style={{ backgroundColor: theme.accent }}
             >
@@ -2877,581 +3253,591 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Cart Drawer */}
-      {showCart && !showCheckout && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold" style={{ color: theme.text }}>Seu pedido</h2>
-              <div className="flex items-center gap-2">
-                {pendingOrderNumber && canCancelPending && (
-                  <button
-                    onClick={() => {
-                      setCancelModalOrderId(lastOrder?.orderId || orderResult?.orderId || "")
-                      setCancelModalTotal(total)
-                    }}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
-                    style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.3)" }}
-                  >
-                    <X className="h-3 w-3" />
-                    Cancelar
-                  </button>
-                )}
-                <button onClick={() => setShowCart(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+      {/* Auto-close overlay: aba aberta via link, PWA já validou */}
+      {verifyAutoClosing && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="mx-6 w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgModal }}>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ backgroundColor: theme.success + "20" }}>
+              <CheckCircle className="h-7 w-7" style={{ color: theme.success }} />
             </div>
-
-            <div className="mb-4 flex gap-2">
-              {orderConfig.delivery && (
-                <button
-                  type="button"
-                  onClick={() => handleOrderTypeChange("delivery")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 text-sm"
-                  style={orderType === "delivery" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                >
-                  <Bike className="h-5 w-5" />
-                  Entrega
-                </button>
-              )}
-              {orderConfig.pickup && (
-                <button
-                  type="button"
-                  onClick={() => handleOrderTypeChange("pickup")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border p-3 text-sm"
-                  style={orderType === "pickup" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                >
-                  <StoreIcon className="h-5 w-5" />
-                  Retirada
-                </button>
-              )}
-            </div>
-
-            {orderType === "pickup" && establishment.address && (
-              <div className="mb-3 rounded-lg border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
-                    <p className="text-sm" style={{ color: theme.accentMid }}>{establishment.address}</p>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium"
-                      style={{ color: theme.accent }}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Ver no mapa
-                    </a>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {orderType === "delivery" && deliveryFee > 0 && (
-              <div className="mb-3 rounded-lg bg-amber-500/[0.06] p-3 text-sm text-amber-300">
-                <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
-                {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
-                  <p className="text-xs mt-1 text-amber-400/70">
-                    Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove || 0)}!
-                    Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)}.
-                  </p>
-                )}
-              </div>
-            )}
-            {orderType === "delivery" && deliveryFee === 0 && (
-              <div className="mb-3 rounded-lg p-3 text-sm" style={{ backgroundColor: theme.accentLight, color: theme.accent }}>
-                <p className="font-medium">Entrega grátis!</p>
-              </div>
-            )}
-
-            {cart.length === 0 && !pendingOrderNumber ? (
-              <p className="py-8 text-center" style={{ color: theme.textMuted }}>Carrinho vazio</p>
-            ) : (
-              <div className="space-y-3">
-                {pendingOrderNumber && (
-                  <div className="rounded-lg p-2 text-center" style={{ backgroundColor: `${theme.primary}15`, borderWidth: 1, borderStyle: "solid", borderColor: `${theme.primary}30` }}>
-                    <p className="text-xs font-medium" style={{ color: theme.primary }}>Pedido #{pendingOrderNumber} - Aguardando pagamento</p>
-                  </div>
-                )}
-{(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
-                   const isPending = !!pendingOrderNumber
-                   const isFromPendingOrder = isPending
-                   const productOptions = getProductOptions(item.id)
-                   const hasOptions = productOptions.length > 0
-                   const selectedOpts = (item.additionalOptions || [])
-                   return (
-                   <div key={item.id} className="rounded-lg p-2" style={{ backgroundColor: theme.bgCard }}>
-                     <div className="flex items-center gap-3">
-                       {item.image && (
-                         <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                       )}
-                       <div className="flex-1 min-w-0">
-                         <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
-                         <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
-                       </div>
-                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                         {!isFromPendingOrder && hasOptions && (
-                           <button onClick={() => {
-                             const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
-                             if (!product) return
-                             setEditingCartItemId(item.id)
-                             setSelectedProduct(product)
-                             setSelectedProductQty(item.quantity)
-                             setSelectedProductOptions(selectedOpts.map((o: { name: string; price: number; quantity: number }) => ({ name: o.name, price: o.price, quantity: o.quantity })))
-                           }} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMutedMore }}>
-                             <Pencil className="h-3.5 w-3.5" />
-                           </button>
-                         )}
-                         <button onClick={() => updateQuantity(item.id, -1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                           <Minus className="h-3 w-3" />
-                         </button>
-                         <span className="w-6 text-center font-medium" style={{ color: theme.text }}>{item.quantity}</span>
-                         <button onClick={() => updateQuantity(item.id, 1)} disabled={isFromPendingOrder} className="flex h-9 w-9 items-center justify-center rounded-full transition-all" style={{ border: `1px solid ${theme.borderInputColor}`, color: isFromPendingOrder ? theme.textMutedMore : theme.textSubtle, opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                           <Plus className="h-3 w-3" />
-                         </button>
-                         <button onClick={() => removeItem(item.id)} disabled={isFromPendingOrder} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: isFromPendingOrder ? theme.textMutedMore : "#EF4444", opacity: isFromPendingOrder ? 0.4 : 1 }}>
-                           <X className="h-3 w-3" />
-                         </button>
-                       </div>
-                     </div>
-                     {/* Selected options as chips */}
-                     {!isFromPendingOrder && selectedOpts.length > 0 && (
-                       <div className="flex flex-wrap gap-1.5 mt-2 pl-[52px]">
-                         {selectedOpts.map((o: { name: string; price: number; quantity: number }, i: number) => (
-                           <span key={i} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                             {o.name}
-                             {o.quantity > 1 && <span>×{o.quantity}</span>}
-                             {o.price > 0 && <span>+{formatCurrency(o.price * o.quantity)}</span>}
-                           </span>
-                         ))}
-                       </div>
-                     )}
-                   </div>
-                   );})}
-
-                {!lastOrder?.paymentLink && !pendingOrderNumber && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm("Deseja esvaziar o carrinho?")) {
-                        setCart([])
-                        localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-                      }
-                    }}
-                    className="text-xs font-medium hover:underline pt-1"
-                    style={{ color: "#EF4444" }}
-                  >
-                    Esvaziar carrinho
-                  </button>
-                )}
-
-                {!couponData ? (
-                  <div className="flex gap-2 pt-3">
-                    <input
-                      placeholder="Cupom de desconto"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="flex-1 h-10 rounded-lg border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-green-500"
-                      style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={validateCoupon}
-                      disabled={couponLoading || !couponCode.trim()}
-                      className="gap-1"
-                    >
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tag className="h-4 w-4" />}
-                      Aplicar
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between rounded-lg border px-3 py-2 pt-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: theme.accent }}>
-                      <Tag className="h-4 w-4" />
-                      <span className="font-medium">{couponData.code}</span>
-                      <span>-{couponData.discountType === "percentage" ? `${couponData.discountValue}%` : formatCurrency(couponData.discountValue)}</span>
-                    </div>
-                    <button onClick={removeCoupon} style={{ color: theme.accent }}>
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-                {couponError && <p className="text-xs text-red-400 pt-1">{couponError}</p>}
-
-                {/* Loyalty */}
-                {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
-                  <div className="pt-3">
-                    <label className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-400" />
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: theme.text }}>
-                            {parsedLoyalty.redeemType === "product" ? "Trocar cash por produto" : "Usar meu cashback"}
-                          </p>
-                          <p className="text-xs" style={{ color: theme.textMuted }}>{customerLoyaltyPoints} cash = {formatCurrency(customerLoyaltyPoints)}</p>
-                        </div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={useLoyalty}
-                        onChange={(e) => setUseLoyalty(e.target.checked)}
-                        disabled={customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100)}
-                        className="h-4 w-4 rounded border-white/20 text-amber-500 focus:ring-amber-500"
-                      />
-                    </label>
-                    {customerLoyaltyPoints < (parsedLoyalty.redeemPoints || 100) && (
-                      <p className="mt-1 text-xs" style={{ color: theme.textMutedMore }}>
-                        {parsedLoyalty.redeemType === "product"
-                          ? `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} cash para resgatar um produto`
-                          : `Faltam ${(parsedLoyalty.redeemPoints || 100) - customerLoyaltyPoints} cash para resgatar R$ ${parsedLoyalty.redeemDiscount || 10} de desconto`}
-                      </p>
-                    )}
-                    {useLoyalty && loyaltyDiscount > 0 && (
-                      <p className="mt-1 text-xs" style={{ color: theme.accent }}>-{formatCurrency(loyaltyDiscount)} de desconto aplicado</p>
-                    )}
-                    {useLoyalty && loyaltyFreeProduct && (
-                      <p className="mt-1 text-xs" style={{ color: theme.accent }}>+{loyaltyFreeProduct.name} (Produto grátis!)</p>
-                    )}
-                    {parsedLoyalty.redeemType === "product" && parsedLoyalty.redeemProductId && !loyaltyFreeProduct && customerLoyaltyPoints >= (parsedLoyalty.redeemPoints || 100) && (
-                      <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Adicione o produto ao carrinho para resgatar</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="pt-3 space-y-1">
-                  <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                  </div>
-                  {deliveryFee > 0 && (
-                    <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                      <span>Taxa de entrega</span>
-                      <span>{formatCurrency(deliveryFee)}</span>
-                    </div>
-                  )}
-                  {couponDiscount > 0 && (
-                    <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                      <span>Desconto (cupom)</span>
-                      <span>-{formatCurrency(couponDiscount)}</span>
-                    </div>
-                  )}
-                  {loyaltyDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-amber-400">
-                      <span>Desconto (cash)</span>
-                      <span>-{formatCurrency(loyaltyDiscount)}</span>
-                    </div>
-                  )}
-                  {loyaltyFreeProduct && (
-                    <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                      <span>Produto grátis ({loyaltyFreeProduct.name})</span>
-                      <span>-{formatCurrency(loyaltyFreeProduct.price)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
-                    <span style={{ color: theme.text }}>Total</span>
-                    <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 space-y-2">
-                  {!lastOrder?.paymentLink && !pendingOrderNumber && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => setShowCart(false)}
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                      Continuar comprando
-                    </Button>
-                  )}
-                  {lastOrder?.paymentLink ? (
-                    <Button
-                      size="lg"
-                      className="w-full gap-2"
-                      onClick={() => checkAndOpenPayment(lastOrder.orderId, extractTrackingToken(lastOrder.trackingUrl))}
-                    >
-                      <CreditCard className="h-5 w-5" />
-                      Pagar pedido
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      className="w-full gap-2"
-                      onClick={() => setShowCheckout(true)}
-                      disabled={!isOpen}
-                    >
-                      <ShoppingBag className="h-5 w-5" />
-                      {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            <h3 className="text-base font-bold" style={{ color: theme.text }}>Código confirmado ✓</h3>
+            <p className="mt-1 text-sm" style={{ color: theme.textMuted }}>
+              Volte para a janela da loja que já estava aberta.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Checkout - Site */}
-      {showCheckout && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold" style={{ color: theme.text }}>Finalizar pedido</h2>
-              <button onClick={() => { setShowCheckout(false); setEditingAddress(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                <X className="h-6 w-6" />
+      {/* Unified Cart/Checkout Full-Screen Flow */}
+      {showCart && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          {/* Timeline at top — shared between cart and checkout */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-3" style={{ borderBottom: `1px solid ${theme.borderCard}` }}>
+            <div className="flex items-center justify-between max-w-lg mx-auto">
+              {[
+                { key: "cart", label: "Carrinho", icon: <ShoppingBag className="h-3.5 w-3.5" /> },
+                { key: "payment", label: "Pagamento", icon: <CreditCard className="h-3.5 w-3.5" /> },
+                { key: "confirmation", label: "Confirmado", icon: <Check className="h-3.5 w-3.5" /> },
+              ].map((step, i) => {
+                const steps = ["cart", "payment", "confirmation"]
+                const currentIdx = steps.indexOf(cartStep)
+                const stepIdx = steps.indexOf(step.key)
+                const isDone = stepIdx < currentIdx
+                const isCurrent = step.key === cartStep
+                return (
+                  <div key={step.key} className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDone ? "text-white" : isCurrent ? "text-white" : ""}`}
+                      style={{ backgroundColor: isDone || isCurrent ? theme.primary : `${theme.textMutedMore}30`, color: isDone || isCurrent ? "white" : theme.textMutedMore }}>
+                      {isDone ? <Check className="h-3 w-3" /> : step.icon}
+                    </div>
+                    <span className={`text-[10px] font-medium`} style={{ color: isDone || isCurrent ? theme.primary : theme.textMutedMore }}>
+                      {step.key === "payment" && paymentMethod && cartStep === "payment" ? "Pagamento selecionado" : step.label}
+                    </span>
+                    {i < 2 && <div className="w-8 h-0.5 rounded mx-1" style={{ backgroundColor: isDone ? theme.primary : `${theme.textMutedMore}30` }} />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 py-3">
+            <h2 className="text-lg font-bold" style={{ color: theme.text }}>
+              {cartStep === "cart" ? "Seu pedido" : cartStep === "payment" ? "Finalizar pedido" : "Pedido confirmado!"}
+            </h2>
+            <div className="flex items-center gap-2">
+              {pendingOrderNumber && canCancelPending && (
+                <button onClick={() => { setCancelModalOrderId(lastOrder?.orderId || orderResult?.orderId || ""); setCancelModalTotal(total) }}
+                  className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.3)" }}>
+                  <X className="h-3 w-3" /> Cancelar
+                </button>
+              )}
+              <button onClick={() => { setShowCart(false); setCartStep("cart"); setEditingAddress(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <X className="h-5 w-5" />
               </button>
             </div>
+          </div>
 
-            <form onSubmit={handleSiteOrder} className="space-y-4">
-              {orderType === "delivery" ? (
-                <div className="space-y-2">
-                  {addressSaved && cepAddress ? (
-                    <div className="rounded-lg p-3 text-sm space-y-2" style={{ backgroundColor: theme.bgCard, color: theme.textSubtle }}>
-                      <p>{cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
-                      <button type="button" onClick={() => setAddressSaved(false)} className="text-xs hover:underline" style={{ color: theme.accent }}>
-                        Alterar endereço
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto px-4">
+            {cartStep === "cart" && (
+              <div className="max-w-lg mx-auto space-y-3 pb-4">
+                {/* Order type toggle */}
+                {(orderConfig.delivery || orderConfig.pickup) && (
+                  <div className="flex gap-2">
+                    {orderConfig.delivery && (
+                      <button type="button" onClick={() => handleOrderTypeChange("delivery")}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all"
+                        style={orderType === "delivery" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        <Bike className="h-4 w-4" /> Entrega
                       </button>
-                    </div>
-                  ) : (
-                    <>
-                      <GeolocationButton
-                        establishmentId={establishment.id}
-                        orderTotal={subtotal}
-                        onResult={(info) => setGeoDeliveryInfo(info)}
-                      />
-                      <div className="flex gap-2">
-                      <div className="space-y-1">
-                        <label htmlFor="cep" className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
-                        <input id="cep" placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))} className="w-32 h-10 rounded-lg border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-green-500" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved && !!cepAddress} />
-                      </div>
-                        {cep.length === 8 && !cepLoading && (
-                          <button type="button" onClick={lookupCep} className="mt-6 text-xs hover:underline self-start" style={{ color: theme.accent }}>
-                            Buscar
-                          </button>
-                        )}
-                        {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin" style={{ color: theme.textMutedMore }} />}
-                      </div>
-                      {cepError && <p className="text-xs text-red-400">{cepError}</p>}
-                      {cepAddress && (
-                        <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
-                      )}
-                      <div className="space-y-1">
-                        <label htmlFor="customerAddress" className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
-                        <input id="customerAddress" placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} className="w-full h-10 rounded-lg border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-green-500" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
-                      </div>
-                      {cepAddress && customer.address && (
-                        <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }} className="w-full rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] px-4 py-2 text-sm font-medium text-white hover:opacity-90">
-                          Salvar endereço
-                        </button>
-                      )}
-                    </>
-                  )}
-                  <input type="hidden" name="fullAddress" value={fullAddress} />
-                </div>
-              ) : (
-                <div className="rounded-lg p-3 text-sm border" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
-                  <StoreIcon className="inline h-4 w-4 mr-1" />
-                  Retirada no local: {establishment.address || "Consulte o estabelecimento"}
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label htmlFor="notes" className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Observações</label>
-                <textarea
-                  id="notes"
-                  placeholder="Ex: Sem cebola, ponto da carne..."
-                  value={customer.notes}
-                  onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }}
-                  className="flex min-h-[80px] w-full rounded-lg border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              <div>
-                <p className="mb-2 text-sm font-medium" style={{ color: theme.textSubtle }}>Pagamento</p>
-                {customerOrders.length > 0 && customerOrders.some((o: any) =>
-                  ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
-                  ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
-                ) && (
-                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-                    <Shield className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold">Você tem um pedido na entrega em andamento.</p>
-                      <p className="mt-0.5">Este novo pedido será pago online (Pix ou Cartão) automaticamente.</p>
-                    </div>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {availablePayments.map((p) => {
-                    // Desabilita "Pagar na Entrega/Retirada" se já tem pedido
-                    // na entrega em andamento. Backend valida de qualquer jeito.
-                    const isDeliveryOption = p.key === "delivery" || p.key === "pickup"
-                    const blockedByOpenDelivery =
-                      isDeliveryOption &&
-                      customerOrders.length > 0 &&
-                      customerOrders.some((o: any) =>
-                        ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
-                        ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
-                      )
-                    return (
-                    <button
-                      key={p.key}
-                      type="button"
-                      disabled={blockedByOpenDelivery}
-                      onClick={() => {
-                        // Bloqueia escolha de "na entrega" se o cliente já tem
-                        // pedido online pendente — vai cancelar o atual.
-                        const switchingToDelivery = p.key === "delivery" || p.key === "pickup"
-                        if (switchingToDelivery && customerOrders.length > 0) {
-                          const pendingOnline = customerOrders.find((o: any) =>
-                            o.paymentStatus === "pending" &&
-                            ["online", "asaas", "inter", "pix"].includes(o.paymentMethod)
-                          )
-                          if (pendingOnline) {
-                            const ok = window.confirm(
-                              `Você tem o pedido #${pendingOnline.orderNumber} com pagamento online pendente. Se mudar para pagamento na entrega, esse pedido será cancelado. Deseja continuar?`
-                            )
-                            if (!ok) return
-                          }
-                        }
-                        setPaymentMethod(p.key as any)
-                        // Reset the cash/card sub-selection when switching away.
-                        if (p.key !== "delivery" && p.key !== "pickup") {
-                          setCashSubMethod(null)
-                          setChangeFor("")
-                        } else {
-                          setCashSubMethod(null)
-                          setChangeFor("")
-                        }
-                      }}
-                      className="flex items-center gap-2 rounded-lg border p-3 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={paymentMethod === p.key ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                      title={blockedByOpenDelivery ? "Você tem um pedido na entrega em andamento" : undefined}
-                    >
-                      {p.icon}
-                      {p.label}
-                    </button>
-                    )
-                  })}
-                </div>
-                {(paymentMethod === "delivery" || paymentMethod === "pickup") && (
-                  <div className="mt-2 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => { setCashSubMethod("cash"); setChangeFor("") }}
-                        className="flex items-center gap-2 rounded-lg border p-2.5 text-sm"
-                        style={cashSubMethod === "cash" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                      >
-                        <Banknote className="h-4 w-4" />
-                        Dinheiro
+                    )}
+                    {orderConfig.pickup && (
+                      <button type="button" onClick={() => handleOrderTypeChange("pickup")}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all"
+                        style={orderType === "pickup" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        <StoreIcon className="h-4 w-4" /> Retirada
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => { setCashSubMethod("card"); setChangeFor("") }}
-                        className="flex items-center gap-2 rounded-lg border p-2.5 text-sm"
-                        style={cashSubMethod === "card" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                      >
-                        <CreditCard className="h-4 w-4" />
-                        Cartão
-                      </button>
-                    </div>
-                    {cashSubMethod === "cash" && (
-                      <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: theme.borderCard, backgroundColor: theme.bgInput }}>
-                        <p className="text-xs font-medium" style={{ color: theme.textSubtle }}>Precisa de troco?</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setChangeFor("")}
-                            className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                            style={changeFor === "" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                          >
-                            Pagamento exato
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setChangeFor(total.toFixed(2))}
-                            className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                            style={changeFor === total.toFixed(2) && changeFor !== "" ? { borderColor: `${theme.primary}80`, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}
-                          >
-                            Valor exato R$ {total.toFixed(2).replace(".", ",")}
-                          </button>
-                        </div>
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>Ou troco para</label>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="text-sm" style={{ color: theme.text }}>R$</span>
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              step="0.01"
-                              min="0"
-                              placeholder="0,00"
-                              value={changeFor}
-                              onChange={(e) => setChangeFor(e.target.value)}
-                              className="flex h-9 w-full rounded-lg border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                              style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderInput }}
-                            />
-                          </div>
-                          {changeFor && Number(changeFor) > 0 && Number(changeFor) >= total && (
-                            <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>
-                              Troco de R$ {(Number(changeFor) - total).toFixed(2).replace(".", ",")}
-                            </p>
-                          )}
-                        </div>
-                      </div>
                     )}
                   </div>
                 )}
-              </div>
 
-              {orderError && <div className="rounded-lg bg-red-500/[0.06] p-3 text-sm text-red-400 border border-red-500/20">{orderError}</div>}
+                {/* Pickup address */}
+                {orderType === "pickup" && establishment.address && (
+                  <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
+                        <p className="text-sm" style={{ color: theme.accentMid }}>{establishment.address}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-              <div className="rounded-lg p-3" style={{ backgroundColor: theme.bgCard }}>
-                <p className="text-sm font-medium mb-2" style={{ color: theme.textSubtle }}>Resumo</p>
-                <div className="flex items-center gap-1 text-xs mb-2" style={{ color: theme.textMuted }}>
-                  {orderType === "delivery" ? <Bike className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
-                  {orderType === "delivery" ? "Entrega" : "Retirada"}
-                </div>
-                {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                    <span>{item.name} x{item.quantity}</span>
-                    <span>{formatCurrency(item.price * item.quantity)}</span>
+                {/* Delivery fee / free */}
+                {orderType === "delivery" && deliveryFee > 0 && (
+                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
+                    <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                    {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
+                      <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
+                    )}
                   </div>
-                ))}
-                <div className="mt-2 space-y-1 border-t pt-2" style={{ borderColor: theme.borderCard }}>
-                  <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                )}
+                {orderType === "delivery" && deliveryFee === 0 && (
+                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
+                    <p className="font-medium">Entrega grátis! 🎉</p>
                   </div>
-                  {deliveryFee > 0 && (
+                )}
+
+                {/* Pending order notice */}
+                {pendingOrderNumber && (
+                  <div className="rounded-xl p-2 text-center" style={{ backgroundColor: `${theme.primary}15`, border: `1px solid ${theme.primary}30` }}>
+                    <p className="text-xs font-medium" style={{ color: theme.primary }}>Pedido #{pendingOrderNumber} - Aguardando pagamento</p>
+                  </div>
+                )}
+
+                {/* Cart items */}
+                {cart.length === 0 && !pendingOrderNumber ? (
+                  <p className="py-12 text-center" style={{ color: theme.textMuted }}>Carrinho vazio</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
+                      const isFromPendingOrder = !!pendingOrderNumber
+                      const productOptions = getProductOptions(item.id)
+                      const hasOptions = productOptions.length > 0
+                      const selectedOpts = (item.additionalOptions || [])
+                      return (
+                        <div key={item.id} className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                          <div className="flex items-center gap-3">
+                            {item.image && <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                              <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {!isFromPendingOrder && hasOptions && (
+                                <button onClick={() => {
+                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                                  if (!product) return
+                                  setSelectedProduct(product)
+                                  setSelectedProductQty(item.quantity)
+                                  setSelectedProductOptions(item.additionalOptions || [])
+                                  setEditingCartItemId(item.id)
+                                  setShowCart(false)
+                                }} className="p-1 rounded" style={{ color: theme.textMutedMore }}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {!isFromPendingOrder && (
+                                <>
+                                  <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: Math.max(1, ci.quantity - 1) } : ci))}
+                                    className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor }}>
+                                    <Minus className="h-3 w-3" style={{ color: theme.text }} />
+                                  </button>
+                                  <span className="w-5 text-center text-xs font-medium" style={{ color: theme.text }}>{item.quantity}</span>
+                                  <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci))}
+                                    className="w-7 h-7 rounded-full border flex items-center justify-center text-white" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}>
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </>
+                              )}
+                              {!isFromPendingOrder && (
+                                <button onClick={() => setCart(prev => prev.filter(ci => ci.id !== item.id))} className="p-1 ml-1" style={{ color: theme.textMutedMore }}>
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {selectedOpts.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {selectedOpts.map((opt: any, i: number) => (
+                                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                  {opt.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Empty cart button */}
+                {cart.length > 0 && (
+                  <button onClick={() => setCart([])} className="text-xs font-medium" style={{ color: "#EF4444" }}>Esvaziar carrinho</button>
+                )}
+
+                {/* Coupon */}
+                {cart.length > 0 && (
+                  <div className="flex gap-2">
+                    <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
+                    <button onClick={validateCoupon} disabled={couponLoading}
+                      className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Loyalty/cashback */}
+                {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
+                  <div className="rounded-xl p-3 flex items-center justify-between" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4" style={{ color: theme.primary }} />
+                      <div>
+                        <div className="text-xs font-semibold" style={{ color: theme.text }}>Usar meu cashback</div>
+                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>{customerLoyaltyPoints} cash = R$ {customerLoyaltyPoints},00</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setUseLoyalty(!useLoyalty)}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${useLoyalty ? "" : ""}`}
+                      style={{ borderColor: useLoyalty ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty ? theme.primary : "transparent" }}>
+                      {useLoyalty && <Check className="h-3 w-3 text-white" />}
+                    </button>
+                  </div>
+                )}
+
+                {/* Price summary */}
+                {cart.length > 0 && (
+                  <div className="pt-2 space-y-1">
                     <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                      <span>Taxa de entrega</span>
-                      <span>{formatCurrency(deliveryFee)}</span>
+                      <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+                    </div>
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                        <span>Taxa de entrega</span><span>{formatCurrency(deliveryFee)}</span>
+                      </div>
+                    )}
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
+                        <span>Desconto (cupom)</span><span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    )}
+                    {loyaltyDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-amber-400">
+                        <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
+                      <span style={{ color: theme.text }}>Total</span>
+                      <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery estimate */}
+                {cart.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMutedMore }}>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Previsão de entrega: <strong style={{ color: theme.text }}>35-45 min</strong></span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {cartStep === "payment" && (
+              <div className="max-w-lg mx-auto space-y-4 pb-4">
+                {/* Address (delivery) */}
+                {orderType === "delivery" ? (
+                  <div className="space-y-2">
+                    {addressSaved && cepAddress ? (
+                      <div className="rounded-xl p-3 text-sm space-y-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                        <p style={{ color: theme.text }}>{cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
+                        <button type="button" onClick={() => setAddressSaved(false)} className="text-xs hover:underline" style={{ color: theme.accent }}>Alterar endereço</button>
+                      </div>
+                    ) : (
+                      <>
+                        <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
+                        <div className="flex gap-2">
+                          <div className="space-y-1">
+                            <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
+                            <input placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                              className="w-32 h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved && !!cepAddress} />
+                          </div>
+                          {cep.length === 8 && !cepLoading && (
+                            <button type="button" onClick={lookupCep} className="mt-6 text-xs hover:underline self-start" style={{ color: theme.accent }}>Buscar</button>
+                          )}
+                          {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin" style={{ color: theme.textMutedMore }} />}
+                        </div>
+                        {cepError && <p className="text-xs text-red-400">{cepError}</p>}
+                        {cepAddress && <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>}
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
+                          <input placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
+                        </div>
+                        {cepAddress && customer.address && (
+                          <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }}
+                            className="w-full rounded-xl px-4 py-2 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: theme.primary }}>
+                            Salvar endereço
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-3 text-sm border" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
+                    <StoreIcon className="inline h-4 w-4 mr-1" />
+                    Retirada no local: {establishment.address || "Consulte o estabelecimento"}
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Observações</label>
+                  <textarea placeholder="Ex: Sem cebola, ponto da carne..." value={customer.notes} onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }}
+                    className="flex min-h-[70px] w-full rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none" />
+                </div>
+
+                {/* Payment method */}
+                <div>
+                  <p className="mb-2 text-sm font-medium" style={{ color: theme.textSubtle }}>Pagamento</p>
+                  {customerOrders.length > 0 && customerOrders.some((o: any) =>
+                    ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
+                    ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
+                  ) && (
+                    <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                      <Shield className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold">Você tem um pedido na entrega em andamento.</p>
+                        <p className="mt-0.5">Este novo pedido será pago online (Pix ou Cartão) automaticamente.</p>
+                      </div>
                     </div>
                   )}
-                  {couponDiscount > 0 && (
-                    <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                      <span>Desconto ({couponData?.code})</span>
-                      <span>-{formatCurrency(couponDiscount)}</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {availablePayments.map((p) => {
+                      const isDeliveryOption = p.key === "delivery" || p.key === "pickup"
+                      const blockedByOpenDelivery = isDeliveryOption && customerOrders.length > 0 && customerOrders.some((o: any) =>
+                        ["pending", "confirmed", "preparing", "ready"].includes(o.status) &&
+                        ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(o.paymentMethod)
+                      )
+                      return (
+                        <button key={p.key} type="button" disabled={blockedByOpenDelivery}
+                          onClick={() => {
+                            const switchingToDelivery = p.key === "delivery" || p.key === "pickup"
+                            if (switchingToDelivery && customerOrders.length > 0) {
+                              const pendingOnline = customerOrders.find((o: any) => o.paymentStatus === "pending" && ["online", "asaas", "inter", "pix"].includes(o.paymentMethod))
+                              if (pendingOnline) {
+                                if (!window.confirm(`Você tem o pedido #${pendingOnline.orderNumber} com pagamento online pendente. Se mudar para pagamento na entrega, esse pedido será cancelado. Deseja continuar?`)) return
+                              }
+                            }
+                            setPaymentMethod(p.key as any)
+                            setCashSubMethod(null)
+                            setChangeFor("")
+                          }}
+                          className="flex flex-col items-center gap-1 rounded-xl border p-3 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          style={paymentMethod === p.key ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                          {p.icon}
+                          {p.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {(paymentMethod === "delivery" || paymentMethod === "pickup") && (
+                    <div className="mt-2 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => { setCashSubMethod("cash"); setChangeFor("") }}
+                          className="flex items-center gap-2 rounded-xl border p-2.5 text-sm"
+                          style={cashSubMethod === "cash" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                          <Banknote className="h-4 w-4" /> Dinheiro
+                        </button>
+                        <button type="button" onClick={() => { setCashSubMethod("card"); setChangeFor("") }}
+                          className="flex items-center gap-2 rounded-xl border p-2.5 text-sm"
+                          style={cashSubMethod === "card" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                          <CreditCard className="h-4 w-4" /> Cartão
+                        </button>
+                      </div>
+                      {cashSubMethod === "cash" && (
+                        <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: theme.borderCard, backgroundColor: theme.bgInput }}>
+                          <p className="text-xs font-medium" style={{ color: theme.textSubtle }}>Precisa de troco?</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button" onClick={() => setChangeFor("")}
+                              className="rounded-xl border px-3 py-1.5 text-xs font-medium"
+                              style={changeFor === "" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                              Pagamento exato
+                            </button>
+                            <button type="button" onClick={() => setChangeFor(total.toFixed(2))}
+                              className="rounded-xl border px-3 py-1.5 text-xs font-medium"
+                              style={changeFor === total.toFixed(2) && changeFor !== "" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                              Valor exato {formatCurrency(total)}
+                            </button>
+                          </div>
+                          <div>
+                            <label className="text-xs" style={{ color: theme.textMuted }}>Ou troco para</label>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-sm" style={{ color: theme.text }}>R$</span>
+                              <input type="number" inputMode="decimal" step="0.01" min="0" placeholder="0,00" value={changeFor} onChange={(e) => setChangeFor(e.target.value)}
+                                className="flex h-9 w-full rounded-xl border px-2 text-sm focus:outline-none" style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderInput }} />
+                            </div>
+                            {changeFor && Number(changeFor) > 0 && Number(changeFor) >= total && (
+                              <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>Troco de R$ {(Number(changeFor) - total).toFixed(2).replace(".", ",")}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                  <div className="flex justify-between font-bold" style={{ color: theme.text }}>
-                    <span>Total</span>
-                    <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
+                </div>
+
+                {/* Error */}
+                {orderError && <div className="rounded-xl p-3 text-sm text-red-400 border border-red-500/20" style={{ backgroundColor: "rgba(239,68,68,0.06)" }}>{orderError}</div>}
+
+                {/* Order summary */}
+                <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard }}>
+                  <p className="text-sm font-medium mb-2" style={{ color: theme.textSubtle }}>Resumo</p>
+                  <div className="flex items-center gap-1 text-xs mb-2" style={{ color: theme.textMuted }}>
+                    {orderType === "delivery" ? <Bike className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
+                    {orderType === "delivery" ? "Entrega" : "Retirada"}
+                  </div>
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>{formatCurrency(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                  <div className="mt-2 space-y-1 border-t pt-2" style={{ borderColor: theme.borderCard }}>
+                    <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                      <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+                    </div>
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                        <span>Taxa de entrega</span><span>{formatCurrency(deliveryFee)}</span>
+                      </div>
+                    )}
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
+                        <span>Desconto ({couponData?.code})</span><span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold" style={{ color: theme.text }}>
+                      <span>Total</span>
+                      <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={ordering}>
-                {ordering ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingBag className="mr-2 h-5 w-5" />}
-                {ordering ? "Enviando..." : "Confirmar pedido"}
-              </Button>
-            </form>
+            {cartStep === "confirmation" && orderResult?.success && (
+              <div className="max-w-lg mx-auto flex flex-col items-center justify-center py-12 px-4">
+                {/* Logo */}
+                <div className="mb-4">
+                  {(establishment.confirmationImage || establishment.logo) ? (
+                    <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.primary}15` }}>
+                      <CheckCircle className="h-8 w-8" style={{ color: theme.primary }} />
+                    </div>
+                  )}
+                </div>
+
+                <h2 className="text-xl font-bold text-center" style={{ color: theme.text }}>
+                  {establishment.confirmationTitle || "Pedido enviado!"}
+                </h2>
+
+                {/* Delivery estimate */}
+                <div className="mt-4 p-4 rounded-2xl w-full text-center" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Timer className="h-5 w-5" style={{ color: theme.primary }} />
+                    <span className="text-sm font-bold" style={{ color: theme.primary }}>Previsão de entrega</span>
+                  </div>
+                  <div className="text-2xl font-black" style={{ color: theme.primary }}>38 min</div>
+                </div>
+
+                {/* Tracker steps */}
+                <div className="mt-6 w-full">
+                  <div className="flex items-center">
+                    {[
+                      { label: "Confirmado", done: true, icon: <Check className="h-3 w-3" /> },
+                      { label: "Preparando", done: false, icon: <Clock className="h-3 w-3" /> },
+                      { label: "Saiu p/ entrega", done: false, icon: <Truck className="h-3 w-3" /> },
+                      { label: "Entregue", done: false, icon: <MapPin className="h-3 w-3" /> },
+                    ].map((step, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center relative">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }}>
+                          {step.icon}
+                        </div>
+                        <span className="text-[8px] mt-1 text-center" style={{ color: theme.textMutedMore }}>{step.label}</span>
+                        {i < 3 && <div className="absolute top-3.5 left-1/2 w-full h-0.5" style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Loyalty points */}
+                {parsedLoyalty?.enabled && (
+                  <div className="mt-5 w-full p-4 rounded-2xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Gift className="h-5 w-5" style={{ color: theme.primary }} />
+                      <span className="text-sm font-bold" style={{ color: theme.primary }}>Cashback ganho</span>
+                    </div>
+                    <div className="text-lg font-black" style={{ color: theme.primary }}>
+                      +{Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))} cash
+                    </div>
+                    <div className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                      = R$ {Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))},00 para usar
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery/pickup message */}
+                {orderResult.orderType === "pickup" && establishment.pickupMessage && (
+                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
+                    {establishment.pickupMessage}
+                  </div>
+                )}
+                {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
+                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
+                    {establishment.deliveryMessage}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Fixed bottom buttons — always in same position */}
+          <div className="flex-shrink-0 px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
+            {cartStep === "cart" && (
+              <>
+                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0}
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity"
+                  style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
+                  <ShoppingBag className="h-4 w-4" />
+                  {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
+                </button>
+                {!lastOrder?.paymentLink && !pendingOrderNumber && (
+                  <button onClick={() => { setShowCart(false); setCartStep("cart") }}
+                    className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
+                    <ArrowLeft className="h-4 w-4" /> Continuar comprando
+                  </button>
+                )}
+                {lastOrder?.paymentLink && (
+                  <button onClick={() => checkAndOpenPayment(lastOrder.orderId, extractTrackingToken(lastOrder.trackingUrl))}
+                    className="w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2" style={{ backgroundColor: theme.primary }}>
+                    <CreditCard className="h-4 w-4" /> Pagar pedido
+                  </button>
+                )}
+              </>
+            )}
+            {cartStep === "payment" && (
+              <>
+                <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity"
+                  style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
+                  {ordering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                  {ordering ? "Enviando..." : "Confirmar pedido 🔒"}
+                </button>
+                <button onClick={() => setCartStep("cart")}
+                  className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
+                  <ArrowLeft className="h-4 w-4" /> Voltar ao carrinho
+                </button>
+              </>
+            )}
+            {cartStep === "confirmation" && (
+              <>
+                {orderResult?.orderId && (
+                  <button onClick={() => {
+                    setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking()
+                  }} className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
+                    style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
+                    <ExternalLink className="h-4 w-4" /> Acompanhar pedido
+                  </button>
+                )}
+                <button onClick={() => {
+                  setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false)
+                  setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                }} className="w-full py-2.5 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
+                  Fechar
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -4066,16 +4452,32 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </span>
                   )}
                 </div>
+                {/* Ratings + Prep time row */}
+                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: `${theme.primary}15`, border: `1px solid ${theme.primary}30` }}>
+                    <Star className="h-3.5 w-3.5" style={{ color: theme.primary }} />
+                    <span className="text-xs font-bold" style={{ color: theme.primary }}>4.7</span>
+                    <span className="text-[10px]" style={{ color: theme.textMutedMore }}>(127)</span>
+                  </div>
+                  <div className="flex items-center gap-1" style={{ color: theme.textMutedMore }}>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="text-xs">~15 min</span>
+                  </div>
+                  <button className="flex items-center gap-1 text-xs transition-colors" style={{ color: theme.textMutedMore }}>
+                    <Heart className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 mt-3">
                   {(selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (
                     <>
                       <span className="text-sm line-through text-zinc-400">{formatCurrency(selectedProduct.price)}</span>
-                      <p className="font-bold text-xl text-green-600">{formatCurrency((selectedProduct as any).promoPrice)}</p>
+                      <p className="font-bold text-xl" style={{ color: "#16a34a" }}>{formatCurrency((selectedProduct as any).promoPrice)}</p>
                     </>
                   ) : (
                     <p className="font-bold text-xl" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
                   )}
                 </div>
+                <p className="text-[10px] mt-0.5" style={{ color: theme.textMutedMore }}>ou 3x de {formatCurrency(((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) / 3)} sem juros</p>
               </div>
 
               {/* Quantity */}
@@ -4183,6 +4585,38 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )
               })()}
+
+              {/* Cross-sell: "Quem pediu, também pediu" */}
+              {selectedProduct.additionalOptions && selectedProduct.additionalOptions.length > 0 && (
+                <div className="px-5 pb-4">
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
+                      <span className="text-xs font-bold" style={{ color: theme.primary }}>Quem pediu, também pediu</span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                      {selectedProduct.additionalOptions.slice(0, 3).map((opt: any, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const existing = selectedProductOptions.find((o) => o.name === opt.name)
+                            if (existing) setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: o.quantity + 1 } : o))
+                            else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                          }}
+                          className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
+                          style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: `${theme.primary}15` }}>🍫</div>
+                          <div className="text-left">
+                            <div className="text-[10px] font-medium" style={{ color: theme.text }}>{opt.name}</div>
+                            <div className="text-[10px] font-bold" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Fixed bottom button */}
