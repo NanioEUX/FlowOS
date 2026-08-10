@@ -259,12 +259,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [verifyDevCode, setVerifyDevCode] = useState("")
   const [whatsappSent, setWhatsappSent] = useState(false)
   const [whatsappError, setWhatsappError] = useState("")
-  const [verifyAutoClosing, setVerifyAutoClosing] = useState(false)
-  const [verifyCloseBlocked, setVerifyCloseBlocked] = useState(false)
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
   const verifyCodeAutoSentRef = useRef(false)
-  const isVerifyLinkTabRef = useRef(false)
-  // Garante que a aplicação do login + toast "Código confirmado" aconteça UMA
+  // Garante que a aplicação do login aconteça UMA
   // vez por verificação, mesmo com múltiplos handlers (storage/BroadcastChannel,
   // focus, polling) detectando a mesma validação ao mesmo tempo.
   const verifyAppliedRef = useRef(false)
@@ -1813,57 +1810,6 @@ const handlePaymentSuccess = useCallback(() => {
     if (verifyCode.length < 6) verifyCodeAutoSentRef.current = false
   }, [verifyCode, verifying])
 
-  // Heartbeat: enquanto o app/PWA está aberto e visível, avisa o servidor que
-  // está ativo. A aba aberta via link consulta esse heartbeat para decidir se
-  // mostra a tela de confirmação sozinha (PWA aberto) ou abre o cardápio
-  // (validação direto no navegador). No iOS o localStorage não é compartilhado
-  // entre PWA e Safari, então o heartbeat é gravado no servidor.
-  // A própria aba do link (aberta com ?code=) não grava heartbeat para não
-  // marcar a si mesma como "PWA ativa".
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    isVerifyLinkTabRef.current = new URLSearchParams(window.location.search).has("code")
-    const key = `flowos-verify-active-${establishment.slug}`
-    // Envia o heartbeat do servidor em intervalo próprio (menos frequente que
-    // o localStorage para não sobrecarregar a API).
-    const sendServerHeartbeat = () => {
-      if (isVerifyLinkTabRef.current) return
-      fetch("/api/verify/heartbeat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ establishmentId: establishment.id }),
-      }).catch(() => {})
-    }
-    const write = () => {
-      if (isVerifyLinkTabRef.current) return
-      try {
-        localStorage.setItem(key, String(Date.now()))
-      } catch {}
-    }
-    write()
-    const id = setInterval(write, 2500)
-    sendServerHeartbeat()
-    const serverId = setInterval(sendServerHeartbeat, 15000)
-    const onVisibility = () => {
-      // Grava também ao ir para background: no iOS o JS é suspenso quando a
-      // página vai para segundo plano, então o timestamp final fica registrado
-      // e a aba via link ainda detecta a PWA como ativa.
-      write()
-      sendServerHeartbeat()
-    }
-    document.addEventListener("visibilitychange", onVisibility)
-    window.addEventListener("focus", write)
-    return () => {
-      clearInterval(id)
-      clearInterval(serverId)
-      document.removeEventListener("visibilitychange", onVisibility)
-      window.removeEventListener("focus", write)
-      try {
-        localStorage.removeItem(key)
-      } catch {}
-    }
-  }, [establishment.id, establishment.slug])
-
   // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
   // modal aqui e atualiza os dados do cliente.
   useEffect(() => {
@@ -2068,40 +2014,8 @@ const handlePaymentSuccess = useCallback(() => {
         setShowVerifyModal(false)
         setVerifyCode("")
 
-        // Decide pelo heartbeat do servidor se existe um PWA aberto:
-        // - PWA ativo (heartbeat < 30s) → fica só na tela de sucesso com o
-        //   botão de fechar (quem tem PWA volta pra ela, que loga sozinha).
-        // - Sem PWA → validação direto no navegador: mostra a tela de sucesso
-        //   e em seguida abre o cardápio já logado.
-        let pwaActive = false
-        try {
-          const hb = await fetch(`/api/verify/heartbeat?establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
-          const hbData = await hb.json()
-          pwaActive = hbData?.active === true
-        } catch {}
-
-        setVerifyCloseBlocked(false)
-        setVerifyAutoClosing(true)
-        if (pwaActive) {
-          // PWA aberto: permanece na tela de sucesso e tenta fechar a aba.
-          setTimeout(() => {
-            try {
-              window.close()
-            } catch {}
-            setTimeout(() => {
-              if (document.visibilityState === "visible") {
-                setVerifyCloseBlocked(true)
-              }
-            }, 400)
-          }, 1500)
-        } else {
-          // Validação direto no navegador: mostra a tela de sucesso por um
-          // instante e depois abre o cardápio logado.
-          setTimeout(() => {
-            setVerifyAutoClosing(false)
-            setVerifyCloseBlocked(false)
-          }, 1200)
-        }
+        // Fluxo simples: validação concluída e o usuário já está logado. O
+        // cardápio abre direto nesta aba, sem tela de sucesso nem heartbeat.
       } catch (e: any) {
         setVerifyError(e.message)
         setShowVerifyModal(true)
@@ -2110,26 +2024,6 @@ const handlePaymentSuccess = useCallback(() => {
       }
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Botão "Fechar janela" da tela de confirmação: tenta fechar programaticamente
-  // e, se o navegador bloquear, avisa para fechar manualmente.
-  function handleCloseVerifyTab() {
-    try {
-      window.close()
-    } catch {}
-    setTimeout(() => {
-      if (document.visibilityState === "visible") {
-        setVerifyCloseBlocked(true)
-      }
-    }, 400)
-  }
-
-  // "Abrir cardápio" na tela de sucesso: para quem não tem a PWA aberta,
-  // fecha a tela e mostra o cardápio logado nesta aba.
-  function handleOpenMenuAfterVerify() {
-    setVerifyAutoClosing(false)
-    setVerifyCloseBlocked(false)
-  }
 
   function handlePedidosClick() {
     if (lastOrder) {
@@ -3483,42 +3377,6 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       <PushHeal establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-      {/* Auto-close overlay: aba aberta via link, PWA já validou. Fundo opaco
-          (bgPage) para o cardápio não aparecer por trás da tela de sucesso. */}
-      {verifyAutoClosing && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: theme.bgPage }}>
-          <div className="mx-6 w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgModal }}>
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ backgroundColor: theme.success + "20" }}>
-              <CheckCircle className="h-7 w-7" style={{ color: theme.success }} />
-            </div>
-            <h3 className="text-base font-bold" style={{ color: theme.text }}>Validação efetivada com sucesso!</h3>
-            <p className="mt-1 text-sm" style={{ color: theme.textMuted }}>
-              Se você tem a loja aberta, volte para ela — o acesso já foi liberado.
-            </p>
-            {verifyCloseBlocked && (
-              <p className="mt-3 text-xs" style={{ color: "#EF4444" }}>
-                O navegador bloqueou o fechamento automático. Feche esta aba manualmente.
-              </p>
-            )}
-            <div className="mt-5 space-y-2">
-              <button
-                onClick={handleOpenMenuAfterVerify}
-                className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: theme.primary }}
-              >
-                Abrir cardápio
-              </button>
-              <button
-                onClick={handleCloseVerifyTab}
-                className="w-full rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-80"
-                style={{ color: theme.textMuted, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
-              >
-                Fechar janela
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Unified Cart/Checkout Full-Screen Flow */}
       {showCart && (
