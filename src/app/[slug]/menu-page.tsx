@@ -1775,7 +1775,10 @@ const handlePaymentSuccess = useCallback(() => {
     write()
     const id = setInterval(write, 2500)
     const onVisibility = () => {
-      if (document.visibilityState === "visible") write()
+      // Grava também ao ir para background: no iOS o JS é suspenso quando a
+      // página vai para segundo plano, então o timestamp final fica registrado
+      // e a aba via link ainda detecta a PWA como ativa.
+      write()
     }
     document.addEventListener("visibilitychange", onVisibility)
     window.addEventListener("focus", write)
@@ -1876,6 +1879,47 @@ const handlePaymentSuccess = useCallback(() => {
     }
   }, [establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput])
 
+  // Polling de segurança: no iOS, quando a PWA volta do background, eventos
+  // storage/BroadcastChannel/focus podem não disparar de forma confiável.
+  // Verifica periodicamente o marcador de verificação gravado pelo link e
+  // aplica o login assim que detectar que foi validado em outra aba.
+  useEffect(() => {
+    if (typeof window === "undefined" || sessionVerified) return
+    const doneKey = `flowos-verify-done-${establishment.slug}`
+    let cancelled = false
+
+    async function pollVerified() {
+      if (cancelled || sessionVerified) return
+      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+      let doneRecent = false
+      try {
+        const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
+        doneRecent = Date.now() - (raw.ts || 0) < 5 * 60 * 1000
+        if (phoneDigits.length < 10) phoneDigits = String(raw.phone || "").replace(/\D/g, "")
+      } catch {}
+      if (!doneRecent || phoneDigits.length < 10) return
+      try {
+        const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
+        const data = await res.json()
+        if (data && !data.notFound && data.whatsappVerified) {
+          setShowVerifyModal(false)
+          setVerifyCode("")
+          setCustomerData(data)
+          markSessionVerified()
+          toast("Código confirmado ✓", "success")
+        }
+      } catch {}
+    }
+
+    pollVerified()
+    const id = setInterval(pollVerified, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput])
+
   // Link de verificação (ex.: ?code=123456&phone=5511999999999):
   // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
   useEffect(() => {
@@ -1935,11 +1979,12 @@ const handlePaymentSuccess = useCallback(() => {
         setShowVerifyModal(false)
         setVerifyCode("")
 
-        // Detecta se outra instância está com o modal aberto (heartbeat recente)
+        // Detecta se outra instância (PWA) está aberta. Janela de 30s porque
+        // no iOS o JS da PWA é suspenso em background e o heartbeat congela.
         let pwaActive = false
         try {
           const ts = parseInt(localStorage.getItem(`flowos-verify-active-${establishment.slug}`) || "0", 10)
-          pwaActive = Date.now() - ts < 6000
+          pwaActive = Date.now() - ts < 30000
         } catch {}
         if (pwaActive) {
           // PWA já aberta: mostra tela de confirmação e tenta fechar esta aba.
