@@ -1748,6 +1748,26 @@ const handlePaymentSuccess = useCallback(() => {
     }
   }, [showVerifyModal])
 
+  // Auto-cola: quando o modal abre, tenta ler o código que o cliente copiou
+  // do WhatsApp e preenche os campos OTP automaticamente. Se já houver código
+  // preenchido (ex.: link de verificação), não sobrescreve.
+  useEffect(() => {
+    if (!showVerifyModal) return
+    if (verifyCode.length > 0) return
+    const t = setTimeout(async () => {
+      try {
+        const text = await navigator.clipboard.readText()
+        const digits = text.replace(/\D/g, "").slice(0, 6)
+        if (digits.length === 6) {
+          setVerifyCode(digits)
+          setVerifyError("")
+          otpInputsRef.current[5]?.focus()
+        }
+      } catch {}
+    }, 300)
+    return () => clearTimeout(t)
+  }, [showVerifyModal, verifyCode])
+
   // Validação automática do código quando os 6 dígitos forem preenchidos
   useEffect(() => {
     if (verifyCode.length === 6 && !verifying && !verifyCodeAutoSentRef.current) {
