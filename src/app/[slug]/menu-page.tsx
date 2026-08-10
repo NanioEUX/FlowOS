@@ -264,6 +264,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
   const verifyCodeAutoSentRef = useRef(false)
   const isVerifyLinkTabRef = useRef(false)
+  // Garante que a aplicação do login + toast "Código confirmado" aconteça UMA
+  // vez por verificação, mesmo com múltiplos handlers (storage/BroadcastChannel,
+  // focus, polling) detectando a mesma validação ao mesmo tempo.
+  const verifyAppliedRef = useRef(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -399,6 +403,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setVerifyDevCode("")
     setWhatsappSent(false)
     setWhatsappError("")
+    verifyAppliedRef.current = false
     try {
       const res = await fetch("/api/verification", {
         method: "POST",
@@ -467,6 +472,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const clearSessionVerified = () => {
     setSessionVerified(false)
     try { localStorage.removeItem(SESSION_KEY) } catch {}
+    verifyAppliedRef.current = false
     markVerifySessionStart()
   }
 
@@ -1850,6 +1856,10 @@ const handlePaymentSuccess = useCallback(() => {
     let channel: BroadcastChannel | null = null
 
     async function onVerifiedElsewhere() {
+      // Vários mecanismos (storage + BroadcastChannel) podem entregar a mesma
+      // validação; só aplica o login/toast uma vez.
+      if (verifyAppliedRef.current) return
+      verifyAppliedRef.current = true
       setShowVerifyModal(false)
       setVerifyError("")
       setVerifyCode("")
@@ -1866,7 +1876,6 @@ const handlePaymentSuccess = useCallback(() => {
         await applyLocalVerified(phoneDigits)
         markSessionVerified()
       }
-      toast("Código confirmado ✓", "success")
     }
 
     function onStorage(e: StorageEvent) {
@@ -1898,6 +1907,9 @@ const handlePaymentSuccess = useCallback(() => {
   useEffect(() => {
     if (typeof window === "undefined") return
     async function checkVerifiedOnFocus() {
+      // Se já aplicamos o login desta verificação, não repete (evita várias
+      // telinhas de "código confirmado" a cada foco).
+      if (verifyAppliedRef.current || sessionVerified) return
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       // Pega o telefone do marcador (funciona onde o storage é compartilhado:
       // Android/desktop). No iOS vem do estado salvo no próprio PWA.
@@ -1918,11 +1930,11 @@ const handlePaymentSuccess = useCallback(() => {
         const data = await res.json()
         const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
         if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
+          verifyAppliedRef.current = true
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
           markSessionVerified()
-          toast("Código confirmado ✓", "success")
         }
       } catch {}
     }
@@ -1933,7 +1945,7 @@ const handlePaymentSuccess = useCallback(() => {
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onFocus)
     }
-  }, [establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput])
+  }, [establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput, sessionVerified])
 
   // Polling de segurança: no iOS, quando a PWA volta do background, eventos
   // storage/BroadcastChannel/focus podem não disparar de forma confiável.
@@ -1947,7 +1959,7 @@ const handlePaymentSuccess = useCallback(() => {
     let cancelled = false
 
     async function pollVerified() {
-      if (cancelled || sessionVerified || !showVerifyModal) return
+      if (cancelled || sessionVerified || !showVerifyModal || verifyAppliedRef.current) return
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       if (phoneDigits.length < 10) {
         try {
@@ -1963,11 +1975,11 @@ const handlePaymentSuccess = useCallback(() => {
         const data = await res.json()
         const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
         if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
+          verifyAppliedRef.current = true
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
           markSessionVerified()
-          toast("Código confirmado ✓", "success")
         }
       } catch {}
     }
@@ -2047,9 +2059,9 @@ const handlePaymentSuccess = useCallback(() => {
         // (que loga consultando o servidor) e quem não tem toca em "Abrir".
         setVerifyCloseBlocked(false)
         setVerifyAutoClosing(true)
-        // Tenta fechar programaticamente. Se o navegador bloquear (iOS
-        // Safari, abas abertas por link externo), a tela fica fixa com a
-        // opção de fechar manualmente.
+        // Delay maior antes de tentar fechar: dá tempo de exibir a tela de
+        // sucesso com o botão de fechar (caso o usuário tenha a PWA aberta)
+        // em vez de pular direto para o cardápio.
         setTimeout(() => {
           try {
             window.close()
@@ -2061,7 +2073,7 @@ const handlePaymentSuccess = useCallback(() => {
               setVerifyCloseBlocked(true)
             }
           }, 400)
-        }, 300)
+        }, 1500)
       } catch (e: any) {
         setVerifyError(e.message)
         setShowVerifyModal(true)
@@ -3443,9 +3455,10 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       <PushHeal establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-      {/* Auto-close overlay: aba aberta via link, PWA já validou */}
+      {/* Auto-close overlay: aba aberta via link, PWA já validou. Fundo opaco
+          (bgPage) para o cardápio não aparecer por trás da tela de sucesso. */}
       {verifyAutoClosing && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ backgroundColor: theme.bgPage }}>
           <div className="mx-6 w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgModal }}>
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ backgroundColor: theme.success + "20" }}>
               <CheckCircle className="h-7 w-7" style={{ color: theme.success }} />
