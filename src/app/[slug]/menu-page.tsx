@@ -1869,25 +1869,26 @@ const handlePaymentSuccess = useCallback(() => {
   // janela não recebeu o evento cross-tab (limitação iOS), ao voltar o foco
   // para a janela o modal fecha e a sessão é marcada como verificada. Também
   // cobre o caso do PWA aberto navegando sem modal: ao voltar o foco, aplica
-  // o login se a verificação foi feita recentemente via link.
+  // o login consultando o servidor (verifiedAt recente) — no iOS o storage
+  // local não é compartilhado entre PWA e Safari, então a decisão vem do banco.
   useEffect(() => {
     if (typeof window === "undefined") return
     async function checkVerifiedOnFocus() {
-      // Phone pode não estar em estado na PWA (ex.: navegando sem modal);
-      // tenta ler do marcador de verificação gravado pelo link.
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      let doneRecent = false
-      try {
-        const raw = JSON.parse(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "{}")
-        doneRecent = Date.now() - (raw.ts || 0) < 5 * 60 * 1000
-        if (phoneDigits.length < 10) phoneDigits = String(raw.phone || "").replace(/\D/g, "")
-      } catch {}
-      if (!doneRecent) return
+      // Pega o telefone do marcador (funciona onde o storage é compartilhado:
+      // Android/desktop). No iOS vem do estado salvo no próprio PWA.
+      if (phoneDigits.length < 10) {
+        try {
+          const raw = JSON.parse(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "{}")
+          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
+        } catch {}
+      }
       if (phoneDigits.length < 10) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
-        if (data && !data.notFound && data.whatsappVerified) {
+        const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
+        if (data && !data.notFound && data.whatsappVerified && Date.now() - verifiedAt < 5 * 60 * 1000) {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
@@ -1907,27 +1908,30 @@ const handlePaymentSuccess = useCallback(() => {
 
   // Polling de segurança: no iOS, quando a PWA volta do background, eventos
   // storage/BroadcastChannel/focus podem não disparar de forma confiável.
-  // Verifica periodicamente o marcador de verificação gravado pelo link e
-  // aplica o login assim que detectar que foi validado em outra aba.
+  // Consulta o servidor periodicamente e aplica o login se o cliente foi
+  // verificado recentemente (verifiedAt dos últimos 5 min). Só roda enquanto
+  // o modal de verificação estiver aberto (fluxo ativo) para não gastar
+  // requests com o usuário navegando sem estar em verificação.
   useEffect(() => {
     if (typeof window === "undefined" || sessionVerified) return
     const doneKey = `flowos-verify-done-${establishment.slug}`
     let cancelled = false
 
     async function pollVerified() {
-      if (cancelled || sessionVerified) return
+      if (cancelled || sessionVerified || !showVerifyModal) return
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      let doneRecent = false
-      try {
-        const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
-        doneRecent = Date.now() - (raw.ts || 0) < 5 * 60 * 1000
-        if (phoneDigits.length < 10) phoneDigits = String(raw.phone || "").replace(/\D/g, "")
-      } catch {}
-      if (!doneRecent || phoneDigits.length < 10) return
+      if (phoneDigits.length < 10) {
+        try {
+          const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
+          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
+        } catch {}
+      }
+      if (phoneDigits.length < 10) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
-        if (data && !data.notFound && data.whatsappVerified) {
+        const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
+        if (data && !data.notFound && data.whatsappVerified && Date.now() - verifiedAt < 5 * 60 * 1000) {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
@@ -1944,7 +1948,7 @@ const handlePaymentSuccess = useCallback(() => {
       clearInterval(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput])
+  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput, showVerifyModal])
 
   // Link de verificação (ex.: ?code=123456&phone=5511999999999):
   // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
@@ -2005,35 +2009,28 @@ const handlePaymentSuccess = useCallback(() => {
         setShowVerifyModal(false)
         setVerifyCode("")
 
-        // Detecta se outra instância (PWA) está aberta. Janela de 30s porque
-        // no iOS o JS da PWA é suspenso em background e o heartbeat congela.
-        let pwaActive = false
-        try {
-          const ts = parseInt(localStorage.getItem(`flowos-verify-active-${establishment.slug}`) || "0", 10)
-          pwaActive = Date.now() - ts < 30000
-        } catch {}
-        if (pwaActive) {
-          // PWA já aberta: mostra tela de confirmação e tenta fechar esta aba.
-          setVerifyCloseBlocked(false)
-          setVerifyAutoClosing(true)
-          // Tenta fechar programaticamente. Se o navegador bloquear (iOS
-          // Safari, abas abertas por link externo), a tela fica fixa com a
-          // opção de fechar manualmente.
+        // Sempre mostra a tela de confirmação no navegador. No iOS o
+        // localStorage do PWA instalado e do Safari não são compartilhados de
+        // forma confiável, então não dá para detectar se o PWA está aberto —
+        // a tela de sucesso cobre os dois casos: quem tem PWA volta pra ela
+        // (que loga consultando o servidor) e quem não tem toca em "Abrir".
+        setVerifyCloseBlocked(false)
+        setVerifyAutoClosing(true)
+        // Tenta fechar programaticamente. Se o navegador bloquear (iOS
+        // Safari, abas abertas por link externo), a tela fica fixa com a
+        // opção de fechar manualmente.
+        setTimeout(() => {
+          try {
+            window.close()
+          } catch {}
+          // Se o fechamento foi bloqueado (iOS Safari / aba externa), a
+          // página continua visível. Detectamos pelo document.visibilityState.
           setTimeout(() => {
-            try {
-              window.close()
-            } catch {}
-            // Se o fechamento foi bloqueado (iOS Safari / aba externa), a
-            // página continua visível. Detectamos pelo document.visibilityState.
-            setTimeout(() => {
-              if (document.visibilityState === "visible") {
-                setVerifyCloseBlocked(true)
-              }
-            }, 400)
-          }, 300)
-        } else {
-          toast("Código confirmado ✓", "success")
-        }
+            if (document.visibilityState === "visible") {
+              setVerifyCloseBlocked(true)
+            }
+          }, 400)
+        }, 300)
       } catch (e: any) {
         setVerifyError(e.message)
         setShowVerifyModal(true)
@@ -2054,6 +2051,13 @@ const handlePaymentSuccess = useCallback(() => {
         setVerifyCloseBlocked(true)
       }
     }, 400)
+  }
+
+  // "Abrir cardápio" na tela de sucesso: para quem não tem a PWA aberta,
+  // fecha a tela e mostra o cardápio logado nesta aba.
+  function handleOpenMenuAfterVerify() {
+    setVerifyAutoClosing(false)
+    setVerifyCloseBlocked(false)
   }
 
   function handlePedidosClick() {
@@ -3417,20 +3421,29 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
             <h3 className="text-base font-bold" style={{ color: theme.text }}>Validação efetivada com sucesso!</h3>
             <p className="mt-1 text-sm" style={{ color: theme.textMuted }}>
-              Volte para a janela da loja que já estava aberta.
+              Se você tem a loja aberta, volte para ela — o acesso já foi liberado.
             </p>
             {verifyCloseBlocked && (
               <p className="mt-3 text-xs" style={{ color: "#EF4444" }}>
                 O navegador bloqueou o fechamento automático. Feche esta aba manualmente.
               </p>
             )}
-            <button
-              onClick={handleCloseVerifyTab}
-              className="mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: theme.primary }}
-            >
-              Fechar janela
-            </button>
+            <div className="mt-5 space-y-2">
+              <button
+                onClick={handleOpenMenuAfterVerify}
+                className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: theme.primary }}
+              >
+                Abrir cardápio
+              </button>
+              <button
+                onClick={handleCloseVerifyTab}
+                className="w-full rounded-xl px-4 py-3 text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ color: theme.textMuted, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+              >
+                Fechar janela
+              </button>
+            </div>
           </div>
         </div>
       )}
