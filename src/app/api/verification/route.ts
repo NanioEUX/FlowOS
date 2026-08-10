@@ -5,11 +5,16 @@ import bcrypt from "bcryptjs"
 
 const MAX_ATTEMPTS = 3
 const CODE_EXPIRY_MINUTES = 5
+const REQUEST_COOLDOWN_MS = 60 * 1000
+const MAX_REQUESTS_PER_HOUR = 5
+const MAX_REQUESTS_PER_DAY = 20
+const MAX_VERIFICATIONS_PER_DAY = 5
 
 /**
  * POST /api/verification
  * Body: { phone: string, establishmentId: string }
  * Generates a 6-digit code, stores it (hashed), and sends via WhatsApp.
+ * Rate limited por número: 60s de cooldown, máx 5/hora e máx 20/dia.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -44,6 +49,37 @@ export async function POST(req: NextRequest) {
         where: { id: customer.id },
         data: { name },
       })
+    }
+
+    // ---- Rate limits (por número) ----
+    const now = Date.now()
+
+    // 1) Cooldown de 60s entre solicitações
+    const lastCode = await prisma.verificationCode.findFirst({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: "desc" },
+    })
+    if (lastCode && now - new Date(lastCode.createdAt).getTime() < REQUEST_COOLDOWN_MS) {
+      const wait = Math.ceil((REQUEST_COOLDOWN_MS - (now - new Date(lastCode.createdAt).getTime())) / 1000)
+      return NextResponse.json({ error: `Aguarde ${wait}s antes de solicitar outro código.` }, { status: 429 })
+    }
+
+    // 2) Máx 5 solicitações/hora
+    const hourAgo = new Date(now - 60 * 60 * 1000)
+    const requestsLastHour = await prisma.verificationCode.count({
+      where: { customerId: customer.id, createdAt: { gte: hourAgo } },
+    })
+    if (requestsLastHour >= MAX_REQUESTS_PER_HOUR) {
+      return NextResponse.json({ error: "Muitas solicitações. Tente novamente mais tarde." }, { status: 429 })
+    }
+
+    // 3) Máx 20 solicitações/dia
+    const dayAgo = new Date(now - 24 * 60 * 60 * 1000)
+    const requestsLastDay = await prisma.verificationCode.count({
+      where: { customerId: customer.id, createdAt: { gte: dayAgo } },
+    })
+    if (requestsLastDay >= MAX_REQUESTS_PER_DAY) {
+      return NextResponse.json({ error: "Limite diário de solicitações atingido. Tente novamente amanhã." }, { status: 429 })
     }
 
     // Rate limit: invalidate previous unused codes
@@ -165,6 +201,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
     }
 
+    // ---- Limite de verificações/logins por número (máx 5/24h) ----
+    const now = Date.now()
+    if (customer.verificationCount >= MAX_VERIFICATIONS_PER_DAY) {
+      const lastVerified = customer.verifiedAt ? new Date(customer.verifiedAt).getTime() : 0
+      const windowStart = now - 24 * 60 * 60 * 1000
+      if (lastVerified > windowStart) {
+        return NextResponse.json({ error: "Limite de verificações diárias atingido. Tente novamente amanhã." }, { status: 429 })
+      }
+    }
+
     // Get latest unused code
     const codeRecord = await prisma.verificationCode.findFirst({
       where: {
@@ -202,11 +248,14 @@ export async function PUT(req: NextRequest) {
     })
 
     // Mark customer as verified (and update name if provided)
+    const lastVerifiedAt = customer.verifiedAt ? new Date(customer.verifiedAt).getTime() : 0
+    const resetCount = now - lastVerifiedAt >= 24 * 60 * 60 * 1000
     const updated = await prisma.customer.update({
       where: { id: customer.id },
       data: {
         whatsappVerified: true,
         verifiedAt: new Date(),
+        verificationCount: resetCount ? 1 : { increment: 1 },
         ...(name && !customer.name ? { name } : {}),
       },
     })
