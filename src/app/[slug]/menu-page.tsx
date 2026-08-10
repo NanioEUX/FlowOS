@@ -262,6 +262,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [verifyCloseBlocked, setVerifyCloseBlocked] = useState(false)
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
   const verifyCodeAutoSentRef = useRef(false)
+  const isVerifyLinkTabRef = useRef(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -1756,26 +1757,37 @@ const handlePaymentSuccess = useCallback(() => {
     if (verifyCode.length < 6) verifyCodeAutoSentRef.current = false
   }, [verifyCode, verifying])
 
-  // Heartbeat: enquanto o modal de verificação está aberto, avisa outras
-  // instâncias (PWA aberta) que o fluxo de verificação está ativo. Isso permite
-  // que a aba aberta via link decida se fecha sozinha.
+  // Heartbeat: enquanto o app/PWA está aberto e visível, avisa outras
+  // instâncias (aba aberta via link) que o app está ativo. Isso permite que a
+  // aba do link mostre a tela de confirmação em vez de logar no navegador.
+  // A própria aba do link (aberta com ?code=) não grava heartbeat para não
+  // marcar a si mesma como "PWA ativa".
   useEffect(() => {
-    if (!showVerifyModal) return
+    if (typeof window === "undefined") return
+    isVerifyLinkTabRef.current = new URLSearchParams(window.location.search).has("code")
     const key = `flowos-verify-active-${establishment.slug}`
     const write = () => {
+      if (isVerifyLinkTabRef.current) return
       try {
         localStorage.setItem(key, String(Date.now()))
       } catch {}
     }
     write()
     const id = setInterval(write, 2500)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") write()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    window.addEventListener("focus", write)
     return () => {
       clearInterval(id)
+      document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("focus", write)
       try {
         localStorage.removeItem(key)
       } catch {}
     }
-  }, [showVerifyModal, establishment.slug])
+  }, [establishment.slug])
 
   // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
   // modal aqui e atualiza os dados do cliente.
@@ -1788,7 +1800,15 @@ const handlePaymentSuccess = useCallback(() => {
       setShowVerifyModal(false)
       setVerifyError("")
       setVerifyCode("")
-      const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+      // Phone pode não estar em estado na PWA (ex.: navegando sem modal);
+      // tenta ler do marcador de verificação gravado pelo link.
+      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
+      if (phoneDigits.length < 10) {
+        try {
+          const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
+          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
+        } catch {}
+      }
       if (phoneDigits.length >= 10) {
         await applyLocalVerified(phoneDigits)
         markSessionVerified()
@@ -1818,26 +1838,30 @@ const handlePaymentSuccess = useCallback(() => {
 
   // Fallback: se a validação aconteceu em outra aba/PWA (via link) e esta
   // janela não recebeu o evento cross-tab (limitação iOS), ao voltar o foco
-  // para a janela o modal fecha automaticamente.
+  // para a janela o modal fecha e a sessão é marcada como verificada. Também
+  // cobre o caso do PWA aberto navegando sem modal: ao voltar o foco, aplica
+  // o login se a verificação foi feita recentemente via link.
   useEffect(() => {
-    if (!showVerifyModal) return
+    if (typeof window === "undefined") return
     async function checkVerifiedOnFocus() {
-      const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      if (phoneDigits.length < 10) return
-      // Só fecha/loga se a verificação foi feita AGORA (via link, outra aba).
-      // O whatsappVerified do banco é permanente e NÃO deve re-logar sozinho.
+      // Phone pode não estar em estado na PWA (ex.: navegando sem modal);
+      // tenta ler do marcador de verificação gravado pelo link.
+      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       let doneRecent = false
       try {
-        const doneTs = parseInt(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "0", 10)
-        doneRecent = Date.now() - doneTs < 5 * 60 * 1000
+        const raw = JSON.parse(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "{}")
+        doneRecent = Date.now() - (raw.ts || 0) < 5 * 60 * 1000
+        if (phoneDigits.length < 10) phoneDigits = String(raw.phone || "").replace(/\D/g, "")
       } catch {}
       if (!doneRecent) return
+      if (phoneDigits.length < 10) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
         if (data && !data.notFound && data.whatsappVerified) {
           setShowVerifyModal(false)
           setVerifyCode("")
+          setCustomerData(data)
           markSessionVerified()
           toast("Código confirmado ✓", "success")
         }
@@ -1850,7 +1874,7 @@ const handlePaymentSuccess = useCallback(() => {
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onFocus)
     }
-  }, [showVerifyModal, establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput])
+  }, [establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput])
 
   // Link de verificação (ex.: ?code=123456&phone=5511999999999):
   // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
@@ -1897,9 +1921,10 @@ const handlePaymentSuccess = useCallback(() => {
         await applyLocalVerified(phoneDigits)
         markSessionVerified()
 
-        // Avisa a PWA já aberta que o código foi validado
+        // Avisa a PWA já aberta que o código foi validado (inclui o telefone
+        // para que a PWA consiga logar mesmo sem ter o phone em estado)
         try {
-          localStorage.setItem(`flowos-verify-done-${establishment.slug}`, String(Date.now()))
+          localStorage.setItem(`flowos-verify-done-${establishment.slug}`, JSON.stringify({ ts: Date.now(), phone: phoneDigits }))
         } catch {}
         try {
           const ch = new BroadcastChannel(`flowos-verify-${establishment.slug}`)
