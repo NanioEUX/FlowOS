@@ -259,6 +259,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [whatsappSent, setWhatsappSent] = useState(false)
   const [whatsappError, setWhatsappError] = useState("")
   const [verifyAutoClosing, setVerifyAutoClosing] = useState(false)
+  const [verifyCloseBlocked, setVerifyCloseBlocked] = useState(false)
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
   const verifyCodeAutoSentRef = useRef(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
@@ -1884,16 +1885,24 @@ const handlePaymentSuccess = useCallback(() => {
           pwaActive = Date.now() - ts < 6000
         } catch {}
         if (pwaActive) {
-          // PWA já aberta: mostra confirmação e tenta fechar esta aba
+          // PWA já aberta: mostra tela de confirmação e tenta fechar esta aba.
+          setVerifyCloseBlocked(false)
           setVerifyAutoClosing(true)
+          // Tenta fechar programaticamente. Se o navegador bloquear (iOS
+          // Safari, abas abertas por link externo), a tela fica fixa com a
+          // opção de fechar manualmente.
           setTimeout(() => {
             try {
               window.close()
             } catch {}
-            // Se o navegador bloquear o close, a página já fica logada e o
-            // usuário só precisa voltar pra PWA.
-            setVerifyAutoClosing(false)
-          }, 1200)
+            // Se o fechamento foi bloqueado (iOS Safari / aba externa), a
+            // página continua visível. Detectamos pelo document.visibilityState.
+            setTimeout(() => {
+              if (document.visibilityState === "visible") {
+                setVerifyCloseBlocked(true)
+              }
+            }, 400)
+          }, 300)
         } else {
           toast("Código confirmado ✓", "success")
         }
@@ -1905,6 +1914,19 @@ const handlePaymentSuccess = useCallback(() => {
       }
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Botão "Fechar janela" da tela de confirmação: tenta fechar programaticamente
+  // e, se o navegador bloquear, avisa para fechar manualmente.
+  function handleCloseVerifyTab() {
+    try {
+      window.close()
+    } catch {}
+    setTimeout(() => {
+      if (document.visibilityState === "visible") {
+        setVerifyCloseBlocked(true)
+      }
+    }, 400)
+  }
 
   function handlePedidosClick() {
     if (lastOrder) {
@@ -3260,10 +3282,22 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ backgroundColor: theme.success + "20" }}>
               <CheckCircle className="h-7 w-7" style={{ color: theme.success }} />
             </div>
-            <h3 className="text-base font-bold" style={{ color: theme.text }}>Código confirmado ✓</h3>
+            <h3 className="text-base font-bold" style={{ color: theme.text }}>Validação efetivada com sucesso!</h3>
             <p className="mt-1 text-sm" style={{ color: theme.textMuted }}>
               Volte para a janela da loja que já estava aberta.
             </p>
+            {verifyCloseBlocked && (
+              <p className="mt-3 text-xs" style={{ color: "#EF4444" }}>
+                O navegador bloqueou o fechamento automático. Feche esta aba manualmente.
+              </p>
+            )}
+            <button
+              onClick={handleCloseVerifyTab}
+              className="mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: theme.primary }}
+            >
+              Fechar janela
+            </button>
           </div>
         </div>
       )}
