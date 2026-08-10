@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v12"
+const CACHE_NAME = "pedefacil-v15"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -92,20 +92,31 @@ self.addEventListener("fetch", (event) => {
 })
 
 self.addEventListener("push", (event) => {
-  let data = { title: "FlowOS", body: "Nova notificação", url: "/" }
+  let data = { title: "Seu pedido", body: "Nova notificação", url: "/" }
   try {
     data = JSON.parse(event.data.text())
   } catch {}
 
+  const title = data.title || "Seu pedido"
+  const body = data.body || ""
+  const tag = data.tag || "push-" + Date.now()
+
+  // iOS usa o nome do app (manifest) como título da notificação, ignorando o
+  // `title` do showNotification. Para o mobile exibir o mesmo texto do cardápio,
+  // prefixamos o body com o título no iOS. O postMessage mantém title/body
+  // separados, então o toast do cardápio continua igual.
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const displayBody = isIOS && title ? `${title} — ${body}` : body
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
+    self.registration.showNotification(title, {
+      body: displayBody,
       icon: data.icon || "/icons/icon-192.png",
       badge: data.badge || "/icons/icon-512.png",
       vibrate: [200, 100, 200],
-      data: { url: data.url, title: data.title, body: data.body, tag: data.tag },
+      data: { url: data.url || "/", title, body, tag },
       actions: [{ action: "open", title: "Ver pedido" }],
-      tag: data.tag,
+      tag,
       renotify: true,
     })
   )
@@ -115,10 +126,10 @@ self.addEventListener("push", (event) => {
     clients.forEach((client) => {
       client.postMessage({
         type: "push-notification",
-        title: data.title,
-        body: data.body,
+        title,
+        body,
         url: data.url,
-        tag: data.tag,
+        tag,
       })
     })
   })
@@ -139,6 +150,15 @@ self.addEventListener("notificationclick", (event) => {
       } else {
         self.clients.openWindow(url)
       }
+    })
+  )
+})
+
+// Subscription expirou/regenerou: pede para os clients re-registrarem
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => client.postMessage({ type: "push-subscription-change" }))
     })
   )
 })
