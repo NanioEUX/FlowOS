@@ -467,11 +467,35 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const clearSessionVerified = () => {
     setSessionVerified(false)
     try { localStorage.removeItem(SESSION_KEY) } catch {}
+    markVerifySessionStart()
+  }
+
+  // Marca o momento em que a sessão atual (sem login) começou. O auto-login
+  // via servidor só é aplicado se a verificação (verifiedAt) aconteceu DEPOIS
+  // desse momento — assim, depois do logout (que redefine este marcador), o
+  // verifiedAt antigo não loga o usuário de volta sozinho.
+  const markVerifySessionStart = () => {
+    try { localStorage.setItem(`flowos-verify-session-start-${establishment.slug}`, String(Date.now())) } catch {}
+  }
+  const getVerifySessionStart = (): number => {
+    try {
+      return parseInt(localStorage.getItem(`flowos-verify-session-start-${establishment.slug}`) || "0", 10) || 0
+    } catch {
+      return 0
+    }
   }
 
   useEffect(() => {
     try {
       if (localStorage.getItem(SESSION_KEY) === "1") setSessionVerified(true)
+      else {
+        // Só redefine o sessionStart se não existir ou for antigo (> 30 min).
+        // Se a PWA recarregar no meio do fluxo de verificação (iOS mata a PWA
+        // em background), preserva o sessionStart para que o verifiedAt do
+        // link (que pode ser anterior a este mount) ainda seja detectado.
+        const existing = getVerifySessionStart()
+        if (!existing || Date.now() - existing > 30 * 60 * 1000) markVerifySessionStart()
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [establishment.slug])
@@ -1884,11 +1908,16 @@ const handlePaymentSuccess = useCallback(() => {
         } catch {}
       }
       if (phoneDigits.length < 10) return
+      // Só aplica o login se a verificação aconteceu DEPOIS desta sessão
+      // começou. Depois do logout o sessionStart é redefinido para "agora",
+      // então um verifiedAt antigo (dos últimos 5 min) não reloga o usuário.
+      const sessionStart = getVerifySessionStart()
+      if (!sessionStart) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
         const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
-        if (data && !data.notFound && data.whatsappVerified && Date.now() - verifiedAt < 5 * 60 * 1000) {
+        if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
@@ -1927,11 +1956,13 @@ const handlePaymentSuccess = useCallback(() => {
         } catch {}
       }
       if (phoneDigits.length < 10) return
+      const sessionStart = getVerifySessionStart()
+      if (!sessionStart) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
         const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
-        if (data && !data.notFound && data.whatsappVerified && Date.now() - verifiedAt < 5 * 60 * 1000) {
+        if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
