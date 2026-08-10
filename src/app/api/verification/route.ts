@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       whatsappNumber: establishment.whatsappNumber,
     })
 
-    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n2️⃣ Volte ao cardápio — o código é preenchido sozinho\n\nOu toque aqui para validar: ${verifyLink}\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
+    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
 
     if (!provider) {
       // Sem Evolution configurada: retorna o código direto na resposta (DEV).
