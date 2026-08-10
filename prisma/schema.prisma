@@ -177,6 +177,7 @@ model Establishment {
   dailyCombos         DailyCombo[]
   stories             Story[]
   banners             Banner[]
+  heartbeat           EstablishmentHeartbeat?
   users               User[]
 }
 
@@ -835,4 +836,15 @@ model Banner {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])
+}
+
+// Heartbeat do PWA aberto: a aba do link consulta para decidir se mostra a
+// tela de sucesso sozinha (PWA aberto) ou abre o cardápio (validação direto
+// no navegador). Funciona no iOS porque não depende do localStorage
+// compartilhado — ambos falam com o mesmo servidor.
+model EstablishmentHeartbeat {
+  establishmentId String   @id
+  lastActiveAt    DateTime
+  updatedAt       DateTime @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 }

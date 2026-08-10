@@ -1813,15 +1813,27 @@ const handlePaymentSuccess = useCallback(() => {
     if (verifyCode.length < 6) verifyCodeAutoSentRef.current = false
   }, [verifyCode, verifying])
 
-  // Heartbeat: enquanto o app/PWA está aberto e visível, avisa outras
-  // instâncias (aba aberta via link) que o app está ativo. Isso permite que a
-  // aba do link mostre a tela de confirmação em vez de logar no navegador.
+  // Heartbeat: enquanto o app/PWA está aberto e visível, avisa o servidor que
+  // está ativo. A aba aberta via link consulta esse heartbeat para decidir se
+  // mostra a tela de confirmação sozinha (PWA aberto) ou abre o cardápio
+  // (validação direto no navegador). No iOS o localStorage não é compartilhado
+  // entre PWA e Safari, então o heartbeat é gravado no servidor.
   // A própria aba do link (aberta com ?code=) não grava heartbeat para não
   // marcar a si mesma como "PWA ativa".
   useEffect(() => {
     if (typeof window === "undefined") return
     isVerifyLinkTabRef.current = new URLSearchParams(window.location.search).has("code")
     const key = `flowos-verify-active-${establishment.slug}`
+    // Envia o heartbeat do servidor em intervalo próprio (menos frequente que
+    // o localStorage para não sobrecarregar a API).
+    const sendServerHeartbeat = () => {
+      if (isVerifyLinkTabRef.current) return
+      fetch("/api/verify/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ establishmentId: establishment.id }),
+      }).catch(() => {})
+    }
     const write = () => {
       if (isVerifyLinkTabRef.current) return
       try {
@@ -1830,23 +1842,27 @@ const handlePaymentSuccess = useCallback(() => {
     }
     write()
     const id = setInterval(write, 2500)
+    sendServerHeartbeat()
+    const serverId = setInterval(sendServerHeartbeat, 15000)
     const onVisibility = () => {
       // Grava também ao ir para background: no iOS o JS é suspenso quando a
       // página vai para segundo plano, então o timestamp final fica registrado
       // e a aba via link ainda detecta a PWA como ativa.
       write()
+      sendServerHeartbeat()
     }
     document.addEventListener("visibilitychange", onVisibility)
     window.addEventListener("focus", write)
     return () => {
       clearInterval(id)
+      clearInterval(serverId)
       document.removeEventListener("visibilitychange", onVisibility)
       window.removeEventListener("focus", write)
       try {
         localStorage.removeItem(key)
       } catch {}
     }
-  }, [establishment.slug])
+  }, [establishment.id, establishment.slug])
 
   // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
   // modal aqui e atualiza os dados do cliente.
@@ -2052,28 +2068,40 @@ const handlePaymentSuccess = useCallback(() => {
         setShowVerifyModal(false)
         setVerifyCode("")
 
-        // Sempre mostra a tela de confirmação no navegador. No iOS o
-        // localStorage do PWA instalado e do Safari não são compartilhados de
-        // forma confiável, então não dá para detectar se o PWA está aberto —
-        // a tela de sucesso cobre os dois casos: quem tem PWA volta pra ela
-        // (que loga consultando o servidor) e quem não tem toca em "Abrir".
+        // Decide pelo heartbeat do servidor se existe um PWA aberto:
+        // - PWA ativo (heartbeat < 30s) → fica só na tela de sucesso com o
+        //   botão de fechar (quem tem PWA volta pra ela, que loga sozinha).
+        // - Sem PWA → validação direto no navegador: mostra a tela de sucesso
+        //   e em seguida abre o cardápio já logado.
+        let pwaActive = false
+        try {
+          const hb = await fetch(`/api/verify/heartbeat?establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
+          const hbData = await hb.json()
+          pwaActive = hbData?.active === true
+        } catch {}
+
         setVerifyCloseBlocked(false)
         setVerifyAutoClosing(true)
-        // Delay maior antes de tentar fechar: dá tempo de exibir a tela de
-        // sucesso com o botão de fechar (caso o usuário tenha a PWA aberta)
-        // em vez de pular direto para o cardápio.
-        setTimeout(() => {
-          try {
-            window.close()
-          } catch {}
-          // Se o fechamento foi bloqueado (iOS Safari / aba externa), a
-          // página continua visível. Detectamos pelo document.visibilityState.
+        if (pwaActive) {
+          // PWA aberto: permanece na tela de sucesso e tenta fechar a aba.
           setTimeout(() => {
-            if (document.visibilityState === "visible") {
-              setVerifyCloseBlocked(true)
-            }
-          }, 400)
-        }, 1500)
+            try {
+              window.close()
+            } catch {}
+            setTimeout(() => {
+              if (document.visibilityState === "visible") {
+                setVerifyCloseBlocked(true)
+              }
+            }, 400)
+          }, 1500)
+        } else {
+          // Validação direto no navegador: mostra a tela de sucesso por um
+          // instante e depois abre o cardápio logado.
+          setTimeout(() => {
+            setVerifyAutoClosing(false)
+            setVerifyCloseBlocked(false)
+          }, 1200)
+        }
       } catch (e: any) {
         setVerifyError(e.message)
         setShowVerifyModal(true)
