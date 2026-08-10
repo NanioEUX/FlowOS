@@ -447,6 +447,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setShowVerifyModal(false)
       setVerifyCode("")
       applyLocalVerified(phoneDigits)
+      markSessionVerified()
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
@@ -454,8 +455,26 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }
 
-  async function applyLocalVerified(phoneDigits: string) {
+  // Flag de verificação de sessão: só é criado quando a verificação é
+  // completada (código OU link). Fechar a página não desloga; só o logout
+  // explícito apaga esse flag e exige nova verificação.
+  const markSessionVerified = () => {
+    setSessionVerified(true)
+    try { localStorage.setItem(SESSION_KEY, "1") } catch {}
+  }
+  const clearSessionVerified = () => {
+    setSessionVerified(false)
+    try { localStorage.removeItem(SESSION_KEY) } catch {}
+  }
+
+  useEffect(() => {
     try {
+      if (localStorage.getItem(SESSION_KEY) === "1") setSessionVerified(true)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [establishment.slug])
+
+  async function applyLocalVerified(phoneDigits: string) {    try {
       const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       if (data && !data.notFound) {
@@ -840,6 +859,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [identifying, setIdentifying] = useState(false)
   const [customerData, setCustomerData] = useState<CustomerData | null>(null)
   const [phoneInput, setPhoneInput] = useState("")
+  const [sessionVerified, setSessionVerified] = useState(false)
+  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
 
   // Quando há pedido pendente (Pix), usa os items do pedido salvo em
   // pendingOrderItems. Caso contrário, usa o cart normal.
@@ -1283,9 +1304,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
 
-    // Verificação WhatsApp sempre obrigatória se cliente não está verificado
-    if (!customerData?.whatsappVerified) {
-      console.log("[submitOrder] RETORNO: whatsapp nao verificado")
+    // Verificação WhatsApp obrigatória para esta sessão (flag é apagado no logout)
+    if (!sessionVerified) {
+      console.log("[submitOrder] RETORNO: sessao nao verificada")
       setShowVerifyModal(true)
       setVerifyError("")
       setOrdering(false)
@@ -1770,6 +1791,7 @@ const handlePaymentSuccess = useCallback(() => {
       const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       if (phoneDigits.length >= 10) {
         await applyLocalVerified(phoneDigits)
+        markSessionVerified()
       }
       toast("Código confirmado ✓", "success")
     }
@@ -1802,12 +1824,21 @@ const handlePaymentSuccess = useCallback(() => {
     async function checkVerifiedOnFocus() {
       const phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       if (phoneDigits.length < 10) return
+      // Só fecha/loga se a verificação foi feita AGORA (via link, outra aba).
+      // O whatsappVerified do banco é permanente e NÃO deve re-logar sozinho.
+      let doneRecent = false
+      try {
+        const doneTs = parseInt(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "0", 10)
+        doneRecent = Date.now() - doneTs < 5 * 60 * 1000
+      } catch {}
+      if (!doneRecent) return
       try {
         const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
         const data = await res.json()
         if (data && !data.notFound && data.whatsappVerified) {
           setShowVerifyModal(false)
           setVerifyCode("")
+          markSessionVerified()
           toast("Código confirmado ✓", "success")
         }
       } catch {}
@@ -1819,7 +1850,7 @@ const handlePaymentSuccess = useCallback(() => {
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onFocus)
     }
-  }, [showVerifyModal, establishment.id, customer.phone, customerData?.phone, phoneInput])
+  }, [showVerifyModal, establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput])
 
   // Link de verificação (ex.: ?code=123456&phone=5511999999999):
   // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
@@ -1864,6 +1895,7 @@ const handlePaymentSuccess = useCallback(() => {
         } catch {}
 
         await applyLocalVerified(phoneDigits)
+        markSessionVerified()
 
         // Avisa a PWA já aberta que o código foi validado
         try {
@@ -2218,7 +2250,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <FlowOSLogo size={60} variant="icon" className="h-[60px] w-[60px] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                {customerData?.whatsappVerified && (customer.name || customerData?.name) ? (
+                {sessionVerified && (customer.name || customerData?.name) ? (
                   <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>
                     Olá, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
@@ -2240,7 +2272,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </span>
                 </div>
               </div>
-              {customerData?.whatsappVerified && (customer.phone || customerData?.phone) ? (
+              {sessionVerified && (customer.phone || customerData?.phone) ? (
                 <button onClick={() => setShowCustomerProfile(true)} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold" style={{ backgroundColor: theme.primary, color: "#ffffff" }}>
                   {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
                 </button>
@@ -3066,8 +3098,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     onClick={async () => {
                       const phoneRaw = phoneInput.replace(/\D/g, "")
                       const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                      // Se não está verificado, exige verificação antes de salvar perfil
-                      if (!customerData?.whatsappVerified) {
+                      // Se a sessão não está verificada, exige verificação antes de salvar perfil
+                      if (!sessionVerified) {
                         setEditingProfile(false)
                         setShowCustomerProfile(false)
                         setShowVerifyModal(true)
@@ -3136,6 +3168,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setCustomer({ name: "", phone: "", address: "", notes: "" })
                   setCep("")
                   setCepAddress(null)
+                  clearSessionVerified()
                   localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
                   setShowCustomerProfile(false)
