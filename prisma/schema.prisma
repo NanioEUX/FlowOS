@@ -753,6 +753,21 @@ model PushSubscription {
   @@index([establishmentId, customerKey])
 }
 
+// Registro de cada tentativa de push (para depuração sem acesso aos runtime logs)
+model PushLog {
+  id              String    @id @default(cuid())
+  establishmentId String
+  orderNumber     String?
+  customerKey     String
+  status          String    // "ok" | "no_subs" | "error" | "failed"
+  sent            Int       @default(0)
+  failed          Int       @default(0)
+  detail          String?
+  createdAt       DateTime  @default(now())
+
+  @@index([establishmentId, createdAt])
+}
+
 // Zonas de entrega por distância (taxa configurável por faixa de km)
 model DeliveryZone {
   id              String   @id @default(cuid())
