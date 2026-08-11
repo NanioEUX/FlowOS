@@ -21,6 +21,10 @@ model Establishment {
   // WhatsApp / Bot config
   whatsappProvider    String?           // "evolution" | "meta" | null
   whatsappNumber      String?           // número E.164 (ex: 5511999999999)
+  // Verificação por código: lembrete automático para quem não confirmou
+  verifyReminderEnabled  Boolean       @default(false)
+  verifyReminderDelayMin Int           @default(60)
+  verifyReminderMessage  String?       @default("Olá {{nome}}! Você iniciou a verificação de cadastro no {{estabelecimento}} mas não concluiu. Para finalizar, volte ao cardápio e solicite um novo código. 😊")
   // Evolution API
   evolutionBaseUrl    String?
   evolutionApiKey     String?
@@ -220,6 +224,7 @@ model VerificationCode {
   attempts        Int      @default(0)
   expiresAt       DateTime
   used            Boolean  @default(false)
+  reminderSentAt  DateTime?
   createdAt       DateTime @default(now())
 
   @@index([customerId, used])

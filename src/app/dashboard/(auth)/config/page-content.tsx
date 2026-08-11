@@ -312,6 +312,10 @@ export default function ConfigPage() {
   const [botTemplateOrderDelivered, setBotTemplateOrderDelivered] = useState("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
   const [botTemplateOrderCancelled, setBotTemplateOrderCancelled] = useState("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
   const [botTemplateOrderScheduled, setBotTemplateOrderScheduled] = useState("📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
+  // Verificação por código: lembrete automático
+  const [verifyReminderEnabled, setVerifyReminderEnabled] = useState(false)
+  const [verifyReminderDelayMin, setVerifyReminderDelayMin] = useState("60")
+  const [verifyReminderMessage, setVerifyReminderMessage] = useState("")
   // Agendamento de pedidos
   const [scheduledMinHours, setScheduledMinHours] = useState("24")
   const [scheduledPrepMinutes, setScheduledPrepMinutes] = useState("60")
@@ -403,6 +407,9 @@ export default function ConfigPage() {
           setBotOutsideHoursMessage(data.botOutsideHoursMessage || "Estamos fechados no momento. Nosso horário de atendimento é:")
           setBotAcceptsScheduledOrders(data.botAcceptsScheduledOrders ?? false)
           setBotScheduledOrderMessage(data.botScheduledOrderMessage || "Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
+          setVerifyReminderEnabled(data.verifyReminderEnabled ?? false)
+          setVerifyReminderDelayMin(String(data.verifyReminderDelayMin ?? 60))
+          setVerifyReminderMessage(data.verifyReminderMessage || "Olá {{nome}}! Você iniciou a verificação de cadastro no {{estabelecimento}} mas não concluiu. Para finalizar, volte ao cardápio e solicite um novo código. 😊")
           setBotFallbackMessage(data.botFallbackMessage || "Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
           setBotTemplateOrderConfirmed(data.botTemplateOrderConfirmed || "✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
           setBotTemplateOrderPreparing(data.botTemplateOrderPreparing || "👨‍🍳 Seu pedido está sendo preparado!")
@@ -485,6 +492,9 @@ export default function ConfigPage() {
           botOutsideHoursMessage,
           botAcceptsScheduledOrders,
           botScheduledOrderMessage,
+          verifyReminderEnabled,
+          verifyReminderDelayMin: Number(verifyReminderDelayMin) || 60,
+          verifyReminderMessage,
           botFallbackMessage,
           botTemplateOrderConfirmed,
           botTemplateOrderPreparing,
@@ -1688,6 +1698,59 @@ export default function ConfigPage() {
                 </div>
               </>
             )}
+
+            {/* Verificação por código: lembrete para quem não confirmou */}
+            <div className="space-y-3 border-t border-zinc-200 pt-4">
+              <h5 className="text-sm font-semibold text-zinc-700">🔐 Lembrete de verificação</h5>
+              <p className="text-xs text-zinc-500">
+                Envia um lembrete no WhatsApp para quem pediu o código de verificação mas não concluiu.
+              </p>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">Enviar lembrete automático</p>
+                  <p className="text-xs text-zinc-500">Se ativado, o envio roda de hora em hora.</p>
+                </div>
+                <button
+                  onClick={() => setVerifyReminderEnabled(!verifyReminderEnabled)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    verifyReminderEnabled
+                      ? "bg-red-100 text-red-700 hover:bg-red-200"
+                      : "bg-green-100 text-green-700 hover:bg-green-200"
+                  }`}
+                >
+                  {verifyReminderEnabled ? "Desativar" : "Ativar"}
+                </button>
+              </div>
+              {verifyReminderEnabled && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Enviar lembrete após (minutos)</label>
+                    <input
+                      type="number"
+                      min={10}
+                      step={5}
+                      value={verifyReminderDelayMin}
+                      onChange={(e) => setVerifyReminderDelayMin(e.target.value)}
+                      className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                    />
+                    <p className="text-xs text-zinc-400">Tempo após a solicitação do código para enviar o lembrete.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Mensagem do lembrete</label>
+                    <textarea
+                      value={verifyReminderMessage}
+                      onChange={(e) => setVerifyReminderMessage(e.target.value)}
+                      rows={3}
+                      className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                    />
+                    <p className="text-xs text-zinc-400">
+                      Use <code className="rounded bg-zinc-100 px-1">{"{{nome}}"}</code> e{" "}
+                      <code className="rounded bg-zinc-100 px-1">{"{{estabelecimento}}"}</code> para personalizar.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
