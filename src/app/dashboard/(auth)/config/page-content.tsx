@@ -1249,7 +1249,6 @@ export default function ConfigPage() {
         <Card id="section-whatsapp-bot" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">WhatsApp & Bot de Atendimento</h3>
-            <p className="text-sm text-zinc-500">Configure o WhatsApp e o bot de atendimento automático. Quando ativado, o bot responde clientes com um menu de opções.</p>
 
             <SaasOnly>
             <div className={`rounded-lg border p-4 ${whatsappAutomationEnabled ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
@@ -1326,18 +1325,6 @@ export default function ConfigPage() {
               </select>
             </div>
             </SaasOnly>
-
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-zinc-700">Número WhatsApp (com DDD)</label>
-              <input
-                type="text"
-                placeholder="5511999999999"
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value.replace(/\D/g, ""))}
-                className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-              />
-              <p className="text-xs text-zinc-400">Formato: 55 (Brasil) + DDD + número. Ex: 5511999999999</p>
-            </div>
 
             <SaasOnly>
             {whatsappProvider === "evolution" && (
