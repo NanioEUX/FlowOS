@@ -3704,7 +3704,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
-                loyaltyBalance={parsedLoyalty?.balance || 0}
+                loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 orderType={orderResult?.orderType}
                 paymentLabel={orderResult?.paymentMethod}
                 estimatedTime={"38 min"}
@@ -3752,7 +3752,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </button>
               </>
             )}
-            {cartStep === "confirmation" && (
+            {cartStep === "confirmation" && !(orderResult?.success && !orderResult?.paymentLink) && (
               <>
                 {orderResult?.orderId && (
                   <button onClick={() => {
