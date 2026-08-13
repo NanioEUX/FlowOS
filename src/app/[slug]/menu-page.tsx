@@ -2227,75 +2227,7 @@ onPaymentConfirmed={handlePaymentSuccess}
     )
   }
 
-  // Success screen - only show if no paymentLink (otherwise payment modal handles it)
-  if (orderResult?.success && !orderResult?.paymentLink) {
-    console.log("[render] TELA DE SUCESSO (sem paymentLink) - orderId:", orderResult.orderId, "paymentError:", orderResult.paymentError)
-    return (
-      <>
-      <div className="flex min-h-screen items-center justify-center p-4" style={{ backgroundColor: theme.bgPage }}>
-        <div className="w-full max-w-md rounded-[20px] border text-center backdrop-blur-xl p-8" style={{ borderColor: theme.borderCard, backgroundColor: theme.bgCard }}>
-            <div className="mb-4 flex justify-center">
-              {(establishment.confirmationImage || establishment.logo) ? (
-                <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-                  <CheckCircle className="h-8 w-8 text-green-400" />
-                </div>
-              )}
-            </div>
-            <h2 className="text-xl font-bold" style={{ color: theme.text }}>{establishment.confirmationTitle || "Pedido enviado!"}</h2>
 
-            {orderResult.orderType === "pickup" && establishment.pickupMessage && (
-              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight }}>
-                <p className="text-sm" style={{ color: theme.accent }}>{establishment.pickupMessage}</p>
-              </div>
-            )}
-            {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
-              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight }}>
-                <p className="text-sm" style={{ color: theme.accent }}>{establishment.deliveryMessage}</p>
-              </div>
-            )}
-
-            {parsedLoyalty?.enabled && (
-              <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3">
-                <p className="text-sm font-medium text-amber-300">
-                  <Star className="inline h-4 w-4 mr-1" />
-                  {useLoyalty && loyaltyDiscount > 0
-                    ? `Usado ${parsedLoyalty.redeemPoints} cash (-${formatCurrency(loyaltyDiscount)})`
-                    : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} cash (R$ ${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))}) ganho!`}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-4 flex flex-col gap-2">
-              {orderResult.orderId && (
-                <Button className="w-full gap-2" onClick={() => {
-                  setOrderResult(null)
-                  setShowCart(false)
-                  setShowCheckout(false)
-                  setEditingAddress(false)
-                  openTracking()
-                }}>
-                  <ExternalLink className="h-4 w-4" />
-                  Acompanhar pedido
-                </Button>
-              )}
-              <Button variant="outline" className="w-full" onClick={() => {
-                setOrderResult(null)
-                setShowCart(false)
-                setShowCheckout(false)
-                setCart([])
-                localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-                setEditingAddress(false)
-              }}>
-                Fechar
-              </Button>
-            </div>
-          </div>
-        </div>
-      </>
-    )
-  }
 
   return (
     <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
