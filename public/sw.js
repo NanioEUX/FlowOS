@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v15"
+const CACHE_NAME = "pedefacil-v18"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -21,10 +21,24 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
-      )
-    }).then(() => self.clients.claim())
+      // Se havia cache de versão anterior, é um upgrade de versão: os clients
+      // abertos estão rodando JS antigo, então força o reload deles. Na
+      // primeira visita não há cache antigo → não recarrega ninguém.
+      const oldCaches = cacheNames.filter((name) => name !== CACHE_NAME)
+      const cleanup = Promise.all(oldCaches.map((name) => caches.delete(name)))
+      return cleanup.then(() => oldCaches.length > 0)
+    }).then((wasUpgrade) => {
+      return self.clients.claim().then(() => {
+        if (!wasUpgrade) return
+        return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+          clients.forEach((client) => {
+            try {
+              client.navigate(client.url)
+            } catch {}
+          })
+        })
+      })
+    })
   )
 })
 

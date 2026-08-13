@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
+import { OrderConfirmationScreen } from "@/components/order-confirmation-screen"
 import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geolocation-button"
 import { PushSubscribe } from "@/components/pwa/push-subscribe"
 import { InstallButton } from "@/components/pwa/install-button"
@@ -196,7 +197,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
     }
     const ec = establishment
-    const pc = ec.primaryColor || "#16a34a"
+    const pc = ec.primaryColor || "#06B6D4"
     return {
       primary: pc,
       accent: pc,
@@ -1315,7 +1316,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     console.log("[submitOrder] lastOrder:", lastOrder ? { orderId: lastOrder.orderId, paymentLink: !!lastOrder.paymentLink } : null)
     console.log("[submitOrder] showPaymentModal:", showPaymentModal)
     if (orderingRef.current) { console.log("[submitOrder] BLOCKED by orderingRef"); return }
-    if (orderResult?.success && (orderResult?.paymentLink || orderResult?.paymentDone)) { return }
     orderingRef.current = true
     setOrderError("")
     setOrdering(true)
@@ -1491,6 +1491,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // Otherwise, stay in cart and show confirmation step.
       if (data.paymentLink) {
         setShowCart(false)
+        setCartStep("confirmation")
       } else {
         setCartStep("confirmation")
       }
@@ -2669,35 +2670,9 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Floating Cart Bar */}
-      {/* Free Shipping Progress Bar - compact, above bottom nav */}
-      {cart.length > 0 && !showCart && !showPaymentModal && orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
-        <div className="fixed bottom-[52px] left-0 right-0 z-20 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
-          <div className="rounded-t-xl px-3 py-1.5 backdrop-blur-xl" style={{ backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e20" : `${theme.primary}15`, borderBottom: `1px solid ${subtotal >= establishment.deliveryFreeAbove ? "#22c55e40" : theme.borderSubtle}` }}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium" style={{ color: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.textMuted }}>
-                {subtotal >= establishment.deliveryFreeAbove
-                  ? "🎉 Frete Grátis!"
-                  : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
-                }
-              </span>
-            </div>
-            <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.borderSubtle}` }}>
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
-                  backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.primary,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -2721,9 +2696,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
               </div>
               <span className="text-[10px] font-medium">Sacola</span>
-              {cart.length > 0 && (
-                <span className="text-[9px] font-bold" style={{ color: theme.primary }}>{formatCurrency(total)}</span>
-              )}
             </button>
             <button
               onClick={() => {
@@ -3381,34 +3353,6 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Unified Cart/Checkout Full-Screen Flow */}
       {showCart && (
         <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {/* Timeline at top — shared between cart and checkout */}
-          <div className="flex-shrink-0 px-4 pt-3 pb-3" style={{ borderBottom: `1px solid ${theme.borderCard}` }}>
-            <div className="flex items-center justify-between max-w-lg mx-auto">
-              {[
-                { key: "cart", label: "Carrinho", icon: <ShoppingBag className="h-3.5 w-3.5" /> },
-                { key: "payment", label: "Pagamento", icon: <CreditCard className="h-3.5 w-3.5" /> },
-                { key: "confirmation", label: "Confirmado", icon: <Check className="h-3.5 w-3.5" /> },
-              ].map((step, i) => {
-                const steps = ["cart", "payment", "confirmation"]
-                const currentIdx = steps.indexOf(cartStep)
-                const stepIdx = steps.indexOf(step.key)
-                const isDone = stepIdx < currentIdx
-                const isCurrent = step.key === cartStep
-                return (
-                  <div key={step.key} className="flex items-center gap-1.5">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDone ? "text-white" : isCurrent ? "text-white" : ""}`}
-                      style={{ backgroundColor: isDone || isCurrent ? theme.primary : `${theme.textMutedMore}30`, color: isDone || isCurrent ? "white" : theme.textMutedMore }}>
-                      {isDone ? <Check className="h-3 w-3" /> : step.icon}
-                    </div>
-                    <span className={`text-[10px] font-medium`} style={{ color: isDone || isCurrent ? theme.primary : theme.textMutedMore }}>
-                      {step.key === "payment" && paymentMethod && cartStep === "payment" ? "Pagamento selecionado" : step.label}
-                    </span>
-                    {i < 2 && <div className="w-8 h-0.5 rounded mx-1" style={{ backgroundColor: isDone ? theme.primary : `${theme.textMutedMore}30` }} />}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
 
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between px-4 py-3">
@@ -3815,80 +3759,26 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             {cartStep === "confirmation" && orderResult?.success && (
-              <div className="max-w-lg mx-auto flex flex-col items-center justify-center py-12 px-4">
-                {/* Logo */}
-                <div className="mb-4">
-                  {(establishment.confirmationImage || establishment.logo) ? (
-                    <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.primary}15` }}>
-                      <CheckCircle className="h-8 w-8" style={{ color: theme.primary }} />
-                    </div>
-                  )}
-                </div>
-
-                <h2 className="text-xl font-bold text-center" style={{ color: theme.text }}>
-                  {establishment.confirmationTitle || "Pedido enviado!"}
-                </h2>
-
-                {/* Delivery estimate */}
-                <div className="mt-4 p-4 rounded-2xl w-full text-center" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Timer className="h-5 w-5" style={{ color: theme.primary }} />
-                    <span className="text-sm font-bold" style={{ color: theme.primary }}>Previsão de entrega</span>
-                  </div>
-                  <div className="text-2xl font-black" style={{ color: theme.primary }}>38 min</div>
-                </div>
-
-                {/* Tracker steps */}
-                <div className="mt-6 w-full">
-                  <div className="flex items-center">
-                    {[
-                      { label: "Confirmado", done: true, icon: <Check className="h-3 w-3" /> },
-                      { label: "Preparando", done: false, icon: <Clock className="h-3 w-3" /> },
-                      { label: "Saiu p/ entrega", done: false, icon: <Truck className="h-3 w-3" /> },
-                      { label: "Entregue", done: false, icon: <MapPin className="h-3 w-3" /> },
-                    ].map((step, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center relative">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white"
-                          style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }}>
-                          {step.icon}
-                        </div>
-                        <span className="text-[8px] mt-1 text-center" style={{ color: theme.textMutedMore }}>{step.label}</span>
-                        {i < 3 && <div className="absolute top-3.5 left-1/2 w-full h-0.5" style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Loyalty points */}
-                {parsedLoyalty?.enabled && (
-                  <div className="mt-5 w-full p-4 rounded-2xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Gift className="h-5 w-5" style={{ color: theme.primary }} />
-                      <span className="text-sm font-bold" style={{ color: theme.primary }}>Cashback ganho</span>
-                    </div>
-                    <div className="text-lg font-black" style={{ color: theme.primary }}>
-                      +{Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))} cash
-                    </div>
-                    <div className="text-[10px]" style={{ color: theme.textMutedMore }}>
-                      = R$ {Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))},00 para usar
-                    </div>
-                  </div>
-                )}
-
-                {/* Delivery/pickup message */}
-                {orderResult.orderType === "pickup" && establishment.pickupMessage && (
-                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
-                    {establishment.pickupMessage}
-                  </div>
-                )}
-                {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
-                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
-                    {establishment.deliveryMessage}
-                  </div>
-                )}
-              </div>
+              <OrderConfirmationScreen
+                theme={theme}
+                title={establishment.confirmationTitle || "Pedido enviado!"}
+                logo={establishment.logo || undefined}
+                establishmentName={establishment.name || "Pedefacil"}
+                orderNumber={orderResult?.orderNumber}
+                items={cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price }))}
+                subtotal={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+                deliveryFee={deliveryFee}
+                couponDiscount={0}
+                total={orderResult?.orderTotal ?? total}
+                showLoyalty={parsedLoyalty?.enabled}
+                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
+                loyaltyBalance={parsedLoyalty?.balance || 0}
+                orderType={orderResult?.orderType}
+                paymentLabel={orderResult?.paymentMethod}
+                estimatedTime={"38 min"}
+                onTrack={() => { openTracking(orderResult?.orderId || ""); setCartStep("cart"); setCart([]) }}
+                onContinue={() => { setCartStep("cart"); setCart([]); setOrderResult(null) }}
+              />
             )}
           </div>
 
