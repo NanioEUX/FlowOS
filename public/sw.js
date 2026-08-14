@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v18"
+const CACHE_NAME = "pedefacil-v19"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [

@@ -336,8 +336,14 @@ export async function PATCH(
           }
           const statusLabel = statusTitleMap[status] || "Atualização do pedido"
           const orderTotalStr = order.total != null ? `R$ ${Number(order.total).toFixed(2).replace(".", ",")}` : ""
+          // Parse items from JSON string for push notification
+          let orderItems: any[] = []
+          try { orderItems = JSON.parse(order.items || "[]") } catch {}
+          const itemsSummary = orderItems.length > 0
+            ? orderItems.slice(0, 3).map((item: any) => `${item.quantity}x ${item.name}`).join(", ") + (orderItems.length > 3 ? ` +${orderItems.length - 3} mais` : "")
+            : ""
           const pushTitle = `Pedido #${orderNum} · ${statusLabel}`
-          const pushBody = `Olá ${customerName}! Seu pedido #${orderNum} ${statusVerbMap[status] || "foi atualizado"}${orderTotalStr ? ` · Total: ${orderTotalStr}` : ""}`
+          const pushBody = `Olá ${customerName}! Seu pedido #${orderNum} ${statusVerbMap[status] || "foi atualizado"}${itemsSummary ? ` · ${itemsSummary}` : ""}${orderTotalStr ? ` · ${orderTotalStr}` : ""}`
           console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" body="${pushBody}" phone=${order.customerPhone}`)
           const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
             title: pushTitle,
