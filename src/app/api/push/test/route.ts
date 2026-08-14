@@ -13,13 +13,17 @@ async function sendTestPush(establishmentId: string, phone?: string, title?: str
 
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 
-  const keys = [phone, phone?.replace(/\D/g, "")].filter(
-    (k, i, arr) => k && arr.indexOf(k) === i
-  ) as string[]
-  keys.push("anonymous")
+  let where: any = { establishmentId }
+  if (phone) {
+    const keys = [phone, phone?.replace(/\D/g, "")].filter(
+      (k, i, arr) => k && arr.indexOf(k) === i
+    ) as string[]
+    keys.push("anonymous")
+    where.customerKey = { in: keys }
+  }
 
   const subs = await prisma.pushSubscription.findMany({
-    where: { establishmentId, customerKey: { in: keys } },
+    where,
     orderBy: { lastUsedAt: "desc" },
     take: 5,
   })
