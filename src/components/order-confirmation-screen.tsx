@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Gift, Bike, Banknote, Clock, ExternalLink, X, Sparkles, Tag, Star } from "lucide-react"
+import { CheckCircle, Gift, Sparkles, ArrowRight } from "lucide-react"
 
 interface ConfirmationItemOption {
   name: string
@@ -32,8 +32,6 @@ interface Props {
   cashEarned: number
   loyaltyBalance: number
   orderType?: string
-  paymentLabel?: string
-  estimatedTime?: string
   onTrack: () => void
   onContinue: () => void
 }
@@ -55,8 +53,6 @@ export function OrderConfirmationScreen({
   cashEarned,
   loyaltyBalance,
   orderType,
-  paymentLabel,
-  estimatedTime,
   onTrack,
   onContinue,
 }: Props) {
@@ -72,9 +68,10 @@ export function OrderConfirmationScreen({
           className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
           style={{ backgroundColor: theme.bgCard, color: theme.textMutedMore }}
         >
-          <X className="h-5 w-5" />
+          ✕
         </button>
       </div>
+
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-4 pt-8 pb-4">
         <div className="mx-auto w-full max-w-lg">
@@ -87,30 +84,29 @@ export function OrderConfirmationScreen({
                 {establishmentName.charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full animate-bounce" style={{ backgroundColor: `${theme.success}12` }}>
+            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.success}15` }}>
               <CheckCircle className="h-9 w-9" style={{ color: theme.success }} />
             </div>
             <h1 className="text-2xl font-bold" style={{ color: theme.text }}>
               {title || "Pedido confirmado!"}
             </h1>
             {orderNumber != null && (
-              <p className="text-2xl font-black mt-1">
+              <p className="text-xl font-black mt-1" style={{ color: theme.success }}>
                 Nº {orderNumber}
               </p>
             )}
           </div>
 
-          {/* Order summary */}
+          {/* Order summary - RECEIPT STYLE */}
           <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm" style={{ color: theme.text }}>Resumo</h3>
-              <span className="text-lg font-bold" style={{ color: theme.primary }}>{fmt(total)}</span>
-            </div>
-            <div className="space-y-1.5">
+            <h3 className="font-semibold text-sm mb-3" style={{ color: theme.text }}>Seu pedido</h3>
+
+            {/* Items list */}
+            <div className="space-y-2 mb-3">
               {items.map((item, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between text-sm">
-                    <span style={{ color: theme.textMuted }}>{item.quantity}x {item.name}</span>
+                    <span style={{ color: theme.text }}>{item.quantity}x {item.name}</span>
                     <span className="font-medium" style={{ color: theme.text }}>{fmt(item.price * item.quantity)}</span>
                   </div>
                   {item.additionalOptions && item.additionalOptions.length > 0 && (
@@ -126,48 +122,42 @@ export function OrderConfirmationScreen({
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 space-y-1" style={{ borderTop: `1px solid ${theme.borderSubtle}` }}>
+
+            {/* Totals */}
+            <div className="pt-3 space-y-1" style={{ borderTop: `1px solid ${theme.borderSubtle}` }}>
               <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
                 <span>Subtotal</span><span>{fmt(subtotal)}</span>
               </div>
               {deliveryFee > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
-                  <span>Taxa de entrega</span><span>{fmt(deliveryFee)}</span>
+                  <span>Entrega</span><span>{fmt(deliveryFee)}</span>
                 </div>
               )}
               {couponDiscount > 0 && (
-                <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                  <span>Desconto (cupom)</span><span>-{fmt(couponDiscount)}</span>
+                <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                  <span>Cupom</span><span>-{fmt(couponDiscount)}</span>
                 </div>
               )}
               {firstPurchaseDiscount > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.success }}>
-                  <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Desconto (1ª compra)</span><span>-{fmt(firstPurchaseDiscount)}</span>
+                  <span>1ª compra</span><span>-{fmt(firstPurchaseDiscount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-sm" style={{ color: theme.text }}>
+              <div className="flex justify-between font-bold text-base pt-1" style={{ color: theme.text }}>
                 <span>Total</span>
-                <span style={{ color: theme.accent }}>{fmt(total)}</span>
+                <span style={{ color: theme.success }}>{fmt(total)}</span>
               </div>
             </div>
           </div>
 
-          {/* Cashback */}
-          {showLoyalty && (
-            <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-              <div className="flex items-center gap-2 mb-2">
-                <Gift className="h-5 w-5" style={{ color: theme.primary }} />
-                <span className="text-sm font-bold" style={{ color: theme.primary }}>Cashback</span>
-              </div>
-              <div className="flex items-center justify-between">
+          {/* Cashback earned */}
+          {showLoyalty && cashEarned > 0 && (
+            <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}20` }}>
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5" style={{ color: theme.success }} />
                 <div>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Você ganhou neste pedido</p>
-                  <p className="text-2xl font-black" style={{ color: theme.success }}>+{cashEarned} cash</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo total</p>
-                  <p className="text-lg font-bold" style={{ color: theme.primary }}>{loyaltyBalance} cash</p>
-                  <p className="text-xs" style={{ color: theme.textMutedMore }}>{fmt(loyaltyBalance)}</p>
+                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} cash</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} cash ({fmt(loyaltyBalance)})</p>
                 </div>
               </div>
             </div>
@@ -176,52 +166,30 @@ export function OrderConfirmationScreen({
           {/* First purchase bonus */}
           {firstPurchaseBonus > 0 && (
             <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}20` }}>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" style={{ color: theme.success }} />
-                <span className="text-sm font-bold" style={{ color: theme.success }}>Bônus Primeira Compra</span>
-              </div>
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Cash de bônus adicionado</p>
-                  <p className="text-2xl font-black" style={{ color: theme.success }}>+{firstPurchaseBonus} cash</p>
+                  <p className="text-sm font-bold" style={{ color: theme.success }}>Bônus 1ª compra: +{firstPurchaseBonus} cash</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Adicionado ao seu saldo</p>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Badges */}
-          <div className="flex flex-wrap justify-center gap-2 mb-3">
-            {orderType && (
-              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                {orderType === "delivery" ? <Bike className="h-3 w-3" /> : "🏪"}
-                {orderType === "delivery" ? "Entrega" : "Retirada"}
-              </span>
-            )}
-            {paymentLabel && (
-              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: `${theme.accentLight}55`, color: theme.accent }}>
-                <Banknote className="h-3 w-3" />
-                {paymentLabel}
-              </span>
-            )}
-            {estimatedTime && (
-              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: `${theme.success}12`, color: theme.success }}>
-                <Clock className="h-3 w-3" />
-                {estimatedTime}
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Sticky buttons */}
-      <div className="flex-shrink-0 px-4 pt-3" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))", backgroundColor: theme.bgPage }}>
+      {/* Sticky CTA - Track button */}
+      <div className="flex-shrink-0 px-4 pt-3 pb-4" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))", backgroundColor: theme.bgPage }}>
         <button
           onClick={onTrack}
-          className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
+          className="w-full py-4 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
           style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}
         >
-          <ExternalLink className="h-4 w-4" /> Acompanhar pedido
+          Acompanhar pedido <ArrowRight className="h-4 w-4" />
         </button>
+        <p className="text-center text-xs mt-2" style={{ color: theme.textMutedMore }}>
+          Acompanhe o status em tempo real
+        </p>
       </div>
     </div>
   )

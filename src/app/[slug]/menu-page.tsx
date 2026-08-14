@@ -3796,8 +3796,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 orderType={orderResult?.orderType}
-                paymentLabel={orderResult?.paymentMethod}
-                estimatedTime={"38 min"}
                 onTrack={() => { openTracking(orderResult?.orderId || ""); setCartStep("cart"); setCart([]) }}
                 onContinue={() => { setCartStep("cart"); setCart([]); setOrderResult(null) }}
               />
@@ -4064,6 +4062,14 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (
                 <>
+                  {/* Status header */}
+                  <div className="text-center">
+                    <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
+                    <h3 className="text-lg font-bold" style={{ color: theme.text }}>{statusLabels[trackingOrder.status] || trackingOrder.status}</h3>
+                    <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
+                  </div>
+
+                  {/* Timeline */}
                   <div className="space-y-2">
                     {["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].map((step, i) => {
                       const flowIdx = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].indexOf(trackingOrder.status)
@@ -4117,13 +4123,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       )
                     })}
                   </div>
-
-                  <div className="border-t pt-3" style={{ borderColor: theme.borderCard }}>
-                    <p className="text-xs" style={{ color: theme.textMutedMore }}>Total: <span className="font-semibold" style={{ color: theme.accent }}>R$ {trackingOrder.total?.toFixed(2)}</span></p>
-                  </div>
                 </>
               )}
 
+              {/* Chat section */}
               <div className="border-t pt-3" style={{ borderColor: theme.borderCard }}>
                 <h3 className="text-sm font-semibold mb-2" style={{ color: theme.textSubtle }}>Mensagens</h3>
                 <div className="max-h-48 overflow-y-auto space-y-2 mb-3">
