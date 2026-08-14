@@ -14,8 +14,8 @@ async function sendTestPush(establishmentId: string, phone?: string, title?: str
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 
   const keys = [phone, phone?.replace(/\D/g, "")].filter(
-    (k: string, i: number, arr: string[]) => k && arr.indexOf(k) === i
-  )
+    (k, i, arr) => k && arr.indexOf(k) === i
+  ) as string[]
   keys.push("anonymous")
 
   const subs = await prisma.pushSubscription.findMany({
