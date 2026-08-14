@@ -321,6 +321,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
+  // Saved cart data for confirmation screen (cart is cleared after order)
+  const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
+  const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
 
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
@@ -1501,6 +1504,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // Clear cart and pending state right after the order is successfully
       // created, regardless of payment method. Otherwise pay-on-delivery
       // orders leave the cart dirty and the customer sees stale items.
+      setConfirmationItems([...cart])
+      setConfirmationSubtotal(subtotal)
       setCart([])
       localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
       setChangeFor("")
@@ -3785,8 +3790,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 logo={establishment.logo || undefined}
                 establishmentName={establishment.name || "Pedefacil"}
                 orderNumber={orderResult?.orderNumber}
-                items={cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
-                subtotal={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+                items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
+                subtotal={confirmationSubtotal}
                 deliveryFee={deliveryFee}
                 couponDiscount={couponDiscount}
                 firstPurchaseDiscount={firstPurchaseDiscountValue}
@@ -3796,8 +3801,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 orderType={orderResult?.orderType}
-                onTrack={() => { openTracking(orderResult?.orderId || ""); setCartStep("cart"); setCart([]) }}
-                onContinue={() => { setCartStep("cart"); setCart([]); setOrderResult(null) }}
+                onTrack={() => { openTracking(orderResult?.orderId || ""); setCartStep("cart"); setConfirmationItems([]) }}
+                onContinue={() => { setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
               />
             )}
           </div>
