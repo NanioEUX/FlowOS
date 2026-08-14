@@ -98,6 +98,9 @@ export async function sendPush(
   let failed = 0
   const errors: string[] = []
 
+  const payloadStr = JSON.stringify(safePayload)
+  console.log(`[Push] Enviando payload (${payloadStr.length} bytes): ${payloadStr.slice(0, 200)}`)
+
   await Promise.all(
     subscriptions.map(async (sub) => {
       try {
@@ -106,7 +109,7 @@ export async function sendPush(
             endpoint: sub.endpoint,
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          JSON.stringify(safePayload)
+          payloadStr
         )
         sent++
         await prisma.pushSubscription.update({

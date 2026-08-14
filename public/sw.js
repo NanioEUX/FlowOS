@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v19"
+const CACHE_NAME = "pedefacil-v20"
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -107,20 +107,30 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   let data = { title: "Seu pedido", body: "Nova notificação", url: "/" }
+  let rawPayload = null
   try {
-    data = JSON.parse(event.data.text())
-  } catch {}
+    if (event.data) {
+      rawPayload = event.data.text()
+      data = JSON.parse(rawPayload)
+    } else {
+      console.warn("[SW push] event.data é NULL - payload não entregue ao dispositivo")
+    }
+  } catch (e) {
+    console.warn("[SW push] Falha ao parsear payload:", e?.message, "raw:", rawPayload?.slice(0, 200))
+  }
 
   const title = data.title || "Seu pedido"
   const body = data.body || ""
   const tag = data.tag || "push-" + Date.now()
 
-  // iOS usa o nome do app (manifest) como título da notificação, ignorando o
-  // `title` do showNotification. Para o mobile exibir o mesmo texto do cardápio,
-  // prefixamos o body com o título no iOS. O postMessage mantém title/body
-  // separados, então o toast do cardápio continua igual.
+  console.log(`[SW push] Recebido: title="${title}" body="${body?.slice(0, 100)}" url="${data.url}"`)
+
+  // No iOS, o SO ignora o title do showNotification e usa o name do manifest.
+  // Prefixar o body com o title faz o texto ficar enorme e ser truncado pelo OS.
+  // Então no iOS mostramos só o body (que já contém as infos do pedido).
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-  const displayBody = isIOS && title ? `${title} — ${body}` : body
+  const isAndroid = /Android/i.test(navigator.userAgent)
+  const displayBody = isIOS && body ? body : (isAndroid && title && body ? `${title}\n${body}` : body)
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -129,9 +139,11 @@ self.addEventListener("push", (event) => {
       badge: data.badge || "/icons/icon-512.png",
       vibrate: [200, 100, 200],
       data: { url: data.url || "/", title, body, tag },
-      actions: [{ action: "open", title: "Ver pedido" }],
+      actions: isIOS ? [] : [{ action: "open", title: "Ver pedido" }],
       tag,
       renotify: true,
+    }).catch((e) => {
+      console.warn("[SW push] showNotification falhou:", e?.message)
     })
   )
 
