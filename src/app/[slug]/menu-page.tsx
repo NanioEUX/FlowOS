@@ -3785,10 +3785,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                 logo={establishment.logo || undefined}
                 establishmentName={establishment.name || "Pedefacil"}
                 orderNumber={orderResult?.orderNumber}
-                items={cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price }))}
+                items={cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
                 subtotal={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
                 deliveryFee={deliveryFee}
-                couponDiscount={0}
+                couponDiscount={couponDiscount}
+                firstPurchaseDiscount={firstPurchaseDiscountValue}
+                firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}

@@ -1,11 +1,18 @@
 "use client"
 
-import { CheckCircle, Gift, Bike, Banknote, Clock, ExternalLink, X } from "lucide-react"
+import { CheckCircle, Gift, Bike, Banknote, Clock, ExternalLink, X, Sparkles, Tag, Star } from "lucide-react"
+
+interface ConfirmationItemOption {
+  name: string
+  price: number
+  quantity: number
+}
 
 interface ConfirmationItem {
   name: string
   quantity: number
   price: number
+  additionalOptions?: ConfirmationItemOption[]
 }
 
 interface Props {
@@ -18,6 +25,8 @@ interface Props {
   subtotal: number
   deliveryFee: number
   couponDiscount: number
+  firstPurchaseDiscount: number
+  firstPurchaseBonus: number
   total: number
   showLoyalty: boolean
   cashEarned: number
@@ -39,6 +48,8 @@ export function OrderConfirmationScreen({
   subtotal,
   deliveryFee,
   couponDiscount,
+  firstPurchaseDiscount,
+  firstPurchaseBonus,
   total,
   showLoyalty,
   cashEarned,
@@ -76,8 +87,8 @@ export function OrderConfirmationScreen({
                 {establishmentName.charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full animate-bounce" style={{ backgroundColor: "rgba(34,197,94,0.12)" }}>
-              <CheckCircle className="h-9 w-9" style={{ color: "#16a34a" }} />
+            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full animate-bounce" style={{ backgroundColor: `${theme.success}12` }}>
+              <CheckCircle className="h-9 w-9" style={{ color: theme.success }} />
             </div>
             <h1 className="text-2xl font-bold" style={{ color: theme.text }}>
               {title || "Pedido confirmado!"}
@@ -97,9 +108,21 @@ export function OrderConfirmationScreen({
             </div>
             <div className="space-y-1.5">
               {items.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-sm">
-                  <span style={{ color: theme.textMuted }}>{item.quantity}x {item.name}</span>
-                  <span className="font-medium" style={{ color: theme.text }}>{fmt(item.price * item.quantity)}</span>
+                <div key={idx}>
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: theme.textMuted }}>{item.quantity}x {item.name}</span>
+                    <span className="font-medium" style={{ color: theme.text }}>{fmt(item.price * item.quantity)}</span>
+                  </div>
+                  {item.additionalOptions && item.additionalOptions.length > 0 && (
+                    <div className="ml-4 mt-0.5 space-y-0.5">
+                      {item.additionalOptions.map((opt, optIdx) => (
+                        <div key={optIdx} className="flex justify-between text-xs">
+                          <span style={{ color: theme.textMutedMore }}>  {opt.quantity}x {opt.name}</span>
+                          <span style={{ color: theme.textMutedMore }}>{fmt(opt.price * opt.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -114,7 +137,12 @@ export function OrderConfirmationScreen({
               )}
               {couponDiscount > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                  <span>Desconto</span><span>-{fmt(couponDiscount)}</span>
+                  <span>Desconto (cupom)</span><span>-{fmt(couponDiscount)}</span>
+                </div>
+              )}
+              {firstPurchaseDiscount > 0 && (
+                <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                  <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Desconto (1ª compra)</span><span>-{fmt(firstPurchaseDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-sm" style={{ color: theme.text }}>
@@ -134,12 +162,28 @@ export function OrderConfirmationScreen({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs" style={{ color: theme.textMuted }}>Você ganhou neste pedido</p>
-                  <p className="text-2xl font-black text-green-500">+{cashEarned} cash</p>
+                  <p className="text-2xl font-black" style={{ color: theme.success }}>+{cashEarned} cash</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs" style={{ color: theme.textMuted }}>Saldo total</p>
                   <p className="text-lg font-bold" style={{ color: theme.primary }}>{loyaltyBalance} cash</p>
                   <p className="text-xs" style={{ color: theme.textMutedMore }}>{fmt(loyaltyBalance)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* First purchase bonus */}
+          {firstPurchaseBonus > 0 && (
+            <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}20` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-5 w-5" style={{ color: theme.success }} />
+                <span className="text-sm font-bold" style={{ color: theme.success }}>Bônus Primeira Compra</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Cash de bônus adicionado</p>
+                  <p className="text-2xl font-black" style={{ color: theme.success }}>+{firstPurchaseBonus} cash</p>
                 </div>
               </div>
             </div>
@@ -160,7 +204,7 @@ export function OrderConfirmationScreen({
               </span>
             )}
             {estimatedTime && (
-              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: "rgba(34,197,94,0.12)", color: "#16a34a" }}>
+              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: `${theme.success}12`, color: theme.success }}>
                 <Clock className="h-3 w-3" />
                 {estimatedTime}
               </span>
