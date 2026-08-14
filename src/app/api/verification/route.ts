@@ -7,14 +7,18 @@ const MAX_ATTEMPTS = 3
 const CODE_EXPIRY_MINUTES = 5
 const REQUEST_COOLDOWN_MS = 60 * 1000
 const MAX_REQUESTS_PER_HOUR = 5
-const MAX_REQUESTS_PER_DAY = 5
+const MAX_REQUESTS_PER_DAY = 10
 const MAX_VERIFICATIONS_PER_DAY = 5
+
+// Números com limite diário dispensado (testes internos)
+const BYPASS_PHONES = new Set(["47984118220"])
 
 /**
  * POST /api/verification
  * Body: { phone: string, establishmentId: string }
  * Generates a 6-digit code, stores it (hashed), and sends via WhatsApp.
- * Rate limited por número: 60s de cooldown, máx 5/hora e máx 20/dia.
+ * Rate limited por número: 60s de cooldown, máx 5/hora e máx 10/dia
+ * (sem limite diário para números em BYPASS_PHONES).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
 
     // ---- Rate limits (por número) ----
     const now = Date.now()
+    const bypassLimits = BYPASS_PHONES.has(phoneDigits)
 
     // 1) Cooldown de 60s entre solicitações
     const lastCode = await prisma.verificationCode.findFirst({
@@ -64,21 +69,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Aguarde ${wait}s antes de solicitar outro código.` }, { status: 429 })
     }
 
-    // 2) Máx 5 solicitações/hora
+    // 2) Máx 5 solicitações/hora (dispensado para números de teste)
     const hourAgo = new Date(now - 60 * 60 * 1000)
     const requestsLastHour = await prisma.verificationCode.count({
       where: { customerId: customer.id, createdAt: { gte: hourAgo } },
     })
-    if (requestsLastHour >= MAX_REQUESTS_PER_HOUR) {
+    if (!bypassLimits && requestsLastHour >= MAX_REQUESTS_PER_HOUR) {
       return NextResponse.json({ error: "Muitas solicitações. Tente novamente mais tarde." }, { status: 429 })
     }
 
-    // 3) Máx 20 solicitações/dia
+    // 3) Máx 10 solicitações/dia (dispensado para números de teste)
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000)
     const requestsLastDay = await prisma.verificationCode.count({
       where: { customerId: customer.id, createdAt: { gte: dayAgo } },
     })
-    if (requestsLastDay >= MAX_REQUESTS_PER_DAY) {
+    if (!bypassLimits && requestsLastDay >= MAX_REQUESTS_PER_DAY) {
       return NextResponse.json({ error: "Limite diário de solicitações atingido. Tente novamente amanhã." }, { status: 429 })
     }
 
@@ -203,7 +208,7 @@ export async function PUT(req: NextRequest) {
 
     // ---- Limite de verificações/logins por número (máx 5/24h) ----
     const now = Date.now()
-    if (customer.verificationCount >= MAX_VERIFICATIONS_PER_DAY) {
+    if (!BYPASS_PHONES.has(phoneDigits) && customer.verificationCount >= MAX_VERIFICATIONS_PER_DAY) {
       const lastVerified = customer.verifiedAt ? new Date(customer.verifiedAt).getTime() : 0
       const windowStart = now - 24 * 60 * 60 * 1000
       if (lastVerified > windowStart) {

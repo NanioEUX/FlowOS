@@ -22,17 +22,22 @@ export async function GET(
 
   return NextResponse.json({
     id: order.id,
+    orderNumber: order.orderNumber,
     status: order.status,
     paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    orderType: order.orderType,
     paymentLink: order.paymentLink,
     items: JSON.parse(order.items),
     total: order.total,
+    deliveryFee: order.deliveryFee,
     customerName: order.customerName,
     customerAddress: order.customerAddress,
     notes: order.notes,
     deliveryPerson: order.deliveryPerson,
     method: order.method,
     createdAt: order.createdAt,
+    deliveredAt: order.deliveredAt,
     establishment: order.establishment,
   })
 }

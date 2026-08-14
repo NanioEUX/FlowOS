@@ -23,7 +23,19 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
   let contentType = "image/png"
 
   try {
-    if (logo.startsWith("http")) {
+    if (logo.startsWith("data:")) {
+      // Data URI base64 (logo enviada sem upload). Decodifica e serve direto.
+      const commaIdx = logo.indexOf(",")
+      const meta = logo.slice(5, commaIdx)
+      const b64 = logo.slice(commaIdx + 1)
+      if (meta.includes(";base64")) {
+        buffer = Buffer.from(b64, "base64")
+      } else {
+        buffer = Buffer.from(decodeURIComponent(b64), "utf8")
+      }
+      const m = meta.match(/^image\/([\w.+-]+)/)
+      contentType = m ? `image/${m[1]}` : "image/png"
+    } else if (logo.startsWith("http")) {
       // URL externa: busca e faz proxy
       const res = await fetch(logo)
       if (!res.ok) throw new Error("fetch failed")

@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
   })
 
   // Then fetch orders for the customer's "Meus Pedidos" tab:
-  // - Online payments (Pix/Card): only paymentStatus = "paid" (webhook confirmed)
+  // - Online payments (Pix/Card): visible while paid, pending or expired, so a
+  //   customer can recover an unpaid Pix/Card payment and see expired ones.
   // - Pay-on-delivery: visible from creation through delivery, including
   //   "pending" (awaiting establishment acceptance). Excludes "cancelled"
   //   (the customer can re-order anytime anyway).
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
         {
           paymentMethod: { in: ["cash", "delivery", "pickup", "card_delivery", "card_pickup"] },
         },
-        { paymentStatus: "paid" },
+        { paymentStatus: { in: ["paid", "pending", "expired"] } },
       ],
     },
     orderBy: { createdAt: "desc" },
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
       paymentId: true,
       trackingToken: true,
       deliveryFee: true,
+      updatedAt: true,
     },
   })
 

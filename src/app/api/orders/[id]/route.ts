@@ -256,6 +256,8 @@ export async function PATCH(
         const establishment = await prisma.establishment.findUnique({
           where: { id: order.establishmentId },
           select: {
+            name: true,
+            slug: true,
             logo: true,
             whatsappProvider: true,
             evolutionBaseUrl: true,
@@ -284,24 +286,29 @@ export async function PATCH(
         }
         const template = templateMap[status]
         console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 50) : 'EMPTY/NULL'} | provider: ${establishment?.whatsappProvider} | baseUrl: ${establishment?.evolutionBaseUrl ? 'SET' : 'MISSING'}`)
-        if (template && establishment) {
-          const provider = getWhatsAppProvider({
-            whatsappProvider: establishment.whatsappProvider,
-            evolutionBaseUrl: establishment.evolutionBaseUrl,
-            evolutionApiKey: establishment.evolutionApiKey,
-            evolutionInstanceName: establishment.evolutionInstanceName,
-            whatsappNumber: establishment.whatsappNumber,
-          })
-          console.log(`[Order PATCH] Provider: ${provider ? 'OK' : 'NULL'}`)
-          if (provider) {
-            const delay = randomTypingDelay(
-              establishment.botTypingDelayMinMs || 1500,
-              establishment.botTypingDelayMaxMs || 3500
-            )
-            console.log(`[Order PATCH] Enviando WhatsApp "${status}" para ${order.customerPhone} com delay ${delay}ms...`)
-            const result = await provider.sendText(order.customerPhone, template, { delay })
-            console.log(`[Order PATCH] WhatsApp "${status}" resultado:`, JSON.stringify(result))
+        // WhatsApp falhando NUNCA pode impedir o push PWA de rodar.
+        try {
+          if (template && establishment) {
+            const provider = getWhatsAppProvider({
+              whatsappProvider: establishment.whatsappProvider,
+              evolutionBaseUrl: establishment.evolutionBaseUrl,
+              evolutionApiKey: establishment.evolutionApiKey,
+              evolutionInstanceName: establishment.evolutionInstanceName,
+              whatsappNumber: establishment.whatsappNumber,
+            })
+            console.log(`[Order PATCH] Provider: ${provider ? 'OK' : 'NULL'}`)
+            if (provider) {
+              const delay = randomTypingDelay(
+                establishment.botTypingDelayMinMs || 1500,
+                establishment.botTypingDelayMaxMs || 3500
+              )
+              console.log(`[Order PATCH] Enviando WhatsApp "${status}" para ${order.customerPhone} com delay ${delay}ms...`)
+              const result = await provider.sendText(order.customerPhone, template, { delay })
+              console.log(`[Order PATCH] WhatsApp "${status}" resultado:`, JSON.stringify(result))
+            }
           }
+        } catch (waErr: any) {
+          console.warn(`[Order PATCH] WhatsApp "${status}" falhou (não bloqueia push):`, waErr.message)
         }
 
         // Push notification PWA (sempre, independente de template)
@@ -309,17 +316,49 @@ export async function PATCH(
           const { sendPush } = await import("@/lib/push")
           const customerName = order.customerName?.split(" ")[0] || "Cliente"
           const orderNum = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
-          const pushBody = `Olá ${customerName}! ${template || "Atualização do pedido."}`
-          const pushTitle = ""
+          const statusTitleMap: Record<string, string> = {
+            pending: "Pedido Recebido",
+            confirmed: "Confirmado",
+            preparing: "Preparando",
+            ready: "Pronto",
+            out_for_delivery: "Saiu para Entrega",
+            delivered: "Entregue",
+            cancelled: "Cancelado",
+          }
+          const statusVerbMap: Record<string, string> = {
+            pending: "foi recebido",
+            confirmed: "foi confirmado",
+            preparing: "está sendo preparado",
+            ready: "está pronto",
+            out_for_delivery: "saiu para entrega",
+            delivered: "foi entregue",
+            cancelled: "foi cancelado",
+          }
+          const statusLabel = statusTitleMap[status] || "Atualização do pedido"
+          const orderTotalStr = order.total != null ? `R$ ${Number(order.total).toFixed(2).replace(".", ",")}` : ""
+          const pushTitle = `Pedido #${orderNum} · ${statusLabel}`
+          const pushBody = `Olá ${customerName}! Seu pedido #${orderNum} ${statusVerbMap[status] || "foi atualizado"}${orderTotalStr ? ` · Total: ${orderTotalStr}` : ""}`
           console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" body="${pushBody}" phone=${order.customerPhone}`)
           const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
             title: pushTitle,
             body: pushBody,
-            icon: establishment?.logo || undefined,
+            icon: establishment?.slug ? `/api/icon/${establishment.slug}?size=192` : undefined,
             url: order.trackingToken ? `/pedido/${order.trackingToken}` : `/`,
             tag: `order-${order.id}`,
           })
           console.log(`[Order PATCH] Push "${status}" resultado: sent=${pushResult.sent} failed=${pushResult.failed}`)
+          await prisma.pushLog
+            .create({
+              data: {
+                establishmentId: order.establishmentId,
+                customerKey: order.customerPhone,
+                status: pushResult.sent > 0 ? "ok" : "failed",
+                sent: pushResult.sent,
+                failed: pushResult.failed,
+                detail: `PATCH "${status}" nº ${(order as any).orderNumber || order.id} - ${pushTitle} - ${pushBody}`.slice(0, 200),
+              },
+            })
+            .catch(() => {})
         } catch (pushErr: any) {
           console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
         }

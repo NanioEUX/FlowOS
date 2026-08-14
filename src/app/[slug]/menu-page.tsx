@@ -897,6 +897,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [sessionVerified, setSessionVerified] = useState(false)
   const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
 
+  // First purchase discount
+  const isFirstPurchase = useMemo(() => {
+    if (!establishment.firstPurchaseEnabled) return false
+    if (!customerData?.whatsappVerified) return false
+    // totalOrders === 0 means first order
+    return (customerData.totalOrders || 0) === 0
+  }, [establishment.firstPurchaseEnabled, customerData?.whatsappVerified, customerData?.totalOrders])
+
+  const firstPurchaseDiscountValue = useMemo(() => {
+    if (!isFirstPurchase) return 0
+    return establishment.firstPurchaseDiscount || 0
+  }, [isFirstPurchase, establishment.firstPurchaseDiscount])
+
   // Quando há pedido pendente (Pix), usa os items do pedido salvo em
   // pendingOrderItems. Caso contrário, usa o cart normal.
   const displayItems = pendingOrderNumber ? pendingOrderItems : cart
@@ -944,7 +957,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       : couponData.discountValue
     : 0
 
-  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
+  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - firstPurchaseDiscountValue - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -3436,6 +3449,22 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <button onClick={() => setCart([])} className="text-xs font-medium" style={{ color: "#EF4444" }}>Esvaziar carrinho</button>
                 )}
 
+                {/* First purchase bonus banner */}
+                {cart.length > 0 && isFirstPurchase && (
+                  <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: "#16a34a15", border: "1px solid #16a34a30" }}>
+                    <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-green-400">Bônus de Primeira Compra!</p>
+                      {firstPurchaseDiscountValue > 0 && (
+                        <p className="text-[10px] text-green-400/80">Desconto de {formatCurrency(firstPurchaseDiscountValue)} aplicado</p>
+                      )}
+                      {establishment.firstPurchaseBonus > 0 && (
+                        <p className="text-[10px] text-green-400/80">+{establishment.firstPurchaseBonus} cash de bônus</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Coupon */}
                 {cart.length > 0 && (
                   <div className="flex gap-2">
@@ -3485,6 +3514,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm text-amber-400">
                         <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                      </div>
+                    )}
+                    {firstPurchaseDiscountValue > 0 && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
