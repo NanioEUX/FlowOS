@@ -266,6 +266,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   // vez por verificação, mesmo com múltiplos handlers (storage/BroadcastChannel,
   // focus, polling) detectando a mesma validação ao mesmo tempo.
   const verifyAppliedRef = useRef(false)
+  const [showFirstPurchaseBonus, setShowFirstPurchaseBonus] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -466,6 +467,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const markSessionVerified = () => {
     setSessionVerified(true)
     try { localStorage.setItem(SESSION_KEY, "1") } catch {}
+    // Show first purchase bonus screen if eligible
+    if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
+      setShowFirstPurchaseBonus(true)
+    }
   }
   const clearSessionVerified = () => {
     setSessionVerified(false)
@@ -2089,22 +2094,6 @@ const handlePaymentSuccess = useCallback(() => {
     delivered: "🎉",
   }
 
-  // Auto-close success screen after 5 seconds
-  useEffect(() => {
-    if (orderResult?.success && !orderResult?.paymentLink) {
-      console.log("[auto-close] Timer iniciado para pedido:", orderResult.orderId)
-      const timer = setTimeout(() => {
-        console.log("[auto-close] LIMPANDO orderResult do pedido:", orderResult.orderId)
-        setOrderResult(null)
-        setShowCart(false)
-        setShowCheckout(false)
-        setEditingAddress(false)
-        setShowPaymentModal(false)
-      }, 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [orderResult?.success, orderResult?.paymentLink, orderResult?.orderId, orderResult?.paymentDone])
-
   // Persistent polling for payment status - runs even when modal is closed
   useEffect(() => {
     if (!orderResult?.paymentLink || orderResult?.paymentDone) return
@@ -3181,7 +3170,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
-              Confirme seu número de WhatsApp para continuar. Enviaremos um código de 6 dígitos{establishment.firstPurchaseBonus > 0 ? ` (+${establishment.firstPurchaseBonus} cash de bônus na primeira compra)` : ""}.
+              Enviaremos um código de 6 dígitos.
             </p>
 
             <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
@@ -3213,9 +3202,9 @@ onPaymentConfirmed={handlePaymentSuccess}
             </button>
 
             {whatsappSent && !verifyDevCode && (
-              <div className="mt-3 rounded-lg border-2 border-green-500/50 bg-green-500/15 p-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-green-400">✓ Código enviado no WhatsApp</p>
-                <p className="mt-1 text-xs text-green-300">Verifique as mensagens do seu WhatsApp</p>
+              <div className="mt-3 rounded-lg border-2 p-4 text-center" style={{ borderColor: `${theme.success}50`, backgroundColor: `${theme.success}15` }}>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.success }}>✓ Código enviado no WhatsApp</p>
+                <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Verifique as mensagens do seu WhatsApp</p>
               </div>
             )}
 
@@ -3289,6 +3278,66 @@ onPaymentConfirmed={handlePaymentSuccess}
             <p className="mt-3 text-center text-xs" style={{ color: theme.textMutedMore }}>
               Não recebeu? Clique em &ldquo;Enviar código&rdquo; novamente.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* First Purchase Bonus Screen */}
+      {showFirstPurchaseBonus && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
+                <Sparkles className="h-5 w-5" style={{ color: theme.success }} />
+                Parabéns!
+              </h2>
+              <button onClick={() => setShowFirstPurchaseBonus(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-6 text-center">
+              <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.success}20` }}>
+                <Sparkles className="h-8 w-8" style={{ color: theme.success }} />
+              </div>
+              <p className="text-sm" style={{ color: theme.textMuted }}>Você ganhou na sua primeira compra:</p>
+            </div>
+
+            <div className="space-y-3">
+              {firstPurchaseDiscountValue > 0 && (
+                <div className="flex items-center justify-between rounded-xl p-4" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
+                  <div className="flex items-center gap-3">
+                    <Tag className="h-5 w-5" style={{ color: theme.success }} />
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: theme.text }}>Desconto</p>
+                      <p className="text-xs" style={{ color: theme.textMuted }}>Aplicado automaticamente</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold" style={{ color: theme.success }}>-{formatCurrency(firstPurchaseDiscountValue)}</span>
+                </div>
+              )}
+              {establishment.firstPurchaseBonus > 0 && (
+                <div className="flex items-center justify-between rounded-xl p-4" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
+                  <div className="flex items-center gap-3">
+                    <Star className="h-5 w-5" style={{ color: theme.success }} />
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: theme.text }}>Cash de bônus</p>
+                      <p className="text-xs" style={{ color: theme.textMuted }}>Adicionado ao seu saldo</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold" style={{ color: theme.success }}>+{establishment.firstPurchaseBonus}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFirstPurchaseBonus(false)}
+              className="mt-6 w-full rounded-lg py-3 text-sm font-medium text-white"
+              style={{ backgroundColor: theme.primary }}
+            >
+              Continuar comprando
+            </button>
           </div>
         </div>
       )}
@@ -3451,15 +3500,15 @@ onPaymentConfirmed={handlePaymentSuccess}
 
                 {/* First purchase bonus banner */}
                 {cart.length > 0 && isFirstPurchase && (
-                  <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: "#16a34a15", border: "1px solid #16a34a30" }}>
-                    <Sparkles className="h-5 w-5 text-green-400 flex-shrink-0" />
+                  <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
+                    <Sparkles className="h-5 w-5 flex-shrink-0" style={{ color: theme.success }} />
                     <div>
-                      <p className="text-xs font-semibold text-green-400">Bônus de Primeira Compra!</p>
+                      <p className="text-xs font-semibold" style={{ color: theme.success }}>Bônus de Primeira Compra!</p>
                       {firstPurchaseDiscountValue > 0 && (
-                        <p className="text-[10px] text-green-400/80">Desconto de {formatCurrency(firstPurchaseDiscountValue)} aplicado</p>
+                        <p className="text-[10px]" style={{ color: `${theme.success}cc` }}>Desconto de {formatCurrency(firstPurchaseDiscountValue)} aplicado</p>
                       )}
                       {establishment.firstPurchaseBonus > 0 && (
-                        <p className="text-[10px] text-green-400/80">+{establishment.firstPurchaseBonus} cash de bônus</p>
+                        <p className="text-[10px]" style={{ color: `${theme.success}cc` }}>+{establishment.firstPurchaseBonus} cash de bônus</p>
                       )}
                     </div>
                   </div>
@@ -3713,6 +3762,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {couponDiscount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
                         <span>Desconto ({couponData?.code})</span><span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    )}
+                    {firstPurchaseDiscountValue > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold" style={{ color: theme.text }}>
