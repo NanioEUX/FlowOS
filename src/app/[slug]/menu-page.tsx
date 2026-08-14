@@ -2875,6 +2875,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
                     // Verificação WhatsApp SEMPRE obrigatória (anti-fraude / novo device)
+                    markVerifySessionStart()
                     setTimeout(() => {
                       setShowVerifyModal(true)
                       setVerifyError("")
