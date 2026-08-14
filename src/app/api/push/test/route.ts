@@ -31,7 +31,6 @@ async function sendTestPush(establishmentId: string, phone?: string, title?: str
   if (subs.length === 0) {
     return {
       error: "Nenhuma subscription encontrada",
-      keys,
       totalSubscriptions: await prisma.pushSubscription.count({ where: { establishmentId } }),
     }
   }
