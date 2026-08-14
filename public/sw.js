@@ -1,4 +1,37 @@
-const CACHE_NAME = "pedefacil-v20"
+const CACHE_NAME = "pedefacil-v21"
+
+/** Lê o contexto push (establishmentId + customerKey) do IndexedDB */
+function getPushContext() {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open("pedefacil-push", 1)
+      req.onupgradeneeded = () => req.result.createObjectStore("context")
+      req.onsuccess = () => {
+        try {
+          const tx = req.result.transaction("context", "readonly")
+          const get = tx.objectStore("context").get("current")
+          get.onsuccess = () => resolve(get.result || null)
+          get.onerror = () => resolve(null)
+        } catch { resolve(null) }
+      }
+      req.onerror = () => resolve(null)
+    } catch { resolve(null) }
+  })
+}
+
+/** Busca dados do pedido mais recente no servidor (usado quando event.data é null no iOS) */
+async function fetchLatestOrder() {
+  const ctx = await getPushContext()
+  if (!ctx?.establishmentId || !ctx?.customerKey) return null
+  try {
+    const res = await fetch(
+      `/api/push/order-details?establishmentId=${encodeURIComponent(ctx.establishmentId)}&customerKey=${encodeURIComponent(ctx.customerKey)}`,
+      { headers: { "Cache-Control": "no-cache" } }
+    )
+    if (!res.ok) return null
+    return await res.json()
+  } catch { return null }
+}
 
 // Recursos críticos para offline
 const PRECACHE_URLS = [
@@ -108,10 +141,12 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let data = { title: "Seu pedido", body: "Nova notificação", url: "/" }
   let rawPayload = null
+  let hasPayload = false
   try {
     if (event.data) {
       rawPayload = event.data.text()
       data = JSON.parse(rawPayload)
+      hasPayload = true
     } else {
       console.warn("[SW push] event.data é NULL - payload não entregue ao dispositivo")
     }
@@ -119,43 +154,67 @@ self.addEventListener("push", (event) => {
     console.warn("[SW push] Falha ao parsear payload:", e?.message, "raw:", rawPayload?.slice(0, 200))
   }
 
-  const title = data.title || "Seu pedido"
-  const body = data.body || ""
-  const tag = data.tag || "push-" + Date.now()
-
-  console.log(`[SW push] Recebido: title="${title}" body="${body?.slice(0, 100)}" url="${data.url}"`)
-
-  // No iOS, o SO ignora o title do showNotification e usa o name do manifest.
-  // Prefixar o body com o title faz o texto ficar enorme e ser truncado pelo OS.
-  // Então no iOS mostramos só o body (que já contém as infos do pedido).
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-  const isAndroid = /Android/i.test(navigator.userAgent)
-  const displayBody = isIOS && body ? body : (isAndroid && title && body ? `${title}\n${body}` : body)
+  // No iOS, event.data é null. Busca dados do pedido no servidor para
+  // mostrar detalhes na notificação em vez de "Nova notificação".
+  const fetchPromise = hasPayload ? Promise.resolve(null) : fetchLatestOrder()
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: displayBody,
-      icon: data.icon || "/icons/icon-192.png",
-      badge: data.badge || "/icons/icon-512.png",
-      vibrate: [200, 100, 200],
-      data: { url: data.url || "/", title, body, tag },
-      actions: isIOS ? [] : [{ action: "open", title: "Ver pedido" }],
-      tag,
-      renotify: true,
-    }).catch((e) => {
-      console.warn("[SW push] showNotification falhou:", e?.message)
+    fetchPromise.then((fetched) => {
+      if (fetched && !hasPayload) {
+        data.title = `Pedido #${fetched.orderNumber} · ${fetched.statusLabel}`
+        data.body = [
+          fetched.customerName ? `Olá ${fetched.customerName}!` : "",
+          fetched.itemsSummary || "",
+          fetched.total || "",
+        ].filter(Boolean).join(" · ")
+        data.url = fetched.url || "/"
+        console.log(`[SW push] Dados buscados do servidor: ${data.title} - ${data.body}`)
+      }
+
+      const title = data.title || "Seu pedido"
+      const body = data.body || ""
+      const tag = data.tag || (fetched ? `order-${fetched.orderNumber}` : "push-" + Date.now())
+
+      console.log(`[SW push] Notificação: title="${title}" body="${body?.slice(0, 100)}" url="${data.url}"`)
+
+      // No iOS, o SO ignora o title do showNotification e usa o name do manifest.
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      const isAndroid = /Android/i.test(navigator.userAgent)
+      const displayBody = isIOS && body ? body : (isAndroid && title && body ? `${title}\n${body}` : body)
+
+      return self.registration.showNotification(title, {
+        body: displayBody,
+        icon: data.icon || "/icons/icon-192.png",
+        badge: data.badge || "/icons/icon-512.png",
+        vibrate: [200, 100, 200],
+        data: { url: data.url || "/", title, body: displayBody, tag },
+        actions: isIOS ? [] : [{ action: "open", title: "Ver pedido" }],
+        tag,
+        renotify: true,
+      }).catch((e) => {
+        console.warn("[SW push] showNotification falhou:", e?.message)
+      })
     })
   )
 
   // Notify all open PWA clients about the new push
-  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-    clients.forEach((client) => {
-      client.postMessage({
-        type: "push-notification",
-        title,
-        body,
-        url: data.url,
-        tag,
+  fetchPromise.then((fetched) => {
+    const title = fetched && !hasPayload
+      ? `Pedido #${fetched.orderNumber} · ${fetched.statusLabel}`
+      : data.title || "Seu pedido"
+    const body = fetched && !hasPayload
+      ? [fetched.customerName ? `Olá ${fetched.customerName}!` : "", fetched.itemsSummary || "", fetched.total || ""].filter(Boolean).join(" · ")
+      : data.body || ""
+
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "push-notification",
+          title,
+          body,
+          url: fetched && !hasPayload ? fetched.url : data.url,
+          tag: fetched ? `order-${fetched.orderNumber}` : data.tag,
+        })
       })
     })
   })

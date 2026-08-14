@@ -4,6 +4,20 @@ import { useEffect, useState } from "react"
 
 const STORAGE_KEY = "pwa-push-subscribed"
 
+/** Salva contexto no IndexedDB para o Service Worker acessar quando event.data é null (iOS) */
+async function savePushContext(establishmentId: string, customerKey: string) {
+  try {
+    const dbReq = indexedDB.open("pedefacil-push", 1)
+    dbReq.onupgradeneeded = () => {
+      dbReq.result.createObjectStore("context")
+    }
+    dbReq.onsuccess = () => {
+      const tx = dbReq.result.transaction("context", "readwrite")
+      tx.objectStore("context").put({ establishmentId, customerKey }, "current")
+    }
+  } catch {}
+}
+
 export function PushSubscribe({ establishmentId, customerKey }: { establishmentId: string; customerKey: string }) {
   const key = customerKey === "anonymous" ? "anonymous" : customerKey.replace(/\D/g, "")
   const [supported, setSupported] = useState(false)
@@ -61,12 +75,13 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
             ? urlBase64Encode(new Uint8Array(currentKey))
             : null
           if (currentB64 === publicKey) {
-            await fetch("/api/push/subscribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ establishmentId, customerKey: key, subscription: existing.toJSON() }),
-            })
-            return
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ establishmentId, customerKey: key, subscription: existing.toJSON() }),
+      })
+      await savePushContext(establishmentId, key)
+      return
           }
           await existing.unsubscribe()
         } catch {
@@ -85,6 +100,7 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ establishmentId, customerKey: key, subscription: subscription.toJSON() }),
       })
+      await savePushContext(establishmentId, key)
     } catch (e) {
       console.error("[Push] auto-subscribe error:", e)
     }
