@@ -1034,6 +1034,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function openCart() {
+    if (!customer.phone || !customer.name) {
+      openIdentifyModal()
+      return
+    }
     const phone = customer.phone || customerData?.phone
 
     // Só trava o cliente se houver pedido Pix/Card online com pagamento
@@ -1152,11 +1156,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function addToCart(product: Product) {
-    // Check if customer is identified
-    if (!customer.phone) {
-      openIdentifyModal()
-      return
-    }
     // Check if has pending online payment (Pix/Card) — pay-on-delivery
     // orders never block; the new order is forced to online.
     const paymentDone = orderResult?.paymentDone || lastOrder?.paymentDone
@@ -2611,7 +2610,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
