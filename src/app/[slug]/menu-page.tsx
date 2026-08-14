@@ -1361,6 +1361,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     // Verificação WhatsApp obrigatória para esta sessão (flag é apagado no logout)
     if (!sessionVerified) {
       console.log("[submitOrder] RETORNO: sessao nao verificada")
+      markVerifySessionStart()
       setShowVerifyModal(true)
       setVerifyError("")
       setOrdering(false)
@@ -1805,33 +1806,7 @@ const handlePaymentSuccess = useCallback(() => {
   }, [showVerifyModal])
 
   // Auto-cola: quando o modal abre, tenta ler o código que o cliente copiou
-  // do WhatsApp e preenche os campos OTP automaticamente. Se já houver código
-  // preenchido (ex.: link de verificação), não sobrescreve.
-  useEffect(() => {
-    if (!showVerifyModal) return
-    if (verifyCode.length > 0) return
-    const t = setTimeout(async () => {
-      try {
-        const text = await navigator.clipboard.readText()
-        const digits = text.replace(/\D/g, "").slice(0, 6)
-        if (digits.length === 6) {
-          setVerifyCode(digits)
-          setVerifyError("")
-          otpInputsRef.current[5]?.focus()
-        }
-      } catch {}
-    }, 300)
-    return () => clearTimeout(t)
-  }, [showVerifyModal, verifyCode])
-
-  // Validação automática do código quando os 6 dígitos forem preenchidos
-  useEffect(() => {
-    if (verifyCode.length === 6 && !verifying && !verifyCodeAutoSentRef.current) {
-      verifyCodeAutoSentRef.current = true
-      submitVerifyCode()
-    }
-    if (verifyCode.length < 6) verifyCodeAutoSentRef.current = false
-  }, [verifyCode, verifying])
+  // Validação do código: usuário deve clicar "Confirmar" manualmente
 
   // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
   // modal aqui e atualiza os dados do cliente.
@@ -1995,6 +1970,7 @@ const handlePaymentSuccess = useCallback(() => {
 
     if (phoneDigits.length < 10) {
       setVerifyError("Link de verificação inválido")
+      markVerifySessionStart()
       setShowVerifyModal(true)
       return
     }
@@ -2041,6 +2017,7 @@ const handlePaymentSuccess = useCallback(() => {
         // cardápio abre direto nesta aba, sem tela de sucesso nem heartbeat.
       } catch (e: any) {
         setVerifyError(e.message)
+        markVerifySessionStart()
         setShowVerifyModal(true)
       } finally {
         setVerifying(false)
@@ -3078,6 +3055,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       if (!sessionVerified) {
                         setEditingProfile(false)
                         setShowCustomerProfile(false)
+                        markVerifySessionStart()
                         setShowVerifyModal(true)
                         setVerifyError("")
                         return
