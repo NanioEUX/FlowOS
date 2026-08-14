@@ -3801,8 +3801,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 orderType={orderResult?.orderType}
-                onTrack={() => { openTracking(orderResult?.orderId || ""); setCartStep("cart"); setConfirmationItems([]) }}
-                onContinue={() => { setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
+                onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]) }}
+                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
               />
             )}
           </div>
