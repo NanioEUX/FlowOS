@@ -2648,8 +2648,12 @@ onPaymentConfirmed={handlePaymentSuccess}
             <button
               onClick={() => {
                 setActiveTab("profile")
-                if (customer.phone || customerData?.phone) {
+                if (customer.phone && customer.name && sessionVerified) {
                   setShowCustomerProfile(true)
+                } else if (customer.phone && customer.name) {
+                  markVerifySessionStart()
+                  setShowVerifyModal(true)
+                  setVerifyError("")
                 } else {
                   openIdentifyModal()
                 }
@@ -2921,6 +2925,19 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             {!editingProfile ? (
               <div className="space-y-4">
+                {!sessionVerified && (
+                  <div className="rounded-lg p-4 text-center" style={{ backgroundColor: `${theme.accent}15`, border: `1px solid ${theme.accent}40` }}>
+                    <p className="text-sm font-medium" style={{ color: theme.accent }}>WhatsApp não verificado</p>
+                    <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Confirme o código enviado para completar seu cadastro.</p>
+                    <button
+                      onClick={() => { setShowCustomerProfile(false); markVerifySessionStart(); setShowVerifyModal(true); setVerifyError("") }}
+                      className="mt-3 rounded-lg px-4 py-2 text-xs font-medium text-white"
+                      style={{ backgroundColor: theme.accent }}
+                    >
+                      Verificar agora
+                    </button>
+                  </div>
+                )}
                 <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nome</p>
