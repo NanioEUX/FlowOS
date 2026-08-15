@@ -785,7 +785,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // Scroll spy: observa qual categoria está visível e atualiza o highlight
   useEffect(() => {
-    if (typeof window === "undefined" || activeCategory !== "all") return
+    if (typeof window === "undefined") return
     const sections = sortedCategories
       .map((cat) => document.getElementById(`cat-${cat.id}`))
       .filter(Boolean) as HTMLElement[]
@@ -793,7 +793,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Pega a primeira seção visível (mais de 30% no viewport)
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
@@ -807,7 +806,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
     sections.forEach((s) => observer.observe(s))
     return () => observer.disconnect()
-  }, [activeCategory, sortedCategories])
+  }, [sortedCategories])
 
   // Fetch stories + featured data
   const loadStories = useCallback(async () => {
@@ -2521,15 +2520,11 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           ) : (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-              <button onClick={() => { setActiveCategory("all"); window.scrollTo({ top: 0, behavior: "smooth" }) }} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🍽️ Todos
-              </button>
               {sortedCategories.map((cat) => {
                 const emoji = getCategoryEmoji(cat.name)
-                const isHighlighted = activeCategory === cat.id || (activeCategory === "all" && visibleCategoryId === cat.id)
+                const isHighlighted = visibleCategoryId === cat.id
                 return (
                   <button key={cat.id} onClick={() => {
-                    setActiveCategory(cat.id)
                     const el = document.getElementById(`cat-${cat.id}`)
                     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
                   }} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${isHighlighted ? "text-white shadow-lg" : "hover:opacity-80"}`} style={isHighlighted ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
@@ -2578,12 +2573,11 @@ onPaymentConfirmed={handlePaymentSuccess}
           sortedCategories.map((cat) => {
             const products = cat.products
             if (products.length === 0) return null
-            const isActive = activeCategory === "all" || activeCategory === cat.id
             return (
               <div
                 key={cat.id}
                 id={`cat-${cat.id}`}
-                className={`mb-8 ${!isActive ? "hidden" : ""}`}
+                className="mb-8"
               >
                 <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
