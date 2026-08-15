@@ -722,6 +722,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // Tab & search
   const [activeCategory, setActiveCategory] = useState<string>("all")
+  const [visibleCategoryId, setVisibleCategoryId] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -781,6 +782,32 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       setActiveCategory("all")
     }
   }, [sortedCategories])
+
+  // Scroll spy: observa qual categoria está visível e atualiza o highlight
+  useEffect(() => {
+    if (typeof window === "undefined" || activeCategory !== "all") return
+    const sections = sortedCategories
+      .map((cat) => document.getElementById(`cat-${cat.id}`))
+      .filter(Boolean) as HTMLElement[]
+    if (sections.length === 0) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pega a primeira seção visível (mais de 30% no viewport)
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible.length > 0) {
+          const id = visible[0].target.id.replace("cat-", "")
+          setVisibleCategoryId(id)
+        }
+      },
+      { rootMargin: "-92px 0px -40% 0px", threshold: [0, 0.3] }
+    )
+
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
+  }, [activeCategory, sortedCategories])
 
   // Fetch stories + featured data
   const loadStories = useCallback(async () => {
@@ -2494,13 +2521,18 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           ) : (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+              <button onClick={() => { setActiveCategory("all"); window.scrollTo({ top: 0, behavior: "smooth" }) }} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
                 🍽️ Todos
               </button>
               {sortedCategories.map((cat) => {
                 const emoji = getCategoryEmoji(cat.name)
+                const isHighlighted = activeCategory === cat.id || (activeCategory === "all" && visibleCategoryId === cat.id)
                 return (
-                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  <button key={cat.id} onClick={() => {
+                    setActiveCategory(cat.id)
+                    const el = document.getElementById(`cat-${cat.id}`)
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${isHighlighted ? "text-white shadow-lg" : "hover:opacity-80"}`} style={isHighlighted ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
                     {emoji} {cat.name}
                   </button>
                 )
