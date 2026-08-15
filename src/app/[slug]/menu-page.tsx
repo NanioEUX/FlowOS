@@ -1034,8 +1034,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function openCart() {
-    if (!customer.phone || !customer.name) {
-      openIdentifyModal()
+    if (!customer.phone || !customer.name || !sessionVerified) {
+      if (!customer.phone || !customer.name) {
+        openIdentifyModal()
+      } else {
+        markVerifySessionStart()
+        setShowVerifyModal(true)
+        setVerifyError("")
+      }
       return
     }
     const phone = customer.phone || customerData?.phone
