@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Store, Phone, MapPin, CreditCard, Bike, Banknote, Send, MessageCircle, Loader2, Clock } from "lucide-react"
+import { MapPin, CreditCard, Bike, Banknote, Send, MessageCircle, Loader2, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -182,9 +182,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
   const unreadCount = messages.filter((m) => m.sender === "establishment" && !m.read).length
   const orderNumber = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
-  const whatsappPhone = order.establishment.phone.replace(/\D/g, "")
-  const whatsappMessage = encodeURIComponent(`Olá! Gostaria de falar sobre o pedido #${orderNumber}`)
-  const whatsappUrl = `https://wa.me/55${whatsappPhone}?text=${whatsappMessage}`
 
   function getEstimatedTime(): string | null {
     if (order.status === "delivered" || order.status === "cancelled") return null
@@ -232,7 +229,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
         <Card className="mb-4">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-zinc-900">Pedido #{orderNumber}</h3>
               <span className="text-lg font-bold text-green-600">{formatCurrency(order.total)}</span>
             </div>
             <div className="space-y-1.5">
@@ -258,20 +254,20 @@ export function TrackingPage({ order, statusSteps }: Props) {
         {/* Order type + payment + estimated time */}
         <div className="mb-4 flex flex-wrap justify-center gap-2">
           {order.orderType && (
-            <Badge variant="info" className="gap-1">
-              {order.orderType === "delivery" ? <Bike className="h-3 w-3" /> : "🏪"}
+            <Badge variant="info" className="gap-1 text-[11px] px-2.5 py-1">
+              {order.orderType === "delivery" ? <Bike className="h-3.5 w-3.5" /> : "🏪"}
               {order.orderType === "delivery" ? "Entrega" : "Retirada"}
             </Badge>
           )}
           {order.paymentMethod && (
-            <Badge variant="warning" className="gap-1">
-              {order.paymentMethod === "online" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />}
+            <Badge variant="warning" className="gap-1 text-[11px] px-2.5 py-1">
+              {order.paymentMethod === "online" ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
               {order.paymentMethod === "online" ? "Pago Online" : order.paymentMethod === "delivery" ? "Pagar na Entrega" : "Pagar na Retirada"}
             </Badge>
           )}
           {estimatedTime && (
-            <Badge variant="success" className="gap-1">
-              <Clock className="h-3 w-3" />
+            <Badge variant="success" className="gap-1 text-[11px] px-2.5 py-1">
+              <Clock className="h-3.5 w-3.5" />
               {estimatedTime}
             </Badge>
           )}
@@ -423,27 +419,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
             </CardContent>
           </Card>
         )}
-
-        {/* Establishment info */}
-        <Card className="mb-4">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-              <Store className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-zinc-900">{order.establishment.name}</p>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-green-600 hover:underline flex items-center gap-1"
-              >
-                <Phone className="h-3 w-3" />
-                Falar com o estabelecimento
-              </a>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Delivery info */}
         {(order.customerAddress || order.deliveryPerson) && (

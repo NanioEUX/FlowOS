@@ -2385,7 +2385,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
             {lastOrder?.items && lastOrder.items.length > 0 && (
               <button onClick={() => { setFeaturedTab("lastOrder"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "lastOrder" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "lastOrder" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🔄 Pedido Anterior
+                🔄 Último Pedido
               </button>
             )}
           </div>
@@ -3770,7 +3770,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             {cartStep === "payment" && (
               <>
                 <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
-                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[50px]"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Shield className="h-4 w-4 shrink-0" />}
                   {ordering ? "Enviando..." : "Confirmar pedido"}
@@ -4453,7 +4453,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="font-bold text-xl" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
                   )}
                 </div>
-                <p className="text-[10px] mt-0.5" style={{ color: theme.textMutedMore }}>ou 3x de {formatCurrency(((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) / 3)} sem juros</p>
+
               </div>
 
               {/* Quantity */}
