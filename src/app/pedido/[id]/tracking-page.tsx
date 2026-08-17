@@ -199,16 +199,32 @@ export function TrackingPage({ order, statusSteps }: Props) {
   return (
     <div className="min-h-screen bg-zinc-50 py-8">
       <div className="mx-auto max-w-lg px-4">
+        {/* Close button */}
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back()
+              } else {
+                window.close()
+              }
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-200 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
         {/* Header */}
         <div className="mb-6 text-center">
           {order.establishment.logo ? (
             <img
               src={order.establishment.logo}
               alt={order.establishment.name}
-              className="mx-auto mb-3 h-14 w-14 rounded-full object-cover shadow-md"
+              className="mx-auto mb-3 h-[60px] w-[60px] rounded-full object-cover shadow-md"
             />
           ) : (
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-700 shadow-md">
+            <div className="mx-auto mb-3 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-700 shadow-md">
               {order.establishment.name.charAt(0).toUpperCase()}
             </div>
           )}
