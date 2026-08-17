@@ -184,6 +184,7 @@ export default function CardapioPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [previewMaximized, setPreviewMaximized] = useState(false)
   const previewIframeRef = useRef<HTMLIFrameElement>(null)
+  const previewIframeMobileRef = useRef<HTMLIFrameElement>(null)
   const [previewKey, setPreviewKey] = useState(0)
   const refreshPreview = () => setPreviewKey((k) => k + 1)
   const [previewPos, setPreviewPos] = useState({ x: -1, y: -1 })
@@ -1194,7 +1195,19 @@ export default function CardapioPage() {
               Ver público
             </a>
             <button
-              onClick={() => { setShowPreview(!showPreview); if (!showPreview && previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
+              onClick={() => {
+                const next = !showPreview
+                setShowPreview(next)
+                if (next && establishmentSlug) {
+                  // Reset position when opening split view
+                  setPreviewPos({ x: -1, y: -1 })
+                  // Force iframe load
+                  setTimeout(() => {
+                    if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}`
+                    if (previewIframeMobileRef.current) previewIframeMobileRef.current.src = `/${establishmentSlug}`
+                  }, 50)
+                }
+              }}
               className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${showPreview ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
             >
               <Eye className="h-4 w-4" />
@@ -1204,6 +1217,9 @@ export default function CardapioPage() {
         )}
       </h2>
 
+      <div className="flex gap-6">
+        {/* Left — editing */}
+        <div className={`min-w-0 transition-all duration-300 ${showPreview ? "w-0 lg:w-[60%] overflow-hidden lg:overflow-visible" : "w-full"}`}>
       {/* Tabs */}
       <div className="flex gap-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
         <button
@@ -2291,6 +2307,48 @@ export default function CardapioPage() {
         </Card>
       )}
 
+      </div>{/* close left editing column */}
+
+      {/* Right — preview (desktop split view) */}
+      {showPreview && establishmentSlug && (
+        <div className="hidden lg:flex flex-col items-center w-[40%] sticky top-20 self-start max-h-[calc(100vh-6rem)]">
+          <div className="w-full max-w-[380px] flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl" style={{ height: "min(780px, calc(100vh - 8rem))" }}>
+            {/* Phone header bar */}
+            <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-4 py-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-red-500" />
+                  <span className="h-3 w-3 rounded-full bg-yellow-500" />
+                  <span className="h-3 w-3 rounded-full bg-green-500" />
+                </div>
+                <span className="ml-2 text-xs text-zinc-400 font-mono">/{establishmentSlug}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => { if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
+                  className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                  title="Recarregar"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                </button>
+              </div>
+            </div>
+            {/* Phone frame with notch */}
+            <div className="relative flex-1 bg-white overflow-hidden">
+              <div className="absolute top-0 left-1/2 z-10 h-6 w-36 -translate-x-1/2 rounded-b-2xl bg-zinc-900" />
+              <iframe
+                key={previewKey}
+                ref={previewIframeRef}
+                src={`/${establishmentSlug}`}
+                className="h-full w-full border-0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      </div>{/* close flex */}
+
       {/* Category Modal */}
       {showCategoryForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -3177,11 +3235,11 @@ export default function CardapioPage() {
         </div>
       )}
 
-      {/* Floating Phone Preview */}
+      {/* Floating Phone Preview — mobile fallback */}
       {showPreview && establishmentSlug && (
         <div
           ref={previewContainerRef}
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl transition-[width,height,inset] duration-300 ${
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl transition-[width,height,inset] duration-300 lg:hidden ${
             previewMaximized ? "" : "h-[680px] w-[360px]"
           }`}
           style={getPreviewStyle()}
@@ -3202,7 +3260,7 @@ export default function CardapioPage() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => { if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
+                onClick={() => { if (previewIframeMobileRef.current) previewIframeMobileRef.current.src = `/${establishmentSlug}` }}
                 className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
                 title="Recarregar"
               >
@@ -3233,7 +3291,7 @@ export default function CardapioPage() {
             <div className="absolute top-0 left-1/2 z-10 h-6 w-36 -translate-x-1/2 rounded-b-2xl bg-zinc-900" />
             <iframe
               key={previewKey}
-              ref={previewIframeRef}
+              ref={previewIframeMobileRef}
               src={`/${establishmentSlug}`}
               className="h-full w-full border-0"
               style={{ pointerEvents: "auto" }}
