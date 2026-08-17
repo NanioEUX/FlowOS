@@ -1784,31 +1784,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch {} finally {
       setLoadingOrders(false)
     }
-
-    // Always reconcile the stale lastOrder stored in localStorage so the
-    // customer is never blocked from making a new order. Uses the
-    // trackingToken to ask the backend whether the order is really pending.
-    const lastOrderId = lastOrder?.orderId
-    const lastOrderToken = extractTrackingToken(lastOrder?.trackingUrl)
-    if (lastOrderId && lastOrderToken) {
-      try {
-        const statusRes = await fetch(`/api/orders/${lastOrderId}/payment-status?token=${lastOrderToken}`)
-        if (statusRes.ok) {
-          const status = await statusRes.json()
-          if (status.paymentStatus === "expired" || status.paymentStatus === "refunded" || status.paymentStatus === "cancelled" || status.paymentStatus === "overdue") {
-            // Payment failed — clear stale local state so the
-            // customer can make a new order without being blocked.
-            setLastOrder(null)
-            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
-          }
-        } else if (statusRes.status === 404) {
-          // Order no longer exists (e.g. cancelled and deleted). Clear it.
-          setLastOrder(null)
-          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
-        }
-      } catch {}
-    }
-  }, [customer.phone, customerData?.phone, establishment.id, lastOrder?.orderId, lastOrder?.trackingUrl, establishment.slug])
+  }, [customer.phone, customerData?.phone, establishment.id, establishment.slug])
 
   // Poll customer orders periodically so the Pedidos badge updates even
   // without push notifications (e.g. browser without service worker).
