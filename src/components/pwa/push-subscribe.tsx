@@ -149,7 +149,27 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     }
   }
 
-  if (!supported || permission === "denied") return null
+  if (!supported) {
+    return (
+      <div className="flex items-center justify-between w-full rounded-lg p-3" style={{ backgroundColor: "rgba(0,0,0,0.03)" }}>
+        <div className="flex items-center gap-2">
+          <span>🔕</span>
+          <span className="text-sm font-medium" style={{ color: "#71717a" }}>Notificações indisponíveis neste navegador</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (permission === "denied") {
+    return (
+      <div className="flex items-center justify-between w-full rounded-lg p-3" style={{ backgroundColor: "rgba(0,0,0,0.03)" }}>
+        <div className="flex items-center gap-2">
+          <span>🔕</span>
+          <span className="text-sm font-medium" style={{ color: "#71717a" }}>Notificações bloqueadas nas configurações</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <button

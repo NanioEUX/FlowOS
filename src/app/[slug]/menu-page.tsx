@@ -4102,13 +4102,23 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
                       return (
                         <div key={step} className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${isCompleted ? "bg-green-500/[0.12] text-green-400" : ""} ${isCurrent ? "ring-2 ring-green-500" : ""}`} style={!isCompleted ? { backgroundColor: theme.bgCard, color: theme.textMutedMore } : {}}>
+                          <div
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-sm"
+                            style={isCompleted
+                              ? { backgroundColor: `${theme.primary}18`, color: theme.primary, ...(isCurrent ? { boxShadow: `0 0 0 2px ${theme.primary}`, fontWeight: 600 } : {}) }
+                              : { backgroundColor: theme.bgCard, color: theme.textMutedMore }
+                            }
+                          >
                             {statusIcons[step]}
                           </div>
-                          <span className={`text-sm font-medium ${isCurrent ? "text-green-300" : ""}`} style={!isCompleted ? { color: theme.textMutedMore } : isCompleted ? { color: theme.text } : {}}>
+                          <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
                             {statusLabels[step]}
                           </span>
-                          {isCurrent && <Badge variant="success" className="text-[10px]">Atual</Badge>}
+                          {isCurrent && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}18`, color: theme.primary }}>
+                              Atual
+                            </span>
+                          )}
                            {showPayButton && (
                              <div className="ml-auto flex gap-1">
                                <button

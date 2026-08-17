@@ -8,7 +8,7 @@ export function InstallButton({ className }: { className?: string }) {
   if (installed) {
     return (
       <div className={className}>
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "#16a34a" }}>
           <span>✅</span>
           <span>App instalado</span>
         </div>
@@ -16,7 +16,16 @@ export function InstallButton({ className }: { className?: string }) {
     )
   }
 
-  if (!canInstall) return null
+  if (!canInstall) {
+    return (
+      <div className={className}>
+        <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "#71717a" }}>
+          <span>📱</span>
+          <span>Abra pelo Safari e toque em "Adicionar à Tela de Início"</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <button
