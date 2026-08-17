@@ -349,7 +349,7 @@ export async function PATCH(
             title: pushTitle,
             body: pushBody,
             icon: establishment?.slug ? `/api/icon/${establishment.slug}?size=192` : undefined,
-            url: order.trackingToken && establishment?.slug ? `/${establishment.slug}/menu?track=${order.trackingToken}` : `/`,
+            url: order.trackingToken && establishment?.slug ? `/${establishment.slug}?track=${order.trackingToken}` : `/`,
             tag: `order-${order.id}`,
           })
           console.log(`[Order PATCH] Push "${status}" resultado: sent=${pushResult.sent} failed=${pushResult.failed}`)

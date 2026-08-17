@@ -70,6 +70,6 @@ export async function GET(req: NextRequest) {
     customerName: order.customerName,
     itemsSummary,
     total: totalStr,
-    url: order.trackingToken && order.establishment?.slug ? `/${order.establishment.slug}/menu?track=${order.trackingToken}` : "/",
+    url: order.trackingToken && order.establishment?.slug ? `/${order.establishment.slug}?track=${order.trackingToken}` : "/",
   })
 }
