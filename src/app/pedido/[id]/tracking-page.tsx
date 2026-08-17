@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { MapPin, CreditCard, Bike, Banknote, Send, MessageCircle, Loader2, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 
@@ -254,22 +253,22 @@ export function TrackingPage({ order, statusSteps }: Props) {
         {/* Order type + payment + estimated time */}
         <div className="mb-4 flex flex-wrap justify-center gap-2">
           {order.orderType && (
-            <Badge variant="info" className="gap-1 text-[11px] px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}>
               {order.orderType === "delivery" ? <Bike className="h-3.5 w-3.5" /> : "🏪"}
               {order.orderType === "delivery" ? "Entrega" : "Retirada"}
-            </Badge>
+            </span>
           )}
           {order.paymentMethod && (
-            <Badge variant="warning" className="gap-1 text-[11px] px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
               {order.paymentMethod === "online" ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
               {order.paymentMethod === "online" ? "Pago Online" : order.paymentMethod === "delivery" ? "Pagar na Entrega" : "Pagar na Retirada"}
-            </Badge>
+            </span>
           )}
           {estimatedTime && (
-            <Badge variant="success" className="gap-1 text-[11px] px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: "#dcfce7", color: "#166534" }}>
               <Clock className="h-3.5 w-3.5" />
               {estimatedTime}
-            </Badge>
+            </span>
           )}
         </div>
 
