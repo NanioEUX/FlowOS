@@ -4037,7 +4037,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (() => {
                 const flowSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
-                const flowIdx = flowIdx = flowSteps.indexOf(trackingOrder.status)
+                const flowIdx = flowSteps.indexOf(trackingOrder.status)
                 const cancelled = trackingOrder.status === "cancelled"
                 const createdAt = trackingOrder.createdAt ? new Date(trackingOrder.createdAt) : null
                 const elapsedMin = createdAt ? (Date.now() - createdAt.getTime()) / 60000 : 0
