@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       customerName: true,
       trackingToken: true,
       createdAt: true,
+      establishment: { select: { slug: true } },
     },
   })
 
@@ -69,6 +70,6 @@ export async function GET(req: NextRequest) {
     customerName: order.customerName,
     itemsSummary,
     total: totalStr,
-    url: order.trackingToken ? `/pedido/${order.trackingToken}` : "/",
+    url: order.trackingToken && order.establishment?.slug ? `/${order.establishment.slug}/menu?track=${order.trackingToken}` : "/",
   })
 }

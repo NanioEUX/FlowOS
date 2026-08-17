@@ -298,6 +298,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number; items?: CartItem[] } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
+  const trackingTokenRef = useRef<string>("")
   const [showOrdersList, setShowOrdersList] = useState(false)
   const [customerOrders, setCustomerOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
@@ -1631,6 +1632,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     const id = orderId || orderResult?.orderId
     const url = trackingUrl || orderResult?.trackingUrl
     if (!id || !url) return
+    const token = url.split("/pedido/")[1]
+    if (!token) return
+    trackingTokenRef.current = token
     setHasEstablishmentReply(false)
     prevMsgCountRef.current = 0
     setShowTracking(true)
@@ -1647,12 +1651,42 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch {}
   }
 
+  // Auto-open tracking modal when URL has ?track=token (from push notification click)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const trackToken = params.get("track")
+    if (!trackToken) return
+
+    // Clean URL immediately
+    const cleanUrl = window.location.pathname
+    window.history.replaceState({}, "", cleanUrl)
+
+    // Fetch order data and open tracking modal
+    ;(async () => {
+      try {
+        const orderRes = await fetch(`/api/tracking/${trackToken}`)
+        if (!orderRes.ok) return
+        const orderData = await orderRes.json()
+
+        setTrackingOrder(orderData)
+        prevStatusRef.current = orderData.status
+        setHasEstablishmentReply(false)
+        prevMsgCountRef.current = 0
+        setShowTracking(true)
+
+        // Fetch messages
+        const msgRes = await fetch(`/api/orders/${orderData.id}/messages?token=${trackToken}`)
+        if (msgRes.ok) setTrackingMessages(await msgRes.json())
+      } catch {}
+    })()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!showTracking) return
-    const currentOrderId = orderResult?.orderId || lastOrder?.orderId
-    const currentTrackingUrl = orderResult?.trackingUrl || lastOrder?.trackingUrl
-    if (!currentOrderId || !currentTrackingUrl) return
-    const token = currentTrackingUrl.split("/pedido/")[1]
+    const currentOrderId = orderResult?.orderId || lastOrder?.orderId || trackingOrder?.id
+    const token = trackingTokenRef.current
+    if (!currentOrderId || !token) return
 
     const interval = setInterval(async () => {
       try {
@@ -1678,7 +1712,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       } catch {}
     }, 10000)
     return () => clearInterval(interval)
-  }, [showTracking, orderResult?.orderId, lastOrder])
+  }, [showTracking, orderResult?.orderId, lastOrder, trackingOrder?.id])
 
   useEffect(() => {
     if (showTracking || !lastOrder) return
