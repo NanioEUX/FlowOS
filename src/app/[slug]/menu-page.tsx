@@ -386,8 +386,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       .then(r => r.json())
       .then(data => {
         if (data.paymentStatus === "paid" && lastOrderIdRef.current === capturedOrderId) {
-          setLastOrder(null)
-          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+          setLastOrder(prev => prev ? { ...prev, paymentDone: true } : null)
         }
       })
       .catch(() => {})
@@ -1796,8 +1795,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
         const statusRes = await fetch(`/api/orders/${lastOrderId}/payment-status?token=${lastOrderToken}`)
         if (statusRes.ok) {
           const status = await statusRes.json()
-          if (!status.paymentStatus || status.paymentStatus === "paid" || status.paymentStatus === "expired" || status.paymentStatus === "refunded" || status.paymentStatus === "cancelled" || status.paymentStatus === "overdue") {
-            // Order is not genuinely pending — clear stale local state so the
+          if (status.paymentStatus === "expired" || status.paymentStatus === "refunded" || status.paymentStatus === "cancelled" || status.paymentStatus === "overdue") {
+            // Payment failed — clear stale local state so the
             // customer can make a new order without being blocked.
             setLastOrder(null)
             localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
@@ -1827,9 +1826,7 @@ const handlePaymentSuccess = useCallback(() => {
     setCart([])
     setPendingOrderItems([])
     setPendingOrderNumber(null)
-    setLastOrder(null)
     localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-    localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
     // Clear paymentLink AND set paymentDone: true so modal closes and doesn't reopen
