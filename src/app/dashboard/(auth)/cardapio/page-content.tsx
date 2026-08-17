@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search } from "lucide-react"
@@ -179,6 +179,13 @@ export default function CardapioPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: "category" | "product"; id: string; name: string; productCount?: number }>({ open: false, type: "category", id: "", name: "" })
   const [conflictConfirm, setConflictConfirm] = useState<{ open: boolean; type: "promo-to-featured" | "featured-to-promo"; productName: string; productId: string; callback: () => void } | null>(null)
   const [marginCatId, setMarginCatId] = useState<string | null>(null)
+
+  // Preview state
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewMaximized, setPreviewMaximized] = useState(false)
+  const previewIframeRef = useRef<HTMLIFrameElement>(null)
+  const [previewKey, setPreviewKey] = useState(0)
+  const refreshPreview = () => setPreviewKey((k) => k + 1)
   const [marginCatPercent, setMarginCatPercent] = useState("")
   const [marginCatRounding, setMarginCatRounding] = useState("none")
   const [savingMarginCat, setSavingMarginCat] = useState(false)
@@ -290,6 +297,7 @@ export default function CardapioPage() {
     setNewCategoryName("")
     setShowCategoryForm(false)
     loadData()
+    refreshPreview()
   }
 
   async function renameCategory(id: string) {
@@ -303,6 +311,7 @@ export default function CardapioPage() {
     setEditingCategoryName("")
     toast("Categoria renomeada", "success")
     loadData()
+    refreshPreview()
   }
 
   async function saveMarginCategory() {
@@ -320,6 +329,7 @@ export default function CardapioPage() {
     setSavingMarginCat(false)
     toast("Margem salva", "success")
     loadData()
+    refreshPreview()
   }
 
   async function updateCategoryPrices(category: any) {
@@ -431,6 +441,7 @@ export default function CardapioPage() {
     }
     setDeleteConfirm({ open: false, type: "category", id: "", name: "" })
     loadData()
+    refreshPreview()
   }
 
   async function saveProduct() {
@@ -574,6 +585,7 @@ export default function CardapioPage() {
     }
 
     toast("Produto salvo com sucesso!", "success")
+    refreshPreview()
     // NÃO fecha o modal — mantém aberto pra ver o que salvou.
     // Atualiza editingProduct com dados novos (cache: no-store evita cache de 30s)
     if (productId) {
@@ -975,13 +987,14 @@ export default function CardapioPage() {
         setShowBannerForm(false); setEditingBanner(null)
         setBannerForm({ title: "", subtitle: "", ctaText: "Ver mais", ctaType: "scroll", ctaTarget: "", gradientFrom: "from-blue-500", gradientTo: "to-purple-500", image: "" })
         loadBanners()
+        refreshPreview()
       } else { const err = await res.json(); toast(err.error || "Erro ao salvar", "error") }
     } catch { toast("Erro ao salvar", "error") }
     setSavingBanner(false)
   }
 
   async function handleDeleteBanner(id: string) {
-    try { const res = await fetchAuth(`/api/admin/banners/${id}`, { method: "DELETE" }); if (res.ok) { toast("Banner removido!", "success"); loadBanners() } } catch { toast("Erro ao deletar", "error") }
+    try { const res = await fetchAuth(`/api/admin/banners/${id}`, { method: "DELETE" }); if (res.ok) { toast("Banner removido!", "success"); loadBanners(); refreshPreview() } } catch { toast("Erro ao deletar", "error") }
     setDeleteBannerConfirm(null)
   }
 
@@ -1038,13 +1051,14 @@ export default function CardapioPage() {
         setShowStoryForm(false); setEditingStory(null)
         setStoryForm({ name: "", emoji: "🔥", gradientFrom: "from-red-500", gradientTo: "to-orange-500", type: "manual", autoType: "" })
         loadStoriesData()
+        refreshPreview()
       } else { const err = await res.json(); toast(err.error || "Erro ao salvar", "error") }
     } catch { toast("Erro ao salvar", "error") }
     setSavingStory(false)
   }
 
   async function handleDeleteStory(id: string) {
-    try { const res = await fetchAuth(`/api/admin/stories/${id}`, { method: "DELETE" }); if (res.ok) { toast("Story removido!", "success"); loadStoriesData() } } catch { toast("Erro ao deletar", "error") }
+    try { const res = await fetchAuth(`/api/admin/stories/${id}`, { method: "DELETE" }); if (res.ok) { toast("Story removido!", "success"); loadStoriesData(); refreshPreview() } } catch { toast("Erro ao deletar", "error") }
     setDeleteStoryConfirm(null)
   }
 
@@ -1101,6 +1115,7 @@ export default function CardapioPage() {
       if (res.ok) {
         setSavedAppearance(true)
         setTimeout(() => setSavedAppearance(false), 3000)
+        refreshPreview()
       }
     } finally {
       setSavingAppearance(false)
@@ -1121,6 +1136,7 @@ export default function CardapioPage() {
       })
       if (res.ok) {
         setColorsPublished(publish)
+        refreshPreview()
       }
     } finally {
       setSavingColors(false)
@@ -1140,10 +1156,19 @@ export default function CardapioPage() {
       <h2 className="flex items-center gap-2 text-2xl font-bold text-zinc-900">
         Cardápio
         {establishmentSlug && (
-          <a href={`/${establishmentSlug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-normal text-green-600 hover:text-green-700">
-            <ExternalLink className="h-4 w-4" />
-            Ver público
-          </a>
+          <>
+            <a href={`/${establishmentSlug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-normal text-green-600 hover:text-green-700">
+              <ExternalLink className="h-4 w-4" />
+              Ver público
+            </a>
+            <button
+              onClick={() => { setShowPreview(!showPreview); if (!showPreview && previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${showPreview ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </button>
+          </>
         )}
       </h2>
 
@@ -3116,6 +3141,67 @@ export default function CardapioPage() {
                 Ativar
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Phone Preview */}
+      {showPreview && establishmentSlug && (
+        <div
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl transition-all duration-300 ${
+            previewMaximized
+              ? "inset-4 lg:inset-8"
+              : "bottom-6 right-6 h-[680px] w-[360px]"
+          }`}
+        >
+          {/* Phone header bar */}
+          <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-red-500" />
+                <span className="h-3 w-3 rounded-full bg-yellow-500" />
+                <span className="h-3 w-3 rounded-full bg-green-500" />
+              </div>
+              <span className="ml-2 text-xs text-zinc-400 font-mono">/{establishmentSlug}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
+                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                title="Recarregar"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              </button>
+              <button
+                onClick={() => setPreviewMaximized(!previewMaximized)}
+                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                title={previewMaximized ? "Minimizar" : "Maximizar"}
+              >
+                {previewMaximized ? (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                ) : (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                )}
+              </button>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                title="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          {/* Phone frame with notch */}
+          <div className="relative flex-1 bg-white">
+            <div className="absolute top-0 left-1/2 z-10 h-6 w-36 -translate-x-1/2 rounded-b-2xl bg-zinc-900" />
+            <iframe
+              key={previewKey}
+              ref={previewIframeRef}
+              src={`/${establishmentSlug}`}
+              className="h-full w-full border-0"
+              style={{ pointerEvents: "auto" }}
+            />
           </div>
         </div>
       )}
