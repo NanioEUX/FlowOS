@@ -1,5 +1,4 @@
 "use client"
-import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart } from "lucide-react"
@@ -12,7 +11,6 @@ import { formatCurrency } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
-import { OrderConfirmationScreen } from "@/components/order-confirmation-screen"
 import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geolocation-button"
 import { PushSubscribe } from "@/components/pwa/push-subscribe"
 import { InstallButton } from "@/components/pwa/install-button"
@@ -142,12 +140,29 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
   const { toast } = useToast()
-  const [darkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`pedefacil-theme-${establishment.slug}`)
+    if (saved !== null) {
+      setDarkMode(saved === "dark")
+    } else {
+      setDarkMode(establishment.defaultTheme !== "light")
+    }
+  }, [establishment.slug, establishment.defaultTheme])
+
+  const toggleTheme = useCallback(() => {
+    setDarkMode((prev) => {
+      const next = !prev
+      localStorage.setItem(`pedefacil-theme-${establishment.slug}`, next ? "dark" : "light")
+      return next
+    })
+  }, [establishment.slug])
 
   const theme = useMemo(() => {
     if (darkMode) {
@@ -180,7 +195,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
     }
     const ec = establishment
-    const pc = ec.primaryColor || "#06B6D4"
+    const pc = ec.primaryColor || "#16a34a"
     return {
       primary: pc,
       accent: pc,
@@ -243,13 +258,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [verifyDevCode, setVerifyDevCode] = useState("")
   const [whatsappSent, setWhatsappSent] = useState(false)
   const [whatsappError, setWhatsappError] = useState("")
-  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
-  const verifyCodeAutoSentRef = useRef(false)
-  // Garante que a aplicação do login aconteça UMA
-  // vez por verificação, mesmo com múltiplos handlers (storage/BroadcastChannel,
-  // focus, polling) detectando a mesma validação ao mesmo tempo.
-  const verifyAppliedRef = useRef(false)
-  const [showFirstPurchaseBonus, setShowFirstPurchaseBonus] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
@@ -279,8 +287,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     new: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
     promo: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
   }>({ trending: [], new: [], promo: [] })
-  const [featuredTab, setFeaturedTab] = useState<"promo" | "trending" | "lastOrder">("promo")
-  const [featuredTabInitialized, setFeaturedTabInitialized] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -298,7 +304,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number; items?: CartItem[] } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
-  const trackingTokenRef = useRef<string>("")
   const [showOrdersList, setShowOrdersList] = useState(false)
   const [customerOrders, setCustomerOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
@@ -307,9 +312,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
-  // Saved cart data for confirmation screen (cart is cleared after order)
-  const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
-  const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
 
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
@@ -343,33 +345,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const savedOrder = localStorage.getItem(`pedefacil-last-order-${establishment.slug}`)
       if (savedOrder) {
         const parsed = JSON.parse(savedOrder)
-        if (parsed.orderId && parsed.trackingUrl && parsed.timestamp > Date.now() - 604800000) {
+        if (parsed.orderId && parsed.trackingUrl && parsed.timestamp > Date.now() - 3600000) {
           setLastOrder(parsed)
-          // Busca itens via API se estiverem faltando (pedidos antigos salvos sem items)
-          if (!parsed.items || parsed.items.length === 0) {
-            const token = parsed.trackingUrl.split("/pedido/")[1]
-            if (token) {
-              fetch(`/api/orders/${parsed.orderId}?token=${token}`)
-                .then(r => r.json())
-                .then(data => {
-                  if (data.items) {
-                    let orderItems: any[] = []
-                    try { orderItems = typeof data.items === "string" ? JSON.parse(data.items) : data.items } catch {}
-                    if (orderItems.length > 0) {
-                      setLastOrder((prev) => {
-                        if (prev && prev.orderId === parsed.orderId) {
-                          const updated = { orderId: prev.orderId, trackingUrl: prev.trackingUrl, paymentLink: prev.paymentLink || "", paymentMethod: prev.paymentMethod || "", total: prev.total || 0, paymentDone: prev.paymentDone || false, orderNumber: prev.orderNumber || 0, items: orderItems as any }
-                          localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(updated))
-                          return updated
-                        }
-                        return prev
-                      })
-                    }
-                  }
-                })
-                .catch(() => {})
-            }
-          }
         } else {
           localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
         }
@@ -387,7 +364,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       .then(r => r.json())
       .then(data => {
         if (data.paymentStatus === "paid" && lastOrderIdRef.current === capturedOrderId) {
-          setLastOrder(prev => prev ? { ...prev, paymentDone: true } : null)
+          setLastOrder(null)
+          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
         }
       })
       .catch(() => {})
@@ -415,7 +393,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     setVerifyDevCode("")
     setWhatsappSent(false)
     setWhatsappError("")
-    verifyAppliedRef.current = false
     try {
       const res = await fetch("/api/verification", {
         method: "POST",
@@ -465,129 +442,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       }
       setShowVerifyModal(false)
       setVerifyCode("")
-      applyLocalVerified(phoneDigits)
-      markSessionVerified()
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
       setVerifying(false)
     }
   }
-
-  // Flag de verificação de sessão: só é criado quando a verificação é
-  // completada (código OU link). Fechar a página não desloga; só o logout
-  // explícito apaga esse flag e exige nova verificação.
-  const markSessionVerified = () => {
-    setSessionVerified(true)
-    try { localStorage.setItem(SESSION_KEY, "1") } catch {}
-    // Show first purchase bonus screen if eligible
-    if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
-      setShowFirstPurchaseBonus(true)
-    }
-  }
-  const clearSessionVerified = () => {
-    setSessionVerified(false)
-    try { localStorage.removeItem(SESSION_KEY) } catch {}
-    verifyAppliedRef.current = false
-    markVerifySessionStart()
-  }
-
-  // Marca o momento em que a sessão atual (sem login) começou. O auto-login
-  // via servidor só é aplicado se a verificação (verifiedAt) aconteceu DEPOIS
-  // desse momento — assim, depois do logout (que redefine este marcador), o
-  // verifiedAt antigo não loga o usuário de volta sozinho.
-  const markVerifySessionStart = () => {
-    try { localStorage.setItem(`flowos-verify-session-start-${establishment.slug}`, String(Date.now())) } catch {}
-  }
-  const getVerifySessionStart = (): number => {
-    try {
-      return parseInt(localStorage.getItem(`flowos-verify-session-start-${establishment.slug}`) || "0", 10) || 0
-    } catch {
-      return 0
-    }
-  }
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(SESSION_KEY) === "1") setSessionVerified(true)
-      else {
-        // Só redefine o sessionStart se não existir ou for antigo (> 30 min).
-        // Se a PWA recarregar no meio do fluxo de verificação (iOS mata a PWA
-        // em background), preserva o sessionStart para que o verifiedAt do
-        // link (que pode ser anterior a este mount) ainda seja detectado.
-        const existing = getVerifySessionStart()
-        if (!existing || Date.now() - existing > 30 * 60 * 1000) markVerifySessionStart()
-      }
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [establishment.slug])
-
-  async function applyLocalVerified(phoneDigits: string) {    try {
-      const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
-      const data = await res.json()
-      if (data && !data.notFound) {
-        setCustomerData(data)
-        setCustomer((prev) => ({
-          ...prev,
-          name: data.name || prev.name,
-          address: data.address || prev.address,
-          cpf: data.cpf || prev.cpf,
-        }))
-      }
-    } catch {}
-  }
-
-  function handleOtpChange(index: number, value: string) {
-    const digits = value.replace(/\D/g, "")
-    if (digits) {
-      const next = verifyCode.slice(0, index) + digits.slice(-1) + verifyCode.slice(index + 1)
-      setVerifyCode(next)
-      if (index < 5) otpInputsRef.current[index + 1]?.focus()
-    } else {
-      setVerifyCode(verifyCode.slice(0, index) + verifyCode.slice(index + 1))
-      if (index > 0) otpInputsRef.current[index - 1]?.focus()
-    }
-  }
-
-  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Backspace" && !verifyCode[index] && index > 0) {
-      setVerifyCode(verifyCode.slice(0, index - 1) + verifyCode.slice(index))
-      otpInputsRef.current[index - 1]?.focus()
-    }
-  }
-
-  function handleOtpPaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
-    if (pasted) {
-      setVerifyCode(pasted)
-      const focusIndex = Math.min(pasted.length, 5)
-      otpInputsRef.current[focusIndex]?.focus()
-    }
-  }
-
-  async function pasteVerifyCode() {
-    // Foca no campo OTP primeiro: no iOS/Android isso faz o teclado mostrar a
-    // sugestão nativa "Colar" (cola sem pedir permissão). Em seguida tenta ler
-    // o clipboard via API — na primeira vez o sistema pede permissão, depois
-    // cola direto.
-    otpInputsRef.current[0]?.focus()
-    try {
-      const text = await navigator.clipboard.readText()
-      const digits = text.replace(/\D/g, "").slice(0, 6)
-      if (digits) {
-        setVerifyCode(digits)
-        setVerifyError("")
-        const focusIndex = Math.min(digits.length, 5)
-        otpInputsRef.current[focusIndex]?.focus()
-      } else {
-        setVerifyError("Nenhum código encontrado. Toque e segure no campo para colar.")
-      }
-    } catch {
-      setVerifyError("Toque e segure no campo e escolha Colar para preencher o código.")
-    }
-  }
-
   const [cep, setCep] = useState("")
   const [cepAddress, setCepAddress] = useState<any>(null)
   const [cepLoading, setCepLoading] = useState(false)
@@ -732,7 +592,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
 
   // Tab & search
   const [activeCategory, setActiveCategory] = useState<string>("all")
-  const [visibleCategoryId, setVisibleCategoryId] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -793,31 +652,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }
   }, [sortedCategories])
 
-  // Scroll spy: observa qual categoria está visível e atualiza o highlight
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const sections = sortedCategories
-      .map((cat) => document.getElementById(`cat-${cat.id}`))
-      .filter(Boolean) as HTMLElement[]
-    if (sections.length === 0) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (visible.length > 0) {
-          const id = visible[0].target.id.replace("cat-", "")
-          setVisibleCategoryId(id)
-        }
-      },
-      { rootMargin: "-92px 0px -40% 0px", threshold: [0, 0.3] }
-    )
-
-    sections.forEach((s) => observer.observe(s))
-    return () => observer.disconnect()
-  }, [sortedCategories])
-
   // Fetch stories + featured data
   const loadStories = useCallback(async () => {
     try {
@@ -875,41 +709,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => { if (destaqueIntervalRef.current) clearInterval(destaqueIntervalRef.current) }
   }, [featuredSections.trending.length])
 
-  // Promo compact cards auto-scroll (cross-tab loop)
+  // Promo compact cards auto-scroll
   const promoAutoScrollRef = useRef<NodeJS.Timeout | null>(null)
-  const userInteractingRef = useRef(false)
   useEffect(() => {
     const el = promoScrollRef.current
-    if (!el) return
-    const tabOrder: Array<"promo" | "trending" | "lastOrder"> = [
-      ...(featuredSections.promo.length > 0 ? ["promo" as const] : []),
-      ...(featuredSections.trending.length > 0 ? ["trending" as const] : []),
-      ...(lastOrder?.items && lastOrder.items.length > 0 ? ["lastOrder" as const] : []),
-    ]
-    if (tabOrder.length === 0) return
-    let tabIdx = tabOrder.indexOf(featuredTab) >= 0 ? tabOrder.indexOf(featuredTab) : 0
-    if (promoAutoScrollRef.current) clearInterval(promoAutoScrollRef.current)
+    if (!el || featuredSections.promo.length <= 1) return
+    let forward = true
     promoAutoScrollRef.current = setInterval(() => {
-      if (userInteractingRef.current) return
-      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 10
-      if (atEnd) {
-        tabIdx = (tabIdx + 1) % tabOrder.length
-        setFeaturedTab(tabOrder[tabIdx])
-        el.scrollTo({ left: 0 })
-      } else {
+      if (forward) {
         el.scrollBy({ left: 233, behavior: "smooth" })
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) forward = false
+      } else {
+        el.scrollBy({ left: -233, behavior: "smooth" })
+        if (el.scrollLeft <= 10) forward = true
       }
-    }, 3000)
+    }, 4000)
     return () => { if (promoAutoScrollRef.current) clearInterval(promoAutoScrollRef.current) }
-  }, [featuredTab, featuredSections.promo.length, featuredSections.trending.length, lastOrder?.items?.length])
-
-  // Auto-select first available tab
-  useEffect(() => {
-    if (featuredTabInitialized) return
-    if (featuredSections.promo.length > 0) { setFeaturedTab("promo"); setFeaturedTabInitialized(true) }
-    else if (featuredSections.trending.length > 0) { setFeaturedTab("trending"); setFeaturedTabInitialized(true) }
-    else if (lastOrder?.items && lastOrder.items.length > 0) { setFeaturedTab("lastOrder"); setFeaturedTabInitialized(true) }
-  }, [featuredSections.promo.length, featuredSections.trending.length, lastOrder?.items, featuredTabInitialized])
+  }, [featuredSections.promo.length])
 
   const openStory = (storyId: string) => {
     const story = storiesData.stories.find((s: any) => s.id === storyId)
@@ -956,21 +772,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [identifying, setIdentifying] = useState(false)
   const [customerData, setCustomerData] = useState<CustomerData | null>(null)
   const [phoneInput, setPhoneInput] = useState("")
-  const [sessionVerified, setSessionVerified] = useState(false)
-  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
-
-  // First purchase discount
-  const isFirstPurchase = useMemo(() => {
-    if (!establishment.firstPurchaseEnabled) return false
-    if (!customerData?.whatsappVerified) return false
-    // totalOrders === 0 means first order
-    return (customerData.totalOrders || 0) === 0
-  }, [establishment.firstPurchaseEnabled, customerData?.whatsappVerified, customerData?.totalOrders])
-
-  const firstPurchaseDiscountValue = useMemo(() => {
-    if (!isFirstPurchase) return 0
-    return establishment.firstPurchaseDiscount || 0
-  }, [isFirstPurchase, establishment.firstPurchaseDiscount])
 
   // Quando há pedido pendente (Pix), usa os items do pedido salvo em
   // pendingOrderItems. Caso contrário, usa o cart normal.
@@ -1019,7 +820,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       : couponData.discountValue
     : 0
 
-  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - firstPurchaseDiscountValue - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
+  const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -1088,16 +889,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function openCart() {
-    if (!customer.phone || !customer.name || !sessionVerified) {
-      if (!customer.phone || !customer.name) {
-        openIdentifyModal()
-      } else {
-        markVerifySessionStart()
-        setShowVerifyModal(true)
-        setVerifyError("")
-      }
-      return
-    }
     const phone = customer.phone || customerData?.phone
 
     // Só trava o cliente se houver pedido Pix/Card online com pagamento
@@ -1216,6 +1007,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   }
 
   function addToCart(product: Product) {
+    // Check if customer is identified
+    if (!customer.phone) {
+      openIdentifyModal()
+      return
+    }
     // Check if has pending online payment (Pix/Card) — pay-on-delivery
     // orders never block; the new order is forced to online.
     const paymentDone = orderResult?.paymentDone || lastOrder?.paymentDone
@@ -1396,6 +1192,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     console.log("[submitOrder] lastOrder:", lastOrder ? { orderId: lastOrder.orderId, paymentLink: !!lastOrder.paymentLink } : null)
     console.log("[submitOrder] showPaymentModal:", showPaymentModal)
     if (orderingRef.current) { console.log("[submitOrder] BLOCKED by orderingRef"); return }
+    if (orderResult?.success && (orderResult?.paymentLink || orderResult?.paymentDone)) { return }
     orderingRef.current = true
     setOrderError("")
     setOrdering(true)
@@ -1418,10 +1215,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return
     }
 
-    // Verificação WhatsApp obrigatória para esta sessão (flag é apagado no logout)
-    if (!sessionVerified) {
-      console.log("[submitOrder] RETORNO: sessao nao verificada")
-      markVerifySessionStart()
+    // Verificação WhatsApp sempre obrigatória se cliente não está verificado
+    if (!customerData?.whatsappVerified) {
+      console.log("[submitOrder] RETORNO: whatsapp nao verificado")
       setShowVerifyModal(true)
       setVerifyError("")
       setOrdering(false)
@@ -1564,8 +1360,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // Clear cart and pending state right after the order is successfully
       // created, regardless of payment method. Otherwise pay-on-delivery
       // orders leave the cart dirty and the customer sees stale items.
-      setConfirmationItems([...cart])
-      setConfirmationSubtotal(subtotal)
       setCart([])
       localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
       setChangeFor("")
@@ -1574,7 +1368,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       // Otherwise, stay in cart and show confirmation step.
       if (data.paymentLink) {
         setShowCart(false)
-        setCartStep("confirmation")
       } else {
         setCartStep("confirmation")
       }
@@ -1635,9 +1428,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     const id = orderId || orderResult?.orderId
     const url = trackingUrl || orderResult?.trackingUrl
     if (!id || !url) return
-    const token = url.split("/pedido/")[1]
-    if (!token) return
-    trackingTokenRef.current = token
     setHasEstablishmentReply(false)
     prevMsgCountRef.current = 0
     setShowTracking(true)
@@ -1654,42 +1444,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch {}
   }
 
-  // Auto-open tracking modal when URL has ?track=token (from push notification click)
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const params = new URLSearchParams(window.location.search)
-    const trackToken = params.get("track")
-    if (!trackToken) return
-
-    // Clean URL immediately
-    const cleanUrl = window.location.pathname
-    window.history.replaceState({}, "", cleanUrl)
-
-    // Fetch order data and open tracking modal
-    ;(async () => {
-      try {
-        const orderRes = await fetch(`/api/tracking/${trackToken}`)
-        if (!orderRes.ok) return
-        const orderData = await orderRes.json()
-
-        setTrackingOrder(orderData)
-        prevStatusRef.current = orderData.status
-        setHasEstablishmentReply(false)
-        prevMsgCountRef.current = 0
-        setShowTracking(true)
-
-        // Fetch messages
-        const msgRes = await fetch(`/api/orders/${orderData.id}/messages?token=${trackToken}`)
-        if (msgRes.ok) setTrackingMessages(await msgRes.json())
-      } catch {}
-    })()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     if (!showTracking) return
-    const currentOrderId = orderResult?.orderId || lastOrder?.orderId || trackingOrder?.id
-    const token = trackingTokenRef.current
-    if (!currentOrderId || !token) return
+    const currentOrderId = orderResult?.orderId || lastOrder?.orderId
+    const currentTrackingUrl = orderResult?.trackingUrl || lastOrder?.trackingUrl
+    if (!currentOrderId || !currentTrackingUrl) return
+    const token = currentTrackingUrl.split("/pedido/")[1]
 
     const interval = setInterval(async () => {
       try {
@@ -1715,7 +1475,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       } catch {}
     }, 10000)
     return () => clearInterval(interval)
-  }, [showTracking, orderResult?.orderId, lastOrder, trackingOrder?.id])
+  }, [showTracking, orderResult?.orderId, lastOrder])
 
   useEffect(() => {
     if (showTracking || !lastOrder) return
@@ -1821,25 +1581,40 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     } catch {} finally {
       setLoadingOrders(false)
     }
-  }, [customer.phone, customerData?.phone, establishment.id, establishment.slug])
 
-  // Poll customer orders periodically so the Pedidos badge updates even
-  // without push notifications (e.g. browser without service worker).
-  useEffect(() => {
-    const phone = customer.phone || customerData?.phone
-    if (!phone) return
-    const interval = setInterval(() => {
-      loadCustomerOrders()
-    }, 15000)
-    return () => clearInterval(interval)
-  }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
+    // Always reconcile the stale lastOrder stored in localStorage so the
+    // customer is never blocked from making a new order. Uses the
+    // trackingToken to ask the backend whether the order is really pending.
+    const lastOrderId = lastOrder?.orderId
+    const lastOrderToken = extractTrackingToken(lastOrder?.trackingUrl)
+    if (lastOrderId && lastOrderToken) {
+      try {
+        const statusRes = await fetch(`/api/orders/${lastOrderId}/payment-status?token=${lastOrderToken}`)
+        if (statusRes.ok) {
+          const status = await statusRes.json()
+          if (!status.paymentStatus || status.paymentStatus === "paid" || status.paymentStatus === "expired" || status.paymentStatus === "refunded" || status.paymentStatus === "cancelled" || status.paymentStatus === "overdue") {
+            // Order is not genuinely pending — clear stale local state so the
+            // customer can make a new order without being blocked.
+            setLastOrder(null)
+            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+          }
+        } else if (statusRes.status === 404) {
+          // Order no longer exists (e.g. cancelled and deleted). Clear it.
+          setLastOrder(null)
+          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+        }
+      } catch {}
+    }
+  }, [customer.phone, customerData?.phone, establishment.id, lastOrder?.orderId, lastOrder?.trackingUrl, establishment.slug])
 
 const handlePaymentSuccess = useCallback(() => {
     console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
     setCart([])
     setPendingOrderItems([])
     setPendingOrderNumber(null)
+    setLastOrder(null)
     localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+    localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
     // Clear paymentLink AND set paymentDone: true so modal closes and doesn't reopen
@@ -1864,233 +1639,6 @@ const handlePaymentSuccess = useCallback(() => {
     navigator.serviceWorker.addEventListener("message", handleMessage)
     return () => navigator.serviceWorker.removeEventListener("message", handleMessage)
   }, [loadCustomerOrders])
-
-  // Auto-foco no primeiro campo OTP ao abrir o modal de verificação
-  useEffect(() => {
-    if (showVerifyModal) {
-      setTimeout(() => otpInputsRef.current[0]?.focus(), 150)
-    }
-  }, [showVerifyModal])
-
-  // Auto-cola: quando o modal abre, tenta ler o código que o cliente copiou
-  // Validação do código: usuário deve clicar "Confirmar" manualmente
-
-  // Ouvinte cross-tab: se outra aba/PWA validou o código (via link), fecha o
-  // modal aqui e atualiza os dados do cliente.
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const doneKey = `flowos-verify-done-${establishment.slug}`
-    let channel: BroadcastChannel | null = null
-
-    async function onVerifiedElsewhere() {
-      // Vários mecanismos (storage + BroadcastChannel) podem entregar a mesma
-      // validação; só aplica o login/toast uma vez.
-      if (verifyAppliedRef.current) return
-      verifyAppliedRef.current = true
-      setShowVerifyModal(false)
-      setVerifyError("")
-      setVerifyCode("")
-      // Phone pode não estar em estado na PWA (ex.: navegando sem modal);
-      // tenta ler do marcador de verificação gravado pelo link.
-      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      if (phoneDigits.length < 10) {
-        try {
-          const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
-          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
-        } catch {}
-      }
-      if (phoneDigits.length >= 10) {
-        await applyLocalVerified(phoneDigits)
-        markSessionVerified()
-      }
-    }
-
-    function onStorage(e: StorageEvent) {
-      if (e.key === doneKey) onVerifiedElsewhere()
-    }
-    window.addEventListener("storage", onStorage)
-
-    if (typeof BroadcastChannel !== "undefined") {
-      try {
-        channel = new BroadcastChannel(`flowos-verify-${establishment.slug}`)
-        channel.onmessage = (e) => {
-          if (e.data?.type === "verified") onVerifiedElsewhere()
-        }
-      } catch {}
-    }
-
-    return () => {
-      window.removeEventListener("storage", onStorage)
-      channel?.close()
-    }
-  }, [establishment.slug, customer.phone, customerData?.phone, phoneInput])
-
-  // Fallback: se a validação aconteceu em outra aba/PWA (via link) e esta
-  // janela não recebeu o evento cross-tab (limitação iOS), ao voltar o foco
-  // para a janela o modal fecha e a sessão é marcada como verificada. Também
-  // cobre o caso do PWA aberto navegando sem modal: ao voltar o foco, aplica
-  // o login consultando o servidor (verifiedAt recente) — no iOS o storage
-  // local não é compartilhado entre PWA e Safari, então a decisão vem do banco.
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    async function checkVerifiedOnFocus() {
-      // Se já aplicamos o login desta verificação, não repete (evita várias
-      // telinhas de "código confirmado" a cada foco).
-      if (verifyAppliedRef.current || sessionVerified) return
-      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      // Pega o telefone do marcador (funciona onde o storage é compartilhado:
-      // Android/desktop). No iOS vem do estado salvo no próprio PWA.
-      if (phoneDigits.length < 10) {
-        try {
-          const raw = JSON.parse(localStorage.getItem(`flowos-verify-done-${establishment.slug}`) || "{}")
-          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
-        } catch {}
-      }
-      if (phoneDigits.length < 10) return
-      // Só aplica o login se a verificação aconteceu DEPOIS desta sessão
-      // começou. Depois do logout o sessionStart é redefinido para "agora",
-      // então um verifiedAt antigo (dos últimos 5 min) não reloga o usuário.
-      const sessionStart = getVerifySessionStart()
-      if (!sessionStart) return
-      try {
-        const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
-        const data = await res.json()
-        const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
-        if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
-          verifyAppliedRef.current = true
-          setShowVerifyModal(false)
-          setVerifyCode("")
-          setCustomerData(data)
-          markSessionVerified()
-        }
-      } catch {}
-    }
-    const onFocus = () => checkVerifiedOnFocus()
-    window.addEventListener("focus", onFocus)
-    document.addEventListener("visibilitychange", onFocus)
-    return () => {
-      window.removeEventListener("focus", onFocus)
-      document.removeEventListener("visibilitychange", onFocus)
-    }
-  }, [establishment.id, establishment.slug, customer.phone, customerData?.phone, phoneInput, sessionVerified])
-
-  // Polling de segurança: no iOS, quando a PWA volta do background, eventos
-  // storage/BroadcastChannel/focus podem não disparar de forma confiável.
-  // Consulta o servidor periodicamente e aplica o login se o cliente foi
-  // verificado recentemente (verifiedAt dos últimos 5 min). Só roda enquanto
-  // o modal de verificação estiver aberto (fluxo ativo) para não gastar
-  // requests com o usuário navegando sem estar em verificação.
-  useEffect(() => {
-    if (typeof window === "undefined" || sessionVerified) return
-    const doneKey = `flowos-verify-done-${establishment.slug}`
-    let cancelled = false
-
-    async function pollVerified() {
-      if (cancelled || sessionVerified || !showVerifyModal || verifyAppliedRef.current) return
-      let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-      if (phoneDigits.length < 10) {
-        try {
-          const raw = JSON.parse(localStorage.getItem(doneKey) || "{}")
-          phoneDigits = String(raw.phone || "").replace(/\D/g, "")
-        } catch {}
-      }
-      if (phoneDigits.length < 10) return
-      const sessionStart = getVerifySessionStart()
-      if (!sessionStart) return
-      try {
-        const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
-        const data = await res.json()
-        const verifiedAt = data?.verifiedAt ? new Date(data.verifiedAt).getTime() : 0
-        if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
-          verifyAppliedRef.current = true
-          setShowVerifyModal(false)
-          setVerifyCode("")
-          setCustomerData(data)
-          markSessionVerified()
-        }
-      } catch {}
-    }
-
-    pollVerified()
-    const id = setInterval(pollVerified, 2000)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput, showVerifyModal])
-
-  // Link de verificação (ex.: ?code=123456&phone=5511999999999):
-  // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get("code")
-    const phoneParam = params.get("phone")
-    if (!code) return
-
-    // Remove o código da URL imediatamente (segurança + não repetir validação)
-    const cleanUrl = window.location.pathname + (window.location.search.replace(/[?&]code=[^&]*/, "").replace(/[?&]phone=[^&]*/, ""))
-    window.history.replaceState({}, "", cleanUrl)
-
-    const phoneDigits = (phoneParam || customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
-
-    if (phoneDigits.length < 10) {
-      setVerifyError("Link de verificação inválido")
-      markVerifySessionStart()
-      setShowVerifyModal(true)
-      return
-    }
-
-    ;(async () => {
-      setVerifying(true)
-      setVerifyError("")
-      try {
-        const res = await fetch("/api/verification", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phoneDigits, establishmentId: establishment.id, code }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Código incorreto")
-
-        // Salva o telefone confirmado no cliente local
-        setCustomer((prev) => ({ ...prev, phone: phoneDigits, name: prev.name || data.customer?.name || prev.name }))
-        try {
-          const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
-          const parsed = saved ? JSON.parse(saved) : {}
-          parsed.phone = phoneDigits
-          localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(parsed))
-        } catch {}
-
-        await applyLocalVerified(phoneDigits)
-        markSessionVerified()
-
-        // Avisa a PWA já aberta que o código foi validado (inclui o telefone
-        // para que a PWA consiga logar mesmo sem ter o phone em estado)
-        try {
-          localStorage.setItem(`flowos-verify-done-${establishment.slug}`, JSON.stringify({ ts: Date.now(), phone: phoneDigits }))
-        } catch {}
-        try {
-          const ch = new BroadcastChannel(`flowos-verify-${establishment.slug}`)
-          ch.postMessage({ type: "verified" })
-          ch.close()
-        } catch {}
-
-        setShowVerifyModal(false)
-        setVerifyCode("")
-
-        // Fluxo simples: validação concluída e o usuário já está logado. O
-        // cardápio abre direto nesta aba, sem tela de sucesso nem heartbeat.
-      } catch (e: any) {
-        setVerifyError(e.message)
-        markVerifySessionStart()
-        setShowVerifyModal(true)
-      } finally {
-        setVerifying(false)
-      }
-    })()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handlePedidosClick() {
     if (lastOrder) {
@@ -2141,6 +1689,22 @@ const handlePaymentSuccess = useCallback(() => {
     out_for_delivery: "🛵",
     delivered: "🎉",
   }
+
+  // Auto-close success screen after 5 seconds
+  useEffect(() => {
+    if (orderResult?.success && !orderResult?.paymentLink) {
+      console.log("[auto-close] Timer iniciado para pedido:", orderResult.orderId)
+      const timer = setTimeout(() => {
+        console.log("[auto-close] LIMPANDO orderResult do pedido:", orderResult.orderId)
+        setOrderResult(null)
+        setShowCart(false)
+        setShowCheckout(false)
+        setEditingAddress(false)
+        setShowPaymentModal(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [orderResult?.success, orderResult?.paymentLink, orderResult?.orderId, orderResult?.paymentDone])
 
   // Persistent polling for payment status - runs even when modal is closed
   useEffect(() => {
@@ -2277,18 +1841,86 @@ onPaymentConfirmed={handlePaymentSuccess}
     )
   }
 
+  // Success screen - only show if no paymentLink (otherwise payment modal handles it)
+  if (orderResult?.success && !orderResult?.paymentLink) {
+    console.log("[render] TELA DE SUCESSO (sem paymentLink) - orderId:", orderResult.orderId, "paymentError:", orderResult.paymentError)
+    return (
+      <>
+      <div className="flex min-h-screen items-center justify-center p-4" style={{ backgroundColor: theme.bgPage }}>
+        <div className="w-full max-w-md rounded-[20px] border text-center backdrop-blur-xl p-8" style={{ borderColor: theme.borderCard, backgroundColor: theme.bgCard }}>
+            <div className="mb-4 flex justify-center">
+              {(establishment.confirmationImage || establishment.logo) ? (
+                <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle className="h-8 w-8 text-green-400" />
+                </div>
+              )}
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: theme.text }}>{establishment.confirmationTitle || "Pedido enviado!"}</h2>
 
+            {orderResult.orderType === "pickup" && establishment.pickupMessage && (
+              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight }}>
+                <p className="text-sm" style={{ color: theme.accent }}>{establishment.pickupMessage}</p>
+              </div>
+            )}
+            {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
+              <div className="mt-3 rounded-lg border p-3" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight }}>
+                <p className="text-sm" style={{ color: theme.accent }}>{establishment.deliveryMessage}</p>
+              </div>
+            )}
+
+            {parsedLoyalty?.enabled && (
+              <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3">
+                <p className="text-sm font-medium text-amber-300">
+                  <Star className="inline h-4 w-4 mr-1" />
+                  {useLoyalty && loyaltyDiscount > 0
+                    ? `Usado ${parsedLoyalty.redeemPoints} cash (-${formatCurrency(loyaltyDiscount)})`
+                    : `+${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))} cash (R$ ${Math.floor((subtotal) * (parsedLoyalty.pointsPerReal || 1))}) ganho!`}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-col gap-2">
+              {orderResult.orderId && (
+                <Button className="w-full gap-2" onClick={() => {
+                  setOrderResult(null)
+                  setShowCart(false)
+                  setShowCheckout(false)
+                  setEditingAddress(false)
+                  openTracking()
+                }}>
+                  <ExternalLink className="h-4 w-4" />
+                  Acompanhar pedido
+                </Button>
+              )}
+              <Button variant="outline" className="w-full" onClick={() => {
+                setOrderResult(null)
+                setShowCart(false)
+                setShowCheckout(false)
+                setCart([])
+                localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                setEditingAddress(false)
+              }}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
-      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
+      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
       </div>
 
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300 safe-top" style={{ backgroundColor: theme.bgPage }}>
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-center gap-3">
@@ -2298,7 +1930,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <FlowOSLogo size={60} variant="icon" className="h-[60px] w-[60px] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                {sessionVerified && (customer.name || customerData?.name) ? (
+                {customerData?.whatsappVerified && (customer.name || customerData?.name) ? (
                   <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>
                     Olá, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
@@ -2320,7 +1952,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </span>
                 </div>
               </div>
-              {sessionVerified && (customer.phone || customerData?.phone) ? (
+              {customerData?.whatsappVerified && (customer.phone || customerData?.phone) ? (
                 <button onClick={() => setShowCustomerProfile(true)} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold" style={{ backgroundColor: theme.primary, color: "#ffffff" }}>
                   {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
                 </button>
@@ -2405,39 +2037,16 @@ onPaymentConfirmed={handlePaymentSuccess}
         )
       })()}
 
-      {/* Promoções + Último Pedido + Mais Pedidos — tabbed horizontal scroll */}
+      {/* Promoções + Último Pedido + Mais Pedidos — unified horizontal scroll row */}
       {(featuredSections.promo.length > 0 || lastOrder?.items?.length || featuredSections.trending.length > 0) && (
         <div className="mx-auto max-w-3xl px-4 pb-4">
-          {/* Tab strip */}
-          <div className="flex gap-2 mb-3 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-            {featuredSections.promo.length > 0 && (
-              <button onClick={() => { setFeaturedTab("promo"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "promo" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "promo" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🔥 Promoção
-              </button>
-            )}
-            {featuredSections.trending.length > 0 && (
-              <button onClick={() => { setFeaturedTab("trending"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "trending" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "trending" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🏆 Mais Vendidos
-              </button>
-            )}
-            {lastOrder?.items && lastOrder.items.length > 0 && (
-              <button onClick={() => { setFeaturedTab("lastOrder"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "lastOrder" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "lastOrder" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                🔄 Último Pedido
-              </button>
-            )}
-          </div>
-
           <div
             ref={promoScrollRef}
             className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
-            onTouchStart={() => { userInteractingRef.current = true }}
-            onTouchEnd={() => { setTimeout(() => { userInteractingRef.current = false }, 500) }}
-            onMouseDown={() => { userInteractingRef.current = true }}
-            onMouseUp={() => { setTimeout(() => { userInteractingRef.current = false }, 500) }}
           >
-            {/* Promoções */}
-            {featuredTab === "promo" && featuredSections.promo.map((item) => (
+            {/* Promoções button-card */}
+            {featuredSections.promo.length > 0 && featuredSections.promo.map((item) => (
               <button
                 key={`promo-${item.id}`}
                 onClick={() => {
@@ -2478,23 +2087,25 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
             ))}
 
-            {/* Último Pedido */}
-            {featuredTab === "lastOrder" && lastOrder?.items && lastOrder.items.map((item, idx) => (
+            {/* Último Pedido button-card */}
+            {lastOrder?.items && lastOrder.items.length > 0 && (
               <button
-                key={`last-${item.id}-${idx}`}
                 onClick={() => {
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                  if (!product) return
-                  setSelectedProduct(product)
-                  setSelectedProductQty(1)
-                  setSelectedProductOptions([])
+                  const lastItem = lastOrder.items![0]
+                  if (!lastItem) return
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === lastItem.id)
+                  if (product) {
+                    setSelectedProduct(product)
+                    setSelectedProductQty(1)
+                    setSelectedProductOptions([])
+                  }
                 }}
                 className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
                 <div className="relative h-[90px] w-full">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                  {lastOrder.items![0].image ? (
+                    <img src={lastOrder.items![0].image} alt={lastOrder.items![0].name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                   )}
@@ -2503,10 +2114,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
                 <div className="p-2.5">
-                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{lastOrder.items![0].name}</h3>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-sm font-bold" style={{ color: theme.text }}>
-                      {formatCurrency(item.price)}
+                      {formatCurrency(lastOrder.items![0].price)}
                     </span>
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
                       Pedir novamente
@@ -2514,10 +2125,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
               </button>
-            ))}
+            )}
 
-            {/* Mais Pedidos */}
-            {featuredTab === "trending" && featuredSections.trending.map((item) => (
+            {/* Mais Pedidos — auto-trending */}
+            {featuredSections.trending.length > 0 && featuredSections.trending.slice(0, 5).map((item) => (
               <button
                 key={`trend-${item.id}`}
                 onClick={() => {
@@ -2576,14 +2187,13 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           ) : (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <button onClick={() => setActiveCategory("all")} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === "all" || !activeCategory ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === "all" || !activeCategory ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🍽️ Todos
+              </button>
               {sortedCategories.map((cat) => {
                 const emoji = getCategoryEmoji(cat.name)
-                const isHighlighted = visibleCategoryId === cat.id
                 return (
-                  <button key={cat.id} onClick={() => {
-                    const el = document.getElementById(`cat-${cat.id}`)
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${isHighlighted ? "text-white shadow-lg" : "hover:opacity-80"}`} style={isHighlighted ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 shrink-0 ${activeCategory === cat.id ? "text-white shadow-lg" : "hover:opacity-80"}`} style={activeCategory === cat.id ? { backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
                     {emoji} {cat.name}
                   </button>
                 )
@@ -2629,11 +2239,12 @@ onPaymentConfirmed={handlePaymentSuccess}
           sortedCategories.map((cat) => {
             const products = cat.products
             if (products.length === 0) return null
+            const isActive = activeCategory === "all" || activeCategory === cat.id
             return (
               <div
                 key={cat.id}
                 id={`cat-${cat.id}`}
-                className="mb-8"
+                className={`mb-8 ${!isActive ? "hidden" : ""}`}
               >
                 <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
@@ -2673,9 +2284,35 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
+      {/* Floating Cart Bar */}
+      {/* Free Shipping Progress Bar - compact, above bottom nav */}
+      {cart.length > 0 && !showCart && !showPaymentModal && orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && deliveryFee > 0 && (
+        <div className="fixed bottom-[52px] left-0 right-0 z-20 px-4" style={{ maxWidth: "480px", margin: "0 auto" }}>
+          <div className="rounded-t-xl px-3 py-1.5 backdrop-blur-xl" style={{ backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e20" : `${theme.primary}15`, borderBottom: `1px solid ${subtotal >= establishment.deliveryFreeAbove ? "#22c55e40" : theme.borderSubtle}` }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-medium" style={{ color: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.textMuted }}>
+                {subtotal >= establishment.deliveryFreeAbove
+                  ? "🎉 Frete Grátis!"
+                  : `Faltam ${formatCurrency(establishment.deliveryFreeAbove - subtotal)} para frete grátis`
+                }
+              </span>
+            </div>
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.borderSubtle}` }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (subtotal / establishment.deliveryFreeAbove) * 100)}%`,
+                  backgroundColor: subtotal >= establishment.deliveryFreeAbove ? "#22c55e" : theme.primary,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderCard, paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t backdrop-blur-xl transition-colors duration-300" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -2699,6 +2336,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
               </div>
               <span className="text-[10px] font-medium">Sacola</span>
+              {cart.length > 0 && (
+                <span className="text-[9px] font-bold" style={{ color: theme.primary }}>{formatCurrency(total)}</span>
+              )}
             </button>
             <button
               onClick={() => {
@@ -2730,12 +2370,8 @@ onPaymentConfirmed={handlePaymentSuccess}
             <button
               onClick={() => {
                 setActiveTab("profile")
-                if (customer.phone && customer.name && sessionVerified) {
+                if (customer.phone || customerData?.phone) {
                   setShowCustomerProfile(true)
-                } else if (customer.phone && customer.name) {
-                  markVerifySessionStart()
-                  setShowVerifyModal(true)
-                  setVerifyError("")
                 } else {
                   openIdentifyModal()
                 }
@@ -2834,6 +2470,68 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
             <div className="space-y-3">
               <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF <span className="text-[10px]" style={{ color: theme.textMutedMore }}>(opcional - só para pagamento online)</span></label>
+                <input
+                  placeholder="000.000.000-00"
+                  value={customer.cpf || ""}
+                  maxLength={14}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "")
+                    if (v.length > 11) v = v.slice(0, 11)
+                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                    setCustomer({ ...customer, cpf: v })
+                    // Validate CPF
+                    const cpfDigits = v.replace(/\D/g, "")
+                    if (cpfDigits.length === 11) {
+                      if (!isValidCpf(v)) {
+                        setCpfError("CPF inválido")
+                      } else {
+                        setCpfError("")
+                        // Auto-fill by CPF lookup
+                        setCpfLookupLoading(true)
+                        fetch(`/api/customers?cpf=${cpfDigits}&establishmentId=${establishment.id}`)
+                          .then(r => r.json())
+                          .then(data => {
+                            if (data && !data.notFound) {
+                              setCustomerData(data)
+                              setCustomer(prev => ({
+                                ...prev,
+                                name: data.name || prev.name,
+                                cpf: v,
+                                address: data.address || prev.address,
+                                cep: data.cep || prev.cep,
+                              }))
+                              if (data.phone) {
+                                const digits = String(data.phone).replace(/\D/g, "").slice(0, 11)
+                                let formatted = digits
+                                if (digits.length > 2) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+                                if (digits.length > 7) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+                                setPhoneInput(formatted)
+                              }
+                              if (data.cep) setCep(data.cep)
+                            } else {
+                              setCustomerData(null)
+                            }
+                          })
+                          .catch(() => {})
+                          .finally(() => setCpfLookupLoading(false))
+                      }
+                    }
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+                {cpfLookupLoading && <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>Buscando cliente...</p>}
+                {cpfError && !cpfLookupLoading && (
+                  <p className="text-xs mt-1 text-red-400">{cpfError}</p>
+                )}
+                {customerData && !cpfLookupLoading && !cpfError && (
+                  <p className="text-xs mt-1" style={{ color: theme.accent }}>Cliente encontrado! Dados preenchidos automaticamente.</p>
+                )}
+              </div>
+              <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
                 <input
                   placeholder="(47) 99999-9999"
@@ -2882,7 +2580,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
                     setShowIdentifyModal(false)
                     // Verificação WhatsApp SEMPRE obrigatória (anti-fraude / novo device)
-                    markVerifySessionStart()
                     setTimeout(() => {
                       setShowVerifyModal(true)
                       setVerifyError("")
@@ -2945,19 +2642,6 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             {!editingProfile ? (
               <div className="space-y-4">
-                {!sessionVerified && (
-                  <div className="rounded-lg p-4 text-center" style={{ backgroundColor: `${theme.accent}15`, border: `1px solid ${theme.accent}40` }}>
-                    <p className="text-sm font-medium" style={{ color: theme.accent }}>WhatsApp não verificado</p>
-                    <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Confirme o código enviado para completar seu cadastro.</p>
-                    <button
-                      onClick={() => { setShowCustomerProfile(false); markVerifySessionStart(); setShowVerifyModal(true); setVerifyError("") }}
-                      className="mt-3 rounded-lg px-4 py-2 text-xs font-medium text-white"
-                      style={{ backgroundColor: theme.accent }}
-                    >
-                      Verificar agora
-                    </button>
-                  </div>
-                )}
                 <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nome</p>
@@ -2974,6 +2658,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                         return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
                       })()}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>CPF</p>
+                    <p className="text-sm font-medium" style={{ color: theme.text }}>{customer.cpf || "Não informado"}</p>
                   </div>
                   {parsedLoyalty?.enabled && (
                     <div>
@@ -3061,6 +2749,23 @@ onPaymentConfirmed={handlePaymentSuccess}
                     style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                   />
                 </div>
+                <div>
+                  <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                  <input
+                    value={customer.cpf || ""}
+                    maxLength={14}
+                    onChange={(e) => {
+                      let v = e.target.value.replace(/\D/g, "")
+                      if (v.length > 11) v = v.slice(0, 11)
+                      if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
+                      else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
+                      else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
+                      setCustomer({ ...customer, cpf: v })
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEditingProfile(false)}
@@ -3073,11 +2778,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     onClick={async () => {
                       const phoneRaw = phoneInput.replace(/\D/g, "")
                       const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                      // Se a sessão não está verificada, exige verificação antes de salvar perfil
-                      if (!sessionVerified) {
+                      // Se não está verificado, exige verificação antes de salvar perfil
+                      if (!customerData?.whatsappVerified) {
                         setEditingProfile(false)
                         setShowCustomerProfile(false)
-                        markVerifySessionStart()
                         setShowVerifyModal(true)
                         setVerifyError("")
                         return
@@ -3112,6 +2816,29 @@ onPaymentConfirmed={handlePaymentSuccess}
               </div>
             )}
 
+            {/* Dark Mode Toggle */}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: theme.borderCard }}>
+              <button
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between rounded-lg p-3 transition-colors hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard }}
+              >
+                <div className="flex items-center gap-3">
+                  {darkMode ? <Sun className="h-4 w-4" style={{ color: theme.textMuted }} /> : <Moon className="h-4 w-4" style={{ color: theme.textMuted }} />}
+                  <span className="text-sm" style={{ color: theme.text }}>{darkMode ? "Modo claro" : "Modo escuro"}</span>
+                </div>
+                <div
+                  className="relative h-5 w-9 rounded-full transition-colors"
+                  style={{ backgroundColor: darkMode ? theme.primary : theme.borderCard }}
+                >
+                  <div
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all"
+                    style={{ left: darkMode ? "18px" : "2px" }}
+                  />
+                </div>
+              </button>
+            </div>
+
             {/* Logout */}
             {(customer.phone || customerData?.phone) && (
               <button
@@ -3121,7 +2848,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setCustomer({ name: "", phone: "", address: "", notes: "" })
                   setCep("")
                   setCepAddress(null)
-                  clearSessionVerified()
                   localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
                   setShowCustomerProfile(false)
@@ -3152,7 +2878,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
-              Enviaremos um código de 6 dígitos.
+              Confirme seu número de WhatsApp para continuar. Enviaremos um código de 6 dígitos{establishment.firstPurchaseBonus > 0 ? ` (+${establishment.firstPurchaseBonus} cash de bônus na primeira compra)` : ""}.
             </p>
 
             <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
@@ -3184,9 +2910,9 @@ onPaymentConfirmed={handlePaymentSuccess}
             </button>
 
             {whatsappSent && !verifyDevCode && (
-              <div className="mt-3 rounded-lg border-2 p-4 text-center" style={{ borderColor: `${theme.success}50`, backgroundColor: `${theme.success}15` }}>
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.success }}>✓ Código enviado no WhatsApp</p>
-                <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Verifique as mensagens do seu WhatsApp</p>
+              <div className="mt-3 rounded-lg border-2 border-green-500/50 bg-green-500/15 p-4 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-green-400">✓ Código enviado no WhatsApp</p>
+                <p className="mt-1 text-xs text-green-300">Verifique as mensagens do seu WhatsApp</p>
               </div>
             )}
 
@@ -3206,40 +2932,17 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between">
-                <label className="block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
-                <button
-                  type="button"
-                  onClick={pasteVerifyCode}
-                  className="flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline"
-                  style={{ color: theme.accent }}
-                >
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  Colar
-                </button>
-              </div>
-              <div className="flex gap-2">
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { otpInputsRef.current[i] = el }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete={i === 0 ? "one-time-code" : "off"}
-                    maxLength={1}
-                    value={verifyCode[i] || ""}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    onPaste={handleOtpPaste}
-                    aria-label={`Dígito ${i + 1} do código`}
-                    className="h-14 w-full rounded-lg border text-center text-2xl font-bold focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                  />
-                ))}
-              </div>
-              <p className="mt-2 text-center text-[10px]" style={{ color: theme.textMutedMore }}>
-                Copie o código no WhatsApp e volte aqui — ele é preenchido sozinho. Se não, toque em Colar.
-              </p>
+              <label className="mb-1 block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-full rounded-lg border px-3 py-3 text-center text-2xl font-bold tracking-widest focus:outline-none focus:ring-2"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+              />
             </div>
 
             {verifyError && (
@@ -3249,7 +2952,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <button
               type="button"
               onClick={submitVerifyCode}
-              disabled={verifying || verifyCode.length < 6}
+              disabled={verifying || verifyCode.length < 4}
               className="mt-3 w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
               style={{ backgroundColor: theme.accent }}
             >
@@ -3264,71 +2967,37 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* First Purchase Bonus Screen */}
-      {showFirstPurchaseBonus && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
-                <Sparkles className="h-5 w-5" style={{ color: theme.success }} />
-                Parabéns!
-              </h2>
-              <button onClick={() => setShowFirstPurchaseBonus(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="mb-6 text-center">
-              <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.success}20` }}>
-                <Sparkles className="h-8 w-8" style={{ color: theme.success }} />
-              </div>
-              <p className="text-sm" style={{ color: theme.textMuted }}>Você ganhou na sua primeira compra:</p>
-            </div>
-
-            <div className="space-y-3">
-              {firstPurchaseDiscountValue > 0 && (
-                <div className="flex items-center justify-between rounded-xl p-4" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
-                  <div className="flex items-center gap-3">
-                    <Tag className="h-5 w-5" style={{ color: theme.success }} />
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: theme.text }}>Desconto</p>
-                      <p className="text-xs" style={{ color: theme.textMuted }}>Aplicado automaticamente</p>
-                    </div>
-                  </div>
-                  <span className="text-lg font-bold" style={{ color: theme.success }}>-{formatCurrency(firstPurchaseDiscountValue)}</span>
-                </div>
-              )}
-              {establishment.firstPurchaseBonus > 0 && (
-                <div className="flex items-center justify-between rounded-xl p-4" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
-                  <div className="flex items-center gap-3">
-                    <Star className="h-5 w-5" style={{ color: theme.success }} />
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: theme.text }}>Cash de bônus</p>
-                      <p className="text-xs" style={{ color: theme.textMuted }}>Adicionado ao seu saldo</p>
-                    </div>
-                  </div>
-                  <span className="text-lg font-bold" style={{ color: theme.success }}>+{establishment.firstPurchaseBonus}</span>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowFirstPurchaseBonus(false)}
-              className="mt-6 w-full rounded-lg py-3 text-sm font-medium text-white"
-              style={{ backgroundColor: theme.primary }}
-            >
-              Continuar comprando
-            </button>
-          </div>
-        </div>
-      )}
-
-      <PushHeal establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-
       {/* Unified Cart/Checkout Full-Screen Flow */}
       {showCart && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage }}>
+          {/* Timeline at top — shared between cart and checkout */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-3" style={{ borderBottom: `1px solid ${theme.borderCard}` }}>
+            <div className="flex items-center justify-between max-w-lg mx-auto">
+              {[
+                { key: "cart", label: "Carrinho", icon: <ShoppingBag className="h-3.5 w-3.5" /> },
+                { key: "payment", label: "Pagamento", icon: <CreditCard className="h-3.5 w-3.5" /> },
+                { key: "confirmation", label: "Confirmado", icon: <Check className="h-3.5 w-3.5" /> },
+              ].map((step, i) => {
+                const steps = ["cart", "payment", "confirmation"]
+                const currentIdx = steps.indexOf(cartStep)
+                const stepIdx = steps.indexOf(step.key)
+                const isDone = stepIdx < currentIdx
+                const isCurrent = step.key === cartStep
+                return (
+                  <div key={step.key} className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDone ? "text-white" : isCurrent ? "text-white" : ""}`}
+                      style={{ backgroundColor: isDone || isCurrent ? theme.primary : `${theme.textMutedMore}30`, color: isDone || isCurrent ? "white" : theme.textMutedMore }}>
+                      {isDone ? <Check className="h-3 w-3" /> : step.icon}
+                    </div>
+                    <span className={`text-[10px] font-medium hidden sm:inline`} style={{ color: isDone || isCurrent ? theme.primary : theme.textMutedMore }}>
+                      {step.key === "payment" && paymentMethod && cartStep === "payment" ? "Pagamento selecionado" : step.label}
+                    </span>
+                    {i < 2 && <div className="w-8 h-0.5 rounded mx-1" style={{ backgroundColor: isDone ? theme.primary : `${theme.textMutedMore}30` }} />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
 
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between px-4 py-3">
@@ -3480,28 +3149,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <button onClick={() => setCart([])} className="text-xs font-medium" style={{ color: "#EF4444" }}>Esvaziar carrinho</button>
                 )}
 
-                {/* First purchase bonus banner */}
-                {cart.length > 0 && isFirstPurchase && (
-                  <div className="rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
-                    <Sparkles className="h-5 w-5 flex-shrink-0" style={{ color: theme.success }} />
-                    <div>
-                      <p className="text-xs font-semibold" style={{ color: theme.success }}>Bônus de Primeira Compra!</p>
-                      {firstPurchaseDiscountValue > 0 && (
-                        <p className="text-[10px]" style={{ color: `${theme.success}cc` }}>Desconto de {formatCurrency(firstPurchaseDiscountValue)} aplicado</p>
-                      )}
-                      {establishment.firstPurchaseBonus > 0 && (
-                        <p className="text-[10px]" style={{ color: `${theme.success}cc` }}>+{establishment.firstPurchaseBonus} cash de bônus</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Coupon */}
                 {cart.length > 0 && (
                   <div className="flex gap-2">
                     <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
                       className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
-                    <button onClick={validateCoupon} disabled={couponLoading}
+                    <button onClick={applyCoupon} disabled={couponLoading}
                       className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
                       {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
                     </button>
@@ -3545,11 +3198,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm text-amber-400">
                         <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
-                      </div>
-                    )}
-                    {firstPurchaseDiscountValue > 0 && (
-                      <div className="flex justify-between text-sm text-green-400">
-                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
@@ -3746,11 +3394,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <span>Desconto ({couponData?.code})</span><span>-{formatCurrency(couponDiscount)}</span>
                       </div>
                     )}
-                    {firstPurchaseDiscountValue > 0 && (
-                      <div className="flex justify-between text-sm" style={{ color: theme.success }}>
-                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between font-bold" style={{ color: theme.text }}>
                       <span>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
@@ -3761,26 +3404,80 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             {cartStep === "confirmation" && orderResult?.success && (
-              <OrderConfirmationScreen
-                theme={theme}
-                title={establishment.confirmationTitle || "Pedido enviado!"}
-                logo={establishment.logo || undefined}
-                establishmentName={establishment.name || "Pedefacil"}
-                orderNumber={orderResult?.orderNumber}
-                items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
-                subtotal={confirmationSubtotal}
-                deliveryFee={deliveryFee}
-                couponDiscount={couponDiscount}
-                firstPurchaseDiscount={firstPurchaseDiscountValue}
-                firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
-                total={orderResult?.orderTotal ?? total}
-                showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
-                loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
-                orderType={orderResult?.orderType}
-                onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]) }}
-                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
-              />
+              <div className="max-w-lg mx-auto flex flex-col items-center justify-center py-12 px-4">
+                {/* Logo */}
+                <div className="mb-4">
+                  {(establishment.confirmationImage || establishment.logo) ? (
+                    <img src={establishment.confirmationImage || establishment.logo || ""} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.primary}15` }}>
+                      <CheckCircle className="h-8 w-8" style={{ color: theme.primary }} />
+                    </div>
+                  )}
+                </div>
+
+                <h2 className="text-xl font-bold text-center" style={{ color: theme.text }}>
+                  {establishment.confirmationTitle || "Pedido enviado!"}
+                </h2>
+
+                {/* Delivery estimate */}
+                <div className="mt-4 p-4 rounded-2xl w-full text-center" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Timer className="h-5 w-5" style={{ color: theme.primary }} />
+                    <span className="text-sm font-bold" style={{ color: theme.primary }}>Previsão de entrega</span>
+                  </div>
+                  <div className="text-2xl font-black" style={{ color: theme.primary }}>38 min</div>
+                </div>
+
+                {/* Tracker steps */}
+                <div className="mt-6 w-full">
+                  <div className="flex items-center">
+                    {[
+                      { label: "Confirmado", done: true, icon: <Check className="h-3 w-3" /> },
+                      { label: "Preparando", done: false, icon: <Clock className="h-3 w-3" /> },
+                      { label: "Saiu p/ entrega", done: false, icon: <Truck className="h-3 w-3" /> },
+                      { label: "Entregue", done: false, icon: <MapPin className="h-3 w-3" /> },
+                    ].map((step, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center relative">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }}>
+                          {step.icon}
+                        </div>
+                        <span className="text-[8px] mt-1 text-center" style={{ color: theme.textMutedMore }}>{step.label}</span>
+                        {i < 3 && <div className="absolute top-3.5 left-1/2 w-full h-0.5" style={{ backgroundColor: step.done ? theme.primary : `${theme.textMutedMore}30` }} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Loyalty points */}
+                {parsedLoyalty?.enabled && (
+                  <div className="mt-5 w-full p-4 rounded-2xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Gift className="h-5 w-5" style={{ color: theme.primary }} />
+                      <span className="text-sm font-bold" style={{ color: theme.primary }}>Cashback ganho</span>
+                    </div>
+                    <div className="text-lg font-black" style={{ color: theme.primary }}>
+                      +{Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))} cash
+                    </div>
+                    <div className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                      = R$ {Math.floor(subtotal * (parsedLoyalty.pointsPerReal || 1))},00 para usar
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery/pickup message */}
+                {orderResult.orderType === "pickup" && establishment.pickupMessage && (
+                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
+                    {establishment.pickupMessage}
+                  </div>
+                )}
+                {orderResult.orderType === "delivery" && establishment.deliveryMessage && (
+                  <div className="mt-3 w-full rounded-xl border p-3 text-sm text-center" style={{ borderColor: theme.accentLight, backgroundColor: theme.accentLight, color: theme.accent }}>
+                    {establishment.deliveryMessage}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -3789,9 +3486,9 @@ onPaymentConfirmed={handlePaymentSuccess}
             {cartStep === "cart" && (
               <>
                 <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0}
-                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
-                  <ShoppingBag className="h-4 w-4 shrink-0" />
+                  <ShoppingBag className="h-4 w-4" />
                   {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
                 </button>
                 {!lastOrder?.paymentLink && !pendingOrderNumber && (
@@ -3811,10 +3508,10 @@ onPaymentConfirmed={handlePaymentSuccess}
             {cartStep === "payment" && (
               <>
                 <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
-                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[50px]"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
-                  {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Shield className="h-4 w-4 shrink-0" />}
-                  {ordering ? "Enviando..." : "Confirmar pedido"}
+                  {ordering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                  {ordering ? "Enviando..." : "Confirmar pedido 🔒"}
                 </button>
                 <button onClick={() => setCartStep("cart")}
                   className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
@@ -3822,7 +3519,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </button>
               </>
             )}
-            {cartStep === "confirmation" && !(orderResult?.success && !orderResult?.paymentLink) && (
+            {cartStep === "confirmation" && (
               <>
                 {orderResult?.orderId && (
                   <button onClick={() => {
@@ -4042,107 +3739,26 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {trackingOrder && (() => {
-                const flowSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
-                const flowIdx = flowSteps.indexOf(trackingOrder.status)
-                const cancelled = trackingOrder.status === "cancelled"
-                const createdAt = trackingOrder.createdAt ? new Date(trackingOrder.createdAt) : null
-                const elapsedMin = createdAt ? (Date.now() - createdAt.getTime()) / 60000 : 0
-                const baseTime = trackingOrder.orderType === "delivery" ? 45 : 25
-                const remainingMin = Math.max(0, baseTime - elapsedMin)
-                const estimatedTime = cancelled || trackingOrder.status === "delivered" ? null
-                  : remainingMin === 0 ? "A qualquer momento"
-                  : remainingMin <= 5 ? "Pronto!" : `~${Math.ceil(remainingMin)} min`
-                const items: any[] = Array.isArray(trackingOrder.items) ? trackingOrder.items : []
-                const paymentLabels: Record<string, string> = { online: "Pago online", delivery: "Pagar na entrega", pickup: "Pagar na retirada" }
-
-                return (
-                  <>
-                    {/* Status header */}
-                    <div className="text-center">
-                      <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
-                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{statusLabels[trackingOrder.status] || trackingOrder.status}</h3>
-                      <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
-                    </div>
-
-                    {/* Order summary */}
-                    <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                      <div className="space-y-1.5">
-                        {items.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between text-sm">
-                            <span style={{ color: theme.text }}>{item.quantity}x {item.name}</span>
-                            <span className="font-medium" style={{ color: theme.text }}>{formatCurrency(item.price * item.quantity)}</span>
+              {trackingOrder && (
+                <>
+                  <div className="space-y-2">
+                    {["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].map((step, i) => {
+                      const flowIdx = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].indexOf(trackingOrder.status)
+                      const isCompleted = i <= flowIdx
+                      const isCurrent = i === flowIdx
+                      const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
+                      return (
+                        <div key={step} className="flex items-center gap-3">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${isCompleted ? "bg-green-500/[0.12] text-green-400" : ""} ${isCurrent ? "ring-2 ring-green-500" : ""}`} style={!isCompleted ? { backgroundColor: theme.bgCard, color: theme.textMutedMore } : {}}>
+                            {statusIcons[step]}
                           </div>
-                        ))}
-                        {trackingOrder.deliveryFee > 0 && (
-                          <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
-                            <span>Taxa de entrega</span>
-                            <span>{formatCurrency(trackingOrder.deliveryFee)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: `1px solid ${theme.borderSubtle}`, color: theme.text }}>
-                          <span>Total</span>
-                          <span style={{ color: theme.primary }}>{formatCurrency(trackingOrder.total)}</span>
-                        </div>
-                        {trackingOrder.notes && (
-                          <p className="text-[11px] italic pt-1" style={{ color: theme.textMutedMore, borderTop: `1px solid ${theme.borderSubtle}` }}>Obs: {trackingOrder.notes}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px solid ${theme.borderSubtle}` }}>
-                        {trackingOrder.orderType && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
-                            {trackingOrder.orderType === "delivery" ? "🛵 Entrega" : "🏪 Retirada"}
+                          <span className={`text-sm font-medium ${isCurrent ? "text-green-300" : ""}`} style={!isCompleted ? { color: theme.textMutedMore } : isCompleted ? { color: theme.text } : {}}>
+                            {statusLabels[step]}
                           </span>
-                        )}
-                        {trackingOrder.paymentMethod && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.accent || theme.primary}12`, color: theme.accent || theme.primary }}>
-                            {paymentLabels[trackingOrder.paymentMethod] || trackingOrder.paymentMethod}
-                          </span>
-                        )}
-                        {estimatedTime && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
-                            ⏱ {estimatedTime}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Timeline */}
-                    <div className="relative pl-4">
-                      {flowSteps.map((step, i) => {
-                        const isCompleted = !cancelled && i <= flowIdx
-                        const isCurrent = !cancelled && i === flowIdx
-                        const isLast = i === flowSteps.length - 1
-                        const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
-                        return (
-                          <div key={step} className="flex items-start gap-3 relative">
-                            {/* Vertical line */}
-                            {!isLast && (
-                              <div
-                                className="absolute left-[13px] top-[28px] w-0.5 h-[calc(100%-4px)]"
-                                style={{ backgroundColor: isCompleted && !isCurrent ? theme.primary : theme.borderCard }}
-                              />
-                            )}
-                            {/* Circle */}
-                            <div
-                              className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs shrink-0"
-                              style={isCompleted
-                                ? { backgroundColor: theme.primary, color: "#ffffff", ...(isCurrent ? { boxShadow: `0 0 0 3px ${theme.bgPage}, 0 0 0 5px ${theme.primary}` } : {}) }
-                                : { backgroundColor: theme.bgCard, color: theme.textMutedMore, border: `2px solid ${theme.borderCard}` }
-                              }
-                            >
-                              {isCompleted && !isCurrent ? "✓" : statusIcons[step]}
-                            </div>
-                            {/* Label */}
-                            <div className="pt-0.5 pb-4 min-w-0 flex-1">
-                              <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
-                                {statusLabels[step]}
-                              </span>
-                              {isCurrent && estimatedTime && (
-                                <span className="ml-2 text-[11px] font-medium" style={{ color: theme.primary }}>{estimatedTime}</span>
-                              )}
-                              {showPayButton && (
-                                <button
+                          {isCurrent && <Badge variant="success" className="text-[10px]">Atual</Badge>}
+                           {showPayButton && (
+                             <div className="ml-auto flex gap-1">
+                               <button
                                   onClick={() => {
                                     setOrderResult({
                                       success: true,
@@ -4151,24 +3767,40 @@ onPaymentConfirmed={handlePaymentSuccess}
                                       paymentMethod: trackingOrder.paymentMethod || "pix",
                                       orderTotal: trackingOrder.total,
                                     })
-                                    setTimeout(() => { setShowTracking(false); setShowPaymentModal(true) }, 300)
+                                    setTimeout(() => {
+                                      setShowTracking(false)
+                                      setShowPaymentModal(true)
+                                    }, 300)
                                   }}
-                                  className="ml-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
-                                  style={{ backgroundColor: theme.primary }}
-                                >
-                                  <CreditCard className="h-3 w-3" /> Pagar
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </>
-                )
-              })()}
+                                 className="rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                                 style={{ backgroundColor: theme.primary }}
+                               >
+                                 <CreditCard className="inline h-3 w-3 mr-1" />
+                                 Pagar
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setCancelModalOrderId(trackingOrder.id)
+                                   setCancelModalTotal(trackingOrder.total)
+                                 }}
+                                 className="rounded-lg border px-2 py-1 text-xs font-medium transition-opacity hover:opacity-80"
+                                 style={{ borderColor: theme.borderCard, color: theme.textMuted }}
+                               >
+                                 <X className="inline h-3 w-3" />
+                               </button>
+                             </div>
+                           )}
+                        </div>
+                      )
+                    })}
+                  </div>
 
-              {/* Chat section */}
+                  <div className="border-t pt-3" style={{ borderColor: theme.borderCard }}>
+                    <p className="text-xs" style={{ color: theme.textMutedMore }}>Total: <span className="font-semibold" style={{ color: theme.accent }}>R$ {trackingOrder.total?.toFixed(2)}</span></p>
+                  </div>
+                </>
+              )}
+
               <div className="border-t pt-3" style={{ borderColor: theme.borderCard }}>
                 <h3 className="text-sm font-semibold mb-2" style={{ color: theme.textSubtle }}>Mensagens</h3>
                 <div className="max-h-48 overflow-y-auto space-y-2 mb-3">
@@ -4544,7 +4176,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="font-bold text-xl" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
                   )}
                 </div>
-
+                <p className="text-[10px] mt-0.5" style={{ color: theme.textMutedMore }}>ou 3x de {formatCurrency(((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) / 3)} sem juros</p>
               </div>
 
               {/* Quantity */}
