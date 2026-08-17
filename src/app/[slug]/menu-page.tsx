@@ -142,29 +142,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
   const { toast } = useToast()
-  const [darkMode, setDarkMode] = useState(true)
+  const [darkMode] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    const saved = localStorage.getItem(`pedefacil-theme-${establishment.slug}`)
-    if (saved !== null) {
-      setDarkMode(saved === "dark")
-    } else {
-      setDarkMode(establishment.defaultTheme !== "light")
-    }
-  }, [establishment.slug, establishment.defaultTheme])
-
-  const toggleTheme = useCallback(() => {
-    setDarkMode((prev) => {
-      const next = !prev
-      localStorage.setItem(`pedefacil-theme-${establishment.slug}`, next ? "dark" : "light")
-      return next
-    })
-  }, [establishment.slug])
 
   const theme = useMemo(() => {
     if (darkMode) {
@@ -2254,7 +2237,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
   return (
     <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
-      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
+      <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
@@ -2644,7 +2627,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Bottom Navigation Bar */}
       {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderCard, paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -3163,29 +3146,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </div>
               </div>
             )}
-
-            {/* Dark Mode Toggle */}
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: theme.borderCard }}>
-              <button
-                onClick={toggleTheme}
-                className="w-full flex items-center justify-between rounded-lg p-3 transition-colors hover:opacity-80"
-                style={{ backgroundColor: theme.bgCard }}
-              >
-                <div className="flex items-center gap-3">
-                  {darkMode ? <Sun className="h-4 w-4" style={{ color: theme.textMuted }} /> : <Moon className="h-4 w-4" style={{ color: theme.textMuted }} />}
-                  <span className="text-sm" style={{ color: theme.text }}>{darkMode ? "Modo claro" : "Modo escuro"}</span>
-                </div>
-                <div
-                  className="relative h-5 w-9 rounded-full transition-colors"
-                  style={{ backgroundColor: darkMode ? theme.primary : theme.borderCard }}
-                >
-                  <div
-                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all"
-                    style={{ left: darkMode ? "18px" : "2px" }}
-                  />
-                </div>
-              </button>
-            </div>
 
             {/* Logout */}
             {(customer.phone || customerData?.phone) && (
@@ -3889,7 +3849,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   {ordering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                  {ordering ? "Enviando..." : "Confirmar pedido 🔒"}
+                  {ordering ? "Enviando..." : "Confirmar pedido"}
                 </button>
                 <button onClick={() => setCartStep("cart")}
                   className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
