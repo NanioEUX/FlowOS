@@ -186,6 +186,38 @@ export default function CardapioPage() {
   const previewIframeRef = useRef<HTMLIFrameElement>(null)
   const [previewKey, setPreviewKey] = useState(0)
   const refreshPreview = () => setPreviewKey((k) => k + 1)
+  const [previewPos, setPreviewPos] = useState({ x: -1, y: -1 })
+  const dragRef = useRef({ dragging: false, offsetX: 0, offsetY: 0 })
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+
+  // Drag handlers for phone preview
+  function handleDragStart(e: React.MouseEvent) {
+    e.preventDefault()
+    const el = previewContainerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    dragRef.current = { dragging: true, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top }
+    const handleMove = (ev: MouseEvent) => {
+      if (!dragRef.current.dragging) return
+      setPreviewPos({ x: ev.clientX - dragRef.current.offsetX, y: ev.clientY - dragRef.current.offsetY })
+    }
+    const handleUp = () => {
+      dragRef.current.dragging = false
+      document.removeEventListener("mousemove", handleMove)
+      document.removeEventListener("mouseup", handleUp)
+    }
+    document.addEventListener("mousemove", handleMove)
+    document.addEventListener("mouseup", handleUp)
+  }
+
+  function getPreviewStyle(): React.CSSProperties {
+    if (previewMaximized) return { inset: "16px" }
+    if (previewPos.x >= 0 && previewPos.y >= 0) {
+      return { left: previewPos.x, top: previewPos.y, bottom: "auto", right: "auto" }
+    }
+    return { bottom: "24px", right: "24px" }
+  }
+
   const [marginCatPercent, setMarginCatPercent] = useState("")
   const [marginCatRounding, setMarginCatRounding] = useState("none")
   const [savingMarginCat, setSavingMarginCat] = useState(false)
@@ -3148,14 +3180,18 @@ export default function CardapioPage() {
       {/* Floating Phone Preview */}
       {showPreview && establishmentSlug && (
         <div
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl transition-all duration-300 ${
-            previewMaximized
-              ? "inset-4 lg:inset-8"
-              : "bottom-6 right-6 h-[680px] w-[360px]"
+          ref={previewContainerRef}
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-300 bg-zinc-900 shadow-2xl transition-[width,height,inset] duration-300 ${
+            previewMaximized ? "" : "h-[680px] w-[360px]"
           }`}
+          style={getPreviewStyle()}
         >
-          {/* Phone header bar */}
-          <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-4 py-2">
+          {/* Phone header bar — draggable */}
+          <div
+            onMouseDown={handleDragStart}
+            className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-4 py-2 select-none"
+            style={{ cursor: previewMaximized ? "default" : "grab" }}
+          >
             <div className="flex items-center gap-2">
               <div className="flex gap-1.5">
                 <span className="h-3 w-3 rounded-full bg-red-500" />
