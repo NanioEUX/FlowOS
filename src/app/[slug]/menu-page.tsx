@@ -4035,44 +4035,107 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {trackingOrder && (
-                <>
-                  {/* Status header */}
-                  <div className="text-center">
-                    <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
-                    <h3 className="text-lg font-bold" style={{ color: theme.text }}>{statusLabels[trackingOrder.status] || trackingOrder.status}</h3>
-                    <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
-                  </div>
+              {trackingOrder && (() => {
+                const flowSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+                const flowIdx = flowIdx = flowSteps.indexOf(trackingOrder.status)
+                const cancelled = trackingOrder.status === "cancelled"
+                const createdAt = trackingOrder.createdAt ? new Date(trackingOrder.createdAt) : null
+                const elapsedMin = createdAt ? (Date.now() - createdAt.getTime()) / 60000 : 0
+                const baseTime = trackingOrder.orderType === "delivery" ? 45 : 25
+                const remainingMin = Math.max(0, baseTime - elapsedMin)
+                const estimatedTime = cancelled || trackingOrder.status === "delivered" ? null
+                  : remainingMin === 0 ? "A qualquer momento"
+                  : remainingMin <= 5 ? "Pronto!" : `~${Math.ceil(remainingMin)} min`
+                const items: any[] = Array.isArray(trackingOrder.items) ? trackingOrder.items : []
+                const paymentLabels: Record<string, string> = { online: "Pago online", delivery: "Pagar na entrega", pickup: "Pagar na retirada" }
 
-                  {/* Timeline */}
-                  <div className="space-y-2">
-                    {["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].map((step, i) => {
-                      const flowIdx = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"].indexOf(trackingOrder.status)
-                      const isCompleted = i <= flowIdx
-                      const isCurrent = i === flowIdx
-                      const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
-                      return (
-                        <div key={step} className="flex items-center gap-3">
-                          <div
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-sm"
-                            style={isCompleted
-                              ? { backgroundColor: `${theme.primary}18`, color: theme.primary, ...(isCurrent ? { boxShadow: `0 0 0 2px ${theme.primary}`, fontWeight: 600 } : {}) }
-                              : { backgroundColor: theme.bgCard, color: theme.textMutedMore }
-                            }
-                          >
-                            {statusIcons[step]}
+                return (
+                  <>
+                    {/* Status header */}
+                    <div className="text-center">
+                      <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
+                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{statusLabels[trackingOrder.status] || trackingOrder.status}</h3>
+                      <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
+                    </div>
+
+                    {/* Order summary */}
+                    <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                      <div className="space-y-1.5">
+                        {items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between text-sm">
+                            <span style={{ color: theme.text }}>{item.quantity}x {item.name}</span>
+                            <span className="font-medium" style={{ color: theme.text }}>{formatCurrency(item.price * item.quantity)}</span>
                           </div>
-                          <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
-                            {statusLabels[step]}
+                        ))}
+                        {trackingOrder.deliveryFee > 0 && (
+                          <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
+                            <span>Taxa de entrega</span>
+                            <span>{formatCurrency(trackingOrder.deliveryFee)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: `1px solid ${theme.borderSubtle}`, color: theme.text }}>
+                          <span>Total</span>
+                          <span style={{ color: theme.primary }}>{formatCurrency(trackingOrder.total)}</span>
+                        </div>
+                        {trackingOrder.notes && (
+                          <p className="text-[11px] italic pt-1" style={{ color: theme.textMutedMore, borderTop: `1px solid ${theme.borderSubtle}` }}>Obs: {trackingOrder.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px solid ${theme.borderSubtle}` }}>
+                        {trackingOrder.orderType && (
+                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
+                            {trackingOrder.orderType === "delivery" ? "🛵 Entrega" : "🏪 Retirada"}
                           </span>
-                          {isCurrent && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}18`, color: theme.primary }}>
-                              Atual
-                            </span>
-                          )}
-                           {showPayButton && (
-                             <div className="ml-auto flex gap-1">
-                               <button
+                        )}
+                        {trackingOrder.paymentMethod && (
+                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.accent || theme.primary}12`, color: theme.accent || theme.primary }}>
+                            {paymentLabels[trackingOrder.paymentMethod] || trackingOrder.paymentMethod}
+                          </span>
+                        )}
+                        {estimatedTime && (
+                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
+                            ⏱ {estimatedTime}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="relative pl-4">
+                      {flowSteps.map((step, i) => {
+                        const isCompleted = !cancelled && i <= flowIdx
+                        const isCurrent = !cancelled && i === flowIdx
+                        const isLast = i === flowSteps.length - 1
+                        const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
+                        return (
+                          <div key={step} className="flex items-start gap-3 relative">
+                            {/* Vertical line */}
+                            {!isLast && (
+                              <div
+                                className="absolute left-[13px] top-[28px] w-0.5 h-[calc(100%-4px)]"
+                                style={{ backgroundColor: isCompleted && !isCurrent ? theme.primary : theme.borderCard }}
+                              />
+                            )}
+                            {/* Circle */}
+                            <div
+                              className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs shrink-0"
+                              style={isCompleted
+                                ? { backgroundColor: theme.primary, color: "#ffffff", ...(isCurrent ? { boxShadow: `0 0 0 3px ${theme.bgPage}, 0 0 0 5px ${theme.primary}` } : {}) }
+                                : { backgroundColor: theme.bgCard, color: theme.textMutedMore, border: `2px solid ${theme.borderCard}` }
+                              }
+                            >
+                              {isCompleted && !isCurrent ? "✓" : statusIcons[step]}
+                            </div>
+                            {/* Label */}
+                            <div className="pt-0.5 pb-4 min-w-0 flex-1">
+                              <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
+                                {statusLabels[step]}
+                              </span>
+                              {isCurrent && estimatedTime && (
+                                <span className="ml-2 text-[11px] font-medium" style={{ color: theme.primary }}>{estimatedTime}</span>
+                              )}
+                              {showPayButton && (
+                                <button
                                   onClick={() => {
                                     setOrderResult({
                                       success: true,
@@ -4081,35 +4144,22 @@ onPaymentConfirmed={handlePaymentSuccess}
                                       paymentMethod: trackingOrder.paymentMethod || "pix",
                                       orderTotal: trackingOrder.total,
                                     })
-                                    setTimeout(() => {
-                                      setShowTracking(false)
-                                      setShowPaymentModal(true)
-                                    }, 300)
+                                    setTimeout(() => { setShowTracking(false); setShowPaymentModal(true) }, 300)
                                   }}
-                                 className="rounded-lg px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                                 style={{ backgroundColor: theme.primary }}
-                               >
-                                 <CreditCard className="inline h-3 w-3 mr-1" />
-                                 Pagar
-                               </button>
-                               <button
-                                 onClick={() => {
-                                   setCancelModalOrderId(trackingOrder.id)
-                                   setCancelModalTotal(trackingOrder.total)
-                                 }}
-                                 className="rounded-lg border px-2 py-1 text-xs font-medium transition-opacity hover:opacity-80"
-                                 style={{ borderColor: theme.borderCard, color: theme.textMuted }}
-                               >
-                                 <X className="inline h-3 w-3" />
-                               </button>
-                             </div>
-                           )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
+                                  className="ml-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
+                                  style={{ backgroundColor: theme.primary }}
+                                >
+                                  <CreditCard className="h-3 w-3" /> Pagar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
 
               {/* Chat section */}
               <div className="border-t pt-3" style={{ borderColor: theme.borderCard }}>
