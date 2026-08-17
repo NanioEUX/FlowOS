@@ -212,7 +212,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
               {order.establishment.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <p className="text-xs font-medium text-zinc-400 mb-1">{order.establishment.name}</p>
           <div className="mb-2 text-4xl">
             {cancelled ? "😢" : statusIcons[order.status] || "📋"}
           </div>
