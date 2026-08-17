@@ -2793,68 +2793,6 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs" style={{ color: theme.textMuted }}>CPF <span className="text-[10px]" style={{ color: theme.textMutedMore }}>(opcional - só para pagamento online)</span></label>
-                <input
-                  placeholder="000.000.000-00"
-                  value={customer.cpf || ""}
-                  maxLength={14}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "")
-                    if (v.length > 11) v = v.slice(0, 11)
-                    if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
-                    else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
-                    else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
-                    setCustomer({ ...customer, cpf: v })
-                    // Validate CPF
-                    const cpfDigits = v.replace(/\D/g, "")
-                    if (cpfDigits.length === 11) {
-                      if (!isValidCpf(v)) {
-                        setCpfError("CPF inválido")
-                      } else {
-                        setCpfError("")
-                        // Auto-fill by CPF lookup
-                        setCpfLookupLoading(true)
-                        fetch(`/api/customers?cpf=${cpfDigits}&establishmentId=${establishment.id}`)
-                          .then(r => r.json())
-                          .then(data => {
-                            if (data && !data.notFound) {
-                              setCustomerData(data)
-                              setCustomer(prev => ({
-                                ...prev,
-                                name: data.name || prev.name,
-                                cpf: v,
-                                address: data.address || prev.address,
-                                cep: data.cep || prev.cep,
-                              }))
-                              if (data.phone) {
-                                const digits = String(data.phone).replace(/\D/g, "").slice(0, 11)
-                                let formatted = digits
-                                if (digits.length > 2) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-                                if (digits.length > 7) formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-                                setPhoneInput(formatted)
-                              }
-                              if (data.cep) setCep(data.cep)
-                            } else {
-                              setCustomerData(null)
-                            }
-                          })
-                          .catch(() => {})
-                          .finally(() => setCpfLookupLoading(false))
-                      }
-                    }
-                  }}
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                />
-                {cpfLookupLoading && <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>Buscando cliente...</p>}
-                {cpfError && !cpfLookupLoading && (
-                  <p className="text-xs mt-1 text-red-400">{cpfError}</p>
-                )}
-                {customerData && !cpfLookupLoading && !cpfError && (
-                  <p className="text-xs mt-1" style={{ color: theme.accent }}>Cliente encontrado! Dados preenchidos automaticamente.</p>
-                )}
-              </div>
-              <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
                 <input
                   placeholder="(47) 99999-9999"
@@ -2996,10 +2934,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       })()}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>CPF</p>
-                    <p className="text-sm font-medium" style={{ color: theme.text }}>{customer.cpf || "Não informado"}</p>
-                  </div>
                   {parsedLoyalty?.enabled && (
                     <div>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
@@ -3081,23 +3015,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       if (raw.length > 2) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`
                       if (raw.length > 7) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`
                       setPhoneInput(formatted)
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
-                  <input
-                    value={customer.cpf || ""}
-                    maxLength={14}
-                    onChange={(e) => {
-                      let v = e.target.value.replace(/\D/g, "")
-                      if (v.length > 11) v = v.slice(0, 11)
-                      if (v.length > 9) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`
-                      else if (v.length > 6) v = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`
-                      else if (v.length > 3) v = `${v.slice(0, 3)}.${v.slice(3)}`
-                      setCustomer({ ...customer, cpf: v })
                     }}
                     className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
                     style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
