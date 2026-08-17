@@ -296,6 +296,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     new: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
     promo: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
   }>({ trending: [], new: [], promo: [] })
+  const [featuredTab, setFeaturedTab] = useState<"promo" | "trending" | "lastOrder">("promo")
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -865,23 +866,30 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => { if (destaqueIntervalRef.current) clearInterval(destaqueIntervalRef.current) }
   }, [featuredSections.trending.length])
 
-  // Promo compact cards auto-scroll
+  // Promo compact cards auto-scroll (loop within active tab)
   const promoAutoScrollRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
     const el = promoScrollRef.current
-    if (!el || featuredSections.promo.length <= 1) return
+    if (!el) return
+    const itemCount = featuredTab === "promo"
+      ? featuredSections.promo.length
+      : featuredTab === "trending"
+        ? featuredSections.trending.length
+        : lastOrder?.items?.length || 0
+    if (itemCount <= 1) return
     let forward = true
     promoAutoScrollRef.current = setInterval(() => {
       if (forward) {
         el.scrollBy({ left: 233, behavior: "smooth" })
-        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) forward = false
-      } else {
-        el.scrollBy({ left: -233, behavior: "smooth" })
-        if (el.scrollLeft <= 10) forward = true
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
+          // Volta pro início (loop)
+          setTimeout(() => el.scrollTo({ left: 0, behavior: "smooth" }), 500)
+          forward = true
+        }
       }
-    }, 4000)
+    }, 3500)
     return () => { if (promoAutoScrollRef.current) clearInterval(promoAutoScrollRef.current) }
-  }, [featuredSections.promo.length])
+  }, [featuredTab, featuredSections.promo.length, featuredSections.trending.length, lastOrder?.items?.length])
 
   const openStory = (storyId: string) => {
     const story = storiesData.stories.find((s: any) => s.id === storyId)
@@ -2370,16 +2378,35 @@ onPaymentConfirmed={handlePaymentSuccess}
         )
       })()}
 
-      {/* Promoções + Último Pedido + Mais Pedidos — unified horizontal scroll row */}
+      {/* Promoções + Último Pedido + Mais Pedidos — tabbed horizontal scroll */}
       {(featuredSections.promo.length > 0 || lastOrder?.items?.length || featuredSections.trending.length > 0) && (
         <div className="mx-auto max-w-3xl px-4 pb-4">
+          {/* Tab strip */}
+          <div className="flex gap-2 mb-3 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            {featuredSections.promo.length > 0 && (
+              <button onClick={() => { setFeaturedTab("promo"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "promo" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "promo" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🔥 Promoção
+              </button>
+            )}
+            {featuredSections.trending.length > 0 && (
+              <button onClick={() => { setFeaturedTab("trending"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "trending" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "trending" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🏆 Mais Vendidos
+              </button>
+            )}
+            {lastOrder?.items && lastOrder.items.length > 0 && (
+              <button onClick={() => { setFeaturedTab("lastOrder"); if (promoScrollRef.current) promoScrollRef.current.scrollTo({ left: 0 }) }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 shrink-0 ${featuredTab === "lastOrder" ? "text-white shadow-lg" : "hover:opacity-80"}`} style={featuredTab === "lastOrder" ? { backgroundColor: theme.primary, boxShadow: `0 0 12px ${theme.shadowPrimary}`, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                🔄 Pedido Anterior
+              </button>
+            )}
+          </div>
+
           <div
             ref={promoScrollRef}
             className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
           >
-            {/* Promoções button-card */}
-            {featuredSections.promo.length > 0 && featuredSections.promo.map((item) => (
+            {/* Promoções */}
+            {featuredTab === "promo" && featuredSections.promo.map((item) => (
               <button
                 key={`promo-${item.id}`}
                 onClick={() => {
@@ -2420,25 +2447,23 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
             ))}
 
-            {/* Último Pedido button-card */}
-            {lastOrder?.items && lastOrder.items.length > 0 && (
+            {/* Último Pedido */}
+            {featuredTab === "lastOrder" && lastOrder?.items && lastOrder.items.map((item, idx) => (
               <button
+                key={`last-${item.id}-${idx}`}
                 onClick={() => {
-                  const lastItem = lastOrder.items![0]
-                  if (!lastItem) return
-                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === lastItem.id)
-                  if (product) {
-                    setSelectedProduct(product)
-                    setSelectedProductQty(1)
-                    setSelectedProductOptions([])
-                  }
+                  const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                  if (!product) return
+                  setSelectedProduct(product)
+                  setSelectedProductQty(1)
+                  setSelectedProductOptions([])
                 }}
                 className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
                 <div className="relative h-[90px] w-full">
-                  {lastOrder.items![0].image ? (
-                    <img src={lastOrder.items![0].image} alt={lastOrder.items![0].name} className="absolute inset-0 w-full h-full object-cover" />
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                   )}
@@ -2447,10 +2472,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
                 <div className="p-2.5">
-                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{lastOrder.items![0].name}</h3>
+                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-sm font-bold" style={{ color: theme.text }}>
-                      {formatCurrency(lastOrder.items![0].price)}
+                      {formatCurrency(item.price)}
                     </span>
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
                       Pedir novamente
@@ -2458,10 +2483,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
               </button>
-            )}
+            ))}
 
-            {/* Mais Pedidos — auto-trending */}
-            {featuredSections.trending.length > 0 && featuredSections.trending.slice(0, 5).map((item) => (
+            {/* Mais Pedidos */}
+            {featuredTab === "trending" && featuredSections.trending.map((item) => (
               <button
                 key={`trend-${item.id}`}
                 onClick={() => {
