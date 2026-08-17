@@ -280,6 +280,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     promo: Array<{ id: string; name: string; price: number; originalPrice: number | null; image: string | null; badge: string | null; onSale: boolean; hasOptions: boolean }>
   }>({ trending: [], new: [], promo: [] })
   const [featuredTab, setFeaturedTab] = useState<"promo" | "trending" | "lastOrder">("promo")
+  const [featuredTabInitialized, setFeaturedTabInitialized] = useState(false)
   const [trackingOrder, setTrackingOrder] = useState<any>(null)
   const [trackingMessages, setTrackingMessages] = useState<any[]>([])
   const [trackingInput, setTrackingInput] = useState("")
@@ -341,8 +342,33 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       const savedOrder = localStorage.getItem(`pedefacil-last-order-${establishment.slug}`)
       if (savedOrder) {
         const parsed = JSON.parse(savedOrder)
-        if (parsed.orderId && parsed.trackingUrl && parsed.timestamp > Date.now() - 3600000) {
+        if (parsed.orderId && parsed.trackingUrl && parsed.timestamp > Date.now() - 604800000) {
           setLastOrder(parsed)
+          // Busca itens via API se estiverem faltando (pedidos antigos salvos sem items)
+          if (!parsed.items || parsed.items.length === 0) {
+            const token = parsed.trackingUrl.split("/pedido/")[1]
+            if (token) {
+              fetch(`/api/orders/${parsed.orderId}?token=${token}`)
+                .then(r => r.json())
+                .then(data => {
+                  if (data.items) {
+                    let orderItems: any[] = []
+                    try { orderItems = typeof data.items === "string" ? JSON.parse(data.items) : data.items } catch {}
+                    if (orderItems.length > 0) {
+                      setLastOrder((prev) => {
+                        if (prev && prev.orderId === parsed.orderId) {
+                          const updated = { orderId: prev.orderId, trackingUrl: prev.trackingUrl, paymentLink: prev.paymentLink || "", paymentMethod: prev.paymentMethod || "", total: prev.total || 0, paymentDone: prev.paymentDone || false, orderNumber: prev.orderNumber || 0, items: orderItems as any }
+                          localStorage.setItem(`pedefacil-last-order-${establishment.slug}`, JSON.stringify(updated))
+                          return updated
+                        }
+                        return prev
+                      })
+                    }
+                  }
+                })
+                .catch(() => {})
+            }
+          }
         } else {
           localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
         }
@@ -873,6 +899,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     }, 3500)
     return () => { if (promoAutoScrollRef.current) clearInterval(promoAutoScrollRef.current) }
   }, [featuredTab, featuredSections.promo.length, featuredSections.trending.length, lastOrder?.items?.length])
+
+  // Auto-select first available tab
+  useEffect(() => {
+    if (featuredTabInitialized) return
+    if (featuredSections.promo.length > 0) { setFeaturedTab("promo"); setFeaturedTabInitialized(true) }
+    else if (featuredSections.trending.length > 0) { setFeaturedTab("trending"); setFeaturedTabInitialized(true) }
+    else if (lastOrder?.items && lastOrder.items.length > 0) { setFeaturedTab("lastOrder"); setFeaturedTabInitialized(true) }
+  }, [featuredSections.promo.length, featuredSections.trending.length, lastOrder?.items, featuredTabInitialized])
 
   const openStory = (storyId: string) => {
     const story = storiesData.stories.find((s: any) => s.id === storyId)
