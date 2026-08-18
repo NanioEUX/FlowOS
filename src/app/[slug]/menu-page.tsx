@@ -2363,7 +2363,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                           )}
                         </button>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
-                        <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm pointer-events-none">TOP</div>
+                        {item.badge && (
+                          <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm pointer-events-none">{item.badge}</div>
+                        )}
                         <div className="relative z-10 flex flex-col justify-end p-5 pointer-events-none" style={{ minHeight: "200px" }}>
                           <h2 className="text-2xl font-black text-white leading-tight uppercase drop-shadow-lg">
                             {item.name.length > 22 ? item.name.substring(0, 22) + "..." : item.name}
