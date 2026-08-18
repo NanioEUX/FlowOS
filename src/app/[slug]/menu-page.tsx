@@ -2337,12 +2337,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                 )}
                 <div className="flex items-center gap-1.5 mt-1">
-                  {isOpen ? (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: "#22c55e15", color: "#22c55e" }}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                      Aberto
-                    </span>
-                  ) : null}
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
@@ -3039,108 +3033,196 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Customer Profile Modal */}
       {showCustomerProfile && (
         <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold" style={{ color: theme.text }}>Meus dados</h2>
-              <button onClick={() => { setShowCustomerProfile(false); setEditingProfile(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                <X className="h-5 w-5" />
+          <div className="w-full max-w-lg rounded-t-2xl border-t backdrop-blur-xl overflow-hidden" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            {/* Close button */}
+            <div className="absolute top-4 right-4 z-10">
+              <button onClick={() => { setShowCustomerProfile(false); setEditingProfile(false) }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgCard }}>
+                <X className="h-4 w-4" style={{ color: theme.textMuted }} />
               </button>
             </div>
 
             {!editingProfile ? (
-              <div className="space-y-4">
-                {!sessionVerified && (
-                  <div className="rounded-lg p-4 text-center" style={{ backgroundColor: `${theme.accent}15`, border: `1px solid ${theme.accent}40` }}>
-                    <p className="text-sm font-medium" style={{ color: theme.accent }}>WhatsApp não verificado</p>
-                    <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Confirme o código enviado para completar seu cadastro.</p>
-                    <button
-                      onClick={() => { setShowCustomerProfile(false); markVerifySessionStart(); setShowVerifyModal(true); setVerifyError("") }}
-                      className="mt-3 rounded-lg px-4 py-2 text-xs font-medium text-white"
-                      style={{ backgroundColor: theme.accent }}
-                    >
-                      Verificar agora
-                    </button>
+              <div className="max-h-[85vh] overflow-y-auto pb-6">
+                {/* Header with avatar */}
+                <div className="relative px-6 pt-6 pb-8">
+                  <div className="flex flex-col items-center">
+                    {/* Avatar */}
+                    <div className="relative mb-3">
+                      <div className="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}dd)` }}>
+                        {(customer.name || customerData?.name || "C").charAt(0).toUpperCase()}
+                      </div>
+                      {parsedTierConfig?.enabled && (
+                        <span className="absolute -bottom-1 -right-1 text-2xl leading-none">
+                          {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-xl font-bold" style={{ color: theme.text }}>
+                      {customer.name || customerData?.name || "Cliente"}
+                    </h2>
+                    {parsedTierConfig?.enabled && (
+                      <span className="mt-1 text-xs font-medium px-2.5 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                        {customerTier === "ouro" ? "Ouro" : customerTier === "prata" ? "Prata" : "Bronze"}
+                      </span>
+                    )}
                   </div>
-                )}
-                <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nome</p>
-                    <p className="text-sm font-medium" style={{ color: theme.text }}>{customer.name || "Não informado"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>WhatsApp</p>
-                    <p className="text-sm font-medium" style={{ color: theme.text }}>
-                      {(() => {
-                        const digits = String(phoneInput || customer.phone || "").replace(/\D/g, "").slice(0, 11)
-                        if (!digits) return "Não informado"
-                        if (digits.length <= 2) return `(${digits}`
-                        if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-                        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-                      })()}
+                </div>
+
+                {/* Cashback Card */}
+                {parsedLoyalty?.enabled && (
+                  <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 4px 15px ${theme.primary}40` }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-white/70">Seu saldo</p>
+                        <p className="text-2xl font-bold text-white">
+                          {formatCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints)}
+                        </p>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <Gift className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-white/80">
+                      Use no próximo pedido • {customerData?.loyaltyPoints || customerLoyaltyPoints} pontos
                     </p>
                   </div>
-                  {parsedLoyalty?.enabled && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
-                      <p className="text-sm font-medium text-amber-400 flex items-center gap-1">
-                        <Star className="h-3 w-3" />{customerData?.loyaltyPoints || customerLoyaltyPoints} cash = {formatCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints)}
+                )}
+
+                {/* Statistics */}
+                {customerData && (
+                  <div className="mx-4 mb-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: theme.bgCard }}>
+                      <p className="text-2xl font-bold" style={{ color: theme.primary }}>
+                        {customerData.totalOrders || 0}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: theme.textMutedMore }}>
+                        Pedidos
                       </p>
                     </div>
-                  )}
-                  {parsedTierConfig?.enabled && (
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: theme.bgCard }}>
+                      <p className="text-2xl font-bold" style={{ color: theme.primary }}>
+                        {formatCurrency((customerData?.realTotalSpent ?? customerData?.totalSpent) || 0)}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: theme.textMutedMore }}>
+                        Total gasto
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tier Progress */}
+                {parsedTierConfig?.enabled && (() => {
+                  const tiers = parsedTierConfig.tiers || []
+                  const asc = [...tiers].sort((a: any, b: any) => (a.minSpent || 0) - (b.minSpent || 0))
+                  const totalSpent = (customerData?.realTotalSpent ?? customerData?.totalSpent) || 0
+                  const currentObj = [...asc].reverse().find((t: any) => totalSpent >= (t.minSpent || 0)) || asc[0]
+                  const currentIdx = asc.findIndex((t: any) => t.name === currentObj?.name)
+                  const nextTier = currentIdx < asc.length - 1 ? asc[currentIdx + 1] : null
+                  const progress = nextTier ? Math.min(100, (totalSpent / (nextTier.minSpent || 1)) * 100) : 100
+                  const remaining = nextTier ? Math.max(0, (nextTier.minSpent || 0) - totalSpent) : 0
+                  return (
+                    <div className="mx-4 mb-4 rounded-xl p-4" style={{ backgroundColor: theme.bgCard }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-lg">{currentObj?.emoji || "🥉"}</span>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: theme.text }}>{currentObj?.name || "Bronze"}</p>
+                          <p className="text-[10px]" style={{ color: theme.textMutedMore }}>{currentObj?.multiplier || 1}x cashback</p>
+                        </div>
+                        {nextTier && (
+                          <span className="ml-auto text-lg">{nextTier.emoji}</span>
+                        )}
+                      </div>
+                      {nextTier ? (
+                        <>
+                          <div className="w-full h-2 rounded-full overflow-hidden mb-2" style={{ backgroundColor: `${theme.primary}20` }}>
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${currentObj?.color || "#CD7F32"}, ${nextTier.color || "#C0C0C0"})` }} />
+                          </div>
+                          <p className="text-xs font-medium" style={{ color: theme.text }}>
+                            {remaining > 0 ? (
+                              <>Faltam <span className="font-bold" style={{ color: theme.primary }}>R$ {remaining.toFixed(0)}</span> para {nextTier.emoji} {nextTier.name}</>
+                            ) : (
+                              <span style={{ color: "#22c55e" }}>{nextTier.emoji} {nextTier.name} desbloqueado!</span>
+                            )}
+                          </p>
+                          <div className="mt-2 flex gap-1.5 flex-wrap">
+                            {nextTier.multiplier && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                {nextTier.multiplier}x cash
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs font-medium" style={{ color: "#22c55e" }}>Nível máximo atingido! 🎉</p>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* User Info */}
+                <div className="mx-4 mb-4 rounded-xl p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Nível</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>WhatsApp</p>
                       <p className="text-sm font-medium" style={{ color: theme.text }}>
                         {(() => {
-                          const tiers = parsedTierConfig.tiers || []
-                          const asc = [...tiers].sort((a: any, b: any) => (a.minSpent || 0) - (b.minSpent || 0))
-                          const totalSpent = (customerData?.realTotalSpent ?? customerData?.totalSpent) || 0
-                          const currentObj = [...asc].reverse().find((t: any) => totalSpent >= (t.minSpent || 0)) || asc[0]
-                          const currentIdx = asc.findIndex((t: any) => t.name === currentObj?.name)
-                          const nextTier = currentIdx < asc.length - 1 ? asc[currentIdx + 1] : null
-                          const progress = nextTier ? Math.min(100, (totalSpent / (nextTier.minSpent || 1)) * 100) : 100
-                          const remaining = nextTier ? Math.max(0, (nextTier.minSpent || 0) - totalSpent) : 0
-                          return (
-                            <div>
-                              <span>{currentObj?.emoji || "🥉"} {currentObj?.name || "Bronze"} — {currentObj?.multiplier || 1}x cash</span>
-                              {nextTier && (
-                                <div className="mt-2">
-                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: theme.borderSubtle }}>
-                                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, backgroundColor: currentObj?.color || "#CD7F32" }} />
-                                  </div>
-                                  <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>
-                                    {remaining > 0 ? `Faltam R$ ${remaining.toFixed(0)} para ${nextTier.emoji} ${nextTier.name}` : `${nextTier.emoji} ${nextTier.name} desbloqueado!`}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )
+                          const digits = String(phoneInput || customer.phone || "").replace(/\D/g, "").slice(0, 11)
+                          if (!digits) return "Não informado"
+                          if (digits.length <= 2) return `(${digits}`
+                          if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+                          return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
                         })()}
                       </p>
                     </div>
-                  )}
+                    <button
+                      onClick={() => setEditingProfile(true)}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
+                      style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Editar
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setEditingProfile(true)}
-                  className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
-                  style={{ backgroundColor: theme.primary }}
-                >
-                  Editar dados
-                </button>
 
-                <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.bgCard }}>
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Notificações</p>
+                {/* Notifications & App */}
+                <div className="mx-4 mb-4 rounded-xl p-4 space-y-4" style={{ backgroundColor: theme.bgCard }}>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: theme.textMutedMore }}>Notificações</p>
                     <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
                   </div>
-                  <div className="pt-2 border-t" style={{ borderColor: theme.borderSubtle }}>
+                  <div className="pt-3 border-t" style={{ borderColor: theme.borderSubtle }}>
                     <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: theme.textMutedMore }}>Aplicativo</p>
                     <InstallButton />
                   </div>
                 </div>
+
+                {/* Logout */}
+                {(customer.phone || customerData?.phone) && (
+                  <div className="mx-4">
+                    <button
+                      onClick={() => {
+                        setCustomerData(null)
+                        setPhoneInput("")
+                        setCustomer({ name: "", phone: "", address: "", notes: "" })
+                        setCep("")
+                        setCepAddress(null)
+                        clearSessionVerified()
+                        localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
+                        localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                        setShowCustomerProfile(false)
+                      }}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors"
+                      style={{ color: theme.textMutedMore, backgroundColor: `${theme.bgCard}` }}
+                    >
+                      Sair da conta
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="space-y-3">
+              /* Edit Mode */
+              <div className="p-6 space-y-3">
                 <div>
                   <label className="text-xs" style={{ color: theme.textMuted }}>Nome</label>
                   <input
@@ -3165,7 +3247,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => setEditingProfile(false)}
                     className="flex-1 rounded-lg py-2.5 text-sm font-medium border hover:opacity-80"
@@ -3177,7 +3259,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     onClick={async () => {
                       const phoneRaw = phoneInput.replace(/\D/g, "")
                       const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                      // Se a sessão não está verificada, exige verificação antes de salvar perfil
                       if (!sessionVerified) {
                         setEditingProfile(false)
                         setShowCustomerProfile(false)
@@ -3186,7 +3267,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                         setVerifyError("")
                         return
                       }
-                      // Save to Supabase
                       if (customerData?.id) {
                         try {
                           await fetch("/api/customers", {
@@ -3202,7 +3282,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                           })
                         } catch {}
                       }
-                      // Save to localStorage
                       localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, phone: phoneRaw }))
                       setEditingProfile(false)
                       setShowCustomerProfile(false)
@@ -3214,28 +3293,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* Logout */}
-            {(customer.phone || customerData?.phone) && (
-              <button
-                onClick={() => {
-                  setCustomerData(null)
-                  setPhoneInput("")
-                  setCustomer({ name: "", phone: "", address: "", notes: "" })
-                  setCep("")
-                  setCepAddress(null)
-                  clearSessionVerified()
-                  localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
-                  localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-                  setShowCustomerProfile(false)
-                }}
-                className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg p-3 text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: "#EF4444" }}
-              >
-                <X className="h-4 w-4" />
-                 Sair da conta
-              </button>
             )}
           </div>
         </div>
