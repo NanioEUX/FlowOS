@@ -1035,6 +1035,11 @@ export default function CardapioPage() {
       .catch(() => {})
   }
 
+  function editProductOnTab(product: Product, tab: "basico" | "onde" | "ficha" | "adicionais") {
+    editProduct(product)
+    setProductTab(tab)
+  }
+
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
     setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", featured: false, featuredDiscountPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true })
@@ -1556,13 +1561,13 @@ export default function CardapioPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleOnSale(product.id, (product as any).onSale || false) }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); editProductOnTab(product, "onde") }}
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 (product as any).onSale
                                   ? "bg-green-100 text-green-700"
                                   : "bg-zinc-100 text-zinc-400"
                               }`}
-                              title={(product as any).onSale ? "Em promoção (clique para remover/editar)" : "Marcar como promoção"}
+                              title={(product as any).onSale ? "Em promoção (clique para editar)" : "Marcar como promoção"}
                             >
                               <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                                 (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
@@ -1575,13 +1580,13 @@ export default function CardapioPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFeatured(product.id, (product as any).featured || false) }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); editProductOnTab(product, "onde") }}
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 (product as any).featured
                                   ? "bg-amber-100 text-amber-700"
                                   : "bg-zinc-100 text-zinc-400"
                               }`}
-                              title={(product as any).featured ? "Em destaque (clique para remover/editar)" : "Marcar como destaque"}
+                              title={(product as any).featured ? "Em destaque (clique para editar)" : "Marcar como destaque"}
                             >
                               <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                                 (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
