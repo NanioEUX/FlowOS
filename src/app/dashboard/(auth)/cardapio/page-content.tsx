@@ -87,6 +87,8 @@ export default function CardapioPage() {
     sendToPrep: false,
     onSale: false,
     promoPrice: "",
+    featured: false,
+    featuredDiscountPrice: "",
     availableOnline: true,
     availablePresencial: true,
     availableWhatsapp: true,
@@ -177,7 +179,7 @@ export default function CardapioPage() {
   const [colorsPublished, setColorsPublished] = useState(false)
   const [savingColors, setSavingColors] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: "category" | "product"; id: string; name: string; productCount?: number }>({ open: false, type: "category", id: "", name: "" })
-  const [conflictConfirm, setConflictConfirm] = useState<{ open: boolean; type: "promo-to-featured" | "featured-to-promo"; productName: string; productId: string; callback: () => void } | null>(null)
+  const [conflictConfirm, setConflictConfirm] = useState<{ open: boolean; type: "promo-to-featured" | "featured-to-promo" | "on-sale-confirm" | "featured-confirm"; productName: string; productId: string; callback: () => void } | null>(null)
   const [marginCatId, setMarginCatId] = useState<string | null>(null)
 
   // Preview state
@@ -496,6 +498,12 @@ export default function CardapioPage() {
     } else if (!productForm.onSale) {
       formData.append("promoPrice", "null")
     }
+    formData.append("featured", String(productForm.featured))
+    if (productForm.featured && productForm.featuredDiscountPrice) {
+      formData.append("featuredDiscountPrice", productForm.featuredDiscountPrice)
+    } else if (!productForm.featured) {
+      formData.append("featuredDiscountPrice", "null")
+    }
     formData.append("availableOnline", String(productForm.availableOnline))
     formData.append("availablePresencial", String(productForm.availablePresencial))
     formData.append("availableWhatsapp", String(productForm.availableWhatsapp))
@@ -547,6 +555,10 @@ export default function CardapioPage() {
             establishmentId,
             categoryId: productForm.categoryId,
             order: maxOrder,
+            onSale: productForm.onSale,
+            promoPrice: productForm.onSale && productForm.promoPrice ? productForm.promoPrice : null,
+            featured: productForm.featured,
+            featuredDiscountPrice: productForm.featured && productForm.featuredDiscountPrice ? productForm.featuredDiscountPrice : null,
           }),
         })
         if (!res.ok) {
@@ -672,49 +684,43 @@ export default function CardapioPage() {
   async function toggleOnSale(productId: string, currentValue: boolean) {
     if (!establishmentId) return
     if (currentValue) {
-      // Desativando promoção — direto
-      try {
-        const res = await fetchAuth(`/api/products/${productId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ onSale: false, promoPrice: null }),
-        })
-        if (!res.ok) {
-          const err = await res.json()
-          toast(err.error || "Erro ao atualizar produto", "error")
-          return
-        }
-        setCategories((prev) =>
-          prev.map((cat) => ({
-            ...cat,
-            products: cat.products.map((p) =>
-              p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
-            ),
-          }))
-        )
-        toast("Produto removido das promoções", "success")
-      } catch (err) {
-        toast("Erro ao atualizar produto", "error")
+      // Perguntar: desativar ou editar?
+      setConflictConfirm({
+        open: true,
+        type: "on-sale-confirm",
+        productName: "",
+        productId: productId,
+        callback: () => {
+          // Usuário escolheu editar -> abrir formulário do produto
+          const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+          if (product) editProduct(product)
+        },
+      })
+      return
+    }
+    // Desativando promoção — direto
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onSale: false, promoPrice: null }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
       }
-    } else {
-      // Ativando promoção
-      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
-      if (product) {
-        // Se já é destaque, pedir confirmação
-        if ((product as any).featured) {
-          setConflictConfirm({
-            open: true,
-            type: "featured-to-promo",
-            productName: product.name,
-            productId: product.id,
-            callback: () => {
-              openPromoModal(product)
-            },
-          })
-          return
-        }
-        openPromoModal(product)
-      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+          ),
+        }))
+      )
+      toast("Produto removido das promoções", "success")
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
     }
   }
 
@@ -765,47 +771,42 @@ export default function CardapioPage() {
   async function toggleFeatured(productId: string, currentValue: boolean) {
     if (!establishmentId) return
     if (currentValue) {
-      try {
-        const res = await fetchAuth(`/api/products/${productId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
-        })
-        if (!res.ok) {
-          const err = await res.json()
-          toast(err.error || "Erro ao atualizar produto", "error")
-          return
-        }
-        setCategories((prev) =>
-          prev.map((cat) => ({
-            ...cat,
-            products: cat.products.map((p) =>
-              p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
-            ),
-          }))
-        )
-        toast("Produto removido dos destaques", "success")
-      } catch (err) {
-        toast("Erro ao atualizar produto", "error")
+      // Perguntar: desativar ou editar?
+      setConflictConfirm({
+        open: true,
+        type: "featured-confirm",
+        productName: "",
+        productId: productId,
+        callback: () => {
+          // Usuário escolheu editar -> abrir formulário do produto
+          const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+          if (product) editProduct(product)
+        },
+      })
+      return
+    }
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
       }
-    } else {
-      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
-      if (product) {
-        // Se já é promoção, pedir confirmação
-        if ((product as any).onSale) {
-          setConflictConfirm({
-            open: true,
-            type: "promo-to-featured",
-            productName: product.name,
-            productId: product.id,
-            callback: () => {
-              openFeaturedModal(product)
-            },
-          })
-          return
-        }
-        openFeaturedModal(product)
-      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
+          ),
+        }))
+      )
+      toast("Produto removido dos destaques", "success")
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
     }
   }
 
@@ -842,6 +843,29 @@ export default function CardapioPage() {
         }))
       )
       toast("Promoção desativada", "info")
+    } else if (type === "featured-to-promo") {
+      await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onSale: false, promoPrice: null }),
+      })
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+          ),
+        }))
+      )
+      toast("Promoção desativada", "info")
+    } else if (type === "on-sale-confirm") {
+      // Usuário confirmou: abrir edição do produto
+      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+      if (product) editProduct(product)
+    } else if (type === "featured-confirm") {
+      // Usuário confirmou: abrir edição do produto
+      const product = categories.flatMap(c => c.products).find(p => p.id === productId)
+      if (product) editProduct(product)
     } else {
       await fetchAuth(`/api/products/${productId}`, {
         method: "PATCH",
@@ -909,6 +933,8 @@ export default function CardapioPage() {
       sendToPrep: product.sendToPrep || false,
       onSale: (product as any).onSale ?? false,
       promoPrice: (product as any).promoPrice ? String((product as any).promoPrice) : "",
+      featured: (product as any).featured ?? false,
+      featuredDiscountPrice: (product as any).featuredDiscountPrice ? String((product as any).featuredDiscountPrice) : "",
       availableOnline: (product as any).availableOnline ?? true,
       availablePresencial: (product as any).availablePresencial ?? true,
       availableWhatsapp: (product as any).availableWhatsapp ?? true,
@@ -954,7 +980,7 @@ export default function CardapioPage() {
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", featured: false, featuredDiscountPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true })
     setProductLinks([])
     setProductAdditionalOptions([])
     setProductTab("basico")
@@ -1480,7 +1506,7 @@ export default function CardapioPage() {
                                   ? "bg-green-100 text-green-700"
                                   : "bg-zinc-100 text-zinc-400"
                               }`}
-                              title={(product as any).onSale ? "Em promoção (clique para remover)" : "Marcar como promoção"}
+                              title={(product as any).onSale ? "Em promoção (clique para remover/editar)" : "Marcar como promoção"}
                             >
                               <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                                 (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
@@ -1490,6 +1516,25 @@ export default function CardapioPage() {
                                 }`} />
                               </span>
                               {(product as any).onSale ? "Promoção" : "Sem promoção"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFeatured(product.id, (product as any).featured || false) }}
+                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
+                                (product as any).featured
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-zinc-100 text-zinc-400"
+                              }`}
+                              title={(product as any).featured ? "Em destaque (clique para remover/editar)" : "Marcar como destaque"}
+                            >
+                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </span>
+                              {(product as any).featured ? "Destaque" : "Sem destaque"}
                             </button>
                             <button
                               type="button"
