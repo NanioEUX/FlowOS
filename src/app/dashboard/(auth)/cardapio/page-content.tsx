@@ -770,15 +770,45 @@ export default function CardapioPage() {
   }
 
   function openPromoModal(product: any) {
+    const isActive = (product as any).onSale || false
+    const currentPromo = (product as any).promoPrice || null
+    const isFeatured = (product as any).featured || false
+
+    // Conflict: featured is active, warn user
+    if (!isActive && isFeatured) {
+      setConflictConfirm({
+        open: true,
+        type: "promo-to-featured",
+        productName: product.name,
+        productId: product.id,
+        callback: () => {
+          // User confirmed — open promo modal after deactivating featured
+          setPromoModal({
+            open: true,
+            productId: product.id,
+            productName: product.name,
+            currentPrice: product.price,
+            currentOnSale: false,
+            currentPromoPrice: null,
+          })
+          setPromoForm({ adjustPrice: false, promoPrice: "" })
+        },
+      })
+      return
+    }
+
     setPromoModal({
       open: true,
       productId: product.id,
       productName: product.name,
       currentPrice: product.price,
-      currentOnSale: (product as any).onSale || false,
-      currentPromoPrice: (product as any).promoPrice || null,
+      currentOnSale: isActive,
+      currentPromoPrice: currentPromo,
     })
-    setPromoForm({ adjustPrice: true, promoPrice: "" })
+    setPromoForm({
+      adjustPrice: isActive && currentPromo ? true : false,
+      promoPrice: isActive && currentPromo ? String(currentPromo) : "",
+    })
   }
 
   async function confirmPromoActivation() {
@@ -808,6 +838,36 @@ export default function CardapioPage() {
       )
       setPromoModal({ ...promoModal, open: false })
       toast("Produto em promoção!", "success")
+      refreshPreview()
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
+    }
+  }
+
+  async function confirmPromoDeactivation() {
+    const { productId } = promoModal
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onSale: false, promoPrice: null }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
+      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+          ),
+        }))
+      )
+      setPromoModal({ ...promoModal, open: false })
+      toast("Promoção desativada", "success")
+      refreshPreview()
     } catch (err) {
       toast("Erro ao atualizar produto", "error")
     }
@@ -902,30 +962,94 @@ export default function CardapioPage() {
   }
 
   function openFeaturedModal(product: any) {
+    const isActive = (product as any).featured || false
+    const currentBadge = (product as any).badge || ""
+    const currentDiscount = (product as any).featuredDiscountPrice || null
+    const isOnSale = (product as any).onSale || false
+
+    // Conflict: promo is active, warn user
+    if (!isActive && isOnSale) {
+      setConflictConfirm({
+        open: true,
+        type: "featured-to-promo",
+        productName: product.name,
+        productId: product.id,
+        callback: () => {
+          // User confirmed — open featured modal after deactivating promo
+          setFeaturedModal({
+            open: true,
+            productId: product.id,
+            productName: product.name,
+            currentPrice: product.price,
+            currentFeatured: false,
+            currentBadge: "",
+            currentDiscountPrice: null,
+          })
+          setFeaturedForm({ badge: "TOP", adjustPrice: false, discountPrice: "" })
+        },
+      })
+      return
+    }
+
     setFeaturedModal({
       open: true,
       productId: product.id,
       productName: product.name,
       currentPrice: product.price,
-      currentFeatured: (product as any).featured || false,
-      currentBadge: (product as any).badge || "",
-      currentDiscountPrice: (product as any).featuredDiscountPrice || null,
+      currentFeatured: isActive,
+      currentBadge,
+      currentDiscountPrice: currentDiscount,
     })
-    setFeaturedForm({ badge: (product as any).badge || "TOP", adjustPrice: false, discountPrice: "" })
+    setFeaturedForm({
+      badge: currentBadge || "TOP",
+      adjustPrice: isActive && currentDiscount ? true : false,
+      discountPrice: isActive && currentDiscount ? String(currentDiscount) : "",
+    })
   }
 
   async function confirmConflict() {
     if (!conflictConfirm) return
     const { productId, type, callback } = conflictConfirm
 
-    if (type === "on-sale-confirm" || type === "featured-confirm") {
-      // User chose to deactivate (from the dialog)
-      await callback()
-    } else if (type === "promo-to-featured") {
-      // User chose to deactivate promo and activate featured
-      await callback()
+    if (type === "promo-to-featured") {
+      // Deactivate featured first, then open promo modal
+      await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
+      })
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
+          ),
+        }))
+      )
+      toast("Destaque desativado", "info")
+      refreshPreview()
+      callback()
     } else if (type === "featured-to-promo") {
-      // User chose to deactivate featured and activate promo
+      // Deactivate promo first, then open featured modal
+      await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onSale: false, promoPrice: null }),
+      })
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, onSale: false, promoPrice: null } : p
+          ),
+        }))
+      )
+      toast("Promoção desativada", "info")
+      refreshPreview()
+      callback()
+    } else if (type === "on-sale-confirm") {
+      await callback()
+    } else if (type === "featured-confirm") {
       await callback()
     }
 
@@ -971,6 +1095,36 @@ export default function CardapioPage() {
       )
       setFeaturedModal({ ...featuredModal, open: false })
       toast("Produto em destaque!", "success")
+      refreshPreview()
+    } catch (err) {
+      toast("Erro ao atualizar produto", "error")
+    }
+  }
+
+  async function confirmFeaturedDeactivation() {
+    const { productId } = featuredModal
+    try {
+      const res = await fetchAuth(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured: false, badge: null, featuredDiscountPrice: null }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
+      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === productId ? { ...p, featured: false, badge: null, featuredDiscountPrice: null } : p
+          ),
+        }))
+      )
+      setFeaturedModal({ ...featuredModal, open: false })
+      toast("Destaque desativado", "success")
+      refreshPreview()
     } catch (err) {
       toast("Erro ao atualizar produto", "error")
     }
@@ -3283,7 +3437,9 @@ export default function CardapioPage() {
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🔥</span>
-                <h3 className="text-lg font-semibold text-zinc-900">Ativar Promoção</h3>
+                <h3 className="text-lg font-semibold text-zinc-900">
+                  {promoModal.currentOnSale ? "Promoção Ativa" : "Ativar Promoção"}
+                </h3>
               </div>
               <button onClick={() => setPromoModal({ ...promoModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
                 <X className="h-5 w-5" />
@@ -3293,9 +3449,19 @@ export default function CardapioPage() {
               <p className="mb-3 text-sm text-zinc-600">
                 Produto: <span className="font-semibold">{promoModal.productName}</span>
               </p>
-              <p className="mb-4 text-sm text-zinc-600">
-                Preço atual: <span className="font-semibold">{formatCurrency(promoModal.currentPrice)}</span>
+              <p className="mb-2 text-sm text-zinc-600">
+                Preço original: <span className="font-semibold">{formatCurrency(promoModal.currentPrice)}</span>
               </p>
+              {promoModal.currentOnSale && promoModal.currentPromoPrice && (
+                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2">
+                  <p className="text-sm text-green-700">
+                    Preço promocional atual: <span className="font-bold">{formatCurrency(promoModal.currentPromoPrice)}</span>
+                    <span className="ml-1 text-xs">
+                      (-{Math.round((1 - promoModal.currentPromoPrice / promoModal.currentPrice) * 100)}%)
+                    </span>
+                  </p>
+                </div>
+              )}
               <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors cursor-pointer ${
                 promoForm.adjustPrice ? "border-green-300 bg-green-50" : "border-zinc-200 hover:bg-zinc-50"
               }`}>
@@ -3306,7 +3472,9 @@ export default function CardapioPage() {
                   className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
                 />
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">Ajustar preço promocional</p>
+                  <p className="text-sm font-medium text-zinc-900">
+                    {promoModal.currentOnSale ? "Alterar preço promocional" : "Ajustar preço promocional"}
+                  </p>
                   <p className="text-xs text-zinc-500">Define um preço menor para esta promoção</p>
                 </div>
               </label>
@@ -3337,8 +3505,21 @@ export default function CardapioPage() {
               <Button variant="outline" className="flex-1" onClick={() => setPromoModal({ ...promoModal, open: false })}>
                 Cancelar
               </Button>
-              <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={!promoForm.promoPrice || parseFloat(promoForm.promoPrice) <= 0} onClick={confirmPromoActivation}>
-                Ativar
+              {promoModal.currentOnSale && (
+                <Button
+                  variant="outline"
+                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={confirmPromoDeactivation}
+                >
+                  Desativar
+                </Button>
+              )}
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={promoForm.adjustPrice && (!promoForm.promoPrice || parseFloat(promoForm.promoPrice) <= 0)}
+                onClick={confirmPromoActivation}
+              >
+                {promoModal.currentOnSale ? "Atualizar" : "Ativar"}
               </Button>
             </div>
           </div>
@@ -3351,7 +3532,9 @@ export default function CardapioPage() {
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl">⭐</span>
-                <h3 className="text-lg font-semibold text-zinc-900">Ativar Destaque</h3>
+                <h3 className="text-lg font-semibold text-zinc-900">
+                  {featuredModal.currentFeatured ? "Destaque Ativo" : "Ativar Destaque"}
+                </h3>
               </div>
               <button onClick={() => setFeaturedModal({ ...featuredModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
                 <X className="h-5 w-5" />
@@ -3361,9 +3544,27 @@ export default function CardapioPage() {
               <p className="mb-3 text-sm text-zinc-600">
                 Produto: <span className="font-semibold">{featuredModal.productName}</span>
               </p>
-              <p className="mb-4 text-sm text-zinc-600">
+              <p className="mb-2 text-sm text-zinc-600">
                 Preço atual: <span className="font-semibold">{formatCurrency(featuredModal.currentPrice)}</span>
               </p>
+              {featuredModal.currentFeatured && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2">
+                  <p className="text-sm text-amber-700">
+                    {featuredModal.currentBadge && <span className="font-bold">Badge: {featuredModal.currentBadge}</span>}
+                    {featuredModal.currentDiscountPrice && (
+                      <span className={featuredModal.currentBadge ? "ml-2" : ""}>
+                        Desconto: <span className="font-bold">{formatCurrency(featuredModal.currentDiscountPrice)}</span>
+                        <span className="ml-1 text-xs">
+                          (-{Math.round((1 - featuredModal.currentDiscountPrice / featuredModal.currentPrice) * 100)}%)
+                        </span>
+                      </span>
+                    )}
+                    {!featuredModal.currentBadge && !featuredModal.currentDiscountPrice && (
+                      <span>Sem configurações adicionais</span>
+                    )}
+                  </p>
+                </div>
+              )}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-zinc-700 mb-1">Texto da chamada</label>
                 <input
@@ -3386,7 +3587,9 @@ export default function CardapioPage() {
                   className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
                 />
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">Adicionar desconto</p>
+                  <p className="text-sm font-medium text-zinc-900">
+                    {featuredModal.currentFeatured ? "Alterar desconto" : "Adicionar desconto"}
+                  </p>
                   <p className="text-xs text-zinc-500">O desconto aparece no card, mas NÃO vai na seção Promoções</p>
                 </div>
               </label>
@@ -3417,8 +3620,17 @@ export default function CardapioPage() {
               <Button variant="outline" className="flex-1" onClick={() => setFeaturedModal({ ...featuredModal, open: false })}>
                 Cancelar
               </Button>
+              {featuredModal.currentFeatured && (
+                <Button
+                  variant="outline"
+                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={confirmFeaturedDeactivation}
+                >
+                  Desativar
+                </Button>
+              )}
               <Button className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={confirmFeaturedActivation}>
-                Ativar
+                {featuredModal.currentFeatured ? "Atualizar" : "Ativar"}
               </Button>
             </div>
           </div>
