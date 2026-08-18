@@ -314,6 +314,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [pushNotification, setPushNotification] = useState<{ title: string; body: string; url: string } | null>(null)
   const [showCustomerProfile, setShowCustomerProfile] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
 
@@ -3201,17 +3202,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {(customer.phone || customerData?.phone) && (
                   <div className="mx-4">
                     <button
-                      onClick={() => {
-                        setCustomerData(null)
-                        setPhoneInput("")
-                        setCustomer({ name: "", phone: "", address: "", notes: "" })
-                        setCep("")
-                        setCepAddress(null)
-                        clearSessionVerified()
-                        localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
-                        localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
-                        setShowCustomerProfile(false)
-                      }}
+                      onClick={() => setShowLogoutConfirm(true)}
                       className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors"
                       style={{ color: theme.textMutedMore, backgroundColor: `${theme.bgCard}` }}
                     >
@@ -3294,6 +3285,52 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, border: `1px solid ${theme.borderCard}` }}>
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 h-14 w-14 rounded-full flex items-center justify-center" style={{ backgroundColor: "#fef2f2" }}>
+                <svg className="h-7 w-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold" style={{ color: theme.text }}>Sair da conta?</h3>
+              <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+                Você precisará informar seu número novamente para acessar seus dados e cashback.
+              </p>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 rounded-xl py-3 text-sm font-medium border transition-colors hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderCard }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setCustomerData(null)
+                  setPhoneInput("")
+                  setCustomer({ name: "", phone: "", address: "", notes: "" })
+                  setCep("")
+                  setCepAddress(null)
+                  clearSessionVerified()
+                  localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
+                  localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                  setShowCustomerProfile(false)
+                  setShowLogoutConfirm(false)
+                }}
+                className="flex-1 rounded-xl py-3 text-sm font-medium text-white transition-colors hover:opacity-90"
+                style={{ backgroundColor: "#ef4444" }}
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </div>
       )}
