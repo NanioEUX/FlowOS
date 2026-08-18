@@ -2343,21 +2343,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
-                <div className="flex items-center gap-1 shrink-0">
-                  {/* Crown + Cashback */}
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors" style={{ backgroundColor: `${theme.primary}15`, borderWidth: 1, borderStyle: "solid", borderColor: `${theme.primary}30` }}>
-                    <span className="text-sm">
+                <div className="flex items-center shrink-0 rounded-full border px-2 py-1.5 gap-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                  {/* Crown */}
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center gap-1">
+                    <span className="text-base leading-none">
                       {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
                     </span>
-                    <span className="text-[11px] font-bold" style={{ color: theme.primary }}>
+                  </button>
+                  {/* Cashback */}
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
+                    <span className="text-[12px] font-bold text-gray-800">
                       R$ {(customerData?.loyaltyPoints || customerLoyaltyPoints).toFixed(2).replace(".", ",")}
                     </span>
                   </button>
+                  {/* Divider */}
+                  <span className="w-px h-4 bg-gray-300" />
                   {/* Notification bell */}
-                  <button onClick={() => setShowNotifications(true)} className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors" style={{ backgroundColor: `${theme.primary}15` }}>
-                    <svg className="h-4.5 w-4.5" style={{ color: theme.primary }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                  <button onClick={() => setShowNotifications(true)} className="relative flex items-center justify-center">
+                    <svg className="h-[18px] w-[18px] text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                     {notifications.filter(n => !n.read).length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: "#ef4444" }}>
+                      <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white bg-red-500">
                         {notifications.filter(n => !n.read).length}
                       </span>
                     )}
