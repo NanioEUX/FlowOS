@@ -1,4 +1,5 @@
 import { EvolutionProvider } from "./evolution"
+import { MetaCloudProvider } from "./meta"
 import type { WhatsAppProvider } from "./provider"
 
 interface EstablishmentWhatsAppConfig {
@@ -7,6 +8,9 @@ interface EstablishmentWhatsAppConfig {
   evolutionApiKey: string | null
   evolutionInstanceName: string | null
   whatsappNumber: string | null
+  metaPhoneNumberId?: string | null
+  metaAccessToken?: string | null
+  metaWebhookVerifyToken?: string | null
 }
 
 /**
@@ -30,10 +34,16 @@ export function getWhatsAppProvider(config: EstablishmentWhatsAppConfig): WhatsA
     }
   }
 
-  // Priority 1b: Meta (not implemented yet)
+  // Priority 1b: Meta Cloud API
   if (config.whatsappProvider === "meta") {
-    // TODO: implementar MetaCloudProvider quando migrar
-    // Fall through to SaaS fallback
+    if (!config.metaPhoneNumberId || !config.metaAccessToken) {
+      // Config incomplete — fall through to SaaS fallback
+    } else {
+      return new MetaCloudProvider({
+        phoneNumberId: config.metaPhoneNumberId,
+        accessToken: config.metaAccessToken,
+      })
+    }
   }
 
   // Priority 2: SaaS-level Evolution fallback
