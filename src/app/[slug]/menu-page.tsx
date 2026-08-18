@@ -307,6 +307,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
+
+  // Notifications
+  const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string }[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
@@ -1834,6 +1838,24 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return () => clearInterval(interval)
   }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
 
+  // Fetch notifications when customer is logged in
+  useEffect(() => {
+    const phone = customer.phone || customerData?.phone
+    if (!phone || !sessionVerified) return
+    async function loadNotifications() {
+      try {
+        const res = await fetch(`/api/customers/notifications?phone=${phone}&establishmentId=${establishment.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setNotifications(data.notifications || [])
+        }
+      } catch { }
+    }
+    loadNotifications()
+    const interval = setInterval(loadNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [customer.phone, customerData?.phone, establishment.id, sessionVerified])
+
 const handlePaymentSuccess = useCallback(() => {
     console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
     setCart([])
@@ -2321,9 +2343,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
-                <button onClick={() => setShowCustomerProfile(true)} className="flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 text-sm font-bold" style={{ backgroundColor: theme.primary, color: "#ffffff" }}>
-                  {getFirstName(customer.name || customerData?.name || "").charAt(0).toUpperCase()}
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Crown + Cashback */}
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors" style={{ backgroundColor: `${theme.primary}15`, borderWidth: 1, borderStyle: "solid", borderColor: `${theme.primary}30` }}>
+                    <span className="text-sm">
+                      {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
+                    </span>
+                    <span className="text-[11px] font-bold" style={{ color: theme.primary }}>
+                      R$ {(customerData?.loyaltyPoints || customerLoyaltyPoints).toFixed(2).replace(".", ",")}
+                    </span>
+                  </button>
+                  {/* Notification bell */}
+                  <button onClick={() => setShowNotifications(true)} className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors" style={{ backgroundColor: `${theme.primary}15` }}>
+                    <svg className="h-4.5 w-4.5" style={{ color: theme.primary }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: "#ef4444" }}>
+                        {notifications.filter(n => !n.read).length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               ) : (
                 <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
                   <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
@@ -2930,6 +2969,44 @@ onPaymentConfirmed={handlePaymentSuccess}
             >
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Drawer */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold" style={{ color: theme.text }}>Notificações</h3>
+              <button onClick={() => setShowNotifications(false)} className="rounded-lg p-1" style={{ color: theme.textMuted }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center">
+                <svg className="mx-auto h-10 w-10 mb-2" style={{ color: theme.textMutedMore }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
+              </div>
+            ) : (
+              <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+                {notifications.map((n) => (
+                  <div key={n.id} className={`rounded-xl border p-3 ${n.read ? "" : "border-l-4"}`} style={{ backgroundColor: theme.bgCard, borderColor: n.read ? theme.borderCard : theme.primary }}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg shrink-0">
+                        {n.type === "order" ? "🛒" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold" style={{ color: theme.text }}>{n.title}</p>
+                        <p className="text-[11px] mt-0.5" style={{ color: theme.textMuted }}>{n.message}</p>
+                        <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>{new Date(n.createdAt).toLocaleString("pt-BR")}</p>
+                      </div>
+                      {!n.read && <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: theme.primary }} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

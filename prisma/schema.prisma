@@ -211,6 +211,7 @@ model Customer {
   orders          Order[]
   reviews         Review[]
   verificationCodes VerificationCode[]
+  notifications   CustomerNotification[]
 
   @@index([establishmentId, phone])
 }
@@ -841,4 +842,17 @@ model Banner {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])
+}
+
+model CustomerNotification {
+  id           String   @id @default(cuid())
+  type         String   @default("info") // order | cashback | promo | info
+  title        String
+  message      String
+  read         Boolean  @default(false)
+  customerId   String
+  createdAt    DateTime @default(now())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
 }
