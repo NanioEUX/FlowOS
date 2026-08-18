@@ -1561,7 +1561,7 @@ export default function CardapioPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); editProductOnTab(product, "onde") }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 (product as any).onSale
                                   ? "bg-green-100 text-green-700"
@@ -1580,7 +1580,7 @@ export default function CardapioPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); editProductOnTab(product, "onde") }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFeaturedModal(product) }}
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 (product as any).featured
                                   ? "bg-amber-100 text-amber-700"
