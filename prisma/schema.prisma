@@ -82,6 +82,8 @@ model Establishment {
   scheduledMinHours       Int           @default(24)   // antecedência mínima em horas
   scheduledPrepMinutes    Int           @default(60)   // tempo médio de preparo em minutos
   scheduledMaxAdvanceDays Int           @default(30)   // antecedência máxima em dias
+  estimatedDeliveryMin    Int           @default(30)   // tempo mínimo estimado de entrega em minutos
+  estimatedDeliveryMax    Int           @default(45)   // tempo máximo estimado de entrega em minutos
 
   address             String?
   addressLat          Float?

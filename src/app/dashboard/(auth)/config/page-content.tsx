@@ -260,6 +260,8 @@ export default function ConfigPage() {
     deliveryFeeType: "free",
     deliveryFeeAmount: "0",
     deliveryFreeAbove: "0",
+    estimatedDeliveryMin: "30",
+    estimatedDeliveryMax: "45",
     defaultTheme: "dark",
     tableCount: "10",
     maxPayOnDeliveryAmount: "150",
@@ -367,6 +369,8 @@ export default function ConfigPage() {
             deliveryFeeType: data.deliveryFeeType || "free",
             deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
             deliveryFreeAbove: String(data.deliveryFreeAbove || "0"),
+            estimatedDeliveryMin: String(data.estimatedDeliveryMin || 30),
+            estimatedDeliveryMax: String(data.estimatedDeliveryMax || 45),
             defaultTheme: data.defaultTheme || "dark",
             tableCount: String(data.tableCount || 10),
             maxPayOnDeliveryAmount: String(data.maxPayOnDeliveryAmount ?? 150),
@@ -452,6 +456,8 @@ export default function ConfigPage() {
           paymentProvider: asaasMode === "card_only" ? "inter" : "asaas",
           deliveryFeeAmount: form.deliveryFeeType === "free" ? 0 : Number(form.deliveryFeeAmount),
           deliveryFreeAbove: form.deliveryFeeType === "free_above" ? Number(form.deliveryFreeAbove) : 0,
+          estimatedDeliveryMin: Number(form.estimatedDeliveryMin) || 30,
+          estimatedDeliveryMax: Number(form.estimatedDeliveryMax) || 45,
           paymentConfig: JSON.stringify(paymentConfig),
           orderConfig: JSON.stringify(orderConfig),
           businessHours: JSON.stringify(businessHours),
@@ -1059,6 +1065,40 @@ export default function ConfigPage() {
                   )}
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tempo Estimado de Entrega */}
+        <Card id="section-tempo-entrega" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Tempo Estimado de Entrega</h3>
+            <p className="text-sm text-zinc-500">Tempo exibido no cardápio para o cliente.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-zinc-700">Mínimo (min)</label>
+                <input
+                  type="number"
+                  min="5"
+                  max="180"
+                  placeholder="30"
+                  value={form.estimatedDeliveryMin || ""}
+                  onChange={(e) => setForm({ ...form, estimatedDeliveryMin: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-zinc-700">Máximo (min)</label>
+                <input
+                  type="number"
+                  min="5"
+                  max="180"
+                  placeholder="45"
+                  value={form.estimatedDeliveryMax || ""}
+                  onChange={(e) => setForm({ ...form, estimatedDeliveryMax: e.target.value })}
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

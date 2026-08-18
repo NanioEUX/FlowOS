@@ -42,7 +42,7 @@ const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover
   "botRespectBusinessHours", "botOutsideHoursMode", "botOutsideHoursMessage", "botAcceptsScheduledOrders", "botScheduledOrderMessage",
   "botFallbackMessage",
   "botTemplateOrderConfirmed", "botTemplateOrderPreparing", "botTemplateOrderReady", "botTemplateOrderDelivering", "botTemplateOrderDelivered", "botTemplateOrderCancelled", "botTemplateOrderScheduled",
-  "scheduledMinHours", "scheduledPrepMinutes", "scheduledMaxAdvanceDays",
+  "scheduledMinHours", "scheduledPrepMinutes", "scheduledMaxAdvanceDays", "estimatedDeliveryMin", "estimatedDeliveryMax",
   "whatsappAutomationEnabled", "whatsappAutomationActivatedAt", "whatsappAutomationPriceCents", "aiMessagesLimit",
   "verifyReminderEnabled", "verifyReminderDelayMin", "verifyReminderMessage"]
 

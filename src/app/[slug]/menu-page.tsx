@@ -66,6 +66,8 @@ interface Establishment {
   closedSub: string | null
   defaultTheme: string
   paymentProvider: string
+  estimatedDeliveryMin: number
+  estimatedDeliveryMax: number
 }
 
 interface CustomerData {
@@ -134,6 +136,13 @@ function normalizeUrl(url: string | null): string {
 function getFirstName(name: string): string {
   if (!name) return ""
   return name.split(" ")[0]
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) return "Bom dia"
+  if (hour >= 12 && hour < 18) return "Boa tarde"
+  return "Boa noite"
 }
 
 
@@ -2321,24 +2330,22 @@ onPaymentConfirmed={handlePaymentSuccess}
               )}
               <div className="flex-1 min-w-0">
                 {sessionVerified && (customer.name || customerData?.name) ? (
-                  <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>
-                    Olá, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                  <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
+                    {getGreeting()}, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
                 ) : (
-                  <h1 className="text-sm font-bold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+                  <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                 )}
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${isOpen ? "#22c55e" : "#ef4444"}15`, color: isOpen ? "#22c55e" : "#ef4444" }}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"}`}></span>
-                    {isOpen ? "Aberto" : "Fechado"}
-                  </span>
+                  {isOpen ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: "#22c55e15", color: "#22c55e" }}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      Aberto
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
-                    30-45 min
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: "#f59e0b15", color: "#f59e0b" }}>
-                    <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                    4.8
+                    {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                   </span>
                 </div>
               </div>
@@ -2380,6 +2387,19 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Spacer for fixed header */}
       <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
+
+      {/* Closed establishment banner */}
+      {!isOpen && (
+        <div className="mx-auto max-w-3xl px-4 pt-2">
+          <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "#fef2f2", borderWidth: 1, borderStyle: "solid", borderColor: "#fecaca" }}>
+            <span className="text-lg">🚫</span>
+            <div>
+              <p className="text-sm font-semibold text-red-600">Estabelecimento fechado</p>
+              <p className="text-xs text-red-500">Estamos fora do horário de funcionamento</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Destaques - full-width carousel, 1 card at a time */}
       {featuredSections.trending.length > 0 && (() => {
