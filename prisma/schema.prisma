@@ -97,7 +97,7 @@ model Establishment {
   headerColor         String            @default("#ffffff")
   colorsPublished     Boolean           @default(false)
   businessHours       String?           @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
-  loyaltyConfig       String?           @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10}")
+  loyaltyConfig       String?           @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10,\"redeemLimitType\":\"percentage\",\"redeemLimitValue\":30,\"minOrderToRedeem\":0}")
   tierConfig          String?           @default("{\"enabled\":false,\"tiers\":[{\"name\":\"Bronze\",\"minSpent\":0,\"multiplier\":1,\"emoji\":\"🥉\",\"color\":\"#CD7F32\"},{\"name\":\"Prata\",\"minSpent\":300,\"multiplier\":1.5,\"emoji\":\"🥈\",\"color\":\"#C0C0C0\"},{\"name\":\"Ouro\",\"minSpent\":800,\"multiplier\":2,\"emoji\":\"🥇\",\"color\":\"#FFD700\"},{\"name\":\"Diamante\",\"minSpent\":2000,\"multiplier\":3,\"emoji\":\"💎\",\"color\":\"#B9F2FF\"}]}")
   firstPurchaseEnabled Boolean          @default(false)
   firstPurchaseDiscount Float?          @default(5.0)

@@ -31,6 +31,8 @@ interface Props {
   showLoyalty: boolean
   cashEarned: number
   loyaltyBalance: number
+  redeemPoints?: number
+  redeemDiscount?: number
   orderType?: string
   onTrack: () => void
   onContinue: () => void
@@ -52,11 +54,17 @@ export function OrderConfirmationScreen({
   showLoyalty,
   cashEarned,
   loyaltyBalance,
+  redeemPoints,
+  redeemDiscount,
   orderType,
   onTrack,
   onContinue,
 }: Props) {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+  const pointsToR$ = (points: number) => {
+    if (!redeemPoints || !redeemDiscount) return 0
+    return (points / redeemPoints) * redeemDiscount
+  }
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col" style={{ backgroundColor: theme.bgPage }}>
@@ -156,8 +164,8 @@ export function OrderConfirmationScreen({
               <div className="flex items-center gap-2">
                 <Gift className="h-5 w-5" style={{ color: theme.success }} />
                 <div>
-                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} cash</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} cash ({fmt(loyaltyBalance)})</p>
+                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} pontos</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} pontos ({fmt(pointsToR$(loyaltyBalance))})</p>
                 </div>
               </div>
             </div>

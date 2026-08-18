@@ -145,6 +145,11 @@ function getGreeting(): string {
   return "Boa noite"
 }
 
+function pointsToCurrency(points: number, redeemPoints: number = 100, redeemDiscount: number = 10): number {
+  if (!redeemPoints || !redeemDiscount) return 0
+  return (points / redeemPoints) * redeemDiscount
+}
+
 
 
 export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
@@ -714,6 +719,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0)
   const [customerTier, setCustomerTier] = useState("bronze")
 
+  // Calculate tier multiplier
+  const tierMultiplier = useMemo(() => {
+    if (!parsedTierConfig?.enabled) return 1
+    const tiers = parsedTierConfig.tiers || []
+    const tier = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
+    return tier?.multiplier || 1
+  }, [parsedTierConfig, customerTier])
+
   const loyaltyDiscount = useMemo(() => {
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
     const pointsNeeded = parsedLoyalty.redeemPoints || 100
@@ -722,9 +735,25 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
       return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
     }
     const discount = parsedLoyalty.redeemDiscount || 10
-    if (customerLoyaltyPoints >= pointsNeeded) return discount
-    return 0
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints])
+    if (customerLoyaltyPoints < pointsNeeded) return 0
+
+    // Check minimum order amount
+    const minOrder = parsedLoyalty.minOrderToRedeem || 0
+    if (minOrder > 0 && subtotal < minOrder) return 0
+
+    // Apply limit
+    const limitType = parsedLoyalty.redeemLimitType || "percentage"
+    const limitValue = parsedLoyalty.redeemLimitValue || 30
+    let maxDiscount = discount
+
+    if (limitType === "percentage") {
+      maxDiscount = (subtotal * limitValue) / 100
+    } else {
+      maxDiscount = limitValue
+    }
+
+    return Math.min(discount, maxDiscount)
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
 
   const loyaltyFreeProduct = useMemo(() => {
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
@@ -2355,7 +2384,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {/* Cashback */}
                   <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
                     <span className="text-[12px] font-bold text-gray-800">
-                      R$ {(customerData?.loyaltyPoints || customerLoyaltyPoints).toFixed(2).replace(".", ",")}
+                      R$ {pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount).toFixed(2).replace(".", ",")}
                     </span>
                   </button>
                   {/* Divider */}
@@ -3076,7 +3105,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div>
                         <p className="text-xs font-medium text-white/70">Seu saldo</p>
                         <p className="text-2xl font-bold text-white">
-                          {formatCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints)}
+                          {formatCurrency(pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}
                         </p>
                       </div>
                       <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -3084,7 +3113,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     </div>
                     <p className="mt-2 text-xs text-white/80">
-                      Use no próximo pedido • {customerData?.loyaltyPoints || customerLoyaltyPoints} pontos
+                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pontos = {formatCurrency(pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}
                     </p>
                   </div>
                 )}
@@ -3973,8 +4002,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                 firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) : 0}
+                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier : 0}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
+                redeemPoints={parsedLoyalty?.redeemPoints}
+                redeemDiscount={parsedLoyalty?.redeemDiscount}
                 orderType={orderResult?.orderType}
                 onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}

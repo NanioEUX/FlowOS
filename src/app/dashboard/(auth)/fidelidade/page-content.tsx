@@ -45,6 +45,9 @@ export default function FidelidadePageContent() {
     redeemDiscount: 10,
     redeemType: "discount",
     redeemProductId: "",
+    redeemLimitType: "percentage",
+    redeemLimitValue: 30,
+    minOrderToRedeem: 0,
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
     enabled: false,
@@ -254,6 +257,59 @@ export default function FidelidadePageContent() {
                   ? `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = R$ ${loyaltyConfig.redeemDiscount} de desconto`
                   : `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = produto selecionado`}
               </p>
+
+              {/* Limite de resgate por pedido */}
+              <div className="pt-4 border-t border-zinc-200">
+                <label className="mb-2 block text-sm font-medium text-zinc-700">Limite de desconto por pedido</label>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitType: "percentage" })}
+                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemLimitType === "percentage" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
+                  >
+                    Percentual (%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitType: "fixed" })}
+                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemLimitType === "fixed" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
+                  >
+                    Valor fixo (R$)
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">
+                      {loyaltyConfig.redeemLimitType === "percentage" ? "Percentual máximo" : "Valor máximo (R$)"}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={loyaltyConfig.redeemLimitType === "percentage" ? 100 : 9999}
+                      value={loyaltyConfig.redeemLimitValue}
+                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitValue: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pedido mínimo (R$)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={loyaltyConfig.minOrderToRedeem}
+                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, minOrderToRedeem: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                      placeholder="0 = sem mínimo"
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-zinc-400">
+                  {loyaltyConfig.redeemLimitType === "percentage"
+                    ? `Ex: máximo ${loyaltyConfig.redeemLimitValue}% do pedido. Pedido R$ 100 → desconto máx R$ ${loyaltyConfig.redeemLimitValue}`
+                    : `Ex: máximo R$ ${loyaltyConfig.redeemLimitValue} de desconto por pedido`}
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -375,7 +431,7 @@ export default function FidelidadePageContent() {
             <Shield className="h-4 w-4" />
             Bônus de Primeira Compra
           </h3>
-          <p className="text-sm text-zinc-500">Cliente novo confirma o WhatsApp e ganha desconto + cash de bônus no primeiro pedido.</p>
+          <p className="text-sm text-zinc-500">Cliente novo ganha desconto + cash de bônus no primeiro pedido.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
               type="checkbox"
@@ -384,8 +440,8 @@ export default function FidelidadePageContent() {
               className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
             />
             <div>
-              <span className="font-medium text-zinc-900">Exigir confirmação WhatsApp na 1ª compra</span>
-              <p className="text-xs text-zinc-500">Anti-fraude: cliente valida número via código antes do primeiro pedido</p>
+              <span className="font-medium text-zinc-900">Ativar Bônus na 1ª compra</span>
+              <p className="text-xs text-zinc-500"></p>
             </div>
           </label>
           {firstPurchaseEnabled && (
