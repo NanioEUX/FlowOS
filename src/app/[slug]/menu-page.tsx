@@ -727,45 +727,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     return tier?.multiplier || 1
   }, [parsedTierConfig, customerTier])
 
-  const loyaltyDiscount = useMemo(() => {
-    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
-    const pointsNeeded = parsedLoyalty.redeemPoints || 100
-    if (parsedLoyalty.redeemType === "product") {
-      // Product redemption: no monetary discount, handled separately
-      return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
-    }
-    const discount = parsedLoyalty.redeemDiscount || 10
-    if (customerLoyaltyPoints < pointsNeeded) return 0
-
-    // Check minimum order amount
-    const minOrder = parsedLoyalty.minOrderToRedeem || 0
-    if (minOrder > 0 && subtotal < minOrder) return 0
-
-    // Apply limit
-    const limitType = parsedLoyalty.redeemLimitType || "percentage"
-    const limitValue = parsedLoyalty.redeemLimitValue || 30
-    let maxDiscount = discount
-
-    if (limitType === "percentage") {
-      maxDiscount = (subtotal * limitValue) / 100
-    } else {
-      maxDiscount = limitValue
-    }
-
-    return Math.min(discount, maxDiscount)
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
-
-  const loyaltyFreeProduct = useMemo(() => {
-    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
-    if (parsedLoyalty.redeemType !== "product") return null
-    const pointsNeeded = parsedLoyalty.redeemPoints || 100
-    if (customerLoyaltyPoints >= pointsNeeded) {
-      const product = cart.find((item: any) => item.productId === parsedLoyalty.redeemProductId)
-      return product || null
-    }
-    return null
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart])
-
   useEffect(() => {
     if (customer.name || customer.phone) {
       localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, cep }))
@@ -1020,6 +981,42 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
   const displayItems = pendingOrderNumber ? pendingOrderItems : cart
   const subtotal = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0)
+
+  const loyaltyDiscount = useMemo(() => {
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (parsedLoyalty.redeemType === "product") {
+      return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
+    }
+    const discount = parsedLoyalty.redeemDiscount || 10
+    if (customerLoyaltyPoints < pointsNeeded) return 0
+
+    const minOrder = parsedLoyalty.minOrderToRedeem || 0
+    if (minOrder > 0 && subtotal < minOrder) return 0
+
+    const limitType = parsedLoyalty.redeemLimitType || "percentage"
+    const limitValue = parsedLoyalty.redeemLimitValue || 30
+    let maxDiscount = discount
+
+    if (limitType === "percentage") {
+      maxDiscount = (subtotal * limitValue) / 100
+    } else {
+      maxDiscount = limitValue
+    }
+
+    return Math.min(discount, maxDiscount)
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
+
+  const loyaltyFreeProduct = useMemo(() => {
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
+    if (parsedLoyalty.redeemType !== "product") return null
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (customerLoyaltyPoints >= pointsNeeded) {
+      const product = cart.find((item: any) => item.productId === parsedLoyalty.redeemProductId)
+      return product || null
+    }
+    return null
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart])
   // Status real do pedido pendente para decidir se o botão "Cancelar" aparece.
   // customerOrders filtra pedidos pending no pagamento online, então pode estar
   // desatualizado; usamos o que estiver em memória (lastOrder/pendingOrderItems).
