@@ -1453,7 +1453,6 @@ export default function ConfigPage() {
             )}
             </SaasOnly>
 
-            <SaasOnly>
             <div className="space-y-1">
               <label className="block text-sm font-medium text-zinc-700">Provedor WhatsApp</label>
               <select
@@ -1466,7 +1465,6 @@ export default function ConfigPage() {
                 <option value="meta">Meta Cloud API</option>
               </select>
             </div>
-            </SaasOnly>
 
             <SaasOnly>
             {whatsappProvider === "evolution" && (
@@ -1507,7 +1505,6 @@ export default function ConfigPage() {
             )}
             </SaasOnly>
 
-            <SaasOnly>
             {whatsappProvider === "meta" && (
               <MetaConfig
                 establishmentId={establishmentId}
@@ -1519,7 +1516,6 @@ export default function ConfigPage() {
                 onVerifyTokenChange={setMetaWebhookVerifyToken}
               />
             )}
-            </SaasOnly>
 
             {whatsappProvider && (
               <>
