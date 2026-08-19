@@ -22,9 +22,19 @@ export async function POST(
     }
 
     // Step 1: Exchange code for short-lived token
+    const redirectUri = `https://flowoshub.com/`
     const tokenRes = await fetch(
-      `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=&code=${code}`,
-      { method: "GET" }
+      `https://graph.facebook.com/v21.0/oauth/access_token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: META_APP_ID,
+          client_secret: META_APP_SECRET,
+          redirect_uri: redirectUri,
+          code: code,
+        }),
+      }
     )
     const tokenData = await tokenRes.json()
 
