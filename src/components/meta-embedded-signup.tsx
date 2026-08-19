@@ -111,10 +111,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setLoading(true)
         setResult(null)
 
+        // Send code + page URL to server (Meta SDK uses page URL as redirect_uri)
+        const pageUrl = window.location.href
+
         try {
           const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-embedded-signup`, {
             method: "POST",
-            body: JSON.stringify({ code, phoneNumberId: phone_number_id, wabaId: waba_id }),
+            body: JSON.stringify({ code, phoneNumberId: phone_number_id, wabaId: waba_id, redirectUri: pageUrl }),
           })
 
           const data2 = await res.json()
@@ -175,7 +178,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
             setLoading(true)
             fetchAuth(`/api/establishments/${establishmentId}/meta-embedded-signup`, {
               method: "POST",
-              body: JSON.stringify({ code: response.authResponse.code, phoneNumberId: null, wabaId: null }),
+              body: JSON.stringify({ code: response.authResponse.code, phoneNumberId: null, wabaId: null, redirectUri: window.location.href }),
             }).then(res => res.json()).then(data2 => {
               console.log("[Meta Embedded Signup] Server response:", data2)
               if (data2.success) {

@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id } = params
     const body = await req.json()
-    const { code, phoneNumberId, wabaId } = body
+    const { code, phoneNumberId, wabaId, redirectUri } = body
 
     if (!code) {
       return NextResponse.json({ success: false, error: "Código não fornecido" }, { status: 400 })
@@ -22,19 +22,9 @@ export async function POST(
     }
 
     // Step 1: Exchange code for short-lived token
-    const redirectUri = `https://flowoshub.com/`
     const tokenRes = await fetch(
-      `https://graph.facebook.com/v21.0/oauth/access_token`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: META_APP_ID,
-          client_secret: META_APP_SECRET,
-          redirect_uri: redirectUri,
-          code: code,
-        }),
-      }
+      `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=${encodeURIComponent(redirectUri || "")}&code=${code}`,
+      { method: "GET" }
     )
     const tokenData = await tokenRes.json()
 
