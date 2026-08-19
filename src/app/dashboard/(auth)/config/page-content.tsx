@@ -1316,42 +1316,6 @@ export default function ConfigPage() {
           </CardContent>
         </Card>
 
-        {/* WhatsApp Connection */}
-        <Card id="section-whatsapp-conexao" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
-          <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Conexão WhatsApp</h3>
-            <p className="text-sm text-zinc-500">Conecte seu número de WhatsApp escaneando o QR Code abaixo. Não precisa acessar o Evolution.</p>
-
-            {(() => {
-              if (!establishmentId) {
-                return (
-                  <div className="rounded-lg border border-zinc-200 p-4 text-sm text-zinc-500">
-                    Carregando...
-                  </div>
-                )
-              }
-              const hasConfig = !!evolutionBaseUrl && !!evolutionApiKey && !!evolutionInstanceName
-              if (!hasConfig) {
-                return (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    ⚠️ Preencha as credenciais do Evolution API abaixo antes de conectar.
-                  </div>
-                )
-              }
-              return (
-                <WhatsAppConnection
-                  establishmentId={establishmentId}
-                  evolutionBaseUrl={evolutionBaseUrl}
-                  evolutionApiKey={evolutionApiKey}
-                  evolutionInstanceName={evolutionInstanceName}
-                  whatsappNumber={whatsappNumber}
-                  onNumberDetected={setWhatsappNumber}
-                />
-              )
-            })()}
-          </CardContent>
-        </Card>
-
         {/* WhatsApp + Bot */}
         <Card id="section-whatsapp-bot" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
@@ -1466,6 +1430,30 @@ export default function ConfigPage() {
                   />
                 </div>
                 <p className="text-xs text-zinc-400">Webhook para configurar na Evolution: <code>https://seu-dominio.com/api/webhooks/whatsapp</code></p>
+
+                {(() => {
+                  if (!establishmentId) return null
+                  const hasConfig = !!evolutionBaseUrl && !!evolutionApiKey && !!evolutionInstanceName
+                  if (!hasConfig) {
+                    return (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 mt-3">
+                        ⚠️ Preencha as credenciais acima antes de conectar.
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="mt-3">
+                      <WhatsAppConnection
+                        establishmentId={establishmentId}
+                        evolutionBaseUrl={evolutionBaseUrl}
+                        evolutionApiKey={evolutionApiKey}
+                        evolutionInstanceName={evolutionInstanceName}
+                        whatsappNumber={whatsappNumber}
+                        onNumberDetected={setWhatsappNumber}
+                      />
+                    </div>
+                  )
+                })()}
               </div>
             )}
             </SaasOnly>
