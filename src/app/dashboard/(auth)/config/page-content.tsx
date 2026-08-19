@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug } from "lucide-react"
+import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -221,100 +222,64 @@ function MetaConfig({
   establishmentId,
   metaPhoneNumberId,
   metaAccessToken,
-  metaWebhookVerifyToken,
-  onPhoneNumberIdChange,
-  onAccessTokenChange,
-  onVerifyTokenChange,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
   metaAccessToken: string
-  metaWebhookVerifyToken: string
-  onPhoneNumberIdChange: (v: string) => void
-  onAccessTokenChange: (v: string) => void
-  onVerifyTokenChange: (v: string) => void
 }) {
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ connected: boolean; error?: string; phoneInfo?: any } | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
-  const handleTest = async () => {
+  const handleDisconnect = async () => {
     if (!establishmentId) return
-    setTesting(true)
-    setTestResult(null)
+    if (!confirm("Desconectar Meta WhatsApp? O bot vai parar de responder.")) return
+    setDisconnecting(true)
     try {
-      const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-connect`, {
-        method: "POST",
-        body: JSON.stringify({ metaPhoneNumberId, metaAccessToken }),
+      await fetchAuth(`/api/establishments/${establishmentId}/meta-connect`, {
+        method: "DELETE",
       })
-      const data = await res.json()
-      setTestResult(data)
+      window.location.reload()
     } catch (e: any) {
-      setTestResult({ connected: false, error: e.message })
+      alert("Erro ao desconectar: " + e.message)
     } finally {
-      setTesting(false)
+      setDisconnecting(false)
     }
+  }
+
+  if (isConnected) {
+    return (
+      <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                ✓ CONECTADO
+              </span>
+              <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
+            </div>
+            <p className="mt-1 text-xs text-green-700">
+              Meta Cloud API ativa via Embedded Signup.
+            </p>
+          </div>
+          <button
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
+          >
+            {disconnecting ? "Desconectando..." : "Desconectar"}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
       <h4 className="text-sm font-semibold text-zinc-700">Meta Cloud API</h4>
-      <div className="space-y-1">
-        <label className="block text-sm font-medium text-zinc-700">Phone Number ID</label>
-        <input
-          type="text"
-          placeholder="Ex: 5511999999999"
-          value={metaPhoneNumberId}
-          onChange={(e) => onPhoneNumberIdChange(e.target.value)}
-          className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="block text-sm font-medium text-zinc-700">Access Token</label>
-        <input
-          type="password"
-          placeholder="EAAx..."
-          value={metaAccessToken}
-          onChange={(e) => onAccessTokenChange(e.target.value)}
-          className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="block text-sm font-medium text-zinc-700">Webhook Verify Token</label>
-        <input
-          type="text"
-          placeholder="flowos-meta-verify"
-          value={metaWebhookVerifyToken}
-          onChange={(e) => onVerifyTokenChange(e.target.value)}
-          className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-        />
-        <p className="text-xs text-zinc-400">Use o mesmo valor ao configurar o webhook no Meta Business Suite.</p>
-      </div>
-
-      {testResult && (
-        <div className={`rounded-lg border p-3 text-xs ${testResult.connected ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-900"}`}>
-          {testResult.connected ? (
-            <div>
-              <p className="font-semibold">✓ Conectado com sucesso!</p>
-              {testResult.phoneInfo?.displayPhoneNumber && (
-                <p className="mt-1">Número: {testResult.phoneInfo.displayPhoneNumber} — {testResult.phoneInfo.verifiedName}</p>
-              )}
-            </div>
-          ) : (
-            <p>✗ {testResult.error || "Falha ao conectar"}</p>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-zinc-400">Webhook: <code>https://flowoshub.com/api/webhooks/whatsapp</code></p>
-        <button
-          onClick={handleTest}
-          disabled={testing || !metaPhoneNumberId || !metaAccessToken}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {testing ? "Testando..." : "Testar conexão"}
-        </button>
-      </div>
+      <p className="text-xs text-zinc-500">
+        Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
+      </p>
+      <EmbeddedSignupButton />
     </div>
   )
 }
@@ -1510,10 +1475,6 @@ export default function ConfigPage() {
                 establishmentId={establishmentId}
                 metaPhoneNumberId={metaPhoneNumberId}
                 metaAccessToken={metaAccessToken}
-                metaWebhookVerifyToken={metaWebhookVerifyToken}
-                onPhoneNumberIdChange={setMetaPhoneNumberId}
-                onAccessTokenChange={setMetaAccessToken}
-                onVerifyTokenChange={setMetaWebhookVerifyToken}
               />
             )}
 

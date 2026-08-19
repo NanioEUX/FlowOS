@@ -59,3 +59,27 @@ export async function POST(
     )
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+
+    await prisma.establishment.update({
+      where: { id },
+      data: {
+        metaPhoneNumberId: null,
+        metaAccessToken: null,
+        metaBusinessAccountId: null,
+        whatsappProvider: null,
+      },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error("[Meta Disconnect] Error:", error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
