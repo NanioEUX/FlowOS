@@ -63,6 +63,12 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
   // Listen for postMessage from Meta popup
   const handleMessage = useCallback(async (event: MessageEvent) => {
+    // Log ALL messages for debugging
+    const dataStr = typeof event.data === "string" ? event.data : JSON.stringify(event.data)
+    if (dataStr.includes("WA_EMBEDDED") || dataStr.includes("embedded") || dataStr.includes("phone_number") || dataStr.includes("waba")) {
+      console.log("[Meta Embedded Signup] Potential message:", event.origin, event.data)
+    }
+
     // Accept messages from Facebook domains
     const validOrigins = [
       "https://www.facebook.com",
@@ -160,9 +166,30 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     window.FB.login(
       (response: any) => {
-        console.log("[Meta Embedded Signup] FB.login response:", response)
+        console.log("[Meta Embedded Signup] FB.login FULL response:", JSON.stringify(response, null, 2))
         if (response.status === "connected") {
-          // Code comes via postMessage, wait for it
+          // Check if code is in the authResponse
+          if (response.authResponse?.code) {
+            console.log("[Meta Embedded Signup] Got code from authResponse:", response.authResponse.code)
+            // Send code to server directly
+            setLoading(true)
+            fetchAuth(`/api/establishments/${establishmentId}/meta-embedded-signup`, {
+              method: "POST",
+              body: JSON.stringify({ code: response.authResponse.code, phoneNumberId: null, wabaId: null }),
+            }).then(res => res.json()).then(data2 => {
+              console.log("[Meta Embedded Signup] Server response:", data2)
+              if (data2.success) {
+                setResult({ success: true, phone: data2.phoneNumber })
+                onComplete?.()
+              } else {
+                setResult({ success: false, error: data2.error })
+              }
+            }).catch(err => {
+              setResult({ success: false, error: "Erro ao salvar: " + err.message })
+            }).finally(() => setLoading(false))
+          } else {
+            console.log("[Meta Embedded Signup] Connected but no code in authResponse, waiting for postMessage...")
+          }
         } else if (response.status === "not_authorized" || response.status === "unknown") {
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
           setLoading(false)
