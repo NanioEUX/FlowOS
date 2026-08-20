@@ -264,6 +264,8 @@ export async function PATCH(
             evolutionApiKey: true,
             evolutionInstanceName: true,
             whatsappNumber: true,
+            metaPhoneNumberId: true,
+            metaAccessToken: true,
             botEnabled: true,
             botTypingDelayMinMs: true,
             botTypingDelayMaxMs: true,
@@ -295,6 +297,8 @@ export async function PATCH(
               evolutionApiKey: establishment.evolutionApiKey,
               evolutionInstanceName: establishment.evolutionInstanceName,
               whatsappNumber: establishment.whatsappNumber,
+              metaPhoneNumberId: establishment.metaPhoneNumberId,
+              metaAccessToken: establishment.metaAccessToken,
             })
             console.log(`[Order PATCH] Provider: ${provider ? 'OK' : 'NULL'}`)
             if (provider) {
@@ -384,6 +388,8 @@ export async function PATCH(
             evolutionApiKey: true,
             evolutionInstanceName: true,
             whatsappNumber: true,
+            metaPhoneNumberId: true,
+            metaAccessToken: true,
             botEnabled: true,
             botTypingDelayMinMs: true,
             botTypingDelayMaxMs: true,
@@ -397,6 +403,8 @@ export async function PATCH(
             evolutionApiKey: establishment.evolutionApiKey,
             evolutionInstanceName: establishment.evolutionInstanceName,
             whatsappNumber: establishment.whatsappNumber,
+            metaPhoneNumberId: establishment.metaPhoneNumberId,
+            metaAccessToken: establishment.metaAccessToken,
           })
           if (provider) {
             const dt = new Date(order.deliveryDate)

@@ -118,6 +118,8 @@ export async function POST(req: NextRequest) {
         evolutionApiKey: true,
         evolutionInstanceName: true,
         whatsappNumber: true,
+        metaPhoneNumberId: true,
+        metaAccessToken: true,
       },
     })
 
@@ -131,6 +133,8 @@ export async function POST(req: NextRequest) {
       "https://flowoshub.com"
     const verifyLink = `${appUrl}/${establishment.slug}?code=${code}&phone=${phoneDigits}`
 
+    console.log(`[VERIFICATION DEBUG] Provider config: whatsappProvider=${establishment.whatsappProvider}, metaPhoneNumberId=${establishment.metaPhoneNumberId}, metaAccessToken=${establishment.metaAccessToken ? establishment.metaAccessToken.substring(0, 20) + '...' : 'NULL'}`)
+
     // Send via WhatsApp (establishment's own or SaaS fallback)
     const provider = getWhatsAppProvider({
       whatsappProvider: establishment.whatsappProvider,
@@ -138,15 +142,18 @@ export async function POST(req: NextRequest) {
       evolutionApiKey: establishment.evolutionApiKey,
       evolutionInstanceName: establishment.evolutionInstanceName,
       whatsappNumber: establishment.whatsappNumber,
+      metaPhoneNumberId: establishment.metaPhoneNumberId,
+      metaAccessToken: establishment.metaAccessToken,
     })
+
+    console.log(`[VERIFICATION DEBUG] Provider created: ${provider ? 'OK (' + provider.constructor.name + ')' : 'NULL'}`)
 
     const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
 
     if (!provider) {
-      // Sem Evolution configurada: retorna o código direto na resposta (DEV).
-      // Quando configurar Evolution (SaaS ou do restaurante), o código vai pelo WhatsApp.
-      console.log(`[VERIFICATION] Code for ${phoneDigits}: ${code}`)
-      return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure Evolution para envio real." })
+      // Sem provider configurado: retorna o código direto na resposta (DEV).
+      console.log(`[VERIFICATION FALLBACK] Code for ${phoneDigits}: ${code} - NO PROVIDER`)
+      return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure provider para envio real." })
     }
 
     const result = await provider.sendText(phoneDigits, message, { delay: 1000 })

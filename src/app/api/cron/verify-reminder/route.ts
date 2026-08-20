@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
       evolutionApiKey: true,
       evolutionInstanceName: true,
       whatsappNumber: true,
+      metaPhoneNumberId: true,
+      metaAccessToken: true,
     },
   })
 
@@ -41,6 +43,8 @@ export async function GET(req: NextRequest) {
       evolutionApiKey: establishment.evolutionApiKey,
       evolutionInstanceName: establishment.evolutionInstanceName,
       whatsappNumber: establishment.whatsappNumber,
+      metaPhoneNumberId: establishment.metaPhoneNumberId,
+      metaAccessToken: establishment.metaAccessToken,
     })
     if (!provider) continue
 
