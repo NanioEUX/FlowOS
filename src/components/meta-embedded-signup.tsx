@@ -64,13 +64,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   }, [])
 
   const sendToServer = useCallback(async (code: string, phoneNumberId: string | null, wabaId: string | null) => {
-    const redirectUri = window.location.origin + "/"
+    const redirectUri = window.location.origin
     const debug: string[] = []
     debug.push("code=" + code.substring(0, 10) + "..., phone=" + phoneNumberId + ", waba=" + wabaId)
 
     const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
       method: "POST",
-      body: JSON.stringify({ code, phoneNumberId, wabaId, redirectUri }),
+      body: JSON.stringify({ code, phoneNumberId, wabaId, redirectUri, accessToken: pendingTokenRef.current || undefined }),
     })
 
     const data = await res.json()
@@ -94,7 +94,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     try {
       const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-discover", {
         method: "POST",
-        body: JSON.stringify({ code, redirectUri: window.location.origin + "/" }),
+        body: JSON.stringify({ code, redirectUri: window.location.origin }),
       })
 
       const data = await res.json()
@@ -130,7 +130,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
       const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
         method: "POST",
-        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, redirectUri: window.location.origin + "/", accessToken: pendingTokenRef.current }),
+        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, redirectUri: window.location.origin, accessToken: pendingTokenRef.current }),
       })
 
       const data = await res.json()

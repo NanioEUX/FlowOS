@@ -21,11 +21,13 @@ export async function POST(
 
     // Step 1: Exchange code for short-lived token
     console.log("[Meta Discover] Exchanging code. redirectUri:", redirectUri)
+    const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
     const redirectUris = [
-      redirectUri,
-      "https://flowoshub.com/",
+      origin,
+      origin + "/",
+      "https://www.facebook.com/connect/login/success.html",
       "",
-    ].filter(Boolean)
+    ]
 
     let shortToken: string | null = null
     for (const uri of redirectUris) {

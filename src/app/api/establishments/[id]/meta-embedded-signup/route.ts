@@ -29,12 +29,13 @@ export async function POST(
     } else {
       // Step 1: Exchange code for short-lived token
       console.log("[Meta Embedded Signup] Exchanging code. Received redirectUri:", redirectUri)
+      const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
       const redirectUris = [
-        redirectUri,
-        "https://flowoshub.com/",
+        origin,
+        origin + "/",
         "https://www.facebook.com/connect/login/success.html",
         "",
-      ].filter(Boolean)
+      ]
 
       let tokenData: any = null
       let tokenOk = false
