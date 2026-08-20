@@ -1471,7 +1471,7 @@ export default function ConfigPage() {
                   return (
                     <div className="mt-3">
                       <WhatsAppConnection
-                        establishmentId={establishmentId}
+                        establishmentId={establishmentId!}
                         evolutionBaseUrl={evolutionBaseUrl}
                         evolutionApiKey={evolutionApiKey}
                         evolutionInstanceName={evolutionInstanceName}
