@@ -85,7 +85,7 @@ function MetaConfig({
       <p className="text-xs text-zinc-500 mb-4">
         Clique em "Conectar WhatsApp" para abrir o popup da Meta. O fluxo automático funciona melhor no Chrome.
       </p>
-      <EmbeddedSignupButton onComplete={onRefresh} />
+      <EmbeddedSignupButton />
     </div>
   )
 }
