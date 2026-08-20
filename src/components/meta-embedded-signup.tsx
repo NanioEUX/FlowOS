@@ -27,7 +27,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingCodeRef = useRef<string | null>(null)
   const pendingTokenRef = useRef<string | null>(null)
-  const postMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (!META_APP_ID || fbInitRef.current) return
@@ -197,7 +196,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         console.log("[Meta Embedded Signup] Got WA_EMBEDDED_SIGNUP:", { phone_number_id, waba_id, hasCode: !!code, codeLength: code?.length })
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
-        if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
 
         const finalCode = code || pendingCodeRef.current
         if (!finalCode) {
@@ -223,7 +221,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       } else if (parsed.type === "WA_EMBEDDED_SIGNUP_CANCEL") {
         console.log("[Meta Embedded Signup] User cancelled")
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
-        if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
         setLoading(false)
         setResult({ success: false, error: "Conexao cancelada pelo usuario." })
       } else {
@@ -271,26 +268,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           console.log("[Meta Embedded Signup] User connected!")
           if (response.authResponse) {
             console.log("[Meta Embedded Signup] authResponse keys:", Object.keys(response.authResponse))
-            console.log("[Meta Embedded Signup] authResponse:", JSON.stringify(response.authResponse, null, 2))
 
             if (response.authResponse.code) {
               console.log("[Meta Embedded Signup] Got code from FB.login callback, length:", response.authResponse.code.length)
               pendingCodeRef.current = response.authResponse.code
-
-              console.log("[Meta Embedded Signup] Starting 8s timeout for postMessage...")
-              postMessageTimeoutRef.current = setTimeout(async () => {
-                if (pendingCodeRef.current) {
-                  console.log("[Meta Embedded Signup] TIMEOUT - postMessage NOT received after 8s, falling back to discover")
-                  const code = pendingCodeRef.current
-                  pendingCodeRef.current = null
-                  await fetchPhoneOptions(code)
-                } else {
-                  console.log("[Meta Embedded Signup] postMessage already received, skipping fallback")
-                }
-              }, 8000)
+              console.log("[Meta Embedded Signup] Code stored. Waiting for postMessage from popup...")
             } else {
-              console.log("[Meta Embedded Signup] Connected but NO code in authResponse - waiting for postMessage...")
-              console.log("[Meta Embedded Signup] authResponse:", JSON.stringify(response.authResponse))
+              console.log("[Meta Embedded Signup] Connected but NO code - waiting for postMessage...")
             }
           } else {
             console.log("[Meta Embedded Signup] Connected but NO authResponse!")
@@ -298,7 +282,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         } else if (response.status === "not_authorized" || response.status === "unknown") {
           console.log("[Meta Embedded Signup] Login cancelled or denied:", response.status)
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
-          if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
           setLoading(false)
           setResult({ success: false, error: "Login cancelado ou permissao negada." })
         } else {
