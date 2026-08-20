@@ -1382,17 +1382,22 @@ export default function ConfigPage() {
             )}
             </SaasOnly>
 
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-zinc-700">WhatsApp Provider</label>
-              <select
-                value={whatsappProvider || ""}
-                onChange={(e) => setWhatsappProvider(e.target.value === "" ? null : (e.target.value as "evolution" | "meta"))}
-                className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+            <div className="flex items-center justify-between rounded-lg border border-zinc-200 p-4">
+              <div>
+                <p className="text-sm font-medium text-zinc-900">WhatsApp via Meta</p>
+                <p className="text-xs text-zinc-500">Connect your WhatsApp number through Meta Cloud API</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWhatsappProvider(whatsappProvider === "meta" ? null : "meta")}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  whatsappProvider === "meta" ? "bg-green-600" : "bg-zinc-300"
+                }`}
               >
-                <option value="">Disabled</option>
-                <option value="evolution">Evolution API</option>
-                <option value="meta">Meta Cloud API</option>
-              </select>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  whatsappProvider === "meta" ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
             </div>
 
             <SaasOnly>
