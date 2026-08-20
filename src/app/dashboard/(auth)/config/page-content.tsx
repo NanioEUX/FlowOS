@@ -231,6 +231,12 @@ function MetaConfig({
   onRefresh?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualPhoneId, setManualPhoneId] = useState("")
+  const [manualToken, setManualToken] = useState("")
+  const [manualWabaId, setManualWabaId] = useState("")
+  const [manualSaving, setManualSaving] = useState(false)
+  const [manualResult, setManualResult] = useState<{ success: boolean; error?: string } | null>(null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
@@ -249,6 +255,33 @@ function MetaConfig({
     }
   }
 
+  const handleManualConnect = async () => {
+    if (!establishmentId || !manualPhoneId || !manualToken) return
+    setManualSaving(true)
+    setManualResult(null)
+    try {
+      const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-connect`, {
+        method: "POST",
+        body: JSON.stringify({
+          metaPhoneNumberId: manualPhoneId,
+          metaAccessToken: manualToken,
+          metaBusinessAccountId: manualWabaId || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (data.connected) {
+        setManualResult({ success: true })
+        onRefresh?.()
+      } else {
+        setManualResult({ success: false, error: data.error || "Falha ao conectar" })
+      }
+    } catch (e: any) {
+      setManualResult({ success: false, error: e.message })
+    } finally {
+      setManualSaving(false)
+    }
+  }
+
   if (isConnected) {
     return (
       <div className="space-y-3">
@@ -262,7 +295,7 @@ function MetaConfig({
                 <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
               </div>
               <p className="mt-1 text-xs text-green-700">
-                Meta Cloud API ativa via Embedded Signup.
+                Meta Cloud API ativa.
               </p>
             </div>
             <button
@@ -283,9 +316,74 @@ function MetaConfig({
     <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
       <h4 className="text-sm font-semibold text-zinc-700">Meta Cloud API</h4>
       <p className="text-xs text-zinc-500">
-        Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
+        Conecte sua conta Meta para usar o WhatsApp Cloud API.
       </p>
       <EmbeddedSignupButton onComplete={onRefresh} />
+
+      <div className="border-t border-zinc-200 pt-3">
+        <button
+          onClick={() => setManualMode(!manualMode)}
+          className="text-xs text-zinc-500 hover:text-zinc-700 underline"
+        >
+          {manualMode ? "Ocultar conexão manual" : "Conectar manualmente (sem popup)"}
+        </button>
+
+        {manualMode && (
+          <div className="mt-3 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs text-amber-800">
+              Cole os dados do seu app Meta. Acesse{" "}
+              <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                developers.facebook.com
+              </a>{" "}
+              → seu app → WhatsApp → Configuração da API.
+            </p>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-zinc-700">Phone Number ID</label>
+              <input
+                type="text"
+                placeholder="Ex: 123456789012345"
+                value={manualPhoneId}
+                onChange={(e) => setManualPhoneId(e.target.value)}
+                className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-zinc-700">Access Token</label>
+              <input
+                type="password"
+                placeholder="EAAx..."
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-zinc-700">WABA ID <span className="text-zinc-400">(opcional)</span></label>
+              <input
+                type="text"
+                placeholder="WhatsApp Business Account ID"
+                value={manualWabaId}
+                onChange={(e) => setManualWabaId(e.target.value)}
+                className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              />
+            </div>
+
+            {manualResult && (
+              <div className={"rounded-lg border p-2 text-xs " + (manualResult.success ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-900")}>
+                {manualResult.success ? "✓ Conectado com sucesso!" : manualResult.error}
+              </div>
+            )}
+
+            <button
+              onClick={handleManualConnect}
+              disabled={manualSaving || !manualPhoneId || !manualToken}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {manualSaving ? "Conectando..." : "Conectar"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
