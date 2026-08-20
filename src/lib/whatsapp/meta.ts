@@ -1,4 +1,4 @@
-import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions } from "./provider"
+import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions, SendVerificationOptions } from "./provider"
 
 interface MetaCloudConfig {
   phoneNumberId: string
@@ -21,19 +21,19 @@ export class MetaCloudProvider implements WhatsAppProvider {
     return `https://graph.facebook.com/${this.apiVersion}`
   }
 
+  private formatPhone(phone: string): string {
+    let phoneDigits = phone.replace(/\D/g, "")
+    if (phoneDigits.length === 10 || phoneDigits.length === 11) {
+      phoneDigits = "55" + phoneDigits
+    } else if (phoneDigits.length === 12 && !phoneDigits.startsWith("55")) {
+      phoneDigits = "55" + phoneDigits
+    }
+    return phoneDigits
+  }
+
   async sendText(phone: string, text: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      let phoneDigits = phone.replace(/\D/g, "")
-
-      // Ensure international format with country code (55 for Brazil)
-      if (phoneDigits.length === 10 || phoneDigits.length === 11) {
-        // Local number without country code: 47984118220 or 984118220
-        phoneDigits = "55" + phoneDigits
-      } else if (phoneDigits.length === 12 && !phoneDigits.startsWith("55")) {
-        // 12 digits without country code prefix
-        phoneDigits = "55" + phoneDigits
-      }
-
+      const phoneDigits = this.formatPhone(phone)
       console.log(`[MetaCloud] Sending to: ${phoneDigits} (original: ${phone})`)
 
       const body: any = {
@@ -66,6 +66,50 @@ export class MetaCloudProvider implements WhatsAppProvider {
       return { success: true, messageId: data.messages?.[0]?.id }
     } catch (err: any) {
       console.error("[MetaCloud] sendText exception:", err)
+      return { success: false, error: err.message }
+    }
+  }
+
+  async sendVerificationCode(phone: string, options: SendVerificationOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const phoneDigits = this.formatPhone(phone)
+      console.log(`[MetaCloud] Sending verification code to: ${phoneDigits}`)
+
+      const body: any = {
+        messaging_product: "whatsapp",
+        to: phoneDigits,
+        type: "interactive",
+        interactive: {
+          type: "cta_copy",
+          body: {
+            text: `🔐 *${options.establishmentName}* - Verificação\n\nSeu código de confirmação é:\n\n*${options.code}*\n\n⏱️ Expira em ${options.expiresInMinutes} minutos.`
+          },
+          action: {
+            display_text: "Copiar Código",
+            copy_code_text: options.code,
+          },
+        },
+      }
+
+      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        console.error("[MetaCloud] sendVerificationCode error:", data)
+        return { success: false, error: data.error?.message || "Failed to send verification code" }
+      }
+
+      return { success: true, messageId: data.messages?.[0]?.id }
+    } catch (err: any) {
+      console.error("[MetaCloud] sendVerificationCode exception:", err)
       return { success: false, error: err.message }
     }
   }
