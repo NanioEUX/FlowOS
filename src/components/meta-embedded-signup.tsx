@@ -90,6 +90,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     setLoading(true)
     setResult(null)
     debug.push("Buscando WABAs e telefones disponiveis...")
+    console.log("[Meta Discover] Starting discover flow, code length:", code.length)
 
     try {
       const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-discover", {
@@ -97,21 +98,26 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         body: JSON.stringify({ code, redirectUri: window.location.origin }),
       })
 
+      console.log("[Meta Discover] Response status:", res.status)
       const data = await res.json()
       debug.push("Discover: " + JSON.stringify(data))
-      console.log("[Meta Embedded Signup] Discover response:", data)
+      console.log("[Meta Discover] Response data:", JSON.stringify(data, null, 2))
 
       if (data.success && data.phones && data.phones.length > 0) {
+        console.log("[Meta Discover] SUCCESS - Found", data.phones.length, "phones")
         setPhoneOptions(data.phones)
         setSelectingPhone(true)
         pendingTokenRef.current = data.accessToken
         setResult(null)
       } else if (data.success && data.phones && data.phones.length === 0) {
+        console.log("[Meta Discover] NO PHONES FOUND - Account has no WhatsApp numbers")
         setResult({ success: false, error: "Nenhum numero de WhatsApp encontrado na conta Meta.", debug })
       } else {
+        console.log("[Meta Discover] FAILED:", data.error)
         setResult({ success: false, error: data.error || "Falha ao buscar telefones", debug })
       }
     } catch (err: any) {
+      console.log("[Meta Discover] EXCEPTION:", err.message)
       setResult({ success: false, error: "Erro ao buscar telefones: " + err.message, debug })
     } finally {
       setLoading(false)
@@ -153,15 +159,23 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
   const handleMessage = useCallback(async (event: MessageEvent) => {
     const dataStr = typeof event.data === "string" ? event.data : JSON.stringify(event.data)
+    console.log("[Meta Embedded Signup] *** ALL MESSAGES *** origin:", event.origin, "data:", dataStr.substring(0, 500))
+
     if (dataStr.includes("WA_EMBEDDED") || dataStr.includes("embedded") || dataStr.includes("phone_number") || dataStr.includes("waba")) {
       console.log("[Meta Embedded Signup] Potential message:", event.origin, event.data)
     }
 
     const validOrigins = ["https://www.facebook.com", "https://facebook.com"]
-    if (!validOrigins.includes(event.origin)) return
+    if (!validOrigins.includes(event.origin)) {
+      console.log("[Meta Embedded Signup] REJECTED - origin not valid:", event.origin, "valid:", validOrigins)
+      return
+    }
 
     const data = event.data
-    if (!data) return
+    if (!data) {
+      console.log("[Meta Embedded Signup] REJECTED - no data")
+      return
+    }
 
     console.log("[Meta Embedded Signup] Received message:", event.origin, data)
 
@@ -172,23 +186,28 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       } else if (typeof data === "object") {
         parsed = data
       } else {
+        console.log("[Meta Embedded Signup] REJECTED - unknown data type:", typeof data)
         return
       }
 
+      console.log("[Meta Embedded Signup] Parsed message type:", parsed.type, "keys:", Object.keys(parsed))
+
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
         const { phone_number_id, waba_id, code } = parsed.data
-        console.log("[Meta Embedded Signup] Got data:", { phone_number_id, waba_id, hasCode: !!code })
+        console.log("[Meta Embedded Signup] Got WA_EMBEDDED_SIGNUP:", { phone_number_id, waba_id, hasCode: !!code, codeLength: code?.length })
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
         if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
 
         const finalCode = code || pendingCodeRef.current
         if (!finalCode) {
+          console.log("[Meta Embedded Signup] ERROR - no code available. pendingCodeRef:", !!pendingCodeRef.current)
           setResult({ success: false, error: "Codigo nao recebido do Meta" })
           setLoading(false)
           return
         }
 
+        console.log("[Meta Embedded Signup] Sending to server...")
         pendingCodeRef.current = null
         setLoading(true)
         setResult(null)
@@ -196,21 +215,22 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         try {
           await sendToServer(finalCode, phone_number_id || null, waba_id || null)
         } catch (err: any) {
+          console.log("[Meta Embedded Signup] ERROR sending to server:", err.message)
           setResult({ success: false, error: "Erro ao salvar: " + err.message })
         } finally {
           setLoading(false)
         }
-      }
-
-      if (parsed.type === "WA_EMBEDDED_SIGNUP_CANCEL") {
+      } else if (parsed.type === "WA_EMBEDDED_SIGNUP_CANCEL") {
         console.log("[Meta Embedded Signup] User cancelled")
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
         if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
         setLoading(false)
         setResult({ success: false, error: "Conexao cancelada pelo usuario." })
+      } else {
+        console.log("[Meta Embedded Signup] Unknown message type:", parsed.type)
       }
-    } catch (err) {
-      // ignore
+    } catch (err: any) {
+      console.log("[Meta Embedded Signup] Parse error:", err.message, "raw:", dataStr.substring(0, 300))
     }
   }, [sendToServer])
 
@@ -220,11 +240,18 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   }, [handleMessage])
 
   const handleConnect = () => {
+    console.log("[Meta Embedded Signup] ===== BUTTON CLICKED =====")
+    console.log("[Meta Embedded Signup] FB SDK loaded:", !!window.FB)
+    console.log("[Meta Embedded Signup] META_APP_ID:", META_APP_ID)
+    console.log("[Meta Embedded Signup] META_CONFIG_ID:", META_CONFIG_ID)
+
     if (!window.FB) {
+      console.log("[Meta Embedded Signup] ERROR - FB SDK not loaded")
       setResult({ success: false, error: "SDK do Facebook nao carregou. Recarregue a pagina." })
       return
     }
 
+    console.log("[Meta Embedded Signup] Calling FB.login with config_id:", META_CONFIG_ID)
     setResult(null)
     setLoading(true)
     pendingCodeRef.current = null
@@ -236,29 +263,46 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     window.FB.login(
       (response: any) => {
+        console.log("[Meta Embedded Signup] FB.login callback received")
+        console.log("[Meta Embedded Signup] FB.login status:", response.status)
         console.log("[Meta Embedded Signup] FB.login response:", JSON.stringify(response, null, 2))
 
         if (response.status === "connected") {
-          if (response.authResponse && response.authResponse.code) {
-            console.log("[Meta Embedded Signup] Got code from FB.login callback")
-            pendingCodeRef.current = response.authResponse.code
+          console.log("[Meta Embedded Signup] User connected!")
+          if (response.authResponse) {
+            console.log("[Meta Embedded Signup] authResponse keys:", Object.keys(response.authResponse))
+            console.log("[Meta Embedded Signup] authResponse:", JSON.stringify(response.authResponse, null, 2))
 
-            postMessageTimeoutRef.current = setTimeout(async () => {
-              if (pendingCodeRef.current) {
-                console.log("[Meta Embedded Signup] postMessage not received, discovering phones via Graph API")
-                const code = pendingCodeRef.current
-                pendingCodeRef.current = null
-                await fetchPhoneOptions(code)
-              }
-            }, 8000)
+            if (response.authResponse.code) {
+              console.log("[Meta Embedded Signup] Got code from FB.login callback, length:", response.authResponse.code.length)
+              pendingCodeRef.current = response.authResponse.code
+
+              console.log("[Meta Embedded Signup] Starting 8s timeout for postMessage...")
+              postMessageTimeoutRef.current = setTimeout(async () => {
+                if (pendingCodeRef.current) {
+                  console.log("[Meta Embedded Signup] TIMEOUT - postMessage NOT received after 8s, falling back to discover")
+                  const code = pendingCodeRef.current
+                  pendingCodeRef.current = null
+                  await fetchPhoneOptions(code)
+                } else {
+                  console.log("[Meta Embedded Signup] postMessage already received, skipping fallback")
+                }
+              }, 8000)
+            } else {
+              console.log("[Meta Embedded Signup] Connected but NO code in authResponse - waiting for postMessage...")
+              console.log("[Meta Embedded Signup] authResponse:", JSON.stringify(response.authResponse))
+            }
           } else {
-            console.log("[Meta Embedded Signup] Connected but no code, waiting for postMessage...")
+            console.log("[Meta Embedded Signup] Connected but NO authResponse!")
           }
         } else if (response.status === "not_authorized" || response.status === "unknown") {
+          console.log("[Meta Embedded Signup] Login cancelled or denied:", response.status)
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
           if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
           setLoading(false)
           setResult({ success: false, error: "Login cancelado ou permissao negada." })
+        } else {
+          console.log("[Meta Embedded Signup] Unknown status:", response.status)
         }
       },
       {
