@@ -133,7 +133,7 @@ function WhatsAppConnection({
             <div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
-                  ✓ CONECTADO
+                ✓ CONNECTED
                 </span>
                 {whatsappNumber && (
                   <span className="text-sm font-medium text-green-900">
@@ -232,7 +232,7 @@ function MetaConfig({
 
   const handleDisconnect = async () => {
     if (!establishmentId) return
-    if (!confirm("Desconectar Meta WhatsApp? O bot vai parar de responder.")) return
+    if (!confirm("Disconnect Meta WhatsApp? The bot will stop responding.")) return
     setDisconnecting(true)
     try {
       await fetchAuth(`/api/establishments/${establishmentId}/meta-connect`, {
@@ -240,7 +240,7 @@ function MetaConfig({
       })
       window.location.reload()
     } catch (e: any) {
-      alert("Erro ao desconectar: " + e.message)
+      alert("Error disconnecting: " + e.message)
     } finally {
       setDisconnecting(false)
     }
@@ -258,7 +258,7 @@ function MetaConfig({
               <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
             </div>
             <p className="mt-1 text-xs text-green-700">
-              Meta Cloud API ativa via Embedded Signup.
+              Meta Cloud API active via Embedded Signup.
             </p>
           </div>
           <button
@@ -266,7 +266,7 @@ function MetaConfig({
             disabled={disconnecting}
             className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
           >
-            {disconnecting ? "Desconectando..." : "Desconectar"}
+            {disconnecting ? "Disconnecting..." : "Disconnect"}
           </button>
         </div>
       </div>
@@ -277,7 +277,7 @@ function MetaConfig({
     <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
       <h4 className="text-sm font-semibold text-zinc-700">Meta Cloud API</h4>
       <p className="text-xs text-zinc-500">
-        Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
+        Connect your Meta account to use the WhatsApp Cloud API. You'll log in with your Facebook account and Meta configures everything automatically.
       </p>
       <EmbeddedSignupButton />
     </div>

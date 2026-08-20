@@ -110,14 +110,14 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setResult(null)
       } else if (data.success && data.phones && data.phones.length === 0) {
         console.log("[Meta Discover] NO PHONES FOUND - Account has no WhatsApp numbers")
-        setResult({ success: false, error: "Nenhum numero de WhatsApp encontrado na conta Meta.", debug })
+        setResult({ success: false, error: "No WhatsApp number found in the Meta account.", debug })
       } else {
         console.log("[Meta Discover] FAILED:", data.error)
-        setResult({ success: false, error: data.error || "Falha ao buscar telefones", debug })
+        setResult({ success: false, error: data.error || "Failed to fetch phone numbers", debug })
       }
     } catch (err: any) {
       console.log("[Meta Discover] EXCEPTION:", err.message)
-      setResult({ success: false, error: "Erro ao buscar telefones: " + err.message, debug })
+      setResult({ success: false, error: "Error fetching phone numbers: " + err.message, debug })
     } finally {
       setLoading(false)
     }
@@ -145,10 +145,10 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setResult({ success: true, phone: data.phoneNumber || phone.display_phone_number, debug })
         onComplete?.()
       } else {
-        setResult({ success: false, error: data.error || "Erro ao salvar", debug })
+        setResult({ success: false, error: data.error || "Error saving", debug })
       }
     } catch (err: any) {
-      setResult({ success: false, error: "Erro ao salvar: " + err.message })
+          setResult({ success: false, error: "Error saving: " + err.message })
     } finally {
       setLoading(false)
       pendingCodeRef.current = null
@@ -207,7 +207,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         const finalCode = code || pendingCodeRef.current
         if (!finalCode) {
           console.log("[Meta Embedded Signup] ERROR - no code available. pendingCodeRef:", !!pendingCodeRef.current)
-          setResult({ success: false, error: "Codigo nao recebido do Meta" })
+          setResult({ success: false, error: "Code not received from Meta" })
           setLoading(false)
           return
         }
@@ -221,7 +221,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           await sendToServer(finalCode, phoneNumberId || null, wabaId || null)
         } catch (err: any) {
           console.log("[Meta Embedded Signup] ERROR sending to server:", err.message)
-          setResult({ success: false, error: "Erro ao salvar: " + err.message })
+      setResult({ success: false, error: "Error saving: " + err.message })
         } finally {
           setLoading(false)
         }
@@ -229,7 +229,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         console.log("[Meta Embedded Signup] User cancelled")
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
         setLoading(false)
-        setResult({ success: false, error: "Conexao cancelada pelo usuario." })
+          setResult({ success: false, error: "Connection cancelled by user." })
       } else {
         console.log("[Meta Embedded Signup] Unknown message type:", parsed.type)
       }
@@ -251,7 +251,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     if (!window.FB) {
       console.log("[Meta Embedded Signup] ERROR - FB SDK not loaded")
-      setResult({ success: false, error: "SDK do Facebook nao carregou. Recarregue a pagina." })
+      setResult({ success: false, error: "Facebook SDK did not load. Please reload the page." })
       return
     }
 
@@ -262,7 +262,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     loadingTimeoutRef.current = setTimeout(() => {
       setLoading(false)
-      setResult({ success: false, error: "Tempo esgotado. Tente novamente." })
+      setResult({ success: false, error: "Connection timed out. Please try again." })
     }, 120000)
 
     window.FB.login(
@@ -290,7 +290,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           console.log("[Meta Embedded Signup] Login cancelled or denied:", response.status)
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
           setLoading(false)
-          setResult({ success: false, error: "Login cancelado ou permissao negada." })
+          setResult({ success: false, error: "Login cancelled or permission denied." })
         } else {
           console.log("[Meta Embedded Signup] Unknown status:", response.status)
         }
@@ -310,7 +310,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <p className="text-sm text-amber-900">
-          Embedded Signup nao configurado. Defina NEXT_PUBLIC_META_APP_ID e NEXT_PUBLIC_META_CONFIG_ID no Vercel.
+          Embedded Signup not configured. Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_CONFIG_ID in Vercel.
         </p>
       </div>
     )
@@ -320,7 +320,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     return (
       <div className="space-y-3">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-          Selecione qual numero de WhatsApp conectar:
+          Select which WhatsApp number to connect:
         </div>
         {phoneOptions.map((phone) => (
           <button
@@ -336,7 +336,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           onClick={() => { setSelectingPhone(false); setPhoneOptions([]); setLoading(false); setResult(null) }}
           className="text-xs text-zinc-500 hover:text-zinc-700"
         >
-          Cancelar
+          Cancel
         </button>
       </div>
     )
@@ -355,7 +355,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           {result.success ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
-              <span>WhatsApp conectado!{result.phone && (" " + result.phone)}</span>
+              <span>WhatsApp connected!{result.phone && (" " + result.phone)}</span>
             </div>
           ) : (
             <div>
@@ -384,15 +384,15 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         ) : (
           <Plug className="h-4 w-4" />
         )}
-        {loading ? "Conectando..." : "Conectar WhatsApp via Meta"}
+        {loading ? "Connecting..." : "Connect WhatsApp via Meta"}
       </button>
 
       <p className="text-xs text-zinc-500">
-        Faca login com sua conta Facebook e selecione o numero de WhatsApp Business.
+        Log in with your Facebook account and select the WhatsApp Business number.
       </p>
 
       <div className="text-[10px] text-zinc-400">
-        SDK: {sdkReady ? "ok" : "carregando..."} | App: {META_APP_ID ? "ok" : "falta"} | Config: {META_CONFIG_ID ? "ok" : "falta"}
+        SDK: {sdkReady ? "ok" : "loading..."} | App: {META_APP_ID ? "ok" : "missing"} | Config: {META_CONFIG_ID ? "ok" : "missing"}
       </div>
     </div>
   )

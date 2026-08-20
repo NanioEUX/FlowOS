@@ -54,7 +54,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
   if (loading) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
-        Carregando cota da Meta...
+        Loading Meta quota...
       </div>
     )
   }
@@ -78,7 +78,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-zinc-900">
-          📊 Cota Meta — {quota.tier}
+          📊 Meta Quota — {quota.tier}
         </h4>
         <button
           onClick={refreshQuota}
@@ -92,7 +92,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
       {/* Progress bar */}
       <div>
         <div className="flex items-center justify-between text-xs text-zinc-600 mb-1">
-          <span>{quota.currentUsage} / {quota.messagingLimit} conversas</span>
+          <span>{quota.currentUsage} / {quota.messagingLimit} conversations</span>
           <span>{quota.usagePercent}%</span>
         </div>
         <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
@@ -105,7 +105,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
 
       {/* Cost */}
       <p className="text-xs text-zinc-600">
-        💰 Gasto estimado no mês: <strong>R$ {quota.estimatedCost.toFixed(2)}</strong>
+        💰 Estimated monthly cost: <strong>${quota.estimatedCost.toFixed(2)}</strong>
       </p>
 
       {/* Warning state */}
@@ -114,8 +114,8 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
           <div className="flex items-start gap-2 text-xs text-yellow-800">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p>
-              Você já utilizou <strong>{quota.usagePercent}%</strong> da sua cota diária de {quota.messagingLimit} mensagens.
-              Para expandir seu limite, envie os documentos da empresa (CNPJ) e adicione um método de pagamento.
+              You have used <strong>{quota.usagePercent}%</strong> of your daily quota of {quota.messagingLimit} messages.
+              To expand your limit, submit your company documents (CNPJ) and add a payment method.
             </p>
           </div>
           {quota.metaManagerUrl && (
@@ -126,7 +126,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 rounded-lg bg-yellow-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-yellow-700"
               >
-                Configurar na Meta <ExternalLink className="h-3 w-3" />
+                Configure in Meta <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           )}
@@ -139,8 +139,8 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
           <div className="flex items-start gap-2 text-xs text-red-800">
             <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <p>
-              <strong>Limite diário atingido.</strong> Envios ativos pausados até amanhã.
-              Para liberar envios ilimitados, ative sua conta com CNPJ e adicione um cartão na Meta.
+              <strong>Daily limit reached.</strong> Active sends paused until tomorrow.
+              To enable unlimited sends, activate your account with CNPJ and add a card in Meta.
             </p>
           </div>
           {quota.metaManagerUrl && (
@@ -150,7 +150,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
             >
-              Ativar conta na Meta <ExternalLink className="h-3 w-3" />
+              Activate account in Meta <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
