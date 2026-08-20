@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug } from "lucide-react"
+import { MetaQuotaCard } from "@/components/meta-quota-card"
 import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -248,27 +249,30 @@ function MetaConfig({
 
   if (isConnected) {
     return (
-      <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
-                ✓ CONECTADO
-              </span>
-              <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
+      <div className="space-y-3">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                  ✓ CONECTADO
+                </span>
+                <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
+              </div>
+              <p className="mt-1 text-xs text-green-700">
+                Meta Cloud API ativa via Embedded Signup.
+              </p>
             </div>
-            <p className="mt-1 text-xs text-green-700">
-              Meta Cloud API ativa via Embedded Signup.
-            </p>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
+            >
+              {disconnecting ? "Desconectando..." : "Desconectar"}
+            </button>
           </div>
-          <button
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-            className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
-          >
-            {disconnecting ? "Desconectando..." : "Desconectar"}
-          </button>
         </div>
+        {establishmentId && <MetaQuotaCard establishmentId={establishmentId} />}
       </div>
     )
   }

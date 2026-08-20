@@ -98,6 +98,29 @@ export async function POST(req: NextRequest) {
       const changes = entry?.changes?.[0]
       const value = changes?.value
 
+      // Handle status updates (delivery, read, errors)
+      if (value?.statuses?.[0]) {
+        const status = value.statuses[0]
+        const phoneNumberId = value.metadata?.phone_number_id
+
+        // Error 131048: messaging limit reached
+        if (status.errors?.[0]?.code === 131048 && phoneNumberId) {
+          console.warn(`[Meta Webhook] Quota limit error 131048 for phone ${phoneNumberId}`)
+          // Find establishment and update usage status
+          const est = await prisma.establishment.findFirst({
+            where: { metaPhoneNumberId: phoneNumberId },
+            select: { id: true },
+          })
+          if (est) {
+            await prisma.establishment.update({
+              where: { id: est.id },
+              data: { messagingLimit: 250, currentUsage: 250 },
+            })
+          }
+        }
+        return NextResponse.json({ success: true, statusHandled: true })
+      }
+
       if (!value?.messages?.[0]) {
         return NextResponse.json({ success: true, ignored: true })
       }

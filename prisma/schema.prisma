@@ -34,6 +34,11 @@ model Establishment {
   metaAccessToken     String?
   metaWebhookVerifyToken String?
   metaBusinessAccountId String?
+  // Meta quota monitoring
+  messagingLimit        Int?              // TIER_250, TIER_1K, etc
+  currentUsage          Int?              @default(0)
+  estimatedCostMonth    Float?            @default(0)
+  lastQuotaCheck        DateTime?
   // Bot
   botEnabled          Boolean           @default(false)
   botAgentName        String?           @default("Atendente")
