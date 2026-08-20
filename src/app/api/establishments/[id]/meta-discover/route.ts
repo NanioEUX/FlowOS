@@ -19,8 +19,6 @@ export async function POST(
       return NextResponse.json({ success: false, error: "META_APP_ID e META_APP_SECRET nao configurados" }, { status: 500 })
     }
 
-    // Step 1: Exchange code for short-lived token
-    console.log("[Meta Discover] Exchanging code. redirectUri:", redirectUri)
     const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
     const redirectUris = [
       origin,
@@ -38,10 +36,10 @@ export async function POST(
       const tokenData = await tokenRes.json()
       if (tokenRes.ok && tokenData.access_token) {
         shortToken = tokenData.access_token
-        console.log("[Meta Discover] Token exchange OK with redirect_uri:", uri)
+        console.log("[Meta Discover] Token OK with redirect_uri:", uri)
         break
       } else {
-        console.log("[Meta Discover] Failed with redirect_uri:", uri, "-", tokenData.error?.message)
+        console.log("[Meta Discover] Failed:", uri, "-", tokenData.error?.message)
       }
     }
 
@@ -49,7 +47,6 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Falha ao trocar codigo por token" }, { status: 400 })
     }
 
-    // Step 2: Exchange for long-lived token
     const longTokenRes = await fetch(
       "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&fb_exchange_token=" + shortToken,
       { method: "GET" }
@@ -57,44 +54,89 @@ export async function POST(
     const longTokenData = await longTokenRes.json()
     const accessToken = longTokenData.access_token || shortToken
 
-    // Step 3: Get user's WhatsApp Business Accounts
-    const wabaRes = await fetch(
-      "https://graph.facebook.com/v21.0/me/whatsapp_business_accounts?fields=id,name,account_review_status",
-      { headers: { Authorization: "Bearer " + accessToken } }
-    )
-    const wabaData = await wabaRes.json()
-    console.log("[Meta Discover] WABAs:", JSON.stringify(wabaData))
-
-    if (!wabaData.data || wabaData.data.length === 0) {
-      return NextResponse.json({
-        success: true,
-        accessToken,
-        phones: [],
-        message: "Nenhuma conta WhatsApp Business encontrada",
-      })
-    }
-
-    // Step 4: Get phone numbers from each WABA
     const phones: Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }> = []
 
-    for (const waba of wabaData.data) {
-      const phoneRes = await fetch(
-        "https://graph.facebook.com/v21.0/" + waba.id + "/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=100",
-        { headers: { Authorization: "Bearer " + accessToken } }
-      )
-      const phoneData = await phoneRes.json()
-      console.log("[Meta Discover] Phones for WABA", waba.id, ":", JSON.stringify(phoneData))
+    const headers = { Authorization: "Bearer " + accessToken }
 
-      if (phoneData.data) {
-        for (const phone of phoneData.data) {
-          phones.push({
-            id: phone.id,
-            display_phone_number: phone.display_phone_number,
-            verified_name: phone.verified_name || waba.name,
-            waba_id: waba.id,
-          })
+    // Method 1: Direct WABAs
+    const wabaRes = await fetch(
+      "https://graph.facebook.com/v21.0/me/whatsapp_business_accounts?fields=id,name,account_review_status",
+      { headers }
+    )
+    const wabaData = await wabaRes.json()
+    console.log("[Meta Discover] Direct WABAs:", JSON.stringify(wabaData))
+
+    if (wabaData.data && wabaData.data.length > 0) {
+      for (const waba of wabaData.data) {
+        const phoneRes = await fetch(
+          "https://graph.facebook.com/v21.0/" + waba.id + "/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=100",
+          { headers }
+        )
+        const phoneData = await phoneRes.json()
+        console.log("[Meta Discover] Phones for WABA", waba.id, ":", JSON.stringify(phoneData))
+        if (phoneData.data) {
+          for (const phone of phoneData.data) {
+            phones.push({
+              id: phone.id,
+              display_phone_number: phone.display_phone_number,
+              verified_name: phone.verified_name || waba.name,
+              waba_id: waba.id,
+            })
+          }
         }
       }
+    }
+
+    // Method 2: Via business accounts (if no phones found yet)
+    if (phones.length === 0) {
+      console.log("[Meta Discover] No direct WABAs, trying via business accounts...")
+      const bizRes = await fetch(
+        "https://graph.facebook.com/v21.0/me?fields=businesses{id,name}",
+        { headers }
+      )
+      const bizData = await bizRes.json()
+      console.log("[Meta Discover] Businesses:", JSON.stringify(bizData))
+
+      const businesses = bizData.businesses?.data || []
+      for (const biz of businesses) {
+        const bizWabaRes = await fetch(
+          "https://graph.facebook.com/v21.0/" + biz.id + "/owned_whatsapp_business_accounts?fields=id,name,account_review_status&limit=100",
+          { headers }
+        )
+        const bizWabaData = await bizWabaRes.json()
+        console.log("[Meta Discover] WABAs for biz", biz.id, ":", JSON.stringify(bizWabaData))
+
+        if (bizWabaData.data) {
+          for (const waba of bizWabaData.data) {
+            const phoneRes = await fetch(
+              "https://graph.facebook.com/v21.0/" + waba.id + "/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=100",
+              { headers }
+            )
+            const phoneData = await phoneRes.json()
+            if (phoneData.data) {
+              for (const phone of phoneData.data) {
+                phones.push({
+                  id: phone.id,
+                  display_phone_number: phone.display_phone_number,
+                  verified_name: phone.verified_name || waba.name,
+                  waba_id: waba.id,
+                })
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Method 3: Shared WABAs via app (if still nothing)
+    if (phones.length === 0) {
+      console.log("[Meta Discover] Trying shared WABAs via debug_token...")
+      const debugRes = await fetch(
+        "https://graph.facebook.com/v21.0/debug_token?input_token=" + accessToken + "&access_token=" + META_APP_ID + "|" + META_APP_SECRET,
+        { method: "GET" }
+      )
+      const debugData = await debugRes.json()
+      console.log("[Meta Discover] Token debug:", JSON.stringify(debugData))
     }
 
     console.log("[Meta Discover] Total phones found:", phones.length)
