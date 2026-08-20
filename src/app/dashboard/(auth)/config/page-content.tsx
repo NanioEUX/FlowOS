@@ -1401,6 +1401,7 @@ export default function ConfigPage() {
                 </button>
               </div>
 
+              {/* Evolution API - ocultado temporariamente
               <div className="flex items-center justify-between rounded-lg border border-zinc-200 p-4">
                 <div>
                   <p className="text-sm font-medium text-zinc-900">Evolution API</p>
@@ -1418,10 +1419,11 @@ export default function ConfigPage() {
                   }`} />
                 </button>
               </div>
+              */}
             </div>
 
             <SaasOnly>
-            {whatsappProvider === "evolution" && (
+            {false && whatsappProvider === "evolution" && (
               <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
                 <h4 className="text-sm font-semibold text-zinc-700">Evolution API</h4>
                 <div className="space-y-1">
