@@ -48,7 +48,7 @@ export async function POST(
       const tokenData = await tokenRes.json()
       console.log("[Meta Discover] Token response:", JSON.stringify(tokenData))
       if (tokenRes.ok && tokenData.access_token) {
-        shortToken = tokenData.access_token
+        shortToken = tokenData.access_token as string
         console.log("[Meta Discover] Token OK with redirect_uri:", uri, "token length:", shortToken.length)
         break
       } else {
