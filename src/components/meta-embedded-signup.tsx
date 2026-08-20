@@ -192,8 +192,15 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       console.log("[Meta Embedded Signup] Parsed message type:", parsed.type, "keys:", Object.keys(parsed))
 
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
-        const { phone_number_id, waba_id, code } = parsed.data
-        console.log("[Meta Embedded Signup] Got WA_EMBEDDED_SIGNUP:", { phone_number_id, waba_id, hasCode: !!code, codeLength: code?.length })
+        const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, code } = parsed.data
+        const phoneNumberId = phone_number_id || phoneId
+        const wabaId = waba_id || whatsappBusinessAccountId
+        console.log("[Meta Embedded Signup] Got WA_EMBEDDED_SIGNUP:", {
+          phone_number_id, phoneId, waba_id, whatsappBusinessAccountId,
+          resolved: { phoneNumberId, wabaId },
+          hasCode: !!code, codeLength: code?.length,
+          dataKeys: Object.keys(parsed.data),
+        })
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
@@ -211,7 +218,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setResult(null)
 
         try {
-          await sendToServer(finalCode, phone_number_id || null, waba_id || null)
+          await sendToServer(finalCode, phoneNumberId || null, wabaId || null)
         } catch (err: any) {
           console.log("[Meta Embedded Signup] ERROR sending to server:", err.message)
           setResult({ success: false, error: "Erro ao salvar: " + err.message })
