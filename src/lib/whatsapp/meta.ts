@@ -23,9 +23,22 @@ export class MetaCloudProvider implements WhatsAppProvider {
 
   async sendText(phone: string, text: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      let phoneDigits = phone.replace(/\D/g, "")
+
+      // Ensure international format with country code (55 for Brazil)
+      if (phoneDigits.length === 10 || phoneDigits.length === 11) {
+        // Local number without country code: 47984118220 or 984118220
+        phoneDigits = "55" + phoneDigits
+      } else if (phoneDigits.length === 12 && !phoneDigits.startsWith("55")) {
+        // 12 digits without country code prefix
+        phoneDigits = "55" + phoneDigits
+      }
+
+      console.log(`[MetaCloud] Sending to: ${phoneDigits} (original: ${phone})`)
+
       const body: any = {
         messaging_product: "whatsapp",
-        to: phone.replace(/\D/g, ""),
+        to: phoneDigits,
         type: "text",
         text: { body: text },
       }
