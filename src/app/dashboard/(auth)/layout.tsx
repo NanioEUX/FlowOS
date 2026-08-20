@@ -10,33 +10,33 @@ import { fetchAuth } from "@/lib/fetch-auth"
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard/home", perm: "dashboard" },
-  { icon: ShoppingBag, label: "Pedidos", href: "/dashboard/pedidos", perm: "pedidos" },
-  { icon: Bike, label: "Entregas", href: "/dashboard/entregas", perm: "entregas" },
-  { icon: UtensilsCrossed, label: "Cardápio", href: "/dashboard/cardapio", perm: "cardapio" },
-  { icon: Boxes, label: "Estoque", href: "/dashboard/estoque", perm: "estoque" },
-  { icon: Users, label: "Clientes", href: "/dashboard/clientes", perm: "clientes" },
+  { icon: ShoppingBag, label: "Orders", href: "/dashboard/pedidos", perm: "pedidos" },
+  { icon: Bike, label: "Deliveries", href: "/dashboard/entregas", perm: "entregas" },
+  { icon: UtensilsCrossed, label: "Menu", href: "/dashboard/cardapio", perm: "cardapio" },
+  { icon: Boxes, label: "Inventory", href: "/dashboard/estoque", perm: "estoque" },
+  { icon: Users, label: "Customers", href: "/dashboard/clientes", perm: "clientes" },
 ]
 
 const financeiroSubItems = [
-  { icon: LayoutDashboard, label: "Visão Geral", href: "/dashboard/financeiro/visao-geral" },
-  { icon: TrendingUp, label: "Receitas", href: "/dashboard/financeiro/receitas" },
+  { icon: LayoutDashboard, label: "Overview", href: "/dashboard/financeiro/visao-geral" },
+  { icon: TrendingUp, label: "Revenue", href: "/dashboard/financeiro/receitas" },
   { icon: BarChart3, label: "DRE", href: "/dashboard/financeiro" },
-  { icon: DollarSign, label: "Despesas", href: "/dashboard/financeiro/despesas" },
-  { icon: Wallet, label: "Fluxo de Caixa", href: "/dashboard/financeiro/fluxo-caixa" },
-  { icon: Package, label: "CMV", href: "/dashboard/financeiro/cmv" },
-  { icon: FileText, label: "Relatórios", href: "/dashboard/financeiro/relatorios", perm: "relatorios" },
+  { icon: DollarSign, label: "Expenses", href: "/dashboard/financeiro/despesas" },
+  { icon: Wallet, label: "Cash Flow", href: "/dashboard/financeiro/fluxo-caixa" },
+  { icon: Package, label: "COGS", href: "/dashboard/financeiro/cmv" },
+  { icon: FileText, label: "Reports", href: "/dashboard/financeiro/relatorios", perm: "relatorios" },
 ]
 
 const marketingSubItems = [
-  { icon: Tag, label: "Cupons", href: "/dashboard/cupons", perm: "config" },
-  { icon: Star, label: "Fidelidade", href: "/dashboard/fidelidade", perm: "config" },
+  { icon: Tag, label: "Coupons", href: "/dashboard/cupons", perm: "config" },
+  { icon: Star, label: "Loyalty", href: "/dashboard/fidelidade", perm: "config" },
 ]
 
 const configSubItems = [
-  { icon: Settings, label: "Geral", href: "/dashboard/config", perm: "config" },
-  { icon: Users, label: "Usuários", href: "/dashboard/usuarios", perm: "usuarios" },
-  { icon: CreditCard, label: "Planos", href: "/dashboard/planos", perm: "config" },
-  { icon: MapPin, label: "Zonas de Entrega", href: "/dashboard/delivery-zones", perm: "config" },
+  { icon: Settings, label: "General", href: "/dashboard/config", perm: "config" },
+  { icon: Users, label: "Users", href: "/dashboard/usuarios", perm: "usuarios" },
+  { icon: CreditCard, label: "Plans", href: "/dashboard/planos", perm: "config" },
+  { icon: MapPin, label: "Delivery Zones", href: "/dashboard/delivery-zones", perm: "config" },
 ]
 
 interface UserData {
@@ -175,7 +175,7 @@ export default function DashboardLayout({
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden flex-shrink-0">
             <X className="h-5 w-5 text-white/60" />
           </button>
-          <button onClick={handleLogout} className="lg:hidden flex-shrink-0" title="Sair">
+          <button onClick={handleLogout} className="lg:hidden flex-shrink-0" title="Logout">
             <LogOut className="h-4 w-4 text-white/40 hover:text-red-400 transition-colors" />
           </button>
         </div>
@@ -195,8 +195,8 @@ export default function DashboardLayout({
               >
                 <item.icon className="h-[18px] w-[18px]" />
                 {item.label}
-                {alertLevel === "danger" && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
-                {alertLevel === "warning" && <span className="ml-auto rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
+                {alertLevel === "danger" && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Alert</span>}
+                {alertLevel === "warning" && <span className="ml-auto rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Alert</span>}
               </Link>
             )
           })}
@@ -209,7 +209,7 @@ export default function DashboardLayout({
                 className={cn("sidebar-item", pathname === "/caixa" ? "active" : "")}
               >
                 <DollarSign className="h-[18px] w-[18px]" />
-                Frente de Caixa
+                POS
               </Link>
               {user?.role === "admin" && (
                 <Link
@@ -218,7 +218,7 @@ export default function DashboardLayout({
                   className={cn("sidebar-item", pathname === "/dashboard/caixa-gerencial" ? "active" : "")}
                 >
                   <Landmark className="h-[18px] w-[18px]" />
-                  Caixa Gerencial
+                  Manager POS
                 </Link>
               )}
             </>
@@ -235,8 +235,8 @@ export default function DashboardLayout({
               >
                 <Landmark className="h-[18px] w-[18px]" />
                 Financeiro
-                {expenseAlert === "danger" && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
-                {expenseAlert === "warning" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
+                {expenseAlert === "danger" && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Alert</span>}
+                {expenseAlert === "warning" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Alert</span>}
                 {financeiroOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
               </button>
               {financeiroOpen && (
@@ -295,7 +295,7 @@ export default function DashboardLayout({
                 )}
               >
                 <Settings className="h-[18px] w-[18px]" />
-                Configurações
+                Settings
                 {configOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
               </button>
               {configOpen && (
@@ -386,7 +386,7 @@ export default function DashboardLayout({
               className="flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-medium text-white/50"
             >
               <Menu className="h-5 w-5" />
-              Mais
+              More
             </button>
           )}
         </div>
@@ -407,8 +407,8 @@ function SubscriptionBadge({ establishment }: { establishment: any }) {
       <a href="/dashboard/planos" className="flex items-center gap-2 rounded-btn border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs transition-colors hover:bg-amber-400/20">
         <Clock className="h-4 w-4 text-amber-400" />
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-amber-300">Teste: {daysLeft}d restante{daysLeft > 1 ? "s" : ""}</p>
-          <p className="text-[10px] text-amber-400/70">Ver planos →</p>
+          <p className="font-medium text-amber-300">Trial: {daysLeft}d left</p>
+          <p className="text-[10px] text-amber-400/70">View plans →</p>
         </div>
       </a>
     )
@@ -419,9 +419,9 @@ function SubscriptionBadge({ establishment }: { establishment: any }) {
       <CreditCard className="h-4 w-4 text-red-400" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-red-300">
-          {status === "expired" ? "Assinatura expirada" : "Pagamento pendente"}
+          {status === "expired" ? "Subscription expired" : "Payment pending"}
         </p>
-        <p className="text-[10px] text-red-400/70">Ativar plano →</p>
+        <p className="text-[10px] text-red-400/70">Activate plan →</p>
       </div>
     </a>
   )
