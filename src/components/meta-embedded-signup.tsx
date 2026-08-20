@@ -20,16 +20,19 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   const [loading, setLoading] = useState(false)
   const [sdkReady, setSdkReady] = useState(false)
   const [sdkError, setSdkError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ success: boolean; error?: string; phone?: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; error?: string; phone?: string; debug?: string[] } | null>(null)
+  const [selectingPhone, setSelectingPhone] = useState(false)
+  const [phoneOptions, setPhoneOptions] = useState<Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }>>([])
   const fbInitRef = useRef(false)
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingCodeRef = useRef<string | null>(null)
+  const pendingTokenRef = useRef<string | null>(null)
+  const postMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Load Facebook SDK
   useEffect(() => {
     if (!META_APP_ID || fbInitRef.current) return
     fbInitRef.current = true
 
-    // Check if SDK already loaded
     if (window.FB) {
       setSdkReady(true)
       return
@@ -49,7 +52,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       }
     }
 
-    // Load SDK script
     if (!document.getElementById("facebook-jssdk")) {
       const script = document.createElement("script")
       script.id = "facebook-jssdk"
@@ -61,26 +63,106 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     }
   }, [])
 
-  // Listen for postMessage from Meta popup
+  const sendToServer = useCallback(async (code: string, phoneNumberId: string | null, wabaId: string | null) => {
+    const redirectUri = window.location.origin + "/"
+    const debug: string[] = []
+    debug.push("code=" + code.substring(0, 10) + "..., phone=" + phoneNumberId + ", waba=" + wabaId)
+
+    const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
+      method: "POST",
+      body: JSON.stringify({ code, phoneNumberId, wabaId, redirectUri }),
+    })
+
+    const data = await res.json()
+    debug.push("Server: " + JSON.stringify(data))
+    console.log("[Meta Embedded Signup] Server response:", data)
+
+    if (data.success) {
+      setResult({ success: true, phone: data.phoneNumber, debug })
+      onComplete?.()
+    } else {
+      setResult({ success: false, error: data.error || "Erro desconhecido", debug })
+    }
+  }, [establishmentId, onComplete])
+
+  const fetchPhoneOptions = useCallback(async (code: string) => {
+    const debug: string[] = []
+    setLoading(true)
+    setResult(null)
+    debug.push("Buscando WABAs e telefones disponiveis...")
+
+    try {
+      const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-discover", {
+        method: "POST",
+        body: JSON.stringify({ code, redirectUri: window.location.origin + "/" }),
+      })
+
+      const data = await res.json()
+      debug.push("Discover: " + JSON.stringify(data))
+      console.log("[Meta Embedded Signup] Discover response:", data)
+
+      if (data.success && data.phones && data.phones.length > 0) {
+        setPhoneOptions(data.phones)
+        setSelectingPhone(true)
+        pendingTokenRef.current = data.accessToken
+        setResult(null)
+      } else if (data.success && data.phones && data.phones.length === 0) {
+        setResult({ success: false, error: "Nenhum numero de WhatsApp encontrado na conta Meta.", debug })
+      } else {
+        setResult({ success: false, error: data.error || "Falha ao buscar telefones", debug })
+      }
+    } catch (err: any) {
+      setResult({ success: false, error: "Erro ao buscar telefones: " + err.message, debug })
+    } finally {
+      setLoading(false)
+    }
+  }, [establishmentId])
+
+  const handleSelectPhone = useCallback(async (phone: { id: string; display_phone_number: string; waba_id: string }) => {
+    setSelectingPhone(false)
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const code = pendingCodeRef.current || ""
+      const debug: string[] = []
+      debug.push("Selecionado: " + phone.display_phone_number + " (" + phone.id + ")")
+
+      const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
+        method: "POST",
+        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, redirectUri: window.location.origin + "/", accessToken: pendingTokenRef.current }),
+      })
+
+      const data = await res.json()
+      debug.push("Server: " + JSON.stringify(data))
+
+      if (data.success) {
+        setResult({ success: true, phone: data.phoneNumber || phone.display_phone_number, debug })
+        onComplete?.()
+      } else {
+        setResult({ success: false, error: data.error || "Erro ao salvar", debug })
+      }
+    } catch (err: any) {
+      setResult({ success: false, error: "Erro ao salvar: " + err.message })
+    } finally {
+      setLoading(false)
+      pendingCodeRef.current = null
+      pendingTokenRef.current = null
+    }
+  }, [establishmentId, onComplete])
+
   const handleMessage = useCallback(async (event: MessageEvent) => {
-    // Log ALL messages for debugging
     const dataStr = typeof event.data === "string" ? event.data : JSON.stringify(event.data)
     if (dataStr.includes("WA_EMBEDDED") || dataStr.includes("embedded") || dataStr.includes("phone_number") || dataStr.includes("waba")) {
       console.log("[Meta Embedded Signup] Potential message:", event.origin, event.data)
     }
 
-    // Accept messages from Facebook domains
-    const validOrigins = [
-      "https://www.facebook.com",
-      "https://facebook.com",
-      "https://www.facebook.com",
-    ]
+    const validOrigins = ["https://www.facebook.com", "https://facebook.com"]
     if (!validOrigins.includes(event.origin)) return
 
     const data = event.data
     if (!data) return
 
-    // Log for debugging
     console.log("[Meta Embedded Signup] Received message:", event.origin, data)
 
     try {
@@ -93,42 +175,26 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         return
       }
 
-      // Check for Embedded Signup response
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
         const { phone_number_id, waba_id, code } = parsed.data
         console.log("[Meta Embedded Signup] Got data:", { phone_number_id, waba_id, hasCode: !!code })
 
-        if (!code) {
-          setResult({ success: false, error: "Código não recebido do Meta" })
+        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+        if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
+
+        const finalCode = code || pendingCodeRef.current
+        if (!finalCode) {
+          setResult({ success: false, error: "Codigo nao recebido do Meta" })
           setLoading(false)
           return
         }
 
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current)
-        }
-
+        pendingCodeRef.current = null
         setLoading(true)
         setResult(null)
 
-        // Send code + origin URL to server (Meta SDK uses origin as redirect_uri)
-        const redirectUri = window.location.origin + "/"
-
         try {
-          const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-embedded-signup`, {
-            method: "POST",
-            body: JSON.stringify({ code, phoneNumberId: phone_number_id, wabaId: waba_id, redirectUri }),
-          })
-
-          const data2 = await res.json()
-          console.log("[Meta Embedded Signup] Server response:", data2)
-
-          if (data2.success) {
-            setResult({ success: true, phone: data2.phoneNumber })
-            onComplete?.()
-          } else {
-            setResult({ success: false, error: data2.error })
-          }
+          await sendToServer(finalCode, phone_number_id || null, waba_id || null)
         } catch (err: any) {
           setResult({ success: false, error: "Erro ao salvar: " + err.message })
         } finally {
@@ -136,16 +202,17 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         }
       }
 
-      // Handle cancel/error from popup
       if (parsed.type === "WA_EMBEDDED_SIGNUP_CANCEL") {
         console.log("[Meta Embedded Signup] User cancelled")
+        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+        if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
         setLoading(false)
-        setResult({ success: false, error: "Conexão cancelada pelo usuário." })
+        setResult({ success: false, error: "Conexao cancelada pelo usuario." })
       }
     } catch (err) {
-      // Not JSON or not our event, ignore
+      // ignore
     }
-  }, [establishmentId, onComplete])
+  }, [sendToServer])
 
   useEffect(() => {
     window.addEventListener("message", handleMessage)
@@ -154,49 +221,44 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
   const handleConnect = () => {
     if (!window.FB) {
-      setResult({ success: false, error: "SDK do Facebook não carregou. Recarregue a página." })
+      setResult({ success: false, error: "SDK do Facebook nao carregou. Recarregue a pagina." })
       return
     }
 
     setResult(null)
     setLoading(true)
+    pendingCodeRef.current = null
 
-    // Timeout after 5 minutes
     loadingTimeoutRef.current = setTimeout(() => {
       setLoading(false)
       setResult({ success: false, error: "Tempo esgotado. Tente novamente." })
-    }, 300000)
+    }, 120000)
 
     window.FB.login(
       (response: any) => {
-        console.log("[Meta Embedded Signup] FB.login FULL response:", JSON.stringify(response, null, 2))
+        console.log("[Meta Embedded Signup] FB.login response:", JSON.stringify(response, null, 2))
+
         if (response.status === "connected") {
-          // Check if code is in the authResponse
-          if (response.authResponse?.code) {
-            console.log("[Meta Embedded Signup] Got code from authResponse:", response.authResponse.code)
-            // Send code to server directly
-            setLoading(true)
-            fetchAuth(`/api/establishments/${establishmentId}/meta-embedded-signup`, {
-              method: "POST",
-              body: JSON.stringify({ code: response.authResponse.code, phoneNumberId: null, wabaId: null, redirectUri: window.location.origin + "/" }),
-            }).then(res => res.json()).then(data2 => {
-              console.log("[Meta Embedded Signup] Server response:", data2)
-              if (data2.success) {
-                setResult({ success: true, phone: data2.phoneNumber })
-                onComplete?.()
-              } else {
-                setResult({ success: false, error: data2.error })
+          if (response.authResponse && response.authResponse.code) {
+            console.log("[Meta Embedded Signup] Got code from FB.login callback")
+            pendingCodeRef.current = response.authResponse.code
+
+            postMessageTimeoutRef.current = setTimeout(async () => {
+              if (pendingCodeRef.current) {
+                console.log("[Meta Embedded Signup] postMessage not received, discovering phones via Graph API")
+                const code = pendingCodeRef.current
+                pendingCodeRef.current = null
+                await fetchPhoneOptions(code)
               }
-            }).catch(err => {
-              setResult({ success: false, error: "Erro ao salvar: " + err.message })
-            }).finally(() => setLoading(false))
+            }, 8000)
           } else {
-            console.log("[Meta Embedded Signup] Connected but no code in authResponse, waiting for postMessage...")
+            console.log("[Meta Embedded Signup] Connected but no code, waiting for postMessage...")
           }
         } else if (response.status === "not_authorized" || response.status === "unknown") {
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+          if (postMessageTimeoutRef.current) clearTimeout(postMessageTimeoutRef.current)
           setLoading(false)
-          setResult({ success: false, error: "Login cancelado ou permissão negada." })
+          setResult({ success: false, error: "Login cancelado ou permissao negada." })
         }
       },
       {
@@ -214,9 +276,34 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <p className="text-sm text-amber-900">
-          ⚠️ Embedded Signup não configurado. O administrador precisa definir{' '}
-          <code>NEXT_PUBLIC_META_APP_ID</code> e <code>NEXT_PUBLIC_META_CONFIG_ID</code> no Vercel.
+          Embedded Signup nao configurado. Defina NEXT_PUBLIC_META_APP_ID e NEXT_PUBLIC_META_CONFIG_ID no Vercel.
         </p>
+      </div>
+    )
+  }
+
+  if (selectingPhone) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+          Selecione qual numero de WhatsApp conectar:
+        </div>
+        {phoneOptions.map((phone) => (
+          <button
+            key={phone.id}
+            onClick={() => handleSelectPhone(phone)}
+            className="w-full rounded-lg border border-zinc-200 p-3 text-left hover:bg-zinc-50 transition-colors"
+          >
+            <div className="text-sm font-medium text-zinc-900">{phone.display_phone_number}</div>
+            <div className="text-xs text-zinc-500">{phone.verified_name}</div>
+          </button>
+        ))}
+        <button
+          onClick={() => { setSelectingPhone(false); setPhoneOptions([]); setLoading(false); setResult(null) }}
+          className="text-xs text-zinc-500 hover:text-zinc-700"
+        >
+          Cancelar
+        </button>
       </div>
     )
   }
@@ -230,16 +317,24 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       )}
 
       {result && (
-        <div className={`rounded-lg border p-3 text-xs ${result.success ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-900"}`}>
+        <div className={"rounded-lg border p-3 text-xs " + (result.success ? "border-green-200 bg-green-50 text-green-900" : "border-red-200 bg-red-50 text-red-900")}>
           {result.success ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
-              <span>WhatsApp conectado com sucesso!{result.phone && ` — ${result.phone}`}</span>
+              <span>WhatsApp conectado!{result.phone && (" " + result.phone)}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4" />
-              <span>{result.error}</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                <span>{result.error}</span>
+              </div>
+              {result.debug && result.debug.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[10px] text-red-600 underline">Debug</summary>
+                  <pre className="mt-1 whitespace-pre-wrap text-[10px] text-red-700/70">{result.debug.join("\n")}</pre>
+                </details>
+              )}
             </div>
           )}
         </div>
@@ -259,12 +354,11 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       </button>
 
       <p className="text-xs text-zinc-500">
-        O Meta vai abrir um popup pra você fazer login com sua conta do Facebook e conectar seu WhatsApp Business.
+        Faca login com sua conta Facebook e selecione o numero de WhatsApp Business.
       </p>
 
-      {/* Debug info - remove in production */}
       <div className="text-[10px] text-zinc-400">
-        SDK: {sdkReady ? "✓" : "carregando..."} | App ID: {META_APP_ID ? "✓" : "✗"} | Config ID: {META_CONFIG_ID ? "✓" : "✗"}
+        SDK: {sdkReady ? "ok" : "carregando..."} | App: {META_APP_ID ? "ok" : "falta"} | Config: {META_CONFIG_ID ? "ok" : "falta"}
       </div>
     </div>
   )

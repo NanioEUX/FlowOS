@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id } = params
     const body = await req.json()
-    const { code, phoneNumberId, wabaId, redirectUri } = body
+    const { code, phoneNumberId, wabaId, redirectUri, accessToken: existingToken } = body
 
     if (!code) {
       return NextResponse.json({ success: false, error: "Código não fornecido" }, { status: 400 })
@@ -21,47 +21,53 @@ export async function POST(
       return NextResponse.json({ success: false, error: "META_APP_ID e META_APP_SECRET não configurados no servidor" }, { status: 500 })
     }
 
-    // Step 1: Exchange code for short-lived token
-    // Try multiple redirect_uri options since we can't know exactly what the SDK used
-    console.log("[Meta Embedded Signup] Exchanging code. Received redirectUri:", redirectUri)
-    const redirectUris = [
-      redirectUri,
-      "https://flowoshub.com/",
-      "https://www.facebook.com/connect/login/success.html",
-      "",
-    ].filter(Boolean)
+    // Use existing token if provided (from meta-discover), otherwise exchange code
+    let accessToken: string
+    if (existingToken) {
+      console.log("[Meta Embedded Signup] Using existing token from meta-discover")
+      accessToken = existingToken
+    } else {
+      // Step 1: Exchange code for short-lived token
+      console.log("[Meta Embedded Signup] Exchanging code. Received redirectUri:", redirectUri)
+      const redirectUris = [
+        redirectUri,
+        "https://flowoshub.com/",
+        "https://www.facebook.com/connect/login/success.html",
+        "",
+      ].filter(Boolean)
 
-    let tokenData: any = null
-    let tokenOk = false
-    for (const uri of redirectUris) {
-      const tokenRes = await fetch(
-        `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=${encodeURIComponent(uri)}&code=${code}`,
+      let tokenData: any = null
+      let tokenOk = false
+      for (const uri of redirectUris) {
+        const tokenRes = await fetch(
+          `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=${encodeURIComponent(uri)}&code=${code}`,
+          { method: "GET" }
+        )
+        tokenData = await tokenRes.json()
+        if (tokenRes.ok && tokenData.access_token) {
+          tokenOk = true
+          console.log("[Meta Embedded Signup] Token exchange OK with redirect_uri:", uri)
+          break
+        } else {
+          console.log("[Meta Embedded Signup] Failed with redirect_uri:", uri, "-", tokenData.error?.message)
+        }
+      }
+
+      if (!tokenOk || !tokenData?.access_token) {
+        console.error("[Meta Embedded Signup] All token exchange attempts failed:", tokenData)
+        return NextResponse.json({ success: false, error: tokenData?.error?.message || "Falha ao trocar código por token" }, { status: 400 })
+      }
+
+      const shortToken = tokenData.access_token
+
+      // Step 2: Exchange short-lived for long-lived token
+      const longTokenRes = await fetch(
+        `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${shortToken}`,
         { method: "GET" }
       )
-      tokenData = await tokenRes.json()
-      if (tokenRes.ok && tokenData.access_token) {
-        tokenOk = true
-        console.log("[Meta Embedded Signup] Token exchange OK with redirect_uri:", uri)
-        break
-      } else {
-        console.log("[Meta Embedded Signup] Failed with redirect_uri:", uri, "-", tokenData.error?.message)
-      }
+      const longTokenData = await longTokenRes.json()
+      accessToken = longTokenData.access_token || shortToken
     }
-
-    if (!tokenOk || !tokenData?.access_token) {
-      console.error("[Meta Embedded Signup] All token exchange attempts failed:", tokenData)
-      return NextResponse.json({ success: false, error: tokenData?.error?.message || "Falha ao trocar código por token" }, { status: 400 })
-    }
-
-    const shortToken = tokenData.access_token
-
-    // Step 2: Exchange short-lived for long-lived token
-    const longTokenRes = await fetch(
-      `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${shortToken}`,
-      { method: "GET" }
-    )
-    const longTokenData = await longTokenRes.json()
-    const accessToken = longTokenData.access_token || shortToken
 
     // Step 3: Get WABA details
     let wabaInfo: any = null

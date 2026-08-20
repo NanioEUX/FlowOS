@@ -223,10 +223,12 @@ function MetaConfig({
   establishmentId,
   metaPhoneNumberId,
   metaAccessToken,
+  onRefresh,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
   metaAccessToken: string
+  onRefresh?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
@@ -283,7 +285,7 @@ function MetaConfig({
       <p className="text-xs text-zinc-500">
         Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
       </p>
-      <EmbeddedSignupButton />
+      <EmbeddedSignupButton onComplete={onRefresh} />
     </div>
   )
 }
@@ -1462,11 +1464,12 @@ export default function ConfigPage() {
             )}
             </SaasOnly>
 
-            {whatsappProvider === "meta" && (
+            {(whatsappProvider === "meta" || whatsappProvider === null) && (
               <MetaConfig
                 establishmentId={establishmentId}
                 metaPhoneNumberId={metaPhoneNumberId}
                 metaAccessToken={metaAccessToken}
+                onRefresh={() => window.location.reload()}
               />
             )}
 
