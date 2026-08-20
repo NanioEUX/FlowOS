@@ -156,22 +156,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure provider para envio real." })
     }
 
-    // Use sendVerificationCode if available (Meta: botão copiar), otherwise sendText
-    let result
-    if (provider.sendVerificationCode) {
-      console.log(`[VERIFICATION] Using sendVerificationCode (with copy button)`)
-      result = await provider.sendVerificationCode(phoneDigits, {
-        establishmentName: establishment.name,
-        code,
-        expiresInMinutes: CODE_EXPIRY_MINUTES,
-      })
-      console.log(`[VERIFICATION] sendVerificationCode result:`, JSON.stringify(result))
-    } else {
-      console.log(`[VERIFICATION] Using sendText (no copy button)`)
-      const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
-      result = await provider.sendText(phoneDigits, message, { delay: 1000 })
-      console.log(`[VERIFICATION] sendText result:`, JSON.stringify(result))
-    }
+    // Use sendText to send verification code
+    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
+    const result = await provider.sendText(phoneDigits, message, { delay: 1000 })
+    console.log(`[VERIFICATION] sendText result:`, JSON.stringify(result))
 
     const showDevCode =
       !result.success ||
