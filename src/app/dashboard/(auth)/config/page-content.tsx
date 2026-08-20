@@ -18,16 +18,14 @@ declare global {
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
 const META_CONFIG_ID = process.env.NEXT_PUBLIC_META_CONFIG_ID
 
-export function MetaConfig({
+function MetaConfig({
   establishmentId,
   metaPhoneNumberId,
   metaAccessToken,
-  onRefresh,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
   metaAccessToken: string
-  onRefresh?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
@@ -84,7 +82,45 @@ export function MetaConfig({
       <p className="text-xs text-zinc-500">
         Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
       </p>
-      <EmbeddedSignupButton onComplete={onRefresh} />
+      <EmbeddedSignupButton onComplete={() => window.location.reload()} />
+      <div className="mt-4">
+        <h5 className="text-xs font-medium text-zinc-700">Conexão Manual</h5>
+        <p className="text-xs text-zinc-500 mb-2">
+          Caso o popup não funcione (ex: Safari), você pode colar os dados manualmente:
+        </p>
+        <div className="mt-2 space-y-2">
+          <div>
+            <label className="block text-xs font-medium text-zinc-700">Phone Number ID</label>
+            <input
+              type="text"
+              placeholder="Ex: 123456789012345"
+              className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-700">Access Token</label>
+            <input
+              type="password"
+              placeholder="EAAx..."
+              className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-700">WABA ID (opcional)</label>
+            <input
+              type="text"
+              placeholder="WhatsApp Business Account ID"
+              className="flex h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => window.alert("Conexão manual ainda não implementada")}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            <Loader2 className="h-3 w-3 animate-spin" /> Conectando
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
