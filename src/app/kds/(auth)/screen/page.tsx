@@ -205,16 +205,16 @@ export default function KdsScreen() {
       {/* Sidebar */}
       <aside className="w-56 bg-[#111] border-r border-zinc-800 flex flex-col p-4 shrink-0">
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-start gap-3 mb-1">
             {establishment?.logo ? (
-              <img src={establishment.logo} alt="" className="h-12 w-12 rounded-xl object-cover shadow-sm shrink-0" />
+              <img src={establishment.logo} alt="" className="h-16 w-16 rounded-xl object-cover shadow-sm shrink-0" />
             ) : (
-              <div className="h-12 w-12 rounded-xl bg-amber-600 flex items-center justify-center shrink-0">
-                <ChefHat className="w-6 h-6 text-white" />
+              <div className="h-16 w-16 rounded-xl bg-amber-600 flex items-center justify-center shrink-0">
+                <ChefHat className="w-8 h-8 text-white" />
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="font-bold text-lg text-white truncate" style={{ fontFamily: "serif" }}>
+              <h1 className="font-bold text-lg text-white leading-tight" style={{ fontFamily: "serif" }}>
                 {establishment?.name || "Cozinha"}
               </h1>
               <div className="flex items-center gap-1.5">
