@@ -8,26 +8,37 @@ export default function KdsLayout({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem("kds_token")
-    const user = localStorage.getItem("kds_user")
+    // Check KDS token first
+    const kdsToken = localStorage.getItem("kds_token")
+    const kdsUser = localStorage.getItem("kds_user")
 
-    if (!token || !user) {
-      router.push("/kds")
-      return
+    if (kdsToken && kdsUser) {
+      try {
+        const parsed = JSON.parse(kdsUser)
+        if (parsed.role === "kds") {
+          setAuthorized(true)
+          return
+        }
+      } catch {}
     }
 
-    try {
-      const parsed = JSON.parse(user)
-      if (parsed.role !== "kds") {
-        router.push("/kds")
-        return
-      }
-    } catch {
-      router.push("/kds")
-      return
+    // Check main user token (admin opening KDS from dashboard)
+    const mainUser = localStorage.getItem("pedefacil-user")
+    if (mainUser) {
+      try {
+        const parsed = JSON.parse(mainUser)
+        if (parsed.role === "admin" || parsed.role === "kds") {
+          // Store as kds_token so the screen page can use it
+          localStorage.setItem("kds_token", parsed.token)
+          localStorage.setItem("kds_user", JSON.stringify(parsed))
+          localStorage.setItem("kds_establishment", JSON.stringify(parsed.establishment))
+          setAuthorized(true)
+          return
+        }
+      } catch {}
     }
 
-    setAuthorized(true)
+    router.push("/kds")
   }, [router])
 
   if (!authorized) return null
