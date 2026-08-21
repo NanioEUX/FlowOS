@@ -35,17 +35,33 @@ export default function KdsScreen() {
   const [timers, setTimers] = useState<Record<string, string>>({})
   const [completedItems, setCompletedItems] = useState<Record<string, Record<number, boolean>>>({})
   const [filter, setFilter] = useState<FilterOrigin>("all")
+  const estIdRef = useRef<string | null>(null)
+
+  // Load establishment data from API (including logo)
+  useEffect(() => {
+    const est = localStorage.getItem("kds_establishment")
+    if (!est) { router.push("/kds"); return }
+    const estData = JSON.parse(est)
+    estIdRef.current = estData.id
+    setEstablishment(estData)
+
+    // Fetch full establishment data with logo from API
+    fetch(`/api/kds/establishment?establishmentId=${estData.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.name) {
+          setEstablishment((prev: any) => ({ ...prev, name: data.name, logo: data.logo }))
+        }
+      })
+      .catch(() => {})
+  }, [router])
 
   const fetchOrders = useCallback(async () => {
     const token = localStorage.getItem("kds_token")
-    const est = localStorage.getItem("kds_establishment")
-    if (!token || !est) { router.push("/kds"); return }
-
-    const estData = JSON.parse(est)
-    setEstablishment(estData)
+    if (!token || !estIdRef.current) return
 
     try {
-      const res = await fetch(`/api/orders?establishmentId=${estData.id}`, {
+      const res = await fetch(`/api/orders?establishmentId=${estIdRef.current}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -67,7 +83,7 @@ export default function KdsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [router, soundEnabled])
+  }, [soundEnabled])
 
   function playBeep() {
     try {
