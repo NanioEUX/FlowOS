@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const establishment = await prisma.establishment.findUnique({
       where: { id: user.establishmentId },
-      select: { id: true, name: true, slug: true },
+      select: { id: true, name: true, slug: true, logo: true },
     })
 
     const token = jwt.sign(

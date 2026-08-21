@@ -187,17 +187,30 @@ export default function KdsScreen() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-white flex">
       {/* Sidebar */}
-      <aside className="w-52 bg-[#111] border-r border-zinc-800 flex flex-col p-4 shrink-0">
+      <aside className="w-56 bg-[#111] border-r border-zinc-800 flex flex-col p-4 shrink-0">
         <div className="mb-6">
-          <h1 className="font-bold text-xl text-amber-200 font-serif truncate">{establishment?.name || "Cozinha"}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="w-2 h-2 bg-green-500 rounded-full" />
-            <span className="text-zinc-400 text-xs">Modo Serviço: Ativo</span>
+          <div className="flex items-center gap-3 mb-1">
+            {establishment?.logo ? (
+              <img src={establishment.logo} alt="" className="h-12 w-12 rounded-xl object-cover shadow-sm shrink-0" />
+            ) : (
+              <div className="h-12 w-12 rounded-xl bg-amber-600 flex items-center justify-center shrink-0">
+                <ChefHat className="w-6 h-6 text-white" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg text-white truncate" style={{ fontFamily: "serif" }}>
+                {establishment?.name || "Cozinha"}
+              </h1>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                <span className="text-zinc-300 text-xs">Modo Serviço: Ativo</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="mb-6">
-          <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-2">Filtrar por Origem</p>
+          <p className="text-zinc-300 text-[10px] uppercase tracking-wider mb-2 font-semibold">Filtrar por Origem</p>
           <div className="flex flex-col gap-1">
             {([
               { value: "all" as FilterOrigin, label: "Todos" },
@@ -210,7 +223,7 @@ export default function KdsScreen() {
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
                   filter === f.value
                     ? "bg-amber-600 text-white"
-                    : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800"
+                    : "bg-zinc-800/50 text-zinc-200 hover:bg-zinc-800"
                 }`}
               >
                 {f.label}
@@ -223,7 +236,7 @@ export default function KdsScreen() {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+          className="flex items-center gap-2 text-zinc-300 hover:text-white text-sm transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Sair
@@ -234,18 +247,18 @@ export default function KdsScreen() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="bg-[#111] border-b border-zinc-800 px-6 py-3 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-bold">Painel Cozinha</h2>
+          <h2 className="text-lg font-bold text-white">Painel Cozinha</h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-zinc-800/50 px-3 py-1.5 rounded-lg">
               <ChefHat className="w-4 h-4 text-amber-400" />
-              <span className="text-sm">Total: <strong>{totalCount}</strong></span>
+              <span className="text-sm text-zinc-200">Total: <strong className="text-white">{totalCount}</strong></span>
             </div>
             <div className="flex items-center gap-2 bg-zinc-800/50 px-3 py-1.5 rounded-lg">
               <Clock className="w-4 h-4 text-amber-400" />
-              <span className="text-sm">Média: <strong>{avgTime}m</strong></span>
+              <span className="text-sm text-zinc-200">Média: <strong className="text-white">{avgTime}m</strong></span>
             </div>
             <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-lg hover:bg-zinc-800">
-              {soundEnabled ? <Volume2 className="w-5 h-5 text-zinc-400" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
+              {soundEnabled ? <Volume2 className="w-5 h-5 text-zinc-300" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
             </button>
           </div>
         </header>
@@ -261,7 +274,7 @@ export default function KdsScreen() {
                   {/* Column Header */}
                   <div className={`flex items-center justify-between px-4 py-2.5 rounded-t-xl ${col.bg} border ${col.border} border-b-0`}>
                     <span className={`font-bold text-sm ${col.color}`}>{col.label}</span>
-                    <span className={`text-xs font-medium ${col.color} bg-white/5 px-2 py-0.5 rounded-full`}>
+                    <span className={`text-xs font-bold ${col.color} bg-white/10 px-2 py-0.5 rounded-full`}>
                       {colOrders.length}
                     </span>
                   </div>
@@ -269,7 +282,7 @@ export default function KdsScreen() {
                   {/* Column Body */}
                   <div className={`flex-1 overflow-y-auto rounded-b-xl border ${col.border} border-t-0 ${col.bg} p-2 space-y-2`}>
                     {colOrders.length === 0 ? (
-                      <div className="text-center text-zinc-600 text-sm py-8">
+                      <div className="text-center text-zinc-400 text-sm py-8">
                         Nenhum pedido
                       </div>
                     ) : (
@@ -282,24 +295,24 @@ export default function KdsScreen() {
                         return (
                           <div
                             key={order.id}
-                            className="bg-[#1a1a1a] rounded-lg border border-zinc-800 overflow-hidden"
+                            className="bg-[#1a1a1a] rounded-lg border border-zinc-700 overflow-hidden"
                           >
                             {/* Card Header */}
-                            <div className="px-3 py-2 flex items-center justify-between border-b border-zinc-800/50">
+                            <div className="px-3 py-2 flex items-center justify-between border-b border-zinc-700/50">
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className={`${overdue ? "text-red-400" : "text-zinc-400"}`}>
+                                <span className={`${overdue ? "text-red-400" : "text-zinc-300"}`}>
                                   {getOriginIcon(order)}
                                 </span>
-                                <span className="font-bold text-sm truncate">{getOrderTitle(order)}</span>
+                                <span className="font-bold text-sm text-white truncate">{getOrderTitle(order)}</span>
                                 {order.tableNumber && (
-                                  <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                                  <span className="text-[10px] text-zinc-300 bg-zinc-700 px-1.5 py-0.5 rounded">
                                     {order.tableNumber}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 {overdue && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
-                                <span className={`text-xs font-mono ${overdue ? "text-red-400" : "text-zinc-500"}`}>
+                                <span className={`text-xs font-mono ${overdue ? "text-red-400" : "text-zinc-300"}`}>
                                   {timers[order.id] || "0:00"}
                                 </span>
                               </div>
@@ -316,17 +329,17 @@ export default function KdsScreen() {
                                       className={`w-4 h-4 mt-0.5 rounded-sm border flex items-center justify-center transition-colors shrink-0 ${
                                         done
                                           ? "bg-green-500 border-green-500"
-                                          : "border-zinc-600 hover:border-zinc-400"
+                                          : "border-zinc-500 hover:border-zinc-300"
                                       }`}
                                     >
                                       {done && <span className="text-white text-[10px]">✓</span>}
                                     </button>
                                     <div className="min-w-0">
-                                      <span className={`text-xs font-medium ${done ? "line-through text-zinc-600" : "text-white"}`}>
+                                      <span className={`text-xs font-medium ${done ? "line-through text-zinc-500" : "text-white"}`}>
                                         {item.quantity}x {item.name}
                                       </span>
                                       {item.notes && (
-                                        <p className="text-amber-400/80 text-[10px] mt-0.5">{item.notes}</p>
+                                        <p className="text-amber-400 text-[10px] mt-0.5">{item.notes}</p>
                                       )}
                                     </div>
                                   </div>
@@ -335,7 +348,7 @@ export default function KdsScreen() {
 
                               {order.notes && (
                                 <div className="mt-1.5 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
-                                  <p className="text-amber-400 text-[10px] font-medium">{order.notes}</p>
+                                  <p className="text-amber-300 text-[10px] font-medium">{order.notes}</p>
                                 </div>
                               )}
                             </div>
