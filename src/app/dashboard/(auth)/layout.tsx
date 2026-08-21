@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin, Image, Eye } from "lucide-react"
+import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin, Image, Eye, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -11,6 +11,7 @@ import { fetchAuth } from "@/lib/fetch-auth"
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard/home", perm: "dashboard" },
   { icon: ShoppingBag, label: "Pedidos", href: "/dashboard/pedidos", perm: "pedidos" },
+  { icon: MessageCircle, label: "Chat", href: "/dashboard/chat", perm: "pedidos", hasAlert: true },
   { icon: Bike, label: "Entregas", href: "/dashboard/entregas", perm: "entregas" },
   { icon: UtensilsCrossed, label: "Cardápio", href: "/dashboard/cardapio", perm: "cardapio" },
   { icon: Boxes, label: "Estoque", href: "/dashboard/estoque", perm: "estoque" },
@@ -64,6 +65,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<UserData | null>(null)
   const [expenseAlert, setExpenseAlert] = useState<"none" | "warning" | "danger">("none")
   const [stockAlert, setStockAlert] = useState<"none" | "warning" | "danger">("none")
+  const [unreadChatCount, setUnreadChatCount] = useState(0)
 
   useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
@@ -109,14 +111,17 @@ export default function DashboardLayout({
         .then((data) => {
           setExpenseAlert(data.expenseAlert || "none")
           setStockAlert(data.stockAlert || "none")
+          setUnreadChatCount(data.unreadChatCount || 0)
         })
         .catch(() => {})
     }
     loadAlerts()
     window.addEventListener("expenses-updated", loadAlerts)
+    window.addEventListener("chat-updated", loadAlerts)
     window.addEventListener("stock-updated", loadAlerts)
     return () => {
       window.removeEventListener("expenses-updated", loadAlerts)
+      window.removeEventListener("chat-updated", loadAlerts)
       window.removeEventListener("stock-updated", loadAlerts)
     }
   }, [user?.establishmentId])
@@ -183,6 +188,7 @@ export default function DashboardLayout({
         <nav className="relative p-3 space-y-0.5">
           {navItems.map((item) => {
             const alertLevel = item.perm === "estoque" ? stockAlert : "none"
+            const chatUnread = item.href === "/dashboard/chat" ? unreadChatCount : 0
             return (
               <Link
                 key={item.href}
@@ -195,6 +201,7 @@ export default function DashboardLayout({
               >
                 <item.icon className="h-[18px] w-[18px]" />
                 {item.label}
+                {chatUnread > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0 animate-pulse">{chatUnread}</span>}
                 {alertLevel === "danger" && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
                 {alertLevel === "warning" && <span className="ml-auto rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
               </Link>

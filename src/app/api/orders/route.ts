@@ -564,7 +564,7 @@ export async function GET(req: NextRequest) {
     where,
     include: {
       establishment: { select: { name: true, phone: true, slug: true } },
-      customer: { select: { id: true, name: true, phone: true, cancellationCount: true, blockedUntil: true } },
+      customer: { select: { id: true, name: true, phone: true, cancellationCount: true, blockedUntil: true, needsHuman: true, needsHumanAt: true } },
     },
     orderBy: { createdAt: "desc" },
   })

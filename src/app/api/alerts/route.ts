@@ -43,5 +43,19 @@ export async function GET(req: NextRequest) {
     }
   } catch {}
 
-  return NextResponse.json({ expenseAlert, stockAlert })
+  // Check unread chat messages
+  let unreadChatCount = 0
+  try {
+    const result = await prisma.orderMessage.aggregate({
+      _count: { id: true },
+      where: {
+        sender: "customer",
+        read: false,
+        order: { establishmentId },
+      },
+    })
+    unreadChatCount = result._count.id || 0
+  } catch {}
+
+  return NextResponse.json({ expenseAlert, stockAlert, unreadChatCount })
 }
