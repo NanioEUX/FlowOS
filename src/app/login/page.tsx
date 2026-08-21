@@ -61,6 +61,15 @@ export default function LoginPage() {
         return
       }
 
+      // KDS users go to the kitchen display
+      if (data.user.role === "kds") {
+        localStorage.setItem("kds_token", data.token)
+        localStorage.setItem("kds_user", JSON.stringify(data.user))
+        localStorage.setItem("kds_establishment", JSON.stringify(data.establishment))
+        router.push("/kds/screen")
+        return
+      }
+
       if (data.user.role === "motoboy" && data.user.deliveryPerson) {
         const { slug, token: dpToken } = data.user.deliveryPerson
         router.push(`/${slug}/entregas/${dpToken}`)
@@ -127,6 +136,14 @@ export default function LoginPage() {
       setTimeout(() => {
         if (loginData.subscriptionExpired) {
           router.push("/dashboard/planos")
+          return
+        }
+        // KDS users go to the kitchen display
+        if (loginData.user.role === "kds") {
+          localStorage.setItem("kds_token", loginData.token)
+          localStorage.setItem("kds_user", JSON.stringify(loginData.user))
+          localStorage.setItem("kds_establishment", JSON.stringify(loginData.establishment))
+          router.push("/kds/screen")
           return
         }
         if (loginData.user.role === "motoboy" && loginData.user.deliveryPerson) {

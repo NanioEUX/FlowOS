@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Use o painel admin SaaS" }, { status: 403 })
     }
 
+    // Usuário KDS tem login próprio (não usa este endpoint)
+    // Mas permitimos para simplificar o fluxo — redirecionamento acontece no frontend
+
     if (!user.establishmentId) {
       return NextResponse.json({ error: "Usuário sem estabelecimento vinculado" }, { status: 403 })
     }
