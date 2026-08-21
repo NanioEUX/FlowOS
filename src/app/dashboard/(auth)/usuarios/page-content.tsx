@@ -28,12 +28,14 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   atendente: "Atendente",
   motoboy: "Motoboy",
+  kds: "Cozinha (KDS)",
 }
 
 const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
   admin: [],
   atendente: ["caixa"],
   motoboy: ["entregas"],
+  kds: ["pedidos"],
 }
 
 const ALL_PERMISSIONS_VALUES = ALL_PERMISSIONS.map((p) => p.value)
@@ -42,6 +44,7 @@ const ROLES = [
   { value: "admin", label: "Administrador" },
   { value: "atendente", label: "Atendente" },
   { value: "motoboy", label: "Motoboy" },
+  { value: "kds", label: "Cozinha (KDS)" },
 ]
 
 export default function UsuariosPage() {
