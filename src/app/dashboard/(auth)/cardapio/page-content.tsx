@@ -1822,7 +1822,13 @@ export default function CardapioPage() {
                         <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
                         <p className="text-xs text-zinc-500">{formatCurrency(product.price)}</p>
                       </div>
-                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Preparo</span>
+                      <button
+                        onClick={() => toggleSendToPrep(product.id, product.sendToPrep)}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      >
+                        <Clock className="h-3 w-3" />
+                        Preparo
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1873,7 +1879,13 @@ export default function CardapioPage() {
                           )}
                         </div>
                       </div>
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Promoção</span>
+                      <button
+                        onClick={() => openPromoModal(product)}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200"
+                      >
+                        <Tag className="h-3 w-3" />
+                        Promoção
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1886,7 +1898,64 @@ export default function CardapioPage() {
       {/* Destaques Tab */}
       {activeTab === "destaques" && (
         <div className="space-y-4">
+          {/* Produtos em Destaque */}
           <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Produtos em destaque no cardápio</p>
+          </div>
+          {categories.filter(c => c.products.some(p => (p as any).featured)).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
+              <Star className="mx-auto h-8 w-8 text-zinc-400" />
+              <p className="mt-2 text-sm text-zinc-500">Nenhum produto em destaque</p>
+              <p className="text-xs text-zinc-400 mt-1">Ative "Destaque" nos produtos</p>
+            </div>
+          ) : (
+            categories.filter(c => c.products.some(p => (p as any).featured)).map(cat => (
+              <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {cat.products.filter(p => (p as any).featured).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      {product.image ? (
+                        <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                        <div className="flex items-center gap-2">
+                          {product.featuredDiscountPrice ? (
+                            <>
+                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-sm font-bold text-amber-600">{formatCurrency(product.featuredDiscountPrice)}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold text-amber-600">{formatCurrency(product.price)}</span>
+                          )}
+                          {product.badge && (
+                            <span className="text-[10px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded">{product.badge}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => openFeaturedModal(product)}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      >
+                        <Star className="h-3 w-3" />
+                        Destaque
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Banners */}
+          <div className="flex items-center justify-between pt-4 border-t border-zinc-200">
             <p className="text-sm text-zinc-500">Configure o carrossel de banners do cardápio</p>
             <Button onClick={() => { setEditingBanner(null); setBannerForm({ title: "", subtitle: "", ctaText: "Ver mais", ctaType: "scroll", ctaTarget: "", gradientFrom: "from-blue-500", gradientTo: "to-purple-500", image: "" }); setShowBannerForm(true) }}>
               <Plus className="mr-1 h-4 w-4" /> Novo Banner
