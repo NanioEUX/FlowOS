@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -141,6 +141,24 @@ export default function CardapioPage() {
     const margin = m / 100
     return margin >= 1 ? null : fichaTecnicaCost / (1 - margin)
   }, [fichaTecnicaCost, productForm.categoryId, categories])
+
+  // CMV por produto (para exibir nos cards)
+  function computeProductCMV(product: any): number {
+    const links = product.stockLinks || []
+    if (links.length === 0) return 0
+    let cost = 0
+    for (const link of links) {
+      const item = stockItems.find((s: any) => s.id === link.stockItemId)
+      if (!item) continue
+      const qty = Number(link.quantity) || 0
+      const linkUnit = link.unit || "un"
+      const stockUnit = item.unit || "un"
+      const converted = convertQuantity(qty, linkUnit, stockUnit)
+      if (converted === null) continue
+      cost += converted * (item.unitCost || 0)
+    }
+    return cost
+  }
 
   // Aparência state
   const [form, setForm] = useState({
@@ -1579,6 +1597,24 @@ export default function CardapioPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
+                              {(() => {
+                                const cmv = computeProductCMV(product)
+                                if (cmv > 0) {
+                                  const lucro = product.price - cmv
+                                  const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
+                                  return (
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <DollarSign className="h-3 w-3 text-zinc-400" />
+                                      <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                      <span className="text-[10px] text-zinc-300">|</span>
+                                      <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        {margem.toFixed(0)}%
+                                      </span>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
                               <span className="font-bold text-green-600">
                                 {formatCurrency(product.price)}
                               </span>
@@ -1719,7 +1755,21 @@ export default function CardapioPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
-                        <p className="text-xs text-zinc-500">{formatCurrency(product.price)}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-zinc-500">{formatCurrency(product.price)}</span>
+                          {(() => {
+                            const cmv = computeProductCMV(product)
+                            if (cmv > 0) {
+                              const margem = product.price > 0 ? (((product.price - cmv) / product.price) * 100) : 0
+                              return (
+                                <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                  CMV {formatCurrency(cmv)} ({margem.toFixed(0)}%)
+                                </span>
+                              )
+                            }
+                            return null
+                          })()}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -1788,6 +1838,24 @@ export default function CardapioPage() {
                             <span className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</span>
                           )}
                         </div>
+                        {(() => {
+                          const cmv = computeProductCMV(product)
+                          if (cmv > 0) {
+                            const finalPrice = product.promoPrice || product.price
+                            const margem = finalPrice > 0 ? (((finalPrice - cmv) / finalPrice) * 100) : 0
+                            return (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <DollarSign className="h-3 w-3 text-zinc-400" />
+                                <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                <span className="text-[10px] text-zinc-300">|</span>
+                                <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                  {margem.toFixed(0)}%
+                                </span>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
                       <button
                         type="button"
@@ -1860,6 +1928,24 @@ export default function CardapioPage() {
                             <span className="text-[10px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded">{product.badge}</span>
                           )}
                         </div>
+                        {(() => {
+                          const cmv = computeProductCMV(product)
+                          if (cmv > 0) {
+                            const finalPrice = product.featuredDiscountPrice || product.price
+                            const margem = finalPrice > 0 ? (((finalPrice - cmv) / finalPrice) * 100) : 0
+                            return (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <DollarSign className="h-3 w-3 text-zinc-400" />
+                                <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                <span className="text-[10px] text-zinc-300">|</span>
+                                <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                  {margem.toFixed(0)}%
+                                </span>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
                       <button
                         type="button"
