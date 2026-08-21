@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { ShoppingBag, Search, MessageCircle, ExternalLink, User, Plus, Loader2, X, Bike, Store, CreditCard, Banknote, Printer, Calendar, Package, Send } from "lucide-react"
+import { ShoppingBag, Search, MessageCircle, ExternalLink, User, Plus, Loader2, X, Bike, Store, CreditCard, Banknote, Printer, Calendar, Package, Send, ChefHat } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -253,7 +253,21 @@ export default function PedidosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-zinc-900">Pedidos</h2>
-
+        <button
+          onClick={() => {
+            const user = JSON.parse(localStorage.getItem("pedefacil-user") || "{}")
+            if (user.establishmentId) {
+              localStorage.setItem("kds_token", user.token)
+              localStorage.setItem("kds_user", JSON.stringify(user))
+              localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
+              window.open("/kds/screen", "_blank")
+            }
+          }}
+          className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <ChefHat className="w-4 h-4" />
+          Cozinha (KDS)
+        </button>
       </div>
 
       {/* Motoboy summary removido — gestão de motoboys fica no módulo /entregas */}
