@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -57,7 +57,7 @@ function getBadgeDisplay(badge: string | null) {
   )
 }
 
-type Tab = "produtos" | "destaques" | "stories" | "aparencia" | "cores"
+type Tab = "produtos" | "preparo" | "promocao" | "destaques"
 
 export default function CardapioPage() {
   const searchParams = useSearchParams()
@@ -313,9 +313,7 @@ export default function CardapioPage() {
       loadBanners()
       loadBannerRefs()
     }
-    if (activeTab === "stories") {
-      loadStoriesData()
-    }
+
   }, [activeTab, establishmentId])
 
   async function addCategory() {
@@ -1473,7 +1471,29 @@ export default function CardapioPage() {
           }`}
         >
           <UtensilsCrossed className="h-4 w-4" />
-          Produto
+          Produtos
+        </button>
+        <button
+          onClick={() => setActiveTab("preparo")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "preparo"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          Preparo
+        </button>
+        <button
+          onClick={() => setActiveTab("promocao")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "promocao"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Tag className="h-4 w-4" />
+          Promoção
         </button>
         <button
           onClick={() => setActiveTab("destaques")}
@@ -1483,41 +1503,8 @@ export default function CardapioPage() {
               : "text-zinc-500 hover:text-zinc-500"
           }`}
         >
-          <ImageIcon className="h-4 w-4" />
+          <Star className="h-4 w-4" />
           Destaques
-        </button>
-        <button
-          onClick={() => setActiveTab("stories")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === "stories"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-500"
-          }`}
-        >
-          <Eye className="h-4 w-4" />
-          Stories
-        </button>
-        <button
-          onClick={() => setActiveTab("aparencia")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === "aparencia"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-500"
-          }`}
-        >
-          <Sparkles className="h-4 w-4" />
-          Aparência
-        </button>
-        <button
-          onClick={() => setActiveTab("cores")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === "cores"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-500"
-          }`}
-        >
-          <Palette className="h-4 w-4" />
-          Cores
         </button>
       </div>
 
@@ -1579,7 +1566,7 @@ export default function CardapioPage() {
                         ) : (
                           <>
                             <Percent className="h-3 w-3" />
-                            Adicionar
+                            Ajustar Preços
                           </>
                         )}
                       </button>
@@ -1782,6 +1769,99 @@ export default function CardapioPage() {
         </>
       )}
 
+      {/* Preparo Tab */}
+      {activeTab === "preparo" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Produtos que possuem tempo de preparo configurado</p>
+          </div>
+          {categories.filter(c => c.products.some(p => p.sendToPrep)).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
+              <Clock className="mx-auto h-8 w-8 text-zinc-400" />
+              <p className="mt-2 text-sm text-zinc-500">Nenhum produto com preparo configurado</p>
+              <p className="text-xs text-zinc-400 mt-1">Ative "Enviar para preparo" nos produtos</p>
+            </div>
+          ) : (
+            categories.filter(c => c.products.some(p => p.sendToPrep)).map(cat => (
+              <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {cat.products.filter(p => p.sendToPrep).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      {product.image ? (
+                        <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                        <p className="text-xs text-zinc-500">{formatCurrency(product.price)}</p>
+                      </div>
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Preparo</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Promoção Tab */}
+      {activeTab === "promocao" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Produtos com promoção ativa</p>
+          </div>
+          {categories.filter(c => c.products.some(p => p.onSale)).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
+              <Tag className="mx-auto h-8 w-8 text-zinc-400" />
+              <p className="mt-2 text-sm text-zinc-500">Nenhum produto em promoção</p>
+              <p className="text-xs text-zinc-400 mt-1">Ative "Promoção" nos produtos</p>
+            </div>
+          ) : (
+            categories.filter(c => c.products.some(p => p.onSale)).map(cat => (
+              <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {cat.products.filter(p => p.onSale).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      {product.image ? (
+                        <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                        <div className="flex items-center gap-2">
+                          {product.promoPrice ? (
+                            <>
+                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-sm font-bold text-green-600">{formatCurrency(product.promoPrice)}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Promoção</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       {/* Destaques Tab */}
       {activeTab === "destaques" && (
         <div className="space-y-4">
@@ -1958,594 +2038,6 @@ export default function CardapioPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* Stories Tab */}
-      {activeTab === "stories" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-500">Configure os stories circulares do cardápio</p>
-            <Button onClick={() => { setEditingStory(null); setStoryForm({ name: "", emoji: "🔥", gradientFrom: "from-red-500", gradientTo: "to-orange-500", type: "manual", autoType: "" }); setShowStoryForm(true) }}>
-              <Plus className="mr-1 h-4 w-4" /> Novo Story
-            </Button>
-          </div>
-
-          {/* Auto Stories Section */}
-          {autoStories.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  <h4 className="text-sm font-semibold text-zinc-700">Stories Automáticos</h4>
-                </div>
-                <p className="text-xs text-zinc-400 mb-3">Gerenciados automaticamente pelo sistema</p>
-                <div className="space-y-2">
-                  {autoStories.map((story: any) => (
-                    <div key={story.id} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5">
-                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center text-lg`}>{story.emoji}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-900">{story.name}</p>
-                        <p className="text-[11px] text-zinc-400">{AUTO_TYPE_OPTIONS.find((a) => a.value === story.autoType)?.label || story.autoType}</p>
-                      </div>
-                      <button onClick={() => toggleStoryActive(story)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${story.active ? "bg-green-500" : "bg-zinc-300"}`}>
-                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${story.active ? "translate-x-4.5" : "translate-x-0.5"}`} style={{ transform: story.active ? "translateX(18px)" : "translateX(2px)" }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Manual Stories */}
-          {stories.length === 0 && autoStories.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-12 text-center">
-              <span className="text-4xl block mb-3">📱</span>
-              <p className="text-sm font-medium text-zinc-600">Nenhum story configurado</p>
-              <p className="text-xs text-zinc-400 mt-1">Crie stories para aparecerem no cardápio do cliente</p>
-            </div>
-          ) : stories.length > 0 ? (
-            <div className="space-y-2">
-              {stories.map((story: any, idx: number) => (
-                <div key={story.id} className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${story.active ? "bg-white border-zinc-200" : "bg-zinc-50 border-zinc-100 opacity-60"}`}>
-                  <div className="flex flex-col gap-0.5">
-                    <button onClick={() => moveStoryOrder(story, "up")} disabled={idx === 0} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
-                    <button onClick={() => moveStoryOrder(story, "down")} disabled={idx === stories.length - 1} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${story.gradientFrom} ${story.gradientTo} flex items-center justify-center text-lg`}>{story.emoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900 truncate">{story.name}</p>
-                    <p className="text-[11px] text-zinc-400">{story.items?.length || 0} produto(s)</p>
-                  </div>
-                  <button onClick={() => toggleStoryActive(story)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${story.active ? "bg-green-500" : "bg-zinc-300"}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${story.active ? "translate-x-6" : "translate-x-1"}`} />
-                  </button>
-                  <button onClick={() => { setEditingStory(story); setStoryForm({ name: story.name, emoji: story.emoji, gradientFrom: story.gradientFrom, gradientTo: story.gradientTo, type: story.type, autoType: story.autoType || "" }); setShowStoryForm(true) }} className="text-zinc-400 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={() => setDeleteStoryConfirm(story.id)} className="text-zinc-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {/* Story Form Modal */}
-          {showStoryForm && (
-            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-              <div className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 sticky top-0 bg-white z-10">
-                  <h3 className="text-lg font-semibold text-zinc-900">{editingStory ? "Editar Story" : "Novo Story"}</h3>
-                  <button onClick={() => { setShowStoryForm(false); setEditingStory(null) }} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
-                </div>
-                <div className="px-6 py-4 space-y-5">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Nome</label>
-                    <input value={storyForm.name} onChange={(e) => setStoryForm({ ...storyForm, name: e.target.value })} placeholder="Ex: Fits, Sem Lactose..." className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Emoji</label>
-                    <div className="flex flex-wrap gap-2">
-                      {STORY_EMOJI_OPTIONS.map((em) => (
-                        <button key={em} type="button" onClick={() => setStoryForm({ ...storyForm, emoji: em })} className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${storyForm.emoji === em ? "bg-green-100 ring-2 ring-green-500 scale-110" : "bg-zinc-100 hover:bg-zinc-200"}`}>{em}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cores</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {STORY_GRADIENT_OPTIONS.map((g) => (
-                        <button key={g.from} type="button" onClick={() => setStoryForm({ ...storyForm, gradientFrom: g.from, gradientTo: g.to })} className={`h-10 rounded-lg bg-gradient-to-br ${g.from} ${g.to} transition-all ${storyForm.gradientFrom === g.from ? "ring-2 ring-green-500 ring-offset-2 scale-105" : "hover:scale-105"}`} title={g.label} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3">
-                    <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${storyForm.gradientFrom} ${storyForm.gradientTo} flex items-center justify-center text-2xl shadow-md`}>{storyForm.emoji}</div>
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900">{storyForm.name || "Nome do story"}</p>
-                      <p className="text-[11px] text-zinc-400">Preview no cardápio</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Tipo</label>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setStoryForm({ ...storyForm, type: "manual" })} className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${storyForm.type === "manual" ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
-                        📋 Manual
-                      </button>
-                      <button type="button" onClick={() => setStoryForm({ ...storyForm, type: "auto" })} className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${storyForm.type === "auto" ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
-                        🤖 Automático
-                      </button>
-                    </div>
-                  </div>
-                  {storyForm.type === "auto" && (
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Tipo automático</label>
-                      <div className="space-y-2">
-                        {AUTO_TYPE_OPTIONS.map((opt) => (
-                          <button key={opt.value} type="button" onClick={() => setStoryForm({ ...storyForm, autoType: opt.value })} className={`w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left ${storyForm.autoType === opt.value ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}>
-                            <span className="text-lg">{opt.icon}</span> {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {storyForm.type === "manual" && editingStory && (
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Produtos no story</label>
-                      {editingStory.items && editingStory.items.length > 0 && (
-                        <div className="space-y-1 mb-3">
-                          {editingStory.items.map((item: any) => (
-                            <div key={item.product.id} className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-                              {item.product.image ? <img src={item.product.image} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <div className="h-8 w-8 rounded-lg bg-zinc-100 flex items-center justify-center text-xs">📦</div>}
-                              <span className="flex-1 text-sm font-medium text-zinc-700 truncate">{item.product.name}</span>
-                              <button onClick={() => removeProductFromStory(editingStory.id, item.product.id)} className="text-zinc-400 hover:text-red-500"><X className="h-4 w-4" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="relative mb-2">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                        <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Buscar produto para adicionar..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm focus:border-green-600 focus:outline-none" />
-                      </div>
-                      {productSearch && (
-                        <div className="max-h-40 overflow-y-auto rounded-lg border border-zinc-200">
-                          {filteredProducts.filter((p) => !editingStory.items?.some((i: any) => i.product.id === p.id)).slice(0, 10).map((product) => (
-                            <button key={product.id} onClick={() => { addProductToStory(editingStory.id, product.id); setProductSearch("") }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 border-b border-zinc-100 last:border-0">
-                              {product.image ? <img src={product.image} alt="" className="h-7 w-7 rounded-lg object-cover" /> : <div className="h-7 w-7 rounded-lg bg-zinc-100 flex items-center justify-center text-[10px]">📦</div>}
-                              <span className="text-sm text-zinc-700 truncate">{product.name}</span>
-                            </button>
-                          ))}
-                          {filteredProducts.filter((p) => !editingStory.items?.some((i: any) => i.product.id === p.id)).length === 0 && (
-                            <p className="px-3 py-2 text-xs text-zinc-400">Nenhum produto encontrado</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 border-t border-zinc-200 px-6 py-4 sticky bottom-0 bg-white">
-                  <button onClick={() => { setShowStoryForm(false); setEditingStory(null) }} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
-                  <button onClick={handleSaveStory} disabled={savingStory} className="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                    {savingStory ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {editingStory ? "Salvar" : "Criar"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Story Delete Confirm */}
-          {deleteStoryConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-                <h3 className="text-lg font-semibold text-zinc-900 mb-2">Remover story?</h3>
-                <p className="text-sm text-zinc-500 mb-6">Essa ação não pode ser desfeita.</p>
-                <div className="flex gap-3">
-                  <button onClick={() => setDeleteStoryConfirm(null)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
-                  <button onClick={() => handleDeleteStory(deleteStoryConfirm)} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Remover</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Aparência Tab */}
-      {activeTab === "aparencia" && (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Aparência do Cardápio</h3>
-            <p className="text-sm text-zinc-500">Personalize a visualização do seu cardápio público.</p>
-            
-            {/* Preview do cardápio */}
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs text-zinc-400 mb-3">Pré-visualização</p>
-              <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm border border-white/[.04]">
-                {form.logo ? (
-                  <img src={form.logo} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
-                    <ImageIcon className="h-5 w-5 text-green-600" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-bold text-zinc-900">{form.name || "Nome do Estabelecimento"}</p>
-                  <p className="text-xs text-zinc-500">{form.phone || "Telefone"}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload da Logo */}
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Logo do Estabelecimento</label>
-              <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
-                  <Upload className="h-4 w-4" />
-                  <span>Selecionar imagem</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        const reader = new FileReader()
-                        reader.onloadend = () => setForm({ ...form, logo: reader.result as string })
-                        reader.readAsDataURL(file)
-                      }
-                    }}
-                  />
-                </label>
-                {form.logo && (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, logo: "" })}
-                    className="text-xs text-red-500 hover:text-red-400"
-                  >
-                    Remover
-                  </button>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
-              <input
-                type="text"
-                placeholder="https://..."
-                value={form.logo.startsWith("data:") ? "" : form.logo}
-                onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Link do Instagram</label>
-              <input
-                type="text"
-                id="instagramUrl"
-                placeholder="https://instagram.com/seuperfil"
-                value={form.instagramUrl}
-                onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-              />
-              <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
-            </div>
-
-            <div className="border-t border-white/[.04] pt-4">
-              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Mensagens de Pedido</h4>
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título de Confirmação</label>
-                  <input
-                    placeholder="Pedido enviado!"
-                    value={form.confirmationTitle}
-                    onChange={(e) => setForm({ ...form, confirmationTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-zinc-400">Título exibido ao cliente após finalizar o pedido</p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de Confirmação</label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
-                      <Upload className="h-4 w-4" />
-                      <span>Selecionar imagem</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const reader = new FileReader()
-                          reader.onloadend = () => {
-                            const img = new window.Image()
-                            img.onload = () => {
-                              const MAX = 600
-                              let w = img.width, h = img.height
-                              if (w > MAX || h > MAX) {
-                                if (w > h) { h = Math.round(h * MAX / w); w = MAX }
-                                else { w = Math.round(w * MAX / h); h = MAX }
-                              }
-                              const canvas = document.createElement("canvas")
-                              canvas.width = w
-                              canvas.height = h
-                              canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
-                              setForm({ ...form, confirmationImage: canvas.toDataURL("image/jpeg", 0.7) })
-                            }
-                            img.src = reader.result as string
-                          }
-                          reader.readAsDataURL(file)
-                        }}
-                      />
-                    </label>
-                    {form.confirmationImage && (
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, confirmationImage: "" })}
-                        className="text-xs text-red-500 hover:text-red-400"
-                      >
-                        Remover
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-zinc-400">Imagem exibida no card de confirmação. Se vazia, usa a logo.</p>
-                  {form.confirmationImage && (
-                    <img src={form.confirmationImage} alt="Preview" className="mt-2 h-16 w-16 rounded-xl object-cover" />
-                  )}
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Retirada</label>
-                  <textarea
-                    placeholder="Vai ser um prazer recebê-lo. Estamos lhe aguardando!"
-                    value={form.pickupMessage}
-                    onChange={(e) => setForm({ ...form, pickupMessage: e.target.value })}
-                    rows={3}
-                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de retirada</p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Entrega</label>
-                  <textarea
-                    placeholder="Obrigado pelo seu pedido!"
-                    value={form.deliveryMessage}
-                    onChange={(e) => setForm({ ...form, deliveryMessage: e.target.value })}
-                    rows={3}
-                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de entrega</p>
-                </div>
-              </div>
-
-              {/* Mensagem de Fechamento */}
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-400" />
-                  <h4 className="text-sm font-semibold text-amber-800">Mensagem quando fechado</h4>
-                </div>
-                <p className="text-xs text-amber-400">Personalize a mensagem exibida quando o estabelecimento estiver fechado. Use {'{day}'} e {'{time}'} para preencher automaticamente.</p>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Título</label>
-                  <input
-                    placeholder="Encerramos por hoje, mas {day} às {time} retornamos"
-                    value={form.closedTitle}
-                    onChange={(e) => setForm({ ...form, closedTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Submensagem</label>
-                  <input
-                    placeholder="Aguarde, estaremos de volta!"
-                    value={form.closedSub}
-                    onChange={(e) => setForm({ ...form, closedSub: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                </div>
-                {/* Preview */}
-                <div className="rounded-lg border border-amber-500/20 bg-white p-3">
-                  <p className="mb-2 text-[10px] font-medium text-zinc-400 uppercase">Preview (simula terça às 14:00)</p>
-                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-center">
-                    <p className="text-sm font-medium text-amber-800">
-                      {form.closedTitle
-                        ? form.closedTitle.replace(/\{day\}/g, "quarta").replace(/\{time\}/g, "09:00")
-                        : "Encerramos por hoje, mas quarta às 09:00 retornamos"}
-                    </p>
-                    <p className="mt-1 text-xs text-amber-400">
-                      {form.closedSub || "Aguarde, estaremos de volta!"}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-amber-400 underline">Ver horários de funcionamento</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <Button type="button" onClick={saveAppearance} disabled={savingAppearance}>
-                {savingAppearance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Salvar aparência
-              </Button>
-              {savedAppearance && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Cores Tab */}
-      {activeTab === "cores" && (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
-                  <Palette className="h-5 w-5 text-[#FF6B35]" />
-                  Personalização de Cores
-                </h3>
-                <p className="text-sm text-zinc-500">Customize as cores do seu cardápio público.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {colorsPublished ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-600/10 px-2 py-1 text-xs font-medium text-green-600">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-600"></div>
-                    Publicado
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-400">
-                    <div className="h-1.5 w-1.5 rounded-full bg-zinc-400"></div>
-                    Rascunho
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Color Picker + Preview */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/* Color Pickers */}
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor primária (botões, destaques)</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={colors.primaryColor}
-                      onChange={(e) => setColors({ ...colors, primaryColor: e.target.value })}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      value={colors.primaryColor}
-                      onChange={(e) => setColors({ ...colors, primaryColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor de fundo</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={colors.backgroundColor}
-                      onChange={(e) => setColors({ ...colors, backgroundColor: e.target.value })}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      value={colors.backgroundColor}
-                      onChange={(e) => setColors({ ...colors, backgroundColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor do texto</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={colors.textColor}
-                      onChange={(e) => setColors({ ...colors, textColor: e.target.value })}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      value={colors.textColor}
-                      onChange={(e) => setColors({ ...colors, textColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Cor do header</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={colors.headerColor}
-                      onChange={(e) => setColors({ ...colors, headerColor: e.target.value })}
-                      className="h-10 w-10 cursor-pointer rounded border-0"
-                    />
-                    <input
-                      type="text"
-                      value={colors.headerColor}
-                      onChange={(e) => setColors({ ...colors, headerColor: e.target.value })}
-                      className="flex-1 rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Preview */}
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400 mb-3">Pré-visualização ao vivo</p>
-                <div
-                  className="rounded-lg overflow-hidden shadow-sm"
-                  style={{ backgroundColor: colors.backgroundColor }}
-                >
-                  {/* Header Preview */}
-                  <div
-                    className="p-3 flex items-center gap-2"
-                    style={{ backgroundColor: colors.headerColor }}
-                  >
-                    {form.logo ? (
-                      <img src={form.logo} alt="Logo" className="h-6 w-6 rounded object-cover" />
-                    ) : (
-                      <div className="h-6 w-6 rounded" style={{ backgroundColor: colors.primaryColor + "30" }}></div>
-                    )}
-                    <span className="font-bold text-sm" style={{ color: colors.textColor }}>
-                      {form.name || "Seu Restaurante"}
-                    </span>
-                  </div>
-                  {/* Content Preview */}
-                  <div className="p-3 space-y-2">
-                    <div className="rounded-lg p-2" style={{ backgroundColor: colors.backgroundColor === "#ffffff" ? "#f9fafb" : colors.backgroundColor }}>
-                      <div className="h-2 w-16 rounded mb-1" style={{ backgroundColor: colors.textColor + "30" }}></div>
-                      <div className="h-2 w-24 rounded mb-2" style={{ backgroundColor: colors.textColor + "20" }}></div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold" style={{ color: colors.primaryColor }}>R$ 45,00</span>
-                        <div
-                          className="rounded px-2 py-0.5 text-[10px] font-medium text-white"
-                          style={{ backgroundColor: colors.primaryColor }}
-                        >
-                          Adicionar
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => saveColors(false)}
-                disabled={savingColors}
-              >
-                {savingColors ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Salvar rascunho
-              </Button>
-              <Button
-                type="button"
-                onClick={() => saveColors(true)}
-                disabled={savingColors}
-                className="bg-[#FF6B35] hover:bg-[#E55A2B]"
-              >
-                {savingColors ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
-                Publicar
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setColors({
-                    primaryColor: "#16a34a",
-                    backgroundColor: "#ffffff",
-                    textColor: "#1a1a2e",
-                    headerColor: "#ffffff",
-                  })
-                }}
-              >
-                Resetar cores
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       </div>{/* close left editing column */}
