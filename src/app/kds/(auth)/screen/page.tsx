@@ -215,6 +215,15 @@ export default function KdsScreen() {
     return order.customer?.name || "Pedido"
   }
 
+  function getOrderTypeLabel(order: Order): string {
+    if (order.tableNumber) return "Mesa"
+    if (order.method === "ifood") return "iFood"
+    if (order.orderType === "delivery") return "Online Entrega"
+    if (order.orderType === "pickup") return "Online Retirada"
+    if (order.method === "site") return "Online"
+    return "Balcão"
+  }
+
   function isOverdue(dateStr: string): boolean {
     return (Date.now() - new Date(dateStr).getTime()) > 15 * 60 * 1000
   }
@@ -393,7 +402,10 @@ export default function KdsScreen() {
                                 <span className={`${overdue ? "text-red-400" : "text-zinc-300"}`}>
                                   {getOriginIcon(order)}
                                 </span>
-                                <span className="font-bold text-sm text-white truncate">{getOrderTitle(order)}</span>
+                                <div className="min-w-0">
+                                  <span className="font-bold text-sm text-white truncate block">{getOrderTitle(order)}</span>
+                                  <span className="text-[9px] text-zinc-500">{getOrderTypeLabel(order)}</span>
+                                </div>
                                 {order.tableNumber && (
                                   <span className="text-[10px] text-zinc-300 bg-zinc-700 px-1.5 py-0.5 rounded">
                                     {order.tableNumber}
@@ -483,6 +495,11 @@ export default function KdsScreen() {
                                             ? "bg-green-600/20 text-green-300"
                                             : "bg-zinc-700 text-zinc-200"
                                         }`}>
+                                          <p className={`text-[9px] font-semibold mb-0.5 ${
+                                            m.sender === "establishment" ? "text-green-400" : "text-amber-400"
+                                          }`}>
+                                            {m.sender === "establishment" ? "Estabelecimento" : getOrderTitle(order)}
+                                          </p>
                                           <p>{m.message}</p>
                                           <p className="text-[8px] opacity-50 mt-0.5">
                                             {new Date(m.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
