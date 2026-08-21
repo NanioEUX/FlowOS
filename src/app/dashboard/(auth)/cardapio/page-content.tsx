@@ -1587,56 +1587,34 @@ export default function CardapioPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-zinc-900">{product.name}</p>
                               {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
-                              {(product as any).stockLinks?.length > 0 && <Badge variant="success">Vendável</Badge>}
                               {hasCostAlert(product) && <Badge variant="warning">Custo alterado</Badge>}
                               {getBadgeDisplay(product.badge)}
                             </div>
                             {product.description && (
                               <p className="text-sm text-zinc-500 truncate">{product.description}</p>
                             )}
+                            {(() => {
+                              const cmv = computeProductCMV(product)
+                              if (cmv > 0) {
+                                const lucro = product.price - cmv
+                                const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
+                                return (
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                    <span className="text-[10px] text-zinc-300">•</span>
+                                    <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                      {margem.toFixed(0)}% lucro
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              {(() => {
-                                const cmv = computeProductCMV(product)
-                                if (cmv > 0) {
-                                  const lucro = product.price - cmv
-                                  const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
-                                  return (
-                                    <div className="flex items-center gap-1 justify-end">
-                                      <DollarSign className="h-3 w-3 text-zinc-400" />
-                                      <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
-                                      <span className="text-[10px] text-zinc-300">|</span>
-                                      <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                        {margem.toFixed(0)}%
-                                      </span>
-                                    </div>
-                                  )
-                                }
-                                return null
-                              })()}
-                              <span className="font-bold text-green-600">
-                                {formatCurrency(product.price)}
-                              </span>
-                              {(() => {
-                                const links = (product as any).stockLinks || []
-                                if (links.length === 0 || !cat.targetMarginPercent) return null
-                                let cost = 0
-                                for (const link of links) {
-                                  const item = stockItems.find((s: any) => s.id === link.stockItemId)
-                                  if (!item) continue
-                                  const qty = Number(link.quantity) || 0
-                                  const linkUnit = link.unit || "un"
-                                  const stockUnit = item.unit || "un"
-                                  const converted = convertQuantity(qty, linkUnit, stockUnit)
-                                  if (converted === null) continue
-                                  cost += converted * (item.unitCost || 0)
-                                }
-                                const suggested = getCategorySuggestedPrice(cat, cost)
-                                if (!suggested) return null
-                                return <p className="text-[10px] text-green-600 font-medium">Sug: {formatCurrency(suggested)}</p>
-                              })()}
-                            </div>
+                            <span className="font-bold text-green-600">
+                              {formatCurrency(product.price)}
+                            </span>
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
