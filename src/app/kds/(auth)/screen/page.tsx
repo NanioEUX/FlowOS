@@ -16,12 +16,14 @@ interface Order {
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  confirmed: { label: "Novo", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
+  new: { label: "Novo", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
+  pending: { label: "Pendente", color: "text-blue-300", bg: "bg-blue-400/20 border-blue-400/30" },
+  confirmed: { label: "Confirmado", color: "text-cyan-400", bg: "bg-cyan-500/20 border-cyan-500/30" },
   preparing: { label: "Preparando", color: "text-yellow-400", bg: "bg-yellow-500/20 border-yellow-500/30" },
   ready: { label: "Pronto", color: "text-green-400", bg: "bg-green-500/20 border-green-500/30" },
 }
 
-const statusOrder = ["confirmed", "preparing", "ready"]
+const statusOrder = ["new", "pending", "confirmed", "preparing", "ready"]
 
 export default function KdsScreen() {
   const router = useRouter()
@@ -49,7 +51,7 @@ export default function KdsScreen() {
 
       if (res.ok) {
         const all = data.orders || data || []
-        const filtered = all.filter((o: Order) => ["confirmed", "preparing", "ready"].includes(o.status))
+        const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "preparing", "ready"].includes(o.status))
         filtered.sort((a: Order, b: Order) => {
           const ai = statusOrder.indexOf(a.status), bi = statusOrder.indexOf(b.status)
           if (ai !== bi) return ai - bi
@@ -212,14 +214,21 @@ export default function KdsScreen() {
                     <p className="text-zinc-400 text-xs mb-3">{order.customer.name}</p>
                   )}
 
-                  {nextStatus && nextLabel && (
+                  {order.status === "new" || order.status === "pending" ? (
+                    <button
+                      onClick={() => updateStatus(order.id, "confirmed")}
+                      className="w-full mt-2 bg-white/10 hover:bg-white/20 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+                    >
+                      Aceitar Pedido
+                    </button>
+                  ) : nextStatus && nextLabel ? (
                     <button
                       onClick={() => updateStatus(order.id, nextStatus)}
                       className="w-full mt-2 bg-white/10 hover:bg-white/20 text-white font-medium py-2 rounded-lg text-sm transition-colors"
                     >
                       {nextLabel}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               )
             })}
