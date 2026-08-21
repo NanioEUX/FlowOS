@@ -2,7 +2,15 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, LogOut, Volume2, VolumeX, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle } from "lucide-react"
+import { Loader2, LogOut, Volume2, VolumeX, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react"
+
+interface OrderMessage {
+  id: string
+  sender: string
+  message: string
+  read: boolean
+  createdAt: string
+}
 
 interface Order {
   id: string
@@ -15,6 +23,7 @@ interface Order {
   waiterName?: string
   method?: string
   orderType?: string
+  messages?: OrderMessage[]
 }
 
 type FilterOrigin = "all" | "mesas" | "online"
@@ -36,6 +45,12 @@ export default function KdsScreen() {
   const [completedItems, setCompletedItems] = useState<Record<string, Record<number, boolean>>>({})
   const [filter, setFilter] = useState<FilterOrigin>("all")
   const estIdRef = useRef<string | null>(null)
+  const [orderMessages, setOrderMessages] = useState<Record<string, OrderMessage[]>>({})
+  const [expandedChat, setExpandedChat] = useState<string | null>(null)
+  const [chatInput, setChatInput] = useState("")
+  const [sendingMsg, setSendingMsg] = useState(false)
+  const lastMsgCountRef = useRef<Record<string, number>>({})
+  const chatScrollRef = useRef<HTMLDivElement>(null)
 
   // Load establishment data from API (including logo)
   useEffect(() => {
@@ -77,6 +92,9 @@ export default function KdsScreen() {
         }
         lastCountRef.current = newCount
         setOrders(filtered)
+
+        // Fetch messages for all orders
+        fetchMessages(filtered.map((o: Order) => o.id))
       }
     } catch (err) {
       console.error("[KDS] Fetch error:", err)
@@ -123,9 +141,62 @@ export default function KdsScreen() {
 
   function handleLogout() {
     localStorage.removeItem("kds_token")
-    localStorage.removeItem("kds_user")
     localStorage.removeItem("kds_establishment")
     router.push("/kds")
+  }
+
+  // Fetch messages for all orders
+  async function fetchMessages(orderIds: string[]) {
+    const token = localStorage.getItem("kds_token")
+    if (!token) return
+    const msgsMap: Record<string, OrderMessage[]> = {}
+    for (const oid of orderIds) {
+      try {
+        const res = await fetch(`/api/orders/${oid}/messages`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          msgsMap[oid] = await res.json()
+        }
+      } catch {}
+    }
+    setOrderMessages(msgsMap)
+
+    // Play sound for new customer messages
+    if (soundEnabled) {
+      for (const oid of orderIds) {
+        const msgs = msgsMap[oid] || []
+        const unread = msgs.filter(m => m.sender === "customer" && !m.read)
+        const prevCount = lastMsgCountRef.current[oid] || 0
+        if (unread.length > prevCount && prevCount >= 0 && lastMsgCountRef.current[oid] !== undefined) {
+          playBeep()
+        }
+        lastMsgCountRef.current[oid] = unread.length
+      }
+    }
+  }
+
+  async function sendKdsMessage(orderId: string) {
+    if (!chatInput.trim() || sendingMsg) return
+    setSendingMsg(true)
+    const token = localStorage.getItem("kds_token")
+    try {
+      const res = await fetch(`/api/orders/${orderId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: chatInput.trim() }),
+      })
+      if (res.ok) {
+        const msg = await res.json()
+        setOrderMessages(prev => ({
+          ...prev,
+          [orderId]: [...(prev[orderId] || []), msg],
+        }))
+        setChatInput("")
+      }
+    } catch {} finally {
+      setSendingMsg(false)
+    }
   }
 
   function getOrigin(order: Order): "mesa" | "online" {
@@ -302,11 +373,14 @@ export default function KdsScreen() {
                         Nenhum pedido
                       </div>
                     ) : (
-                      colOrders.map(order => {
+                       colOrders.map(order => {
                         const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
                         const orderCompleted = completedItems[order.id] || {}
                         const overdue = isOverdue(order.createdAt)
                         const nextAction = getNextAction(order.status)
+                        const msgs = orderMessages[order.id] || []
+                        const unreadMsgs = msgs.filter(m => m.sender === "customer" && !m.read)
+                        const isChatOpen = expandedChat === order.id
 
                         return (
                           <div
@@ -368,6 +442,74 @@ export default function KdsScreen() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Message indicator + Chat toggle */}
+                            <div className="px-3 pb-1">
+                              <button
+                                onClick={() => setExpandedChat(isChatOpen ? null : order.id)}
+                                className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                                  unreadMsgs.length > 0
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    : msgs.length > 0
+                                      ? "bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700"
+                                      : "bg-zinc-700/50 text-zinc-500 hover:bg-zinc-700"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <MessageCircle className="w-3 h-3" />
+                                  {unreadMsgs.length > 0 ? (
+                                    <span className="animate-pulse">{unreadMsgs.length} msg nova{unreadMsgs.length > 1 ? "s" : ""}</span>
+                                  ) : msgs.length > 0 ? (
+                                    <span>{msgs.length} msg{msgs.length > 1 ? "s" : ""}</span>
+                                  ) : (
+                                    <span>Chat</span>
+                                  )}
+                                </div>
+                                {isChatOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            </div>
+
+                            {/* Chat panel */}
+                            {isChatOpen && (
+                              <div className="border-t border-zinc-700">
+                                <div ref={chatScrollRef} className="max-h-40 overflow-y-auto px-3 py-2 space-y-1.5">
+                                  {msgs.length === 0 ? (
+                                    <p className="text-zinc-500 text-[10px] text-center py-2">Nenhuma mensagem</p>
+                                  ) : (
+                                    msgs.map(m => (
+                                      <div key={m.id} className={`flex ${m.sender === "establishment" ? "justify-end" : "justify-start"}`}>
+                                        <div className={`max-w-[85%] rounded-lg px-2 py-1 text-[10px] ${
+                                          m.sender === "establishment"
+                                            ? "bg-green-600/20 text-green-300"
+                                            : "bg-zinc-700 text-zinc-200"
+                                        }`}>
+                                          <p>{m.message}</p>
+                                          <p className="text-[8px] opacity-50 mt-0.5">
+                                            {new Date(m.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                                <div className="px-3 pb-2 flex gap-1.5">
+                                  <input
+                                    value={chatInput}
+                                    onChange={e => setChatInput(e.target.value.slice(0, 500))}
+                                    onKeyDown={e => e.key === "Enter" && sendKdsMessage(order.id)}
+                                    placeholder="Responder..."
+                                    className="flex-1 bg-zinc-800 text-white text-[10px] rounded px-2 py-1.5 border border-zinc-600 focus:border-green-500 focus:outline-none"
+                                  />
+                                  <button
+                                    onClick={() => sendKdsMessage(order.id)}
+                                    disabled={!chatInput.trim() || sendingMsg}
+                                    className="bg-green-600 hover:bg-green-500 disabled:opacity-30 text-white rounded px-2 py-1.5 transition-colors"
+                                  >
+                                    <Send className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
 
                             {/* Action */}
                             {nextAction && (
