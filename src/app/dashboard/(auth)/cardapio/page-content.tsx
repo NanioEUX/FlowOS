@@ -57,7 +57,7 @@ function getBadgeDisplay(badge: string | null) {
   )
 }
 
-type Tab = "produtos" | "preparo" | "promocao" | "destaques"
+type Tab = "produtos" | "preparo" | "promocao" | "destaques" | "stories" | "aparencia" | "cores"
 
 export default function CardapioPage() {
   const searchParams = useSearchParams()
@@ -1506,6 +1506,39 @@ export default function CardapioPage() {
           <Star className="h-4 w-4" />
           Destaques
         </button>
+        <button
+          onClick={() => setActiveTab("stories")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "stories"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Eye className="h-4 w-4" />
+          Stories
+        </button>
+        <button
+          onClick={() => setActiveTab("aparencia")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "aparencia"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          Aparência
+        </button>
+        <button
+          onClick={() => setActiveTab("cores")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === "cores"
+              ? "bg-white text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-500"
+          }`}
+        >
+          <Palette className="h-4 w-4" />
+          Cores
+        </button>
       </div>
 
       {/* Produtos Tab */}
@@ -1767,6 +1800,99 @@ export default function CardapioPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Preparo Tab */}
+      {activeTab === "preparo" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Produtos que possuem tempo de preparo configurado</p>
+          </div>
+          {categories.filter(c => c.products.some(p => p.sendToPrep)).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
+              <Clock className="mx-auto h-8 w-8 text-zinc-400" />
+              <p className="mt-2 text-sm text-zinc-500">Nenhum produto com preparo configurado</p>
+              <p className="text-xs text-zinc-400 mt-1">Ative "Enviar para preparo" nos produtos</p>
+            </div>
+          ) : (
+            categories.filter(c => c.products.some(p => p.sendToPrep)).map(cat => (
+              <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {cat.products.filter(p => p.sendToPrep).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      {product.image ? (
+                        <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                        <p className="text-xs text-zinc-500">{formatCurrency(product.price)}</p>
+                      </div>
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Preparo</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Promoção Tab */}
+      {activeTab === "promocao" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500">Produtos com promoção ativa</p>
+          </div>
+          {categories.filter(c => c.products.some(p => p.onSale)).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
+              <Tag className="mx-auto h-8 w-8 text-zinc-400" />
+              <p className="mt-2 text-sm text-zinc-500">Nenhum produto em promoção</p>
+              <p className="text-xs text-zinc-400 mt-1">Ative "Promoção" nos produtos</p>
+            </div>
+          ) : (
+            categories.filter(c => c.products.some(p => p.onSale)).map(cat => (
+              <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {cat.products.filter(p => p.onSale).map((product: any) => (
+                    <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      {product.image ? (
+                        <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{product.name}</p>
+                        <div className="flex items-center gap-2">
+                          {product.promoPrice ? (
+                            <>
+                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-sm font-bold text-green-600">{formatCurrency(product.promoPrice)}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Promoção</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       {/* Preparo Tab */}
