@@ -2489,10 +2489,11 @@ export default function CardapioPage() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">R$</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           step="0.01"
                           placeholder="29,90"
-                          value={Number(productForm.price || 0).toFixed(2)}
+                          value={productForm.price}
                           onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                           className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                         />
