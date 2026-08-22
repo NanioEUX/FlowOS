@@ -968,7 +968,7 @@ win.close()
               {messages.map((msg: any) => (
                 <div key={msg.id} className={`flex ${msg.sender === "establishment" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.sender === "establishment" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-200"}`}>
-                    <p>{msg.message}</p>
+                    <p>{msg.sender === "customer" ? "Você: " : "Estabelecimento: "}{msg.message}</p>
                     <p className={`text-[10px] mt-1 ${msg.sender === "establishment" ? "text-green-200" : "text-zinc-400"}`}>
                       {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                     </p>

@@ -48,18 +48,19 @@ export async function GET(req: NextRequest) {
   // Coupons discount
   const couponsUsed = orders.filter((o) => o.couponId)
   let couponsDiscount = 0
-  for (const order of couponsUsed) {
-    try {
-      const coupon = await prisma.coupon.findUnique({ where: { id: order.couponId! } })
-      if (coupon) {
-        if (coupon.type === "percent") {
-          couponsDiscount += order.total * (coupon.value / 100)
-        } else {
-          couponsDiscount += coupon.value
-        }
-      }
-    } catch {}
-  }
+  // Desconto de cupons - funcionalidade em implementação
+  // for (const order of couponsUsed) {
+  //   try {
+  //     const coupon = await prisma.coupon.findUnique({ where: { id: order.couponId! } })
+  //     if (coupon) {
+  //       if (coupon.type === "percent") {
+  //         couponsDiscount += order.total * (coupon.value / 100)
+  //       } else {
+  //         couponsDiscount += coupon.value
+  //       }
+  //     }
+  //   } catch {}
+  // }
 
   // Expenses by category
   const expensesByCategory = {

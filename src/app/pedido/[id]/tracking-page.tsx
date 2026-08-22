@@ -404,7 +404,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
                           : "bg-zinc-100 text-zinc-800"
                       }`}
                     >
-                      <p>{msg.message}</p>
+                      <p>{msg.sender === "customer" ? "Você: " : "Estabelecimento: "}{msg.message}</p>
                       <p className={`text-[10px] mt-1 ${msg.sender === "customer" ? "text-green-200" : "text-zinc-400"}`}>
                         {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>

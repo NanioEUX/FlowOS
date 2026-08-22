@@ -89,6 +89,7 @@ interface Props {
   establishment: Establishment & { categories: Category[] }
   paymentConfig: { online: boolean; delivery: boolean; pickup: boolean }
   orderConfig: { delivery: boolean; pickup: boolean }
+  minimumOrder: { enabled: boolean; value: number; applyToDelivery: boolean; applyToPickup: boolean }
 }
 
 const BADGE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
@@ -152,7 +153,7 @@ function pointsToCurrency(points: number, redeemPoints: number = 100, redeemDisc
 
 
 
-export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
+export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrder }: Props) {
   const hasCustomColors = establishment.colorsPublished
 
   const { toast } = useToast()
@@ -1060,6 +1061,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig }: Props) {
     : 0
 
   const total = subtotal + deliveryFee - couponDiscount - loyaltyDiscount - firstPurchaseDiscountValue - (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0)
+
+  const isBelowMinimum = minimumOrder.enabled && subtotal > 0 && (
+    (orderType === "delivery" && minimumOrder.applyToDelivery && subtotal < minimumOrder.value) ||
+    (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
+  )
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -4022,11 +4028,16 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="flex-shrink-0 px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
-                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0}
+                {isBelowMinimum && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-center">
+                    <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
+                  </div>
+                )}
+                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : "Finalizar pedido"}
+                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : "Finalizar pedido"}
                 </button>
                 {!lastOrder?.paymentLink && !pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}

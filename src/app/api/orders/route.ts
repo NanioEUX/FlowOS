@@ -339,11 +339,11 @@ export async function POST(req: NextRequest) {
       console.error("[Orders POST] Falha ao gravar CMV snapshot:", e)
     }
 
-    // Increment coupon usedCount
+    // Increment coupon timesUsed
     if (couponId) {
       await prisma.coupon.update({
         where: { id: couponId },
-        data: { usedCount: { increment: 1 } },
+        data: { timesUsed: { increment: 1 } },
       }).catch(() => {})
     }
 

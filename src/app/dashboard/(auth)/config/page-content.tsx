@@ -343,6 +343,10 @@ export default function ConfigPage() {
   const [cancellationBlockThreshold, setCancellationBlockThreshold] = useState("3")
   const [cancellationBlockWindowDays, setCancellationBlockWindowDays] = useState("7")
   const [cancellationBlockDurationDays, setCancellationBlockDurationDays] = useState("7")
+  const [minimumOrderEnabled, setMinimumOrderEnabled] = useState(false)
+  const [minimumOrderValue, setMinimumOrderValue] = useState("0")
+  const [minimumOrderApplyToDelivery, setMinimumOrderApplyToDelivery] = useState(true)
+  const [minimumOrderApplyToPickup, setMinimumOrderApplyToPickup] = useState(false)
   const [whatsappProvider, setWhatsappProvider] = useState<"evolution" | "meta" | null>(null)
   const [whatsappNumber, setWhatsappNumber] = useState("")
   const [evolutionBaseUrl, setEvolutionBaseUrl] = useState("")
@@ -449,6 +453,10 @@ export default function ConfigPage() {
           setCancellationBlockThreshold(String(data.cancellationBlockThreshold ?? 3))
           setCancellationBlockWindowDays(String(data.cancellationBlockWindowDays ?? 7))
           setCancellationBlockDurationDays(String(data.cancellationBlockDurationDays ?? 7))
+          setMinimumOrderEnabled(data.minimumOrderEnabled ?? false)
+          setMinimumOrderValue(String(data.minimumOrderValue ?? 0))
+          setMinimumOrderApplyToDelivery(data.minimumOrderApplyToDelivery ?? true)
+          setMinimumOrderApplyToPickup(data.minimumOrderApplyToPickup ?? false)
           setWhatsappProvider(data.whatsappProvider ?? null)
           setWhatsappNumber(data.whatsappNumber || "")
           setEvolutionBaseUrl(data.evolutionBaseUrl || "")
@@ -581,6 +589,10 @@ export default function ConfigPage() {
           scheduledMaxAdvanceDays: Number(scheduledMaxAdvanceDays) || 30,
           whatsappAutomationEnabled,
           aiMessagesLimit,
+          minimumOrderEnabled,
+          minimumOrderValue: Number(minimumOrderValue) || 0,
+          minimumOrderApplyToDelivery,
+          minimumOrderApplyToPickup,
         }),
       })
 
@@ -962,6 +974,69 @@ export default function ConfigPage() {
                 </div>
               </label>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Pedido Mínimo */}
+        <Card id="section-pedido-minimo" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Pedido Mínimo</h3>
+            <p className="text-sm text-zinc-500">Defina o valor mínimo para que o pedido possa ser realizado no cardápio online.</p>
+            <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+              <input
+                type="checkbox"
+                checked={minimumOrderEnabled}
+                onChange={(e) => setMinimumOrderEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+              />
+              <div>
+                <span className="font-medium text-zinc-900">Habilitar pedido mínimo</span>
+                <p className="text-xs text-zinc-500">Quando ativo, pedidos abaixo do valor não poderão ser realizados</p>
+              </div>
+            </label>
+            {minimumOrderEnabled && (
+              <div className="rounded-lg bg-zinc-50 p-4 space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Valor mínimo (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="30,00"
+                    value={minimumOrderValue}
+                    onChange={(e) => setMinimumOrderValue(e.target.value)}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-700">Aplicar para:</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={minimumOrderApplyToDelivery}
+                      onChange={(e) => setMinimumOrderApplyToDelivery(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <Bike className="h-3.5 w-3.5 text-zinc-400" />
+                      <span className="text-sm text-zinc-700">Entrega</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={minimumOrderApplyToPickup}
+                      onChange={(e) => setMinimumOrderApplyToPickup(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-zinc-400" />
+                      <span className="text-sm text-zinc-700">Retirada</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

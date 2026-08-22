@@ -44,7 +44,8 @@ const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover
   "botTemplateOrderConfirmed", "botTemplateOrderPreparing", "botTemplateOrderReady", "botTemplateOrderDelivering", "botTemplateOrderDelivered", "botTemplateOrderCancelled", "botTemplateOrderScheduled",
   "scheduledMinHours", "scheduledPrepMinutes", "scheduledMaxAdvanceDays", "estimatedDeliveryMin", "estimatedDeliveryMax",
   "whatsappAutomationEnabled", "whatsappAutomationActivatedAt", "whatsappAutomationPriceCents", "aiMessagesLimit",
-  "verifyReminderEnabled", "verifyReminderDelayMin", "verifyReminderMessage"]
+  "verifyReminderEnabled", "verifyReminderDelayMin", "verifyReminderMessage",
+  "minimumOrderEnabled", "minimumOrderValue", "minimumOrderApplyToDelivery", "minimumOrderApplyToPickup"]
 
 export async function PATCH(
   req: NextRequest,

@@ -377,11 +377,10 @@ model Order {
   cancelledBy       String?         // "customer" | "merchant" | "system"
   cancellationCount Int             @default(0)
   // Agendamento de pedidos
-  isScheduled       Boolean         @default(false)
+isScheduled       Boolean         @default(false)
   deliveryDate      DateTime?       // data/hora agendada para entrega/retirada
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  coupon            Coupon?         @relation(fields: [couponId], references: [id])
   customer          Customer?       @relation(fields: [customerId], references: [id])
   deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
   establishment     Establishment   @relation(fields: [establishmentId], references: [id])
@@ -529,21 +528,17 @@ model DeliveryPayment {
 }
 
 model Coupon {
-  id              String        @id @default(cuid())
-  code            String
-  type            String        @default("percent")
-  value           Float
-  minOrder        Float         @default(0)
-  maxUses         Int?
-  usedCount       Int           @default(0)
-  active          Boolean       @default(true)
-  expiresAt       DateTime?
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  orders          Order[]
+  id               String   @id @default(cuid())
+  name             String   // "R$ 20 em compras acima de R$ 200" ou "Aniversário"
+  type             String   // "atingido_valor", "todos", "manual", "dias_sem_comprar"
+  conditionValue   Float    // Valor em R$ para a condição (ex: 200)
+  usageLimit       Int      @default(1) // Quantas vezes pode usar (1 = usado uma vez)
+  timesUsed        Int      @default(0) // Contador de usos
+  available        Boolean  @default(false) // Está disponível para esse cliente?
+  establishmentId  String
+  establishment    Establishment @relation(fields: [establishmentId], references: [id])
 
-  @@unique([code, establishmentId])
+  createdAt        DateTime @default(now())
 }
 
 model CashRegister {
@@ -858,7 +853,8 @@ model CustomerNotification {
   message      String
   read         Boolean  @default(false)
   customerId   String
-  createdAt    DateTime @default(now())
+  couponId     String?  // Cupom relacionado (opcional)
+createdAt    DateTime @default(now())
   customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])

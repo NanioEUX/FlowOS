@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { sendPush } from "@/lib/push"
 
 export async function GET(
   req: NextRequest,
@@ -86,6 +87,35 @@ export async function POST(
       message: body.message.trim().slice(0, 500),
     },
   })
+
+  // Notificar cliente: criar notificação interna + push notification
+  if (sender === "establishment") {
+    try {
+      const order = await prisma.order.findUnique({ where: { id: params.id } })
+      if (order?.customerId && order?.customerPhone) {
+        // 1. Criar notificação interna no banco
+        await prisma.customerNotification.create({
+          data: {
+            type: "info",
+            title: "Mensagem do estabelecimento",
+            message: body.message.trim().slice(0, 200),
+            customerId: order.customerId,
+          },
+        })
+
+        // 2. Enviar push notification para o cliente
+        const pushPayload = {
+          title: "Nova mensagem do estabelecimento",
+          body: body.message.trim().slice(0, 200),
+          url: `/pedido/${order.id}/tracking`,
+          tag: `msg-${order.id}`,
+        }
+        await sendPush(order.establishmentId, order.customerPhone, pushPayload)
+      }
+    } catch (notifyErr: any) {
+      console.error(`[Order Message] Falha ao notificar cliente:`, notifyErr.message)
+    }
+  }
 
   return NextResponse.json(message)
 }

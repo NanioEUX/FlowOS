@@ -86,6 +86,12 @@ export default async function EstablishmentPage({
   const { password, paymentConfig: pc, orderConfig: oc, ...rest } = establishment
   const paymentConfig = JSON.parse(pc || '{"online":true,"delivery":true,"pickup":true}')
   const orderConfig = JSON.parse(oc || '{"delivery":true,"pickup":true}')
+  const minimumOrder = {
+    enabled: rest.minimumOrderEnabled ?? false,
+    value: rest.minimumOrderValue ?? 0,
+    applyToDelivery: rest.minimumOrderApplyToDelivery ?? true,
+    applyToPickup: rest.minimumOrderApplyToPickup ?? false,
+  }
 
   if (isExpired) {
     return (
@@ -109,5 +115,5 @@ export default async function EstablishmentPage({
     )
   }
 
-  return <MenuPage establishment={rest} paymentConfig={paymentConfig} orderConfig={orderConfig} />
+  return <MenuPage establishment={rest} paymentConfig={paymentConfig} orderConfig={orderConfig} minimumOrder={minimumOrder} />
 }

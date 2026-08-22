@@ -450,6 +450,7 @@ export default function KdsScreen() {
 
                               {order.notes && (
                                 <div className="mt-1.5 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
+                                  <p className="text-amber-300 text-[10px] font-medium">Observação:</p>
                                   <p className="text-amber-300 text-[10px] font-medium">{order.notes}</p>
                                 </div>
                               )}
