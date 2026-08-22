@@ -2456,9 +2456,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                             {item.name.length > 22 ? item.name.substring(0, 22) + "..." : item.name}
                           </h2>
                           <div className="flex items-center justify-between mt-3">
-                            <p className="text-xl font-bold text-white drop-shadow">
-                              R$ {item.price.toFixed(2).replace(".", ",")}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              {item.originalPrice && (
+                                <span className="text-sm line-through text-white/60">
+                                  R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                                </span>
+                              )}
+                              <p className="text-xl font-bold text-white drop-shadow">
+                                R$ {item.price.toFixed(2).replace(".", ",")}
+                              </p>
+                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -2630,15 +2637,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <div className="p-2.5">
                   <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
                   <div className="flex items-center justify-between mt-1">
-                    {(item as any).promoPrice && (item as any).onSale ? (
-                      <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
-                        R$ {(item as any).promoPrice.toFixed(2).replace(".", ",")}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-bold" style={{ color: theme.text }}>
+                    <div className="flex items-center gap-2">
+                      {item.originalPrice && (
+                        <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
+                          R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                        </span>
+                      )}
+                      <span className="text-sm font-bold" style={{ color: item.originalPrice ? "#16a34a" : theme.text }}>
                         R$ {item.price.toFixed(2).replace(".", ",")}
                       </span>
-                    )}
+                    </div>
                     <span className="text-[10px] font-medium" style={{ color: theme.textMutedMore }}>
                       ⭐ {(item as any).rating || "4.8"}
                     </span>
@@ -4404,7 +4412,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {trackingMessages.map((msg: any) => (
                     <div key={msg.id} className={`flex ${msg.sender === "customer" ? "justify-end" : "justify-start"}`}>
                       <div className="max-w-[80%] rounded-lg px-3 py-1.5 text-sm" style={msg.sender === "customer" ? { backgroundColor: theme.primary, color: "#ffffff" } : { backgroundColor: theme.bgCard, color: theme.textSubtle }}>
-                        <p>{msg.message}</p>
+                        <p>{msg.sender === "customer" ? "Você: " : "Estabelecimento: "}{msg.message}</p>
                         <p className="text-[10px] mt-0.5" style={msg.sender === "customer" ? { color: "rgba(255,255,255,0.6)" } : { color: theme.textMutedMore }}>
                           {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </p>
