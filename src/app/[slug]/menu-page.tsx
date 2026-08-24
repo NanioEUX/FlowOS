@@ -2415,15 +2415,12 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Spacer for fixed header */}
       <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
 
-      {/* Closed establishment banner */}
-      {!isOpen && (
+      {/* Closed banner — configurable */}
+      {!isOpen && closedMessage && (
         <div className="mx-auto max-w-3xl px-4 pt-2">
-          <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "#fef2f2", borderWidth: 1, borderStyle: "solid", borderColor: "#fecaca" }}>
-            <span className="text-lg">🚫</span>
-            <div>
-              <p className="text-sm font-semibold text-red-600">Estabelecimento fechado</p>
-              <p className="text-xs text-red-500">Estamos fora do horário de funcionamento</p>
-            </div>
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-center backdrop-blur-sm">
+            <p className="text-sm font-medium text-amber-300">{closedMessage.title}</p>
+            <p className="mt-1 text-xs text-amber-400/70">{closedMessage.sub}</p>
           </div>
         </div>
       )}
@@ -2693,16 +2690,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           )}
         </div>
       </div>
-
-      {/* Closed banner */}
-      {!isOpen && closedMessage && (
-        <div className="mx-auto max-w-3xl px-4 pt-3">
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-center backdrop-blur-sm">
-            <p className="text-sm font-medium text-amber-300">{closedMessage.title}</p>
-            <p className="mt-1 text-xs text-amber-400/70">{closedMessage.sub}</p>
-          </div>
-        </div>
-      )}
 
       {/* Categories & Products */}
       <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
