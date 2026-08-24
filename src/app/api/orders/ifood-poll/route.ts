@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
       for (const event of events) {
         const isNewOrder = ["PLACED", "PLC", "CFM", "CONFIRMED"].includes(event.code)
-        const isUpdate = ["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(event.code)
+        const isUpdate = ["DSP", "DISPATCHED", "CON", "CONCLUDED", "PREPARATION_STARTED", "READY_TO_PICKUP"].includes(event.code)
         const isCancel = ["CAN", "CANCELLED", "CANCELLATION_REQUESTED"].includes(event.code)
         if (!isNewOrder && !isUpdate && !isCancel) {
           skipped++
@@ -53,7 +53,11 @@ export async function POST(req: Request) {
 
           // For status updates (DSP/CON), update the existing order in place.
           if (existing && isUpdate) {
-            const newStatus = event.code === 'CON' || event.code === 'CONCLUDED' ? 'delivered' : 'out_for_delivery'
+            const newStatus = event.code === 'CON' || event.code === 'CONCLUDED' ? 'delivered'
+              : event.code === 'DISPATCHED' || event.code === 'DSP' ? 'out_for_delivery'
+              : event.code === 'PREPARATION_STARTED' ? 'preparing'
+              : event.code === 'READY_TO_PICKUP' ? 'ready'
+              : 'dispatched'
 
             // Don't downgrade a manually-completed order back to a delivery
             // status. Once the operator marks "delivered" the iFood event

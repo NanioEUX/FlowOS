@@ -21,12 +21,13 @@ export async function POST(req: NextRequest) {
 
     const actionMap: Record<string, string> = {
       confirmed: "confirm",
-      preparing: "confirm",
+      preparing: "startPreparation",
+      ready: "readyForPickup",
       dispatched: "dispatch",
       out_to_delivery: "dispatch",
       out_for_delivery: "dispatch",
       outfordelivery: "dispatch",
-      delivered: "deliver",
+      delivered: "dispatch",
       cancelled: "cancel",
     }
     const action = actionMap[status]

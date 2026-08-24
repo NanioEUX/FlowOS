@@ -191,17 +191,13 @@ export async function PATCH(
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
-            preparing: "confirm",
-            // ready: tell iFood the kitchen finished so the courier can be
-            // dispatched. /readyForPickup is the canonical endpoint for both
-            // STORE and MERCHANT merchants. The iFood sandbox may return 404 —
-            // we fall back to /confirm (idempotent) in that case.
+            preparing: "startPreparation",
             ready: "readyForPickup",
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",
             outfordelivery: "dispatch",
-            delivered: isMerchantDelivery ? "deliver" : "",
+            delivered: isMerchantDelivery ? "dispatch" : "",
             cancelled: "cancel",
           }
           const action = statusActionMap[status]
@@ -209,7 +205,7 @@ export async function PATCH(
             const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action)
             console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, isMerchantDelivery })
           } else if (status === "delivered" && !isMerchantDelivery) {
-            console.log("[ifood sync] STORE order: skipping /conclude (iFood finishes via webhook CON)", { orderId: order.externalId })
+            console.log("[ifood sync] iFood delivery: skipping (iFood auto-concludes after dispatch)", { orderId: order.externalId })
           } else {
             console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, isMerchantDelivery })
           }

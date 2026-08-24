@@ -200,12 +200,16 @@ export async function POST(req: NextRequest) {
         } else {
           results.push({ orderId, action: 'not_found_for_cancel' })
         }
-      } else if (["DSP", "DISPATCHED", "CON", "CONCLUDED"].includes(code)) {
+      } else if (["DSP", "DISPATCHED", "CON", "CONCLUDED", "PREPARATION_STARTED", "READY_TO_PICKUP"].includes(code)) {
         const existing = await prisma.order.findFirst({
           where: { establishmentId: est.id, externalId: orderId },
         })
         if (existing) {
-          const newStatus = code === 'CON' || code === 'CONCLUDED' ? 'delivered' : 'dispatched'
+          const newStatus = code === 'CON' || code === 'CONCLUDED' ? 'delivered'
+            : code === 'DISPATCHED' || code === 'DSP' ? 'out_for_delivery'
+            : code === 'PREPARATION_STARTED' ? 'preparing'
+            : code === 'READY_TO_PICKUP' ? 'ready'
+            : 'dispatched'
 
           // Don't downgrade a manually-completed order. Once the operator
           // marks "delivered" the iFood event may arrive late.

@@ -3,29 +3,28 @@ import https from "https"
 /**
  * Maps a Flow action to the iFood endpoint path suffix.
  *
- * iFood order lifecycle:
+ * iFood order lifecycle (current API):
  *   PLC (placed)        -> in "Aceitar" tab, awaiting acceptance
- *   CFM (confirmed)     -> in "Em preparo" tab after confirmation via /confirm
+ *   CFM (confirmed)     -> in "Em preparo" tab after /confirm
  *   DSP (dispatched)    -> in "Em rota" tab after /dispatch
- *   CON (concluded)     -> in "Finalizados" tab after /deliver
+ *   CON (concluded)     -> automatic after dispatch (iFood handles)
  *
- * NOTE: iFood sandbox only exposes /confirm and /dispatch reliably.
- * /conclude (or /deliver depending on docs version) is the canonical endpoint
- * for marking an order as delivered, but the sandbox does NOT expose it
- * for the standard test merchant — every variation returns 404. In
- * production (real merchant account), /conclude (POST) is the documented
- * endpoint and works. The dispatcher falls back to "do nothing" so the
- * order stays in "delivered" locally even when iFood does not acknowledge
- * the state change.
+ * Endpoints:
+ *   /confirm           - Confirm order (202)
+ *   /startPreparation  - Start preparation (optional, 202)
+ *   /readyToPickup     - Ready for pickup / delivery (202)
+ *   /dispatch          - Dispatch for delivery (202)
+ *   /cancellation      - Request cancellation (requires body with reason)
  *
- * We log the response so callers can decide whether to retry or alert.
+ * NOTE: /conclude does NOT exist in current API. For merchant delivery,
+ * iFood auto-marks as CONCLUDED after /dispatch + deliveryTimeInSeconds.
  */
 function pathForAction(action: string): string {
   switch (action) {
     case "confirm": return "/confirm"
-    case "readyForPickup": return "/readyForPickup"
+    case "startPreparation": return "/startPreparation"
+    case "readyForPickup": return "/readyToPickup"
     case "dispatch": return "/dispatch"
-    case "deliver": return "/conclude"  // iFood's canonical finish endpoint
     case "cancel": return "/cancellation"
     default: return ""
   }
