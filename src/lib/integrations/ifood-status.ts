@@ -30,7 +30,7 @@ function pathForAction(action: string): string {
   }
 }
 
-function callEndpoint(action: string, token: string, merchantId: string, orderId: string): Promise<{ success: boolean; status?: number; body?: string }> {
+function callEndpoint(action: string, token: string, merchantId: string, orderId: string, deliveredBy?: string): Promise<{ success: boolean; status?: number; body?: string }> {
   return new Promise((resolve) => {
     const suffix = pathForAction(action)
     if (!suffix) {
@@ -38,7 +38,13 @@ function callEndpoint(action: string, token: string, merchantId: string, orderId
       return
     }
 
-    const body = JSON.stringify({})
+    // readyToPickup and dispatch require deliveredBy in the body
+    let requestBody: any = {}
+    if (action === "readyToPickup" || action === "dispatch") {
+      requestBody.deliveredBy = deliveredBy || "MERCHANT"
+    }
+
+    const body = JSON.stringify(requestBody)
     const options = {
       hostname: "merchant-api.ifood.com.br",
       path: `/order/v1.0/orders/${orderId}${suffix}`,
@@ -72,10 +78,11 @@ export async function updateIfoodStatus(
   token: string,
   merchantId: string,
   orderId: string,
-  action: string
+  action: string,
+  deliveredBy?: string
 ): Promise<{ success: boolean; status?: number; body?: string; tried?: string[] }> {
   const tried: string[] = [action]
-  let result = await callEndpoint(action, token, merchantId, orderId)
+  let result = await callEndpoint(action, token, merchantId, orderId, deliveredBy)
 
   // Fallback: if /readyForPickup returns 404 (sandbox limitation), fall back to
   // /confirm (idempotent) so the order at least reaches CFM state.
