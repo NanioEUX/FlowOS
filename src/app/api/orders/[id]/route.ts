@@ -191,7 +191,7 @@ export async function PATCH(
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
-            preparing: "startPreparation",
+            preparing: "confirm",
             ready: "readyForPickup",
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
