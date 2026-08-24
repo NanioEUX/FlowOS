@@ -182,17 +182,20 @@ export async function PATCH(
           where: { id: order.establishmentId },
         })
         if (establishment?.ifoodMerchantId) {
-          // iFood state machine: confirm -> readyForPickup -> dispatch -> conclude.
-          // Whether the merchant can drive delivery themselves depends on
-          // order.delivery.deliveredBy captured at order creation.
-          //   IFOOD  = iFood delivery (we cannot /conclude, we just update local)
-          //   MERCHANT = own delivery (we can call /conclude)
+          // iFood state machine:
+          //   confirm -> startPreparation -> dispatch (delivery) or readyToPickup (takeout)
+          // For DELIVERY orders: use /dispatch (NOT /readyToPickup)
+          // For TAKEOUT orders: use /readyToPickup (NOT /dispatch)
+          const isDelivery = order.orderType === "delivery"
           const isMerchantDelivery = order.ifoodDeliveryBy === "MERCHANT"
+
+          // readyToPickup is ONLY for takeout; delivery uses dispatch directly
+          const readyAction = isDelivery ? "dispatch" : "readyForPickup"
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             preparing: "startPreparation",
-            ready: "readyForPickup",
+            ready: readyAction,
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",
