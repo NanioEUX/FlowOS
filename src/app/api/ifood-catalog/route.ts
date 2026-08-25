@@ -45,7 +45,7 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
   })
 }
 
-async function fetchIfoodCatalog(merchantId: string, token: string): Promise<IfoodCategory[]> {
+async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ categories: IfoodCategory[], rawItems: any[] }> {
   // Step 1: Get catalogs
   console.log("[ifood-catalog] Step 1: Fetching catalogs")
   const catalogsRes = await httpsGet(
@@ -67,6 +67,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
   console.log("[ifood-catalog] Found", catalogs.length, "catalogs")
 
   const allCategories: IfoodCategory[] = []
+  const rawItems: any[] = []
 
   for (const catalog of catalogs) {
     const catalogId = catalog.catalogId
@@ -116,8 +117,10 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
 
       console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
 
-      // Return raw iFood response for debugging (first category only)
-      const rawDebug = allCategories.length === 0 ? items.slice(0, 1) : undefined
+      // Save raw items for debugging (first category only)
+      if (rawItems.length === 0 && items.length > 0) {
+        rawItems.push(...items.slice(0, 2))
+      }
 
       allCategories.push({
         categoryId: catId,
@@ -152,12 +155,11 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
             optionGroups: item.optionGroups || [],
           }
         }),
-        rawDebug,
       })
     }
   }
 
-  return allCategories
+  return { categories: allCategories, rawItems }
 }
 
 export async function GET(req: NextRequest) {
@@ -202,7 +204,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log("[ifood-catalog] Fetching catalog for merchant:", establishment.ifoodMerchantId)
-    const categories = await fetchIfoodCatalog(
+    const { categories, rawItems } = await fetchIfoodCatalog(
       establishment.ifoodMerchantId,
       ifoodAuth.accessToken
     )
@@ -246,7 +248,7 @@ export async function GET(req: NextRequest) {
       categories: mappedCategories,
       existingCategories,
       totalItems: categories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0),
-      rawDebug: rawDebug || null,
+      rawItems,
     })
   } catch (error: any) {
     console.error("[ifood-catalog] error:", error.message)
