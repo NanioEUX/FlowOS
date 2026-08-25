@@ -59,12 +59,12 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
   async function loadCatalog() {
     try {
       const res = await fetchAuth("/api/ifood-catalog")
+      const data = await res.json()
       if (!res.ok) {
-        const data = await res.json()
+        console.error("[ifood-wizard] Error:", data)
         setError(data.error || "Erro ao carregar catálogo")
         return
       }
-      const data = await res.json()
       setCategories(data.categories)
       setExistingCategories(data.existingCategories)
       setTotalItems(data.totalItems)
