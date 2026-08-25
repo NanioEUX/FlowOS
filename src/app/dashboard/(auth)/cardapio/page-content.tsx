@@ -3133,28 +3133,29 @@ export default function CardapioPage() {
                                       )
                                     })}
                                   </div>
-                                  {/* Botão adicionar item */}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setProductAdditionalOptions([...productAdditionalOptions, {
-                                        name: "",
-                                        price: "0",
-                                        selectionType: firstItem?.selectionType || "single",
-                                        inputType: firstItem?.inputType || "radio",
-                                        groupName: groupName === "default" ? "" : groupName,
-                                        headerText: firstItem?.headerText || "",
-                                        maxSelection: firstItem?.maxSelection || "",
-                                                consumesStock: false,
-                                                stockProductId: "",
-                                                stockQuantity: "1",
-                                                stockUnit: "un",
-                                        stockUnit: "un",
-                                      }])
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                    Adicionar item
-                                  </button>
+                                   {/* Botão adicionar item */}
+                                   <button
+                                     type="button"
+                                     onClick={() => {
+                                       setProductAdditionalOptions([...productAdditionalOptions, {
+                                         name: "",
+                                         price: "0",
+                                         selectionType: firstItem?.selectionType || "single",
+                                         inputType: firstItem?.inputType || "radio",
+                                         groupName: groupName === "default" ? "" : groupName,
+                                         headerText: firstItem?.headerText || "",
+                                         maxSelection: firstItem?.maxSelection || "",
+                                         consumesStock: false,
+                                         stockProductId: "",
+                                         stockQuantity: "1",
+                                         stockUnit: "un",
+                                       }])
+                                     }}
+                                     className="flex w-full items-center justify-center gap-1 border-t border-zinc-200 bg-zinc-50 py-2 text-xs text-green-600 hover:bg-zinc-100 hover:text-green-700"
+                                   >
+                                     <Plus className="h-3 w-3" />
+                                     Adicionar item
+                                   </button>
                                 </div>
                               )
                             })}
@@ -3163,7 +3164,7 @@ export default function CardapioPage() {
                       })()}
                       <button
                         type="button"
-                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "", consumesStock: false, stockProductId: "", stockQuantity: "1" }])}
+                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "", consumesStock: false, stockProductId: "", stockQuantity: "1", stockUnit: "un" }])}
                         className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
                       >
                         <Plus className="h-3 w-3" />
