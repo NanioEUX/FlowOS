@@ -45,71 +45,73 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
 }
 
 async function fetchIfoodCatalog(merchantId: string, token: string): Promise<IfoodCategory[]> {
-  // Step 1: Get categories (without items)
-  console.log("[ifood-catalog] Step 1: Fetching categories")
-  const catRes = await httpsGet(
-    `/catalog/v2.0/merchants/${merchantId}/categories`,
+  // Step 1: Get catalogs
+  console.log("[ifood-catalog] Step 1: Fetching catalogs")
+  const catalogsRes = await httpsGet(
+    `/catalog/v2.0/merchants/${merchantId}/catalogs`,
     token
   )
-  console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 500))
+  console.log("[ifood-catalog] Catalogs response:", catalogsRes.status, catalogsRes.body.slice(0, 500))
 
-  if (catRes.status !== 200) {
-    throw new Error(`iFood categories API error: ${catRes.status} - ${catRes.body.slice(0, 300)}`)
+  if (catalogsRes.status !== 200) {
+    throw new Error(`iFood catalogs API error: ${catalogsRes.status} - ${catalogsRes.body.slice(0, 300)}`)
   }
 
-  const categoriesData = JSON.parse(catRes.body)
-  if (!Array.isArray(categoriesData) || categoriesData.length === 0) {
-    console.log("[ifood-catalog] No categories found")
+  const catalogs = JSON.parse(catalogsRes.body)
+  if (!Array.isArray(catalogs) || catalogs.length === 0) {
+    console.log("[ifood-catalog] No catalogs found")
     return []
   }
 
-  console.log("[ifood-catalog] Found", categoriesData.length, "categories")
+  console.log("[ifood-catalog] Found", catalogs.length, "catalogs")
 
-  // Step 2: For each category, fetch items
   const allCategories: IfoodCategory[] = []
 
-  for (const cat of categoriesData) {
-    const catId = cat.id || cat.categoryId
-    const catName = cat.name
-    console.log("[ifood-catalog] Fetching items for category:", catName, catId)
+  // Step 2: For each catalog, get categories with items
+  for (const catalog of catalogs) {
+    const catalogId = catalog.catalogId
+    console.log("[ifood-catalog] Step 2: Fetching categories for catalog:", catalogId)
 
-    const itemsRes = await httpsGet(
-      `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
+    const catRes = await httpsGet(
+      `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories?include_items=true`,
       token
     )
-    console.log("[ifood-catalog] Items response:", itemsRes.status, itemsRes.body.slice(0, 300))
+    console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 500))
 
-    let items: IfoodItem[] = []
-    if (itemsRes.status === 200) {
-      try {
-        const itemsData = JSON.parse(itemsRes.body)
-        // Items might be in different structures
-        if (Array.isArray(itemsData)) {
-          items = itemsData
-        } else if (itemsData.items && Array.isArray(itemsData.items)) {
-          items = itemsData.items
-        } else if (itemsData.categoryId) {
-          // Single item wrapped
-          items = [itemsData]
-        }
-      } catch {}
+    if (catRes.status !== 200) {
+      console.log("[ifood-catalog] Failed to fetch categories for catalog:", catalogId)
+      continue
     }
 
-    console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
+    const categoriesData = JSON.parse(catRes.body)
+    if (!Array.isArray(categoriesData)) {
+      console.log("[ifood-catalog] Categories is not an array for catalog:", catalogId)
+      continue
+    }
 
-    allCategories.push({
-      categoryId: catId,
-      name: catName,
-      items: items.map((item: any) => ({
-        id: item.id || item.productId || "",
-        name: item.name || item.product?.name || "",
-        description: item.description || item.product?.description || "",
-        price: item.price || item.product?.price || { value: 0 },
-        status: item.status || "AVAILABLE",
-        imagePath: item.imagePath || item.product?.imagePath || null,
-        optionGroups: item.optionGroups || [],
-      })),
-    })
+    console.log("[ifood-catalog] Found", categoriesData.length, "categories in catalog", catalogId)
+
+    for (const cat of categoriesData) {
+      const catId = cat.id || cat.categoryId
+      const catName = cat.name
+      const items = cat.items || []
+
+      console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
+
+      allCategories.push({
+        categoryId: catId,
+        name: catName,
+        items: items.map((item: any) => ({
+          id: item.id || "",
+          name: item.name || "",
+          description: item.description || "",
+          price: item.price || { value: 0 },
+          status: item.status || "AVAILABLE",
+          imagePath: item.imagePath || null,
+          optionGroups: item.optionGroups || [],
+        })),
+      })
+    }
   }
 
   return allCategories
