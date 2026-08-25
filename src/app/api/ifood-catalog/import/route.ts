@@ -101,14 +101,14 @@ export async function POST(req: NextRequest) {
               if (imageBuffer.length < 5 * 1024 * 1024) {
                 const fileName = `products/${auth.establishmentId}/${Date.now()}-${item.id.slice(0, 8)}.jpg`
                 const { data: uploadData, error: uploadError } = await supabase.storage
-                  .from("products")
+                  .from("images")
                   .upload(fileName, imageBuffer, {
                     contentType: "image/jpeg",
                   })
 
                 if (!uploadError && uploadData) {
                   const { data: urlData } = supabase.storage
-                    .from("products")
+                    .from("images")
                     .getPublicUrl(uploadData.path)
                   imageUrl = urlData.publicUrl
                   results.imagesDownloaded++
