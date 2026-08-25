@@ -3094,9 +3094,9 @@ export default function CardapioPage() {
                                               }}
                                               className="h-6 flex-1 min-w-[120px] rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
                                             >
-                                              <option value="">Selecionar produto...</option>
-                                              {categories.flatMap((c: any) => c.products || []).map((p: any) => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                              <option value="">Selecionar item do estoque...</option>
+                                              {stockItems.map((item: any) => (
+                                                <option key={item.id} value={item.id}>{item.name}</option>
                                               ))}
                                             </select>
                                             <span className="text-[10px] text-zinc-400">Qtd:</span>
