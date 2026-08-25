@@ -148,7 +148,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
           // Product details
           const name = product.name || item.name || ""
           const description = product.description || item.description || ""
-          const imagePath = product.imagePath || item.imagePath || null
+          const imagePath = product.image || product.imagePath || item.imagePath || null
 
           // Price from contextModifiers
           let price = 0
