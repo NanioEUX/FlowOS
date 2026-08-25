@@ -7,17 +7,15 @@ import https from "https"
  *   PLC (placed)        -> in "Aceitar" tab, awaiting acceptance
  *   CFM (confirmed)     -> in "Em preparo" tab after /confirm
  *   DSP (dispatched)    -> in "Em rota" tab after /dispatch
- *   CON (concluded)     -> automatic after dispatch (iFood handles)
+ *   CON (concluded)     -> automatic after dispatch OR handshake
  *
  * Endpoints:
  *   /confirm           - Confirm order (202)
  *   /startPreparation  - Start preparation (optional, 202)
  *   /readyToPickup     - Ready for pickup / delivery (202)
  *   /dispatch          - Dispatch for delivery (202)
+ *   /handshake         - Delivery confirmation with customer code (200/204)
  *   /cancellation      - Request cancellation (requires body with reason)
- *
- * NOTE: /conclude does NOT exist in current API. For merchant delivery,
- * iFood auto-marks as CONCLUDED after /dispatch + deliveryTimeInSeconds.
  */
 function pathForAction(action: string): string {
   switch (action) {
@@ -25,6 +23,7 @@ function pathForAction(action: string): string {
     case "startPreparation": return "/startPreparation"
     case "readyForPickup": return "/readyToPickup"
     case "dispatch": return "/dispatch"
+    case "handshake": return "/handshake"
     case "cancel": return "/cancellation"
     default: return ""
   }
@@ -38,10 +37,13 @@ function callEndpoint(action: string, token: string, merchantId: string, orderId
       return
     }
 
-    // readyToPickup and dispatch require deliveredBy in the body
+    // readyToPickup and dispatch require deliveredBy; handshake requires handshakeCode
     let requestBody: any = {}
     if (action === "readyToPickup" || action === "dispatch") {
       requestBody.deliveredBy = deliveredBy || "MERCHANT"
+    }
+    if (action === "handshake" && deliveredBy) {
+      requestBody.handshakeCode = deliveredBy
     }
 
     const body = JSON.stringify(requestBody)
@@ -99,4 +101,49 @@ export async function updateIfoodStatus(
   }
 
   return { ...result, tried }
+}
+
+/**
+ * Calls iFood /handshake endpoint to confirm delivery with customer code.
+ * Only for MERCHANT delivery orders.
+ * Returns { success, status, body } where:
+ *   - 200/204 = code correct, order CONCLUDED
+ *   - 400/422 = incorrect code
+ *   - 409 = already concluded or invalid state
+ */
+export async function ifoodHandshake(
+  token: string,
+  merchantId: string,
+  orderId: string,
+  handshakeCode: string
+): Promise<{ success: boolean; status?: number; body?: string }> {
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ handshakeCode })
+    const options = {
+      hostname: "merchant-api.ifood.com.br",
+      path: `/order/v1.0/orders/${orderId}/handshake`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        MerchantId: merchantId,
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(body),
+      },
+    }
+
+    const req = https.request(options, (res) => {
+      let b = ""
+      res.on("data", (c) => (b += c))
+      res.on("end", () => {
+        resolve({
+          success: res.statusCode === 200 || res.statusCode === 204,
+          status: res.statusCode,
+          body: b
+        })
+      })
+    })
+    req.on("error", (e) => resolve({ success: false, body: e.message }))
+    req.write(body)
+    req.end()
+  })
 }

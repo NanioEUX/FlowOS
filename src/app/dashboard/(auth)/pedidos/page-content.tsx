@@ -570,6 +570,13 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const [sending, setSending] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
+  // iFood handshake state
+  const [handshakeCode, setHandshakeCode] = useState("")
+  const [handshakeLoading, setHandshakeLoading] = useState(false)
+  const [handshakeError, setHandshakeError] = useState("")
+  const [handshakeSuccess, setHandshakeSuccess] = useState(false)
+  const showHandshake = isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT" && ["out_for_delivery", "dispatched"].includes(order.status)
+
   async function fetchMessages() {
     try {
       const res = await fetchAuth(`/api/orders/${order.id}/messages?_t=${Date.now()}`)
@@ -578,6 +585,33 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
         setMessages(data)
       }
     } catch (e) {}
+  }
+
+  async function confirmHandshake() {
+    if (!/^\d{4}$/.test(handshakeCode)) {
+      setHandshakeError("Código deve ter 4 dígitos")
+      return
+    }
+    setHandshakeLoading(true)
+    setHandshakeError("")
+    try {
+      const res = await fetchAuth(`/api/orders/${order.id}/ifood-handshake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handshakeCode }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setHandshakeSuccess(true)
+        onUpdateStatus(order.id, "delivered")
+      } else {
+        setHandshakeError(data.error || "Erro ao confirmar entrega")
+      }
+    } catch (e) {
+      setHandshakeError("Erro de conexão")
+    } finally {
+      setHandshakeLoading(false)
+    }
   }
 
   async function markAsRead() {
@@ -942,6 +976,43 @@ win.close()
             </div>
             )}
           </div>
+
+          {/* iFood Handshake - 4-digit delivery confirmation */}
+          {showHandshake && !handshakeSuccess && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs font-medium text-amber-700 mb-2">
+                Peça ao cliente o código de confirmação de entrega do iFood (4 últimos dígitos do celular).
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={handshakeCode}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 4)
+                    setHandshakeCode(v)
+                    setHandshakeError("")
+                  }}
+                  placeholder="XXXX"
+                  className="w-20 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
+                />
+                <button
+                  onClick={confirmHandshake}
+                  disabled={handshakeLoading || handshakeCode.length !== 4}
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  {handshakeLoading ? "Confirmando..." : "Confirmar Entrega Segura"}
+                </button>
+              </div>
+              {handshakeError && <p className="mt-2 text-xs text-red-600">{handshakeError}</p>}
+            </div>
+          )}
+          {showHandshake && handshakeSuccess && (
+            <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+              <p className="text-xs font-medium text-green-700">Entrega confirmada com sucesso!</p>
+            </div>
+          )}
 
           <div className="flex flex-col items-end justify-between gap-3 lg:min-h-[90px]">
             <p className="text-xl font-black text-green-600 tracking-tight">{formatCurrency(order.total)}</p>
