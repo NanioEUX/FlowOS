@@ -132,6 +132,14 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
 
   for (const catalog of catalogs) {
     const catalogId = catalog.catalogId
+    const groupId = catalog.groupId
+
+    // Try sellableItems endpoint first (returns items with full option data)
+    const sellableRes = await httpsGet(
+      `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/sellableItems`,
+      token
+    )
+    console.log("[ifood-catalog] SellableItems:", sellableRes.status, sellableRes.body.slice(0, 3000))
 
     const catRes = await httpsGet(
       `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`,
