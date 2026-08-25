@@ -9,13 +9,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = verifyAuth(req)
-    if (!auth) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
     const body = await req.json()
-    const { handshakeCode } = body
+    const { handshakeCode, deliveryPersonToken } = body
 
     if (!handshakeCode || !/^\d{4}$/.test(handshakeCode)) {
       return NextResponse.json(
@@ -32,8 +27,24 @@ export async function POST(
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
     }
 
-    if (order.establishmentId !== auth.establishmentId) {
-      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    // Auth: dashboard session OR motoboy token
+    if (deliveryPersonToken) {
+      // Motoboy token auth — verify token matches the order's delivery person
+      const person = await prisma.deliveryPerson.findUnique({
+        where: { token: deliveryPersonToken },
+      })
+      if (!person || person.id !== order.deliveryPersonId) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      }
+    } else {
+      // Dashboard session auth
+      const auth = verifyAuth(req)
+      if (!auth) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      }
+      if (order.establishmentId !== auth.establishmentId) {
+        return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+      }
     }
 
     // Validate preconditions

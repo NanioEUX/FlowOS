@@ -395,7 +395,7 @@ export function DeliveryPage({ token }: { token: string }) {
             </h2>
             <div className="space-y-3">
               {readyOrders.map(order => (
-                <OrderCard key={order.id} order={order} statusLabel="Saiu pra entrega" statusAction="out_for_delivery" onUpdate={updateStatus} updating={updating === order.id} />
+                <OrderCard key={order.id} order={order} statusLabel="Saiu pra entrega" statusAction="out_for_delivery" onUpdate={updateStatus} updating={updating === order.id} token={token} />
               ))}
             </div>
           </div>
@@ -410,7 +410,7 @@ export function DeliveryPage({ token }: { token: string }) {
             </h2>
             <div className="space-y-3">
               {outOrders.map(order => (
-                <OrderCard key={order.id} order={order} statusLabel="Entregue" statusAction="delivered" onUpdate={updateStatus} updating={updating === order.id} />
+                <OrderCard key={order.id} order={order} statusLabel="Entregue" statusAction="delivered" onUpdate={updateStatus} updating={updating === order.id} token={token} />
               ))}
             </div>
           </div>
@@ -463,12 +463,13 @@ export function DeliveryPage({ token }: { token: string }) {
   )
 }
 
-function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
+function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token }: {
   order: Order
   statusLabel: string
   statusAction: string
   onUpdate: (id: string, status: string) => void
   updating: boolean
+  token: string
 }) {
   let items: OrderItem[] = []
   try {
@@ -497,7 +498,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
       const res = await fetch(`/api/orders/${order.id}/ifood-handshake`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handshakeCode }),
+        body: JSON.stringify({ handshakeCode, deliveryPersonToken: token }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -627,7 +628,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
                       setHandshakeError("")
                     }}
                     placeholder="XXXX"
-                    className="w-20 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
+                    className="w-24 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
                   />
                   <button
                     onClick={confirmHandshake}

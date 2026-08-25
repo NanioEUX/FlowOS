@@ -995,7 +995,7 @@ win.close()
                     setHandshakeError("")
                   }}
                   placeholder="XXXX"
-                  className="w-20 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
+                  className="w-24 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
                 />
                 <button
                   onClick={confirmHandshake}
