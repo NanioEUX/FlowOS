@@ -45,59 +45,71 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
 }
 
 async function fetchIfoodCatalog(merchantId: string, token: string): Promise<IfoodCategory[]> {
-  // Try direct categories endpoint first
-  console.log("[ifood-catalog] Trying /categories?include_items=true")
+  // Step 1: Get categories (without items)
+  console.log("[ifood-catalog] Step 1: Fetching categories")
   const catRes = await httpsGet(
-    `/catalog/v2.0/merchants/${merchantId}/categories?include_items=true`,
+    `/catalog/v2.0/merchants/${merchantId}/categories`,
     token
   )
-  console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 300))
+  console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 500))
 
-  if (catRes.status === 200) {
-    try {
-      const data = JSON.parse(catRes.body)
-      if (Array.isArray(data)) return data
-    } catch {}
+  if (catRes.status !== 200) {
+    throw new Error(`iFood categories API error: ${catRes.status} - ${catRes.body.slice(0, 300)}`)
   }
 
-  // Fallback: get catalogs first, then categories per catalog
-  console.log("[ifood-catalog] Trying /catalogs first")
-  const catalogsRes = await httpsGet(
-    `/catalog/v2.0/merchants/${merchantId}/catalogs`,
-    token
-  )
-  console.log("[ifood-catalog] Catalogs response:", catalogsRes.status, catalogsRes.body.slice(0, 300))
-
-  if (catalogsRes.status !== 200) {
-    throw new Error(`iFood catalog API error: ${catalogsRes.status} - ${catalogsRes.body.slice(0, 300)}`)
-  }
-
-  const catalogs = JSON.parse(catalogsRes.body)
-  if (!Array.isArray(catalogs) || catalogs.length === 0) {
-    console.log("[ifood-catalog] No catalogs found, returning empty")
+  const categoriesData = JSON.parse(catRes.body)
+  if (!Array.isArray(categoriesData) || categoriesData.length === 0) {
+    console.log("[ifood-catalog] No categories found")
     return []
   }
 
+  console.log("[ifood-catalog] Found", categoriesData.length, "categories")
+
+  // Step 2: For each category, fetch items
   const allCategories: IfoodCategory[] = []
 
-  for (const catalog of catalogs) {
-    const catalogId = catalog.catalogId
-    console.log("[ifood-catalog] Fetching categories for catalog:", catalogId)
+  for (const cat of categoriesData) {
+    const catId = cat.id || cat.categoryId
+    const catName = cat.name
+    console.log("[ifood-catalog] Fetching items for category:", catName, catId)
 
-    const categoriesRes = await httpsGet(
-      `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories?include_items=true`,
+    const itemsRes = await httpsGet(
+      `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
       token
     )
-    console.log("[ifood-catalog] Categories response:", categoriesRes.status, categoriesRes.body.slice(0, 300))
+    console.log("[ifood-catalog] Items response:", itemsRes.status, itemsRes.body.slice(0, 300))
 
-    if (categoriesRes.status === 200) {
+    let items: IfoodItem[] = []
+    if (itemsRes.status === 200) {
       try {
-        const cats = JSON.parse(categoriesRes.body)
-        if (Array.isArray(cats)) {
-          allCategories.push(...cats)
+        const itemsData = JSON.parse(itemsRes.body)
+        // Items might be in different structures
+        if (Array.isArray(itemsData)) {
+          items = itemsData
+        } else if (itemsData.items && Array.isArray(itemsData.items)) {
+          items = itemsData.items
+        } else if (itemsData.categoryId) {
+          // Single item wrapped
+          items = [itemsData]
         }
       } catch {}
     }
+
+    console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
+
+    allCategories.push({
+      categoryId: catId,
+      name: catName,
+      items: items.map((item: any) => ({
+        id: item.id || item.productId || "",
+        name: item.name || item.product?.name || "",
+        description: item.description || item.product?.description || "",
+        price: item.price || item.product?.price || { value: 0 },
+        status: item.status || "AVAILABLE",
+        imagePath: item.imagePath || item.product?.imagePath || null,
+        optionGroups: item.optionGroups || [],
+      })),
+    })
   }
 
   return allCategories
