@@ -3093,7 +3093,7 @@ export default function CardapioPage() {
                                               className="h-6 flex-1 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
                                             >
                                               <option value="">Selecionar produto...</option>
-                                              {products.map((p: any) => (
+                                              {allProducts.map((p: any) => (
                                                 <option key={p.id} value={p.id}>{p.name}</option>
                                               ))}
                                             </select>
