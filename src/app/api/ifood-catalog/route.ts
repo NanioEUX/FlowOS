@@ -190,6 +190,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
       for (const opid of optionProductIds) {
         const optProduct = await fetchProduct(merchantId, opid, token)
         if (optProduct) {
+          console.log("[ifood-catalog] Option product", opid, ":", optProduct.name, "price:", JSON.stringify(optProduct.price))
           productMap.set(opid, optProduct)
         }
       }
