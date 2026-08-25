@@ -94,28 +94,39 @@ export async function POST(req: NextRequest) {
         let imageUrl: string | null = null
         if (item.imagePath) {
           try {
+            console.log("[ifood-import] Downloading image:", item.imagePath)
             const imageBuffer = await downloadImage(item.imagePath)
-            if (imageBuffer && imageBuffer.length > 0 && imageBuffer.length < 5 * 1024 * 1024) {
-              const fileName = `products/${auth.establishmentId}/${Date.now()}-${item.id.slice(0, 8)}.jpg`
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from("products")
-                .upload(fileName, imageBuffer, {
-                  contentType: "image/jpeg",
-                })
-
-              if (!uploadError && uploadData) {
-                const { data: urlData } = supabase.storage
+            if (imageBuffer && imageBuffer.length > 0) {
+              console.log("[ifood-import] Image downloaded, size:", imageBuffer.length)
+              if (imageBuffer.length < 5 * 1024 * 1024) {
+                const fileName = `products/${auth.establishmentId}/${Date.now()}-${item.id.slice(0, 8)}.jpg`
+                const { data: uploadData, error: uploadError } = await supabase.storage
                   .from("products")
-                  .getPublicUrl(uploadData.path)
-                imageUrl = urlData.publicUrl
-                results.imagesDownloaded++
+                  .upload(fileName, imageBuffer, {
+                    contentType: "image/jpeg",
+                  })
+
+                if (!uploadError && uploadData) {
+                  const { data: urlData } = supabase.storage
+                    .from("products")
+                    .getPublicUrl(uploadData.path)
+                  imageUrl = urlData.publicUrl
+                  results.imagesDownloaded++
+                  console.log("[ifood-import] Image uploaded:", imageUrl)
+                } else {
+                  console.log("[ifood-import] Upload error:", uploadError?.message)
+                  results.imagesFailed++
+                }
               } else {
+                console.log("[ifood-import] Image too large:", imageBuffer.length)
                 results.imagesFailed++
               }
             } else {
+              console.log("[ifood-import] Failed to download image or empty")
               results.imagesFailed++
             }
-          } catch {
+          } catch (err: any) {
+            console.log("[ifood-import] Image error:", err.message)
             results.imagesFailed++
           }
         }
