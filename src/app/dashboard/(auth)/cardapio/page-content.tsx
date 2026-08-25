@@ -104,7 +104,7 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
-  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
+  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string }[]>([])
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
 
   // Stories state
@@ -599,6 +599,9 @@ export default function CardapioPage() {
               groupName: opt.groupName || null,
               headerText: opt.headerText || null,
               maxSelection: opt.maxSelection ? parseInt(opt.maxSelection) : null,
+              consumesStock: opt.consumesStock || false,
+              stockProductId: opt.stockProductId || null,
+              stockQuantity: parseFloat(opt.stockQuantity) || 1,
               productId,
               establishmentId,
             }),
@@ -1162,6 +1165,9 @@ export default function CardapioPage() {
               groupName: opt.groupName || "",
               headerText: opt.headerText || "",
               maxSelection: opt.maxSelection ? String(opt.maxSelection) : "",
+              consumesStock: opt.consumesStock || false,
+              stockProductId: opt.stockProductId || "",
+              stockQuantity: opt.stockQuantity ? String(opt.stockQuantity) : "1",
             })))
           })
           .catch(() => {})
@@ -3053,6 +3059,18 @@ export default function CardapioPage() {
                                             type="button"
                                             onClick={() => {
                                               const updated = [...productAdditionalOptions]
+                                              updated[itemIdx] = { ...item, consumesStock: !item.consumesStock }
+                                              setProductAdditionalOptions(updated)
+                                            }}
+                                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium border ${item.consumesStock ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600'}`}
+                                            title="Consome estoque"
+                                          >
+                                            Estoque
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...productAdditionalOptions]
                                               updated.splice(itemIdx, 1)
                                               setProductAdditionalOptions(updated)
                                             }}
@@ -3061,6 +3079,38 @@ export default function CardapioPage() {
                                             <X className="h-3 w-3" />
                                           </button>
                                         </div>
+                                        {item.consumesStock && (
+                                          <div className="flex items-center gap-2 px-3 pb-2 -mt-1">
+                                            <span className="text-[10px] text-zinc-400">Consome de:</span>
+                                            <select
+                                              value={item.stockProductId}
+                                              onChange={(e) => {
+                                                const updated = [...productAdditionalOptions]
+                                                updated[itemIdx] = { ...item, stockProductId: e.target.value }
+                                                setProductAdditionalOptions(updated)
+                                              }}
+                                              className="h-6 flex-1 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
+                                            >
+                                              <option value="">Selecionar produto...</option>
+                                              {products.map((p: any) => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                              ))}
+                                            </select>
+                                            <span className="text-[10px] text-zinc-400">Qtd:</span>
+                                            <input
+                                              type="number"
+                                              min="0.1"
+                                              step="0.5"
+                                              value={item.stockQuantity}
+                                              onChange={(e) => {
+                                                const updated = [...productAdditionalOptions]
+                                                updated[itemIdx] = { ...item, stockQuantity: e.target.value }
+                                                setProductAdditionalOptions(updated)
+                                              }}
+                                              className="h-6 w-14 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-center text-zinc-600 focus:border-amber-500 focus:outline-none"
+                                            />
+                                          </div>
+                                        )}
                                       )
                                     })}
                                   </div>
@@ -3075,7 +3125,10 @@ export default function CardapioPage() {
                                         inputType: firstItem?.inputType || "radio",
                                         groupName: groupName === "default" ? "" : groupName,
                                         headerText: firstItem?.headerText || "",
-                                        maxSelection: firstItem?.maxSelection || ""
+                                        maxSelection: firstItem?.maxSelection || "",
+                                        consumesStock: false,
+                                        stockProductId: "",
+                                        stockQuantity: "1",
                                       }])
                                     }}
                                     className="flex w-full items-center justify-center gap-1 border-t border-zinc-200 bg-zinc-50 py-2 text-xs text-green-600 hover:bg-zinc-100 hover:text-green-700"
@@ -3091,7 +3144,7 @@ export default function CardapioPage() {
                       })()}
                       <button
                         type="button"
-                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "" }])}
+                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "", consumesStock: false, stockProductId: "", stockQuantity: "1" }])}
                         className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
                       >
                         <Plus className="h-3 w-3" />
