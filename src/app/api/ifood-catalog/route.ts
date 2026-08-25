@@ -122,15 +122,17 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
         items: items.map((item: any) => {
           // Log first item for debugging
           if (items.indexOf(item) === 0) {
-            console.log("[ifood-catalog] First item raw:", JSON.stringify(item).slice(0, 1000))
+            console.log("[ifood-catalog] First item raw:", JSON.stringify(item).slice(0, 2000))
           }
 
-          // Try different structures for name
-          const name = item.name || item.product?.name || item.productName || ""
-          const description = item.description || item.product?.description || ""
-          const imagePath = item.imagePath || item.product?.imagePath || item.image || null
+          // iFood structure: item has products array with name, description
+          // and item itself has price
+          const product = item.products?.[0] || {}
+          const name = product.name || item.name || ""
+          const description = product.description || item.description || ""
+          const imagePath = product.imagePath || item.imagePath || null
 
-          // Try different structures for price
+          // Price is at item level
           let price = 0
           let originalPrice = 0
           if (item.price && typeof item.price === "object") {
@@ -139,9 +141,6 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
           } else if (typeof item.price === "number") {
             price = item.price
             originalPrice = item.price
-          } else if (item.product?.price) {
-            price = item.product.price.value || 0
-            originalPrice = item.product.price.originalValue || item.product.price.value || 0
           }
 
           return {
