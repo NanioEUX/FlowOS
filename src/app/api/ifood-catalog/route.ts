@@ -103,7 +103,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
       if (itemsRes.status === 200) {
         try {
           const itemsData = JSON.parse(itemsRes.body)
-          console.log("[ifood-catalog] Items raw structure:", JSON.stringify(itemsData).slice(0, 1000))
+          console.log("[ifood-catalog] Items raw structure:", JSON.stringify(itemsData).slice(0, 2000))
 
           // Handle different possible structures
           if (Array.isArray(itemsData)) {
@@ -116,15 +116,13 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
 
       console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
 
+      // Return raw iFood response for debugging (first category only)
+      const rawDebug = allCategories.length === 0 ? items.slice(0, 1) : undefined
+
       allCategories.push({
         categoryId: catId,
         name: catName,
         items: items.map((item: any) => {
-          // Log first item for debugging
-          if (items.indexOf(item) === 0) {
-            console.log("[ifood-catalog] First item raw:", JSON.stringify(item).slice(0, 2000))
-          }
-
           // iFood structure: item has products array with name, description
           // and item itself has price
           const product = item.products?.[0] || {}
@@ -154,6 +152,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
             optionGroups: item.optionGroups || [],
           }
         }),
+        rawDebug,
       })
     }
   }
@@ -240,10 +239,14 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // Collect raw debug from first category
+    const rawDebug = categories.find(c => c.rawDebug)?.rawDebug
+
     return NextResponse.json({
       categories: mappedCategories,
       existingCategories,
       totalItems: categories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0),
+      rawDebug: rawDebug || null,
     })
   } catch (error: any) {
     console.error("[ifood-catalog] error:", error.message)
