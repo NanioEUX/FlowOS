@@ -338,6 +338,7 @@ model AdditionalOption {
   consumesStock   Boolean            @default(false)
   stockProductId  String?            // produto de onde consome o estoque
   stockQuantity   Float              @default(1) // quanto consome por unidade
+  stockUnit       String             @default("un") // unidade: un, kg, g, l, ml
   productId       String
   establishmentId String
   createdAt       DateTime           @default(now())

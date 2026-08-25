@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, price, selectionType, inputType, groupName, headerText, maxSelection, productId, establishmentId, consumesStock, stockProductId, stockQuantity } = body
+    const { name, price, selectionType, inputType, groupName, headerText, maxSelection, productId, establishmentId, consumesStock, stockProductId, stockQuantity, stockUnit } = body
 
     if (!name || !productId || !establishmentId) {
       return NextResponse.json({ error: "name, productId e establishmentId obrigatórios" }, { status: 400 })
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
         consumesStock: consumesStock || false,
         stockProductId: stockProductId || null,
         stockQuantity: stockQuantity || 1,
+        stockUnit: stockUnit || "un",
         order: (maxOrder?.order || 0) + 1,
         groupOrder: (maxGroupOrder?.groupOrder || 0),
         productId,

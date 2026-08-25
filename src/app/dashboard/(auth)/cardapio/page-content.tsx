@@ -104,7 +104,7 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
-  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string }[]>([])
+  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
 
   // Stories state
@@ -602,6 +602,7 @@ export default function CardapioPage() {
               consumesStock: opt.consumesStock || false,
               stockProductId: opt.stockProductId || null,
               stockQuantity: parseFloat(opt.stockQuantity) || 1,
+              stockUnit: opt.stockUnit || "un",
               productId,
               establishmentId,
             }),
@@ -1168,6 +1169,7 @@ export default function CardapioPage() {
               consumesStock: opt.consumesStock || false,
               stockProductId: opt.stockProductId || "",
               stockQuantity: opt.stockQuantity ? String(opt.stockQuantity) : "1",
+              stockUnit: opt.stockUnit || "un",
             })))
           })
           .catch(() => {})
@@ -3081,7 +3083,7 @@ export default function CardapioPage() {
                                           </button>
                                         </div>
                                         {item.consumesStock && (
-                                          <div className="flex items-center gap-2 px-3 pb-2 -mt-1">
+                                          <div className="flex flex-wrap items-center gap-2 px-3 pb-2 -mt-1">
                                             <span className="text-[10px] text-zinc-400">Consome de:</span>
                                             <select
                                               value={item.stockProductId}
@@ -3090,10 +3092,10 @@ export default function CardapioPage() {
                                                 updated[itemIdx] = { ...item, stockProductId: e.target.value }
                                                 setProductAdditionalOptions(updated)
                                               }}
-                                              className="h-6 flex-1 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
+                                              className="h-6 flex-1 min-w-[120px] rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
                                             >
                                               <option value="">Selecionar produto...</option>
-                                              {allProducts.map((p: any) => (
+                                              {categories.flatMap((c: any) => c.products || []).map((p: any) => (
                                                 <option key={p.id} value={p.id}>{p.name}</option>
                                               ))}
                                             </select>
@@ -3110,6 +3112,21 @@ export default function CardapioPage() {
                                               }}
                                               className="h-6 w-14 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-center text-zinc-600 focus:border-amber-500 focus:outline-none"
                                             />
+                                            <select
+                                              value={item.stockUnit}
+                                              onChange={(e) => {
+                                                const updated = [...productAdditionalOptions]
+                                                updated[itemIdx] = { ...item, stockUnit: e.target.value }
+                                                setProductAdditionalOptions(updated)
+                                              }}
+                                              className="h-6 rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
+                                            >
+                                              <option value="un">un</option>
+                                              <option value="kg">kg</option>
+                                              <option value="g">g</option>
+                                              <option value="l">L</option>
+                                              <option value="ml">ml</option>
+                                            </select>
                                           </div>
                                         )}
                                         </>
@@ -3128,12 +3145,12 @@ export default function CardapioPage() {
                                         groupName: groupName === "default" ? "" : groupName,
                                         headerText: firstItem?.headerText || "",
                                         maxSelection: firstItem?.maxSelection || "",
-                                        consumesStock: false,
-                                        stockProductId: "",
-                                        stockQuantity: "1",
+                                                consumesStock: false,
+                                                stockProductId: "",
+                                                stockQuantity: "1",
+                                                stockUnit: "un",
+                                        stockUnit: "un",
                                       }])
-                                    }}
-                                    className="flex w-full items-center justify-center gap-1 border-t border-zinc-200 bg-zinc-50 py-2 text-xs text-green-600 hover:bg-zinc-100 hover:text-green-700"
                                   >
                                     <Plus className="h-3 w-3" />
                                     Adicionar item
