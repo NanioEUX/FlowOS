@@ -241,9 +241,6 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Collect raw debug from first category
-    const rawDebug = categories.find(c => c.rawDebug)?.rawDebug
-
     return NextResponse.json({
       categories: mappedCategories,
       existingCategories,
