@@ -46,10 +46,10 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
 }
 
 async function fetchProduct(merchantId: string, productId: string, token: string): Promise<any> {
-  const res = await httpsGet(
-    `/catalog/v2.0/merchants/${merchantId}/products/${productId}`,
-    token
-  )
+    const res = await httpsGet(
+      `/catalog/v2.0/merchants/${merchantId}/product/${productId}`,
+      token
+    )
   console.log("[ifood-catalog] Product", productId, "status:", res.status, "body:", res.body.slice(0, 1000))
   if (res.status === 200) {
     try {
