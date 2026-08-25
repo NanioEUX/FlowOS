@@ -102,6 +102,9 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
       if (itemsRes.status === 200) {
         try {
           const itemsData = JSON.parse(itemsRes.body)
+          console.log("[ifood-catalog] Items raw structure:", JSON.stringify(itemsData).slice(0, 1000))
+
+          // Handle different possible structures
           if (Array.isArray(itemsData)) {
             items = itemsData
           } else if (itemsData.items && Array.isArray(itemsData.items)) {
@@ -115,15 +118,42 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
       allCategories.push({
         categoryId: catId,
         name: catName,
-        items: items.map((item: any) => ({
-          id: item.id || "",
-          name: item.name || "",
-          description: item.description || "",
-          price: item.price || { value: 0 },
-          status: item.status || "AVAILABLE",
-          imagePath: item.imagePath || null,
-          optionGroups: item.optionGroups || [],
-        })),
+        items: items.map((item: any) => {
+          // Log first item for debugging
+          if (items.indexOf(item) === 0) {
+            console.log("[ifood-catalog] First item raw:", JSON.stringify(item).slice(0, 1000))
+          }
+
+          // Try different structures for name
+          const name = item.name || item.product?.name || item.productName || ""
+          const description = item.description || item.product?.description || ""
+          const imagePath = item.imagePath || item.product?.imagePath || item.image || null
+
+          // Try different structures for price
+          let price = 0
+          let originalPrice = 0
+          if (item.price && typeof item.price === "object") {
+            price = item.price.value || 0
+            originalPrice = item.price.originalValue || item.price.value || 0
+          } else if (typeof item.price === "number") {
+            price = item.price
+            originalPrice = item.price
+          } else if (item.product?.price) {
+            price = item.product.price.value || 0
+            originalPrice = item.product.price.originalValue || item.product.price.value || 0
+          }
+
+          return {
+            id: item.id || "",
+            name,
+            description,
+            price,
+            originalPrice,
+            status: item.status || "AVAILABLE",
+            imagePath,
+            optionGroups: item.optionGroups || [],
+          }
+        }),
       })
     }
   }
