@@ -3,9 +3,10 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
 
 
 import { formatCurrency } from "@/lib/utils"
@@ -104,6 +105,7 @@ export default function CardapioPage() {
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string }[]>([])
+  const [showIfoodWizard, setShowIfoodWizard] = useState(false)
 
   // Stories state
   const [stories, setStories] = useState<any[]>([])
@@ -1451,10 +1453,16 @@ export default function CardapioPage() {
         <>
           <div className="flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
-            <Button onClick={() => setShowCategoryForm(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              Nova Categoria
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowIfoodWizard(true)} className="gap-2">
+                <Download className="h-4 w-4" />
+                Importar do iFood
+              </Button>
+              <Button onClick={() => setShowCategoryForm(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Nova Categoria
+              </Button>
+            </div>
           </div>
 
           {categories.map((cat) => {
@@ -2423,6 +2431,16 @@ export default function CardapioPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* iFood Catalog Wizard */}
+      {showIfoodWizard && (
+        <IfoodCatalogWizard
+          onClose={() => {
+            setShowIfoodWizard(false)
+            loadData() // Reload products after import
+          }}
+        />
       )}
 
       {/* Product Modal */}
