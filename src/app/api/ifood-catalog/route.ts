@@ -67,34 +67,48 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<Ifo
 
   const allCategories: IfoodCategory[] = []
 
-  // Step 2: For each catalog, get categories with items
   for (const catalog of catalogs) {
     const catalogId = catalog.catalogId
-    console.log("[ifood-catalog] Step 2: Fetching categories for catalog:", catalogId)
+    console.log("[ifood-catalog] Fetching categories for catalog:", catalogId)
 
+    // Get categories (without items first)
     const catRes = await httpsGet(
-      `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories?include_items=true`,
+      `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`,
       token
     )
     console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 500))
 
-    if (catRes.status !== 200) {
-      console.log("[ifood-catalog] Failed to fetch categories for catalog:", catalogId)
-      continue
-    }
+    if (catRes.status !== 200) continue
 
     const categoriesData = JSON.parse(catRes.body)
-    if (!Array.isArray(categoriesData)) {
-      console.log("[ifood-catalog] Categories is not an array for catalog:", catalogId)
-      continue
-    }
+    if (!Array.isArray(categoriesData)) continue
 
-    console.log("[ifood-catalog] Found", categoriesData.length, "categories in catalog", catalogId)
+    console.log("[ifood-catalog] Found", categoriesData.length, "categories")
 
+    // For each category, fetch items separately
     for (const cat of categoriesData) {
       const catId = cat.id || cat.categoryId
       const catName = cat.name
-      const items = cat.items || []
+
+      console.log("[ifood-catalog] Fetching items for category:", catName, catId)
+
+      const itemsRes = await httpsGet(
+        `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
+        token
+      )
+      console.log("[ifood-catalog] Items response:", itemsRes.status, itemsRes.body.slice(0, 500))
+
+      let items: any[] = []
+      if (itemsRes.status === 200) {
+        try {
+          const itemsData = JSON.parse(itemsRes.body)
+          if (Array.isArray(itemsData)) {
+            items = itemsData
+          } else if (itemsData.items && Array.isArray(itemsData.items)) {
+            items = itemsData.items
+          }
+        } catch {}
+      }
 
       console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
 
