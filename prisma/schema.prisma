@@ -295,7 +295,8 @@ model Product {
   establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   stockItem       StockItem?         @relation(fields: [stockItemId], references: [id])
   stockLinks      ProductStockLink[]
-  additionalOptions AdditionalOption[]
+  additionalOptions AdditionalOption[] @relation("AdditionalOptionProduct")
+  stockedByAdditionals AdditionalOption[] @relation("StockProduct")
   comboItems      DailyComboItem[]
   storyItems      StoryItem[]
 }
@@ -334,12 +335,16 @@ model AdditionalOption {
   maxSelection    Int?               // limite de seleções (null = sem limite)
   order           Int                @default(0)
   groupOrder      Int                @default(0) // ordem do grupo
+  consumesStock   Boolean            @default(false)
+  stockProductId  String?            // produto de onde consome o estoque
+  stockQuantity   Float              @default(1) // quanto consome por unidade
   productId       String
   establishmentId String
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
-  product         Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product         Product            @relation("AdditionalOptionProduct", fields: [productId], references: [id], onDelete: Cascade)
   establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  stockProduct    Product?           @relation("StockProduct", fields: [stockProductId], references: [id], onDelete: SetNull)
 }
 
 model Order {

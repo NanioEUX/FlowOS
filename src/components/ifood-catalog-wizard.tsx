@@ -63,6 +63,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
   const [existingCategories, setExistingCategories] = useState<ExistingCategory[]>([])
   const [totalItems, setTotalItems] = useState(0)
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({})
+  const [selectedOptionGroups, setSelectedOptionGroups] = useState<Record<string, boolean>>({})
   const [categoryMappings, setCategoryMappings] = useState<Record<string, string>>({})
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>({})
@@ -87,6 +88,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
       setTotalItems(data.totalItems)
 
       const selected: Record<string, boolean> = {}
+      const selectedOgs: Record<string, boolean> = {}
       const expanded: Record<string, boolean> = {}
       const mappings: Record<string, string> = {}
 
@@ -95,10 +97,15 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
         mappings[cat.ifoodCategoryId] = cat.mappedCategoryId || ""
         cat.items.forEach((item) => {
           selected[item.id] = true
+          // Auto-select all option groups
+          item.optionGroups.forEach((og) => {
+            selectedOgs[og.id] = true
+          })
         })
       })
 
       setSelectedItems(selected)
+      setSelectedOptionGroups(selectedOgs)
       setExpandedCategories(expanded)
       setCategoryMappings(mappings)
       setStep("review")
@@ -131,6 +138,10 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
     setExpandedOptions((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
+  function toggleOptionGroup(groupId: string) {
+    setSelectedOptionGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }))
+  }
+
   function updateCategoryMapping(ifoodCategoryId: string, targetCategoryId: string) {
     setCategoryMappings((prev) => ({ ...prev, [ifoodCategoryId]: targetCategoryId }))
   }
@@ -147,6 +158,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
         if (selectedItems[item.id]) {
           itemsToImport.push({
             ...item,
+            optionGroups: item.optionGroups.filter((og) => selectedOptionGroups[og.id]),
             targetCategoryId: categoryMappings[cat.ifoodCategoryId] || null,
             ifoodCategoryName: cat.ifoodName,
           })
@@ -323,23 +335,33 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
                             {expandedOptions[item.id] && item.optionGroups.length > 0 && (
                               <div className="px-4 pb-3 pl-12">
                                 {item.optionGroups.map((og) => (
-                                  <div key={og.id} className="rounded-lg bg-blue-50 border border-blue-100 p-3 mb-2 last:mb-0">
+                                  <div key={og.id} className={`rounded-lg border p-3 mb-2 last:mb-0 ${selectedOptionGroups[og.id] ? 'bg-blue-50 border-blue-100' : 'bg-zinc-50 border-zinc-200 opacity-60'}`}>
                                     <div className="flex items-center justify-between mb-2">
-                                      <p className="text-sm font-semibold text-blue-900">{og.name}</p>
-                                      <span className="text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => toggleOptionGroup(og.id)}
+                                          className="flex h-5 w-5 items-center justify-center rounded border border-zinc-300 bg-white"
+                                        >
+                                          {selectedOptionGroups[og.id] && <Check className="h-3 w-3 text-green-600" />}
+                                        </button>
+                                        <p className={`text-sm font-semibold ${selectedOptionGroups[og.id] ? 'text-blue-900' : 'text-zinc-700'}`}>{og.name}</p>
+                                      </div>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedOptionGroups[og.id] ? 'text-blue-600 bg-blue-100' : 'text-zinc-500 bg-zinc-100'}`}>
                                         {og.min > 0 ? `Obrigatório (${og.min}-${og.max})` : `Opcional (máx ${og.max})`}
                                       </span>
                                     </div>
-                                    <div className="space-y-1">
-                                      {og.options.map((opt) => (
-                                        <div key={opt.id} className="flex items-center justify-between text-xs">
-                                          <span className="text-zinc-700">{opt.name}</span>
-                                          <span className="text-zinc-500">
-                                            {opt.price > 0 ? `+ ${formatCurrency(opt.price)}` : "Grátis"}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
+                                    {selectedOptionGroups[og.id] && (
+                                      <div className="space-y-1">
+                                        {og.options.map((opt) => (
+                                          <div key={opt.id} className="flex items-center justify-between text-xs">
+                                            <span className="text-zinc-700">{opt.name}</span>
+                                            <span className="text-zinc-500">
+                                              {opt.price > 0 ? `+ ${formatCurrency(opt.price)}` : "Grátis"}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
