@@ -18,6 +18,8 @@ interface OrderItem {
 interface Order {
   id: string
   orderNumber: number | null
+  externalDisplayId: string | null
+  method: string | null
   customerName: string
   customerPhone: string | null
   customerAddress: string | null
@@ -31,6 +33,7 @@ interface Order {
   assignedAt: string | null
   deliveredAt: string | null
   changeFor: number | null
+  ifoodDeliveryBy: string | null
 }
 
 interface PersonData {
@@ -474,18 +477,63 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
     items = []
   }
 
+  const isIfoodOrder = order.method === "ifood"
+  const isMerchantDelivery = order.ifoodDeliveryBy === "MERCHANT"
+  const showHandshake = isIfoodOrder && isMerchantDelivery && order.status === "out_for_delivery"
+
+  const [handshakeCode, setHandshakeCode] = useState("")
+  const [handshakeLoading, setHandshakeLoading] = useState(false)
+  const [handshakeError, setHandshakeError] = useState("")
+  const [handshakeSuccess, setHandshakeSuccess] = useState(false)
+
+  async function confirmHandshake() {
+    if (!/^\d{4}$/.test(handshakeCode)) {
+      setHandshakeError("Código deve ter 4 dígitos")
+      return
+    }
+    setHandshakeLoading(true)
+    setHandshakeError("")
+    try {
+      const res = await fetch(`/api/orders/${order.id}/ifood-handshake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handshakeCode }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setHandshakeSuccess(true)
+        onUpdate(order.id, "delivered")
+      } else {
+        setHandshakeError(data.error || "Erro ao confirmar entrega")
+      }
+    } catch {
+      setHandshakeError("Erro de conexão")
+    } finally {
+      setHandshakeLoading(false)
+    }
+  }
+
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              {order.orderNumber && (
+              {isIfoodOrder && order.externalDisplayId ? (
+                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                  #{order.externalDisplayId}
+                </span>
+              ) : order.orderNumber ? (
                 <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
                   #{order.orderNumber}
                 </span>
-              )}
+              ) : null}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
+              {isIfoodOrder && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                  iFood
+                </span>
+              )}
             </div>
             <p className="text-xs text-zinc-400">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
 
@@ -560,6 +608,43 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
               }
               return null
             })()}
+
+            {/* iFood Handshake - 4-digit delivery confirmation */}
+            {showHandshake && !handshakeSuccess && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-medium text-amber-700 mb-2">
+                  Peça o código de confirmação ao cliente (4 últimos dígitos do celular).
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={handshakeCode}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 4)
+                      setHandshakeCode(v)
+                      setHandshakeError("")
+                    }}
+                    placeholder="XXXX"
+                    className="w-20 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center text-lg font-bold tracking-[0.3em] text-zinc-800 focus:border-amber-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={confirmHandshake}
+                    disabled={handshakeLoading || handshakeCode.length !== 4}
+                    className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  >
+                    {handshakeLoading ? "Confirmando..." : "Confirmar"}
+                  </button>
+                </div>
+                {handshakeError && <p className="mt-2 text-xs text-red-600">{handshakeError}</p>}
+              </div>
+            )}
+            {showHandshake && handshakeSuccess && (
+              <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+                <p className="text-xs font-medium text-green-700">Entrega confirmada com sucesso!</p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-2 shrink-0">
@@ -567,9 +652,11 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating }: {
             <Badge variant={statusAction === "out_for_delivery" ? "warning" : "success"}>
               {order.status === "ready" ? "Pronto" : "Em rota"}
             </Badge>
-            <Button size="sm" onClick={() => onUpdate(order.id, statusAction)} disabled={updating} className="gap-1">
-              {updating ? "..." : <><CheckCircle className="h-4 w-4" />{statusLabel}</>}
-            </Button>
+            {!showHandshake && (
+              <Button size="sm" onClick={() => onUpdate(order.id, statusAction)} disabled={updating} className="gap-1">
+                {updating ? "..." : <><CheckCircle className="h-4 w-4" />{statusLabel}</>}
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
