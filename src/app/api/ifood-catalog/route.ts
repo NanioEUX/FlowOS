@@ -174,6 +174,26 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
         }
       }
 
+      // Also fetch option products (each option links to its own productId)
+      const optionProductIds = new Set<string>()
+      for (const item of rawItems) {
+        const product = productMap.get(item.productId) || {}
+        const groups = product.optionGroups || item.optionGroups || []
+        for (const og of groups) {
+          for (const opt of og.options || []) {
+            if (opt.productId && !productMap.has(opt.productId)) {
+              optionProductIds.add(opt.productId)
+            }
+          }
+        }
+      }
+      for (const opid of optionProductIds) {
+        const optProduct = await fetchProduct(merchantId, opid, token)
+        if (optProduct) {
+          productMap.set(opid, optProduct)
+        }
+      }
+
       allCategories.push({
         categoryId: catId,
         name: catName,
@@ -206,7 +226,32 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
             originalPrice,
             status: item.status || "AVAILABLE",
             imagePath,
-            optionGroups: product.optionGroups || item.optionGroups || [],
+            optionGroups: (product.optionGroups || item.optionGroups || []).map((og: any) => ({
+              id: og.id,
+              name: og.name,
+              min: og.min || 0,
+              max: og.max || 0,
+              options: (og.options || []).map((opt: any) => {
+                let optPrice = opt.price?.value || 0
+                if (optPrice === 0 && opt.productId) {
+                  const optProduct = productMap.get(opt.productId)
+                  if (optProduct) {
+                    if (typeof optProduct.price === "object" && optProduct.price?.value) {
+                      optPrice = optProduct.price.value
+                    } else if (typeof optProduct.price === "number") {
+                      optPrice = optProduct.price
+                    }
+                  }
+                }
+                return {
+                  id: opt.id,
+                  name: opt.name,
+                  description: opt.description || "",
+                  price: optPrice,
+                  status: opt.status || "AVAILABLE",
+                }
+              }),
+            })),
           }
         }),
       })
