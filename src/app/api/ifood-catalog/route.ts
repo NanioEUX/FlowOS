@@ -8,9 +8,10 @@ interface IfoodItem {
   id: string
   name: string
   description?: string
-  price: { value: number; originalValue?: number }
+  price: number
+  originalPrice: number
   status: string
-  imagePath?: string
+  imagePath?: string | null
   optionGroups?: any[]
 }
 
