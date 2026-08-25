@@ -4,6 +4,20 @@ import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { verifyAuth } from "@/lib/auth"
 import https from "https"
 
+interface IfoodOptionGroup {
+  id: string
+  name: string
+  min: number
+  max: number
+  options: {
+    id: string
+    name: string
+    description?: string
+    price: { value: number }
+    status: string
+  }[]
+}
+
 interface IfoodItem {
   id: string
   name: string
@@ -12,7 +26,7 @@ interface IfoodItem {
   originalPrice: number
   status: string
   imagePath?: string | null
-  optionGroups?: any[]
+  optionGroups?: IfoodOptionGroup[]
 }
 
 interface IfoodCategory {
@@ -46,11 +60,10 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
 }
 
 async function fetchProduct(merchantId: string, productId: string, token: string): Promise<any> {
-    const res = await httpsGet(
-      `/catalog/v2.0/merchants/${merchantId}/product/${productId}`,
-      token
-    )
-  console.log("[ifood-catalog] Product", productId, "status:", res.status, "body:", res.body.slice(0, 1000))
+  const res = await httpsGet(
+    `/catalog/v2.0/merchants/${merchantId}/product/${productId}`,
+    token
+  )
   if (res.status === 200) {
     try {
       return JSON.parse(res.body)
@@ -59,14 +72,52 @@ async function fetchProduct(merchantId: string, productId: string, token: string
   return null
 }
 
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+}
+
+function findCategoryMatch(
+  ifoodName: string,
+  existingCategories: { id: string; name: string }[]
+): { id: string; name: string } | null {
+  const normalized = normalizeString(ifoodName)
+
+  // 1. Exact match (case-insensitive, accent-insensitive)
+  const exact = existingCategories.find(
+    (ec) => normalizeString(ec.name) === normalized
+  )
+  if (exact) return exact
+
+  // 2. iFood name contains existing name or vice versa
+  const contains = existingCategories.find((ec) => {
+    const ecNorm = normalizeString(ec.name)
+    return normalized.includes(ecNorm) || ecNorm.includes(normalized)
+  })
+  if (contains) return contains
+
+  // 3. Single word match (e.g., "Picole" matches "Picolés")
+  const ifoodWords = normalized.split(/\s+/)
+  const wordMatch = existingCategories.find((ec) => {
+    const ecNorm = normalizeString(ec.name)
+    const ecWords = ecNorm.split(/\s+/)
+    return ifoodWords.some((w) => ecWords.some((ew) => ew === w || ew.includes(w) || w.includes(ew)))
+  })
+  if (wordMatch) return wordMatch
+
+  return null
+}
+
 async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ categories: IfoodCategory[] }> {
-  // Step 1: Get catalogs
   console.log("[ifood-catalog] Step 1: Fetching catalogs")
   const catalogsRes = await httpsGet(
     `/catalog/v2.0/merchants/${merchantId}/catalogs`,
     token
   )
-  console.log("[ifood-catalog] Catalogs response:", catalogsRes.status, catalogsRes.body.slice(0, 500))
 
   if (catalogsRes.status !== 200) {
     throw new Error(`iFood catalogs API error: ${catalogsRes.status} - ${catalogsRes.body.slice(0, 300)}`)
@@ -74,37 +125,27 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
 
   const catalogs = JSON.parse(catalogsRes.body)
   if (!Array.isArray(catalogs) || catalogs.length === 0) {
-    console.log("[ifood-catalog] No catalogs found")
     return { categories: [] }
   }
-
-  console.log("[ifood-catalog] Found", catalogs.length, "catalogs")
 
   const allCategories: IfoodCategory[] = []
 
   for (const catalog of catalogs) {
     const catalogId = catalog.catalogId
-    console.log("[ifood-catalog] Fetching categories for catalog:", catalogId)
 
-    // Get categories
     const catRes = await httpsGet(
       `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`,
       token
     )
-    console.log("[ifood-catalog] Categories response:", catRes.status, catRes.body.slice(0, 500))
 
     if (catRes.status !== 200) continue
 
     const categoriesData = JSON.parse(catRes.body)
     if (!Array.isArray(categoriesData)) continue
 
-    console.log("[ifood-catalog] Found", categoriesData.length, "categories")
-
     for (const cat of categoriesData) {
       const catId = cat.id || cat.categoryId
       const catName = cat.name
-
-      console.log("[ifood-catalog] Fetching items for category:", catName, catId)
 
       const itemsRes = await httpsGet(
         `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
@@ -123,19 +164,13 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
         } catch {}
       }
 
-      console.log("[ifood-catalog] Category", catName, "has", rawItems.length, "items")
-
-      // Collect unique productIds to fetch
       const productIds = [...new Set(rawItems.map((item: any) => item.productId).filter(Boolean))]
-      console.log("[ifood-catalog] Need to fetch", productIds.length, "products")
 
-      // Fetch product details for each item
       const productMap = new Map<string, any>()
       for (const pid of productIds) {
         const product = await fetchProduct(merchantId, pid, token)
         if (product) {
           productMap.set(pid, product)
-          console.log("[ifood-catalog] Product", pid, ":", product.name || "(no name)")
         }
       }
 
@@ -145,12 +180,10 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
         items: rawItems.map((item: any) => {
           const product = productMap.get(item.productId) || {}
 
-          // Product details
           const name = product.name || item.name || ""
           const description = product.description || item.description || ""
           const imagePath = product.image || product.imagePath || item.imagePath || null
 
-          // Price from contextModifiers
           let price = 0
           let originalPrice = 0
           const ctxMod = item.contextModifiers?.[0]
@@ -173,7 +206,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
             originalPrice,
             status: item.status || "AVAILABLE",
             imagePath,
-            optionGroups: item.optionGroups || [],
+            optionGroups: product.optionGroups || item.optionGroups || [],
           }
         }),
       })
@@ -190,16 +223,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    console.log("[ifood-catalog] Authenticated, establishmentId:", auth.establishmentId)
-
     const establishment = await prisma.establishment.findUnique({
       where: { id: auth.establishmentId },
       select: { ifoodMerchantId: true, ifoodEnabled: true },
-    })
-
-    console.log("[ifood-catalog] Establishment:", {
-      ifoodEnabled: establishment?.ifoodEnabled,
-      ifoodMerchantId: establishment?.ifoodMerchantId,
     })
 
     if (!establishment?.ifoodEnabled || !establishment?.ifoodMerchantId) {
@@ -209,13 +235,10 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    console.log("[ifood-catalog] Getting iFood auth...")
     const ifoodAuth = await getIfoodAuth(
       process.env.IFOOD_CLIENT_ID!,
       process.env.IFOOD_CLIENT_SECRET!
     )
-
-    console.log("[ifood-catalog] iFood auth result:", ifoodAuth ? "success" : "failed")
 
     if (!ifoodAuth?.accessToken) {
       return NextResponse.json(
@@ -224,24 +247,19 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    console.log("[ifood-catalog] Fetching catalog for merchant:", establishment.ifoodMerchantId)
     const { categories } = await fetchIfoodCatalog(
       establishment.ifoodMerchantId,
       ifoodAuth.accessToken
     )
 
-    // Get existing categories for mapping
     const existingCategories = await prisma.category.findMany({
       where: { establishmentId: auth.establishmentId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     })
 
-    // Map categories and try to auto-match
     const mappedCategories = categories.map((cat) => {
-      const existingMatch = existingCategories.find(
-        (ec) => ec.name.toLowerCase() === cat.name.toLowerCase()
-      )
+      const match = findCategoryMatch(cat.name, existingCategories)
       return {
         ifoodCategoryId: cat.categoryId,
         ifoodName: cat.name,
@@ -255,10 +273,22 @@ export async function GET(req: NextRequest) {
           status: item.status,
           imagePath: item.imagePath || null,
           hasPromotion: (item.originalPrice || 0) > (item.price || 0) && item.originalPrice > 0,
-          hasOptions: (item.optionGroups?.length || 0) > 0,
+          optionGroups: (item.optionGroups || []).map((og: any) => ({
+            id: og.id,
+            name: og.name,
+            min: og.min || 0,
+            max: og.max || 0,
+            options: (og.options || []).map((opt: any) => ({
+              id: opt.id,
+              name: opt.name,
+              description: opt.description || "",
+              price: opt.price?.value || 0,
+              status: opt.status || "AVAILABLE",
+            })),
+          })),
         })),
-        mappedCategoryId: existingMatch?.id || null,
-        mappedCategoryName: existingMatch?.name || null,
+        mappedCategoryId: match?.id || null,
+        mappedCategoryName: match?.name || null,
       }
     })
 
@@ -269,7 +299,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("[ifood-catalog] error:", error.message)
-    console.error("[ifood-catalog] error stack:", error.stack)
     return NextResponse.json(
       { error: `Erro ao buscar catálogo do iFood: ${error.message}` },
       { status: 500 }

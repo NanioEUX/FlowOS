@@ -1,11 +1,27 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShoppingBag, Download, Check, ChevronDown, ChevronUp, Loader2, X, Package, AlertTriangle, CheckCircle, Image as ImageIcon } from "lucide-react"
+import { ShoppingBag, Download, Check, ChevronDown, ChevronUp, Loader2, X, Package, AlertTriangle, CheckCircle, Image as ImageIcon, List } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { formatCurrency } from "@/lib/utils"
+
+interface IfoodOption {
+  id: string
+  name: string
+  description: string
+  price: number
+  status: string
+}
+
+interface IfoodOptionGroup {
+  id: string
+  name: string
+  min: number
+  max: number
+  options: IfoodOption[]
+}
 
 interface IfoodItem {
   id: string
@@ -16,7 +32,7 @@ interface IfoodItem {
   imagePath: string | null
   status: string
   hasPromotion: boolean
-  hasOptions: boolean
+  optionGroups: IfoodOptionGroup[]
 }
 
 interface IfoodCategory {
@@ -35,6 +51,7 @@ interface ExistingCategory {
 
 interface ImportResults {
   created: number
+  optionsCreated: number
   imagesDownloaded: number
   imagesFailed: number
   errors: string[]
@@ -48,6 +65,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({})
   const [categoryMappings, setCategoryMappings] = useState<Record<string, string>>({})
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+  const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>({})
   const [importing, setImporting] = useState(false)
   const [results, setResults] = useState<ImportResults | null>(null)
   const [error, setError] = useState("")
@@ -61,7 +79,6 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
       const res = await fetchAuth("/api/ifood-catalog")
       const data = await res.json()
       if (!res.ok) {
-        console.error("[ifood-wizard] Error:", data)
         setError(data.error || "Erro ao carregar catálogo")
         return
       }
@@ -69,7 +86,6 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
       setExistingCategories(data.existingCategories)
       setTotalItems(data.totalItems)
 
-      // Auto-select all items and expand first category
       const selected: Record<string, boolean> = {}
       const expanded: Record<string, boolean> = {}
       const mappings: Record<string, string> = {}
@@ -109,6 +125,10 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
 
   function toggleExpand(categoryId: string) {
     setExpandedCategories((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }))
+  }
+
+  function toggleExpandOptions(itemId: string) {
+    setExpandedOptions((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
   function updateCategoryMapping(ifoodCategoryId: string, targetCategoryId: string) {
@@ -160,7 +180,6 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <CardContent className="p-0 flex flex-col h-full">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
@@ -181,9 +200,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
-            {/* Loading */}
             {step === "loading" && (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-red-600" />
@@ -191,19 +208,16 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {/* Error */}
             {error && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 {error}
               </div>
             )}
 
-            {/* Review */}
             {step === "review" && (
               <div className="space-y-4">
                 {categories.map((cat) => (
                   <div key={cat.ifoodCategoryId} className="rounded-lg border border-zinc-200 bg-white">
-                    {/* Category Header */}
                     <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
                       <div className="flex items-center gap-3">
                         <button
@@ -228,7 +242,6 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
 
-                      {/* Category Mapping */}
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-zinc-500">→</span>
                         <select
@@ -246,61 +259,91 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
                       </div>
                     </div>
 
-                    {/* Items */}
                     {expandedCategories[cat.ifoodCategoryId] && (
                       <div className="divide-y divide-zinc-100">
                         {cat.items.map((item) => (
-                          <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                            <button
-                              onClick={() => toggleItem(item.id)}
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-zinc-300"
-                            >
-                              {selectedItems[item.id] && <Check className="h-3 w-3 text-green-600" />}
-                            </button>
+                          <div key={item.id}>
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <button
+                                onClick={() => toggleItem(item.id)}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-zinc-300"
+                              >
+                                {selectedItems[item.id] && <Check className="h-3 w-3 text-green-600" />}
+                              </button>
 
-                            {item.imagePath ? (
-                              <img
-                                src={item.imagePath}
-                                alt={item.name}
-                                className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                                <ImageIcon className="h-5 w-5 text-zinc-400" />
+                              {item.imagePath ? (
+                                <img
+                                  src={item.imagePath}
+                                  alt={item.name}
+                                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
+                                  <ImageIcon className="h-5 w-5 text-zinc-400" />
+                                </div>
+                              )}
+
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-zinc-900 truncate">{item.name}</p>
+                                {item.description && (
+                                  <p className="text-xs text-zinc-500 truncate">{item.description}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  {item.hasPromotion && (
+                                    <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                                      PROMOÇÃO
+                                    </span>
+                                  )}
+                                  {item.optionGroups.length > 0 && (
+                                    <button
+                                      onClick={() => toggleExpandOptions(item.id)}
+                                      className="flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded hover:bg-blue-100"
+                                    >
+                                      <List className="h-3 w-3" />
+                                      {item.optionGroups.length} {item.optionGroups.length === 1 ? "grupo" : "grupos"} de opções
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                {item.hasPromotion ? (
+                                  <>
+                                    <p className="text-xs text-zinc-400 line-through">
+                                      {formatCurrency(item.originalPrice)}
+                                    </p>
+                                    <p className="font-bold text-green-600">{formatCurrency(item.price)}</p>
+                                  </>
+                                ) : (
+                                  <p className="font-bold text-zinc-900">{formatCurrency(item.price)}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {expandedOptions[item.id] && item.optionGroups.length > 0 && (
+                              <div className="px-4 pb-3 pl-12">
+                                {item.optionGroups.map((og) => (
+                                  <div key={og.id} className="rounded-lg bg-blue-50 border border-blue-100 p-3 mb-2 last:mb-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-sm font-semibold text-blue-900">{og.name}</p>
+                                      <span className="text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                                        {og.min > 0 ? `Obrigatório (${og.min}-${og.max})` : `Opcional (máx ${og.max})`}
+                                      </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                      {og.options.map((opt) => (
+                                        <div key={opt.id} className="flex items-center justify-between text-xs">
+                                          <span className="text-zinc-700">{opt.name}</span>
+                                          <span className="text-zinc-500">
+                                            {opt.price > 0 ? `+ ${formatCurrency(opt.price)}` : "Grátis"}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             )}
-
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-zinc-900 truncate">{item.name}</p>
-                              {item.description && (
-                                <p className="text-xs text-zinc-500 truncate">{item.description}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.hasPromotion && (
-                                  <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                                    PROMOÇÃO
-                                  </span>
-                                )}
-                                {item.hasOptions && (
-                                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                    OPÇÕES
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              {item.hasPromotion ? (
-                                <>
-                                  <p className="text-xs text-zinc-400 line-through">
-                                    {formatCurrency(item.originalPrice)}
-                                  </p>
-                                  <p className="font-bold text-green-600">{formatCurrency(item.price)}</p>
-                                </>
-                              ) : (
-                                <p className="font-bold text-zinc-900">{formatCurrency(item.price)}</p>
-                              )}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -310,16 +353,14 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {/* Importing */}
             {step === "importing" && (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-green-600" />
                 <p className="mt-4 text-sm text-zinc-500">Importando {selectedCount} produtos...</p>
-                <p className="text-xs text-zinc-400">Baixando imagens e criando categorias</p>
+                <p className="text-xs text-zinc-400">Baixando imagens, criando categorias e adicionais</p>
               </div>
             )}
 
-            {/* Done */}
             {step === "done" && results && (
               <div className="space-y-4">
                 <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
@@ -327,21 +368,26 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
                   <h3 className="mt-3 text-lg font-bold text-green-800">Importação Concluída!</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
                     <Package className="mx-auto h-6 w-6 text-green-600" />
                     <p className="mt-2 text-2xl font-bold text-zinc-900">{results.created}</p>
-                    <p className="text-xs text-zinc-500">Produtos criados</p>
+                    <p className="text-xs text-zinc-500">Produtos</p>
+                  </div>
+                  <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+                    <List className="mx-auto h-6 w-6 text-blue-600" />
+                    <p className="mt-2 text-2xl font-bold text-zinc-900">{results.optionsCreated}</p>
+                    <p className="text-xs text-zinc-500">Adicionais</p>
                   </div>
                   <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
                     <ImageIcon className="mx-auto h-6 w-6 text-blue-600" />
                     <p className="mt-2 text-2xl font-bold text-zinc-900">{results.imagesDownloaded}</p>
-                    <p className="text-xs text-zinc-500">Imagens baixadas</p>
+                    <p className="text-xs text-zinc-500">Imagens</p>
                   </div>
                   <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
                     <AlertTriangle className="mx-auto h-6 w-6 text-amber-500" />
                     <p className="mt-2 text-2xl font-bold text-zinc-900">{results.imagesFailed}</p>
-                    <p className="text-xs text-zinc-500">Imagens com falha</p>
+                    <p className="text-xs text-zinc-500">Falhas</p>
                   </div>
                 </div>
 
@@ -359,7 +405,6 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          {/* Footer */}
           <div className="border-t border-zinc-200 px-6 py-4">
             {step === "review" && (
               <div className="flex items-center justify-between">

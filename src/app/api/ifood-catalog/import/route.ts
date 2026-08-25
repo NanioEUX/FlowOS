@@ -4,6 +4,22 @@ import { verifyAuth } from "@/lib/auth"
 import https from "https"
 import { createClient } from "@supabase/supabase-js"
 
+interface ImportOption {
+  id: string
+  name: string
+  description: string
+  price: number
+  status: string
+}
+
+interface ImportOptionGroup {
+  id: string
+  name: string
+  min: number
+  max: number
+  options: ImportOption[]
+}
+
 interface ImportItem {
   id: string
   name: string
@@ -12,6 +28,8 @@ interface ImportItem {
   originalPrice: number
   imagePath: string | null
   targetCategoryId: string
+  ifoodCategoryName?: string
+  optionGroups: ImportOptionGroup[]
 }
 
 async function downloadImage(url: string): Promise<Buffer | null> {
@@ -46,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { items, categoryMappings } = body
+    const { items } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -62,6 +80,7 @@ export async function POST(req: NextRequest) {
 
     const results = {
       created: 0,
+      optionsCreated: 0,
       imagesDownloaded: 0,
       imagesFailed: 0,
       errors: [] as string[],
@@ -69,11 +88,9 @@ export async function POST(req: NextRequest) {
 
     for (const item of items) {
       try {
-        // Find or create category
         let categoryId = item.targetCategoryId
 
         if (!categoryId) {
-          // Create new category from iFood name
           const newCat = await prisma.category.create({
             data: {
               name: item.ifoodCategoryName || "Sem categoria",
@@ -84,7 +101,6 @@ export async function POST(req: NextRequest) {
           categoryId = newCat.id
         }
 
-        // Download image if available
         let imageUrl: string | null = null
         if (item.imagePath) {
           try {
@@ -114,8 +130,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Create product
-        await prisma.product.create({
+        const product = await prisma.product.create({
           data: {
             name: item.name,
             description: item.description || null,
@@ -131,6 +146,45 @@ export async function POST(req: NextRequest) {
         })
 
         results.created++
+
+        // Create AdditionalOption records from optionGroups
+        if (item.optionGroups && item.optionGroups.length > 0) {
+          for (let groupIdx = 0; groupIdx < item.optionGroups.length; groupIdx++) {
+            const og = item.optionGroups[groupIdx]
+
+            // Determine selection type
+            let selectionType = "multiple"
+            if (og.min >= 1 && og.max === 1) {
+              selectionType = "required"
+            } else if (og.max === 1) {
+              selectionType = "single"
+            }
+
+            for (let optIdx = 0; optIdx < og.options.length; optIdx++) {
+              const opt = og.options[optIdx]
+
+              await prisma.additionalOption.create({
+                data: {
+                  name: opt.name,
+                  price: opt.price,
+                  selectionType,
+                  inputType: "radio",
+                  groupName: og.name,
+                  headerText: og.min >= 1
+                    ? `Escolha ${og.min === og.max ? og.min : `de ${og.min} a ${og.max}`}`
+                    : `Escolha até ${og.max}`,
+                  maxSelection: og.max || null,
+                  order: optIdx,
+                  groupOrder: groupIdx,
+                  productId: product.id,
+                  establishmentId: auth.establishmentId,
+                },
+              })
+
+              results.optionsCreated++
+            }
+          }
+        }
       } catch (error: any) {
         results.errors.push(`Erro ao importar "${item.name}": ${error.message}`)
       }
