@@ -141,6 +141,11 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({ items: itemsToImport }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Erro ao importar produtos")
+        setStep("review")
+        return
+      }
       setResults(data)
       setStep("done")
     } catch {
