@@ -4,37 +4,6 @@ import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { verifyAuth } from "@/lib/auth"
 import https from "https"
 
-interface IfoodOptionGroup {
-  id: string
-  name: string
-  min: number
-  max: number
-  options: {
-    id: string
-    name: string
-    description?: string
-    price: { value: number }
-    status: string
-  }[]
-}
-
-interface IfoodItem {
-  id: string
-  name: string
-  description?: string
-  price: number
-  originalPrice: number
-  status: string
-  imagePath?: string | null
-  optionGroups?: IfoodOptionGroup[]
-}
-
-interface IfoodCategory {
-  categoryId: string
-  name: string
-  items: IfoodItem[]
-}
-
 function httpsGet(path: string, token: string): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const options = {
@@ -59,19 +28,6 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
   })
 }
 
-async function fetchProduct(merchantId: string, productId: string, token: string): Promise<any> {
-  const res = await httpsGet(
-    `/catalog/v2.0/merchants/${merchantId}/product/${productId}`,
-    token
-  )
-  if (res.status === 200) {
-    try {
-      return JSON.parse(res.body)
-    } catch {}
-  }
-  return null
-}
-
 function normalizeString(str: string): string {
   return str
     .toLowerCase()
@@ -87,20 +43,17 @@ function findCategoryMatch(
 ): { id: string; name: string } | null {
   const normalized = normalizeString(ifoodName)
 
-  // 1. Exact match (case-insensitive, accent-insensitive)
   const exact = existingCategories.find(
     (ec) => normalizeString(ec.name) === normalized
   )
   if (exact) return exact
 
-  // 2. iFood name contains existing name or vice versa
   const contains = existingCategories.find((ec) => {
     const ecNorm = normalizeString(ec.name)
     return normalized.includes(ecNorm) || ecNorm.includes(normalized)
   })
   if (contains) return contains
 
-  // 3. Single word match (e.g., "Picole" matches "Picolés")
   const ifoodWords = normalized.split(/\s+/)
   const wordMatch = existingCategories.find((ec) => {
     const ecNorm = normalizeString(ec.name)
@@ -112,8 +65,8 @@ function findCategoryMatch(
   return null
 }
 
-async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ categories: IfoodCategory[] }> {
-  console.log("[ifood-catalog] Step 1: Fetching catalogs")
+async function fetchIfoodCatalog(merchantId: string, token: string) {
+  // Get catalogs
   const catalogsRes = await httpsGet(
     `/catalog/v2.0/merchants/${merchantId}/catalogs`,
     token
@@ -125,149 +78,30 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
 
   const catalogs = JSON.parse(catalogsRes.body)
   if (!Array.isArray(catalogs) || catalogs.length === 0) {
-    return { categories: [] }
+    return []
   }
 
-  const allCategories: IfoodCategory[] = []
+  const allItems: any[] = []
 
   for (const catalog of catalogs) {
-    const catalogId = catalog.catalogId
     const groupId = catalog.groupId
 
-    // Try sellableItems endpoint first (returns items with full option data)
     const sellableRes = await httpsGet(
       `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/sellableItems`,
       token
     )
-    console.log("[ifood-catalog] SellableItems:", sellableRes.status, sellableRes.body.slice(0, 3000))
 
-    const catRes = await httpsGet(
-      `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`,
-      token
-    )
-
-    if (catRes.status !== 200) continue
-
-    const categoriesData = JSON.parse(catRes.body)
-    if (!Array.isArray(categoriesData)) continue
-
-    for (const cat of categoriesData) {
-      const catId = cat.id || cat.categoryId
-      const catName = cat.name
-
-      const itemsRes = await httpsGet(
-        `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
-        token
-      )
-
-      let rawItems: any[] = []
-      if (itemsRes.status === 200) {
-        try {
-          const itemsData = JSON.parse(itemsRes.body)
-          if (Array.isArray(itemsData)) {
-            rawItems = itemsData
-          } else if (itemsData.items && Array.isArray(itemsData.items)) {
-            rawItems = itemsData.items
-          }
-        } catch {}
-      }
-
-      const productIds = [...new Set(rawItems.map((item: any) => item.productId).filter(Boolean))]
-
-      const productMap = new Map<string, any>()
-      for (const pid of productIds) {
-        const product = await fetchProduct(merchantId, pid, token)
-        if (product) {
-          productMap.set(pid, product)
+    if (sellableRes.status === 200) {
+      try {
+        const items = JSON.parse(sellableRes.body)
+        if (Array.isArray(items)) {
+          allItems.push(...items)
         }
-      }
-
-      // Also fetch option products (each option links to its own productId)
-      const optionProductIds = new Set<string>()
-      for (const item of rawItems) {
-        const product = productMap.get(item.productId) || {}
-        const groups = product.optionGroups || item.optionGroups || []
-        for (const og of groups) {
-          for (const opt of og.options || []) {
-            if (opt.productId && !productMap.has(opt.productId)) {
-              optionProductIds.add(opt.productId)
-            }
-          }
-        }
-      }
-      for (const opid of optionProductIds) {
-        const optProduct = await fetchProduct(merchantId, opid, token)
-        if (optProduct) {
-          console.log("[ifood-catalog] Option product", opid, "full:", JSON.stringify(optProduct).slice(0, 1500))
-          productMap.set(opid, optProduct)
-        }
-      }
-
-      allCategories.push({
-        categoryId: catId,
-        name: catName,
-        items: rawItems.map((item: any) => {
-          const product = productMap.get(item.productId) || {}
-
-          const name = product.name || item.name || ""
-          const description = product.description || item.description || ""
-          const imagePath = product.image || product.imagePath || item.imagePath || null
-
-          let price = 0
-          let originalPrice = 0
-          const ctxMod = item.contextModifiers?.[0]
-          if (ctxMod?.price?.value) {
-            price = ctxMod.price.value
-            originalPrice = ctxMod.price.originalValue || ctxMod.price.value
-          } else if (item.price && typeof item.price === "object") {
-            price = item.price.value || 0
-            originalPrice = item.price.originalValue || item.price.value || 0
-          } else if (typeof item.price === "number") {
-            price = item.price
-            originalPrice = item.price
-          }
-
-          return {
-            id: item.id || "",
-            name,
-            description,
-            price,
-            originalPrice,
-            status: item.status || "AVAILABLE",
-            imagePath,
-            optionGroups: (product.optionGroups || item.optionGroups || []).map((og: any) => ({
-              id: og.id,
-              name: og.name,
-              min: og.min || 0,
-              max: og.max || 0,
-              options: (og.options || []).map((opt: any) => {
-                let optPrice = opt.price?.value || 0
-                if (optPrice === 0 && opt.productId) {
-                  const optProduct = productMap.get(opt.productId)
-                  if (optProduct) {
-                    if (typeof optProduct.price === "object" && optProduct.price?.value) {
-                      optPrice = optProduct.price.value
-                    } else if (typeof optProduct.price === "number") {
-                      optPrice = optProduct.price
-                    }
-                  }
-                }
-                return {
-                  id: opt.id,
-                  name: opt.name,
-                  description: opt.description || "",
-                  price: optPrice,
-                  status: opt.status || "AVAILABLE",
-                }
-              }),
-            })),
-          }
-        }),
-      })
+      } catch {}
     }
   }
 
-  return { categories: allCategories }
+  return allItems
 }
 
 export async function GET(req: NextRequest) {
@@ -301,10 +135,24 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const { categories } = await fetchIfoodCatalog(
+    const sellableItems = await fetchIfoodCatalog(
       establishment.ifoodMerchantId,
       ifoodAuth.accessToken
     )
+
+    // Group items by category
+    const categoryMap = new Map<string, any>()
+    for (const item of sellableItems) {
+      const catId = item.categoryId
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          categoryId: catId,
+          name: item.categoryName || "Sem categoria",
+          items: [],
+        })
+      }
+      categoryMap.get(catId)!.items.push(item)
+    }
 
     const existingCategories = await prisma.category.findMany({
       where: { establishmentId: auth.establishmentId },
@@ -312,35 +160,55 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     })
 
+    const categories = Array.from(categoryMap.values())
+    let totalItems = 0
+
     const mappedCategories = categories.map((cat) => {
       const match = findCategoryMatch(cat.name, existingCategories)
+
+      const mappedItems = cat.items.map((item: any) => {
+        totalItems++
+        const price = item.itemPrice?.value || 0
+        const originalPrice = item.itemPrice?.originalValue || price
+
+        // Build image URL
+        const imagePath = item.logosUrls?.[0]
+          ? `https://static-images.ifood.com.br/pratos/${item.logosUrls[0]}`
+          : null
+
+        // Map option groups
+        const optionGroups = (item.itemOptionGroups || []).map((og: any) => ({
+          id: og.optionGroupId,
+          name: og.name,
+          min: og.minQuantity || 0,
+          max: og.maxQuantity || 0,
+          options: (og.options || []).map((opt: any) => ({
+            id: opt.optionId,
+            name: opt.name,
+            description: "",
+            price: opt.price?.value || 0,
+            status: "AVAILABLE",
+          })),
+        }))
+
+        return {
+          id: item.itemId,
+          name: item.itemName || "",
+          description: item.itemDescription || "",
+          price,
+          originalPrice,
+          status: "AVAILABLE",
+          imagePath,
+          optionGroups,
+          hasPromotion: originalPrice > price && originalPrice > 0,
+        }
+      })
+
       return {
         ifoodCategoryId: cat.categoryId,
         ifoodName: cat.name,
-        itemCount: cat.items?.length || 0,
-        items: (cat.items || []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || "",
-          price: item.price || 0,
-          originalPrice: item.originalPrice || item.price || 0,
-          status: item.status,
-          imagePath: item.imagePath || null,
-          hasPromotion: (item.originalPrice || 0) > (item.price || 0) && item.originalPrice > 0,
-          optionGroups: (item.optionGroups || []).map((og: any) => ({
-            id: og.id,
-            name: og.name,
-            min: og.min || 0,
-            max: og.max || 0,
-            options: (og.options || []).map((opt: any) => ({
-              id: opt.id,
-              name: opt.name,
-              description: opt.description || "",
-              price: opt.price?.value || 0,
-              status: opt.status || "AVAILABLE",
-            })),
-          })),
-        })),
+        itemCount: mappedItems.length,
+        items: mappedItems,
         mappedCategoryId: match?.id || null,
         mappedCategoryName: match?.name || null,
       }
@@ -349,7 +217,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       categories: mappedCategories,
       existingCategories,
-      totalItems: categories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0),
+      totalItems,
     })
   } catch (error: any) {
     console.error("[ifood-catalog] error:", error.message)
