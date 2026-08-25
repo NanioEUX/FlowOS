@@ -45,7 +45,20 @@ function httpsGet(path: string, token: string): Promise<{ status: number; body: 
   })
 }
 
-async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ categories: IfoodCategory[], rawItems: any[] }> {
+async function fetchProduct(merchantId: string, productId: string, token: string): Promise<any> {
+  const res = await httpsGet(
+    `/catalog/v2.0/merchants/${merchantId}/products/${productId}`,
+    token
+  )
+  if (res.status === 200) {
+    try {
+      return JSON.parse(res.body)
+    } catch {}
+  }
+  return null
+}
+
+async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ categories: IfoodCategory[] }> {
   // Step 1: Get catalogs
   console.log("[ifood-catalog] Step 1: Fetching catalogs")
   const catalogsRes = await httpsGet(
@@ -61,19 +74,18 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
   const catalogs = JSON.parse(catalogsRes.body)
   if (!Array.isArray(catalogs) || catalogs.length === 0) {
     console.log("[ifood-catalog] No catalogs found")
-    return { categories: [], rawItems: [] }
+    return { categories: [] }
   }
 
   console.log("[ifood-catalog] Found", catalogs.length, "catalogs")
 
   const allCategories: IfoodCategory[] = []
-  const rawItems: any[] = []
 
   for (const catalog of catalogs) {
     const catalogId = catalog.catalogId
     console.log("[ifood-catalog] Fetching categories for catalog:", catalogId)
 
-    // Get categories (without items first)
+    // Get categories
     const catRes = await httpsGet(
       `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`,
       token
@@ -87,7 +99,6 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
 
     console.log("[ifood-catalog] Found", categoriesData.length, "categories")
 
-    // For each category, fetch items separately
     for (const cat of categoriesData) {
       const catId = cat.id || cat.categoryId
       const catName = cat.name
@@ -98,45 +109,54 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
         `/catalog/v2.0/merchants/${merchantId}/categories/${catId}/items`,
         token
       )
-      console.log("[ifood-catalog] Items response:", itemsRes.status, itemsRes.body.slice(0, 500))
 
-      let items: any[] = []
+      let rawItems: any[] = []
       if (itemsRes.status === 200) {
         try {
           const itemsData = JSON.parse(itemsRes.body)
-          console.log("[ifood-catalog] Items raw structure:", JSON.stringify(itemsData).slice(0, 2000))
-
-          // Handle different possible structures
           if (Array.isArray(itemsData)) {
-            items = itemsData
+            rawItems = itemsData
           } else if (itemsData.items && Array.isArray(itemsData.items)) {
-            items = itemsData.items
+            rawItems = itemsData.items
           }
         } catch {}
       }
 
-      console.log("[ifood-catalog] Category", catName, "has", items.length, "items")
+      console.log("[ifood-catalog] Category", catName, "has", rawItems.length, "items")
 
-      // Save raw items for debugging (first category only)
-      if (rawItems.length === 0 && items.length > 0) {
-        rawItems.push(...items.slice(0, 2))
+      // Collect unique productIds to fetch
+      const productIds = [...new Set(rawItems.map((item: any) => item.productId).filter(Boolean))]
+      console.log("[ifood-catalog] Need to fetch", productIds.length, "products")
+
+      // Fetch product details for each item
+      const productMap = new Map<string, any>()
+      for (const pid of productIds) {
+        const product = await fetchProduct(merchantId, pid, token)
+        if (product) {
+          productMap.set(pid, product)
+          console.log("[ifood-catalog] Product", pid, ":", product.name || "(no name)")
+        }
       }
 
       allCategories.push({
         categoryId: catId,
         name: catName,
-        items: items.map((item: any) => {
-          // iFood structure: item has products array with name, description
-          // and item itself has price
-          const product = item.products?.[0] || {}
+        items: rawItems.map((item: any) => {
+          const product = productMap.get(item.productId) || {}
+
+          // Product details
           const name = product.name || item.name || ""
           const description = product.description || item.description || ""
           const imagePath = product.imagePath || item.imagePath || null
 
-          // Price is at item level
+          // Price from contextModifiers
           let price = 0
           let originalPrice = 0
-          if (item.price && typeof item.price === "object") {
+          const ctxMod = item.contextModifiers?.[0]
+          if (ctxMod?.price?.value) {
+            price = ctxMod.price.value
+            originalPrice = ctxMod.price.originalValue || ctxMod.price.value
+          } else if (item.price && typeof item.price === "object") {
             price = item.price.value || 0
             originalPrice = item.price.originalValue || item.price.value || 0
           } else if (typeof item.price === "number") {
@@ -159,7 +179,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
     }
   }
 
-  return { categories: allCategories, rawItems }
+  return { categories: allCategories }
 }
 
 export async function GET(req: NextRequest) {
@@ -204,7 +224,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log("[ifood-catalog] Fetching catalog for merchant:", establishment.ifoodMerchantId)
-    const { categories, rawItems } = await fetchIfoodCatalog(
+    const { categories } = await fetchIfoodCatalog(
       establishment.ifoodMerchantId,
       ifoodAuth.accessToken
     )
@@ -245,7 +265,6 @@ export async function GET(req: NextRequest) {
       categories: mappedCategories,
       existingCategories,
       totalItems: categories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0),
-      rawItems,
     })
   } catch (error: any) {
     console.error("[ifood-catalog] error:", error.message)
