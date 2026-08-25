@@ -317,6 +317,11 @@ export default function ConfigPage() {
     cover: "",
     asaasApiKey: "",
     asaasWalletId: "",
+    pagarmeApiKey: "",
+    pagarmeEnvironment: "sandbox",
+    pagarmeWebhookKey: "",
+    flowChavePix: "",
+    flowModoAtivado: false,
     interClientId: "",
     interClientSecret: "",
     interCertificate: "",
@@ -333,6 +338,7 @@ export default function ConfigPage() {
     tableCount: "10",
     maxPayOnDeliveryAmount: "150",
     blockConcurrentPayOnDelivery: true,
+    pagarmeSplitReceiverId: "",
   })
 
   const [asaasMode, setAsaasMode] = useState<"both" | "card_only">("both")
@@ -419,17 +425,22 @@ export default function ConfigPage() {
     fetchAuth(`/api/establishments?id=${establishmentId}`)
       .then((r) => r.json())
       .then((data) => {
-        if (!data.error) {
-          setForm({
-            name: data.name || "",
-            phone: data.phone || "",
-            category: data.category || "",
-            address: data.address || "",
-            description: data.description || "",
-            logo: data.logo || "",
-            cover: data.cover || "",
-            asaasApiKey: data.asaasApiKey || "",
-            asaasWalletId: data.asaasWalletId || "",
+if (!data.error) {
+            setForm({
+                name: data.name || "",
+                phone: data.phone || "",
+                category: data.category || "",
+                address: data.address || "",
+                description: data.description || "",
+                logo: data.logo || "",
+                cover: data.cover || "",
+                asaasApiKey: data.asaasApiKey || "",
+                asaasWalletId: data.asaasWalletId || "",
+                pagarmeApiKey: data.pagarmeApiKey || "",
+                pagarmeEnvironment: data.pagarmeEnvironment || "sandbox",
+                pagarmeWebhookKey: data.pagarmeWebhookKey || "",
+                flowChavePix: data.flowChavePix || "",
+                flowModoAtivado: data.flowModoAtivado ?? false,
             interClientId: data.interClientId || "",
             interClientSecret: data.interClientSecret || "",
             interCertificate: data.interCertificate || "",
@@ -446,6 +457,7 @@ export default function ConfigPage() {
             tableCount: String(data.tableCount || 10),
             maxPayOnDeliveryAmount: String(data.maxPayOnDeliveryAmount ?? 150),
             blockConcurrentPayOnDelivery: data.blockConcurrentPayOnDelivery ?? true,
+            pagarmeSplitReceiverId: data.pagarmeSplitReceiverId || "",
           })
           setDeliveryLimit(String(data.maxPayOnDeliveryAmount ?? 150))
           setBlockConcurrent(data.blockConcurrentPayOnDelivery ?? true)
@@ -545,6 +557,12 @@ export default function ConfigPage() {
           cancellationBlockWindowDays: Number(cancellationBlockWindowDays) || 7,
           cancellationBlockDurationDays: Number(cancellationBlockDurationDays) || 7,
           whatsappProvider,
+          flowChavePix: form.flowChavePix,
+          flowModoAtivado: form.flowModoAtivado,
+          pagarmeApiKey: form.pagarmeApiKey,
+          pagarmeEnvironment: form.pagarmeEnvironment,
+          pagarmeWebhookKey: form.pagarmeWebhookKey,
+          pagarmeSplitReceiverId: form.pagarmeSplitReceiverId,
           whatsappNumber,
           evolutionBaseUrl,
           evolutionApiKey,
@@ -834,8 +852,88 @@ export default function ConfigPage() {
               </div>
             </div>
 
-            {/* Banco Inter - aparece só quando "Somente Cartão" */}
-            {asaasMode === "card_only" && (
+              {/* Pagar.me (Stone) */}
+              <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-zinc-900">Stone (Pagar.me)</h4>
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX + Cartão via Pagar.me</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">API Key</label>
+                  <input
+                    type={showKey ? "text" : "password"}
+                    placeholder="pagarme_key_production_..."
+                    value={form.pagarmeApiKey}
+                    onChange={(e) => { setForm({ ...form, pagarmeApiKey: e.target.value }); setAsaasTestResult(null) }}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                  <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-400">
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Environment</label>
+                  <select
+                    value={form.pagarmeEnvironment}
+                    onChange={(e) => setForm({ ...form, pagarmeEnvironment: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  >
+                    <option value="sandbox">Sandbox</option>
+                    <option value="production">Produção</option>
+                  </select>
+                  <label className="block text-sm font-medium text-zinc-700">Webhook Key</label>
+                  <input
+                    type="text"
+                    placeholder="Chave do webhook Pagar.me"
+                    value={form.pagarmeWebhookKey}
+                    onChange={(e) => setForm({ ...form, pagarmeWebhookKey: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                  <label className="block text-sm font-medium text-zinc-700">Receiver ID (Split)</label>
+                  <input
+                    type="text"
+                    placeholder="ID do receiver Stone para split (opcional)"
+                    value={form.pagarmeSplitReceiverId}
+                    onChange={(e) => setForm({ ...form, pagarmeSplitReceiverId: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">Deixe em branco se não usar split. O receiver ficará com 100% do valor.</p>
+                </div>
+              </div>
+
+              {/* Flow/Taxa Fixa - modelo administrado */}
+              <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-zinc-900">Flow (Taxa Fixa)</h4>
+                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Taxas administradas pelo SaaS</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Chave PIX para recebimento</label>
+                  <input
+                    type="text"
+                    placeholder="Chave PIX onde receberá o líquido (ex: 551199999999@email)"
+                    value={form.flowChavePix}
+                    onChange={(e) => setForm({ ...form, flowChavePix: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
+                  <label className="block text-sm font-medium text-zinc-700">Ativar Modelo Flow</label>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={form.flowModoAtivado}
+                      onChange={(e) => setForm({ ...form, flowModoAtivado: e.target.checked })}
+                      className="rounded w-5 h-5 bg-green-600 border border-zinc-200 cursor-pointer"
+                    />
+                    <span className="ml-2 text-sm text-zinc-700">Usar taxa definida pelo admin do SaaS</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    As taxas (PIX, Crédito, Débito) são definidas pelo admin da plataforma e se aplicam automaticamente às suas vendas.
+                  </p>
+                </div>
+              </div>
+
+              {/* Banco Inter - aparece só quando "Somente Cartão" */}
+              {asaasMode === "card_only" && (
               <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-zinc-900">Banco Inter</h4>

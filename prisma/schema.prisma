@@ -122,6 +122,12 @@ model Establishment {
   interCertificate    String?
   interCertificatePassword String?
   interPixKey         String?
+  pagarmeApiKey       String?
+  pagarmeEnvironment  String            @default("sandbox")
+  pagarmeWebhookKey   String?
+  pagarmeSplitReceiverId String? // ID da conta Stone/receiver para split de pagamentos (Modelo Individual)
+  flowChavePix         String?  // Chave PIX para recebimento de liquidos (Modelo Flow)
+  flowModoAtivado      Boolean? // Se o modelo Flow/Taxa Fixa foi ativado
   paymentConfig       String            @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
   orderConfig         String            @default("{\"delivery\":true,\"pickup\":true}")
   deliveryFeeType     String            @default("free")
