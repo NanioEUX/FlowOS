@@ -23,7 +23,6 @@ function pathForAction(action: string): string {
     case "startPreparation": return "/startPreparation"
     case "readyForPickup": return "/readyToPickup"
     case "dispatch": return "/dispatch"
-    case "handshake": return "/handshake"
     case "cancel": return "/cancellation"
     default: return ""
   }
@@ -37,13 +36,10 @@ function callEndpoint(action: string, token: string, merchantId: string, orderId
       return
     }
 
-    // readyToPickup and dispatch require deliveredBy; handshake requires handshakeCode
+    // readyToPickup and dispatch require deliveredBy
     let requestBody: any = {}
     if (action === "readyToPickup" || action === "dispatch") {
       requestBody.deliveredBy = deliveredBy || "MERCHANT"
-    }
-    if (action === "handshake" && deliveredBy) {
-      requestBody.handshakeCode = deliveredBy
     }
 
     const body = JSON.stringify(requestBody)
@@ -104,12 +100,18 @@ export async function updateIfoodStatus(
 }
 
 /**
- * Calls iFood /handshake endpoint to confirm delivery with customer code.
+ * Calls iFood Logistics /verifyDeliveryCode endpoint to confirm delivery with customer code.
  * Only for MERCHANT delivery orders.
+ * 
+ * IMPORTANT: This endpoint is part of the Logistics API, not the Order API.
+ * Path: POST /logistics/v1.0/orders/{id}/verifyDeliveryCode
+ * Body: { "code": "XXXX" } (4-digit delivery code)
+ * 
  * Returns { success, status, body } where:
  *   - 200/204 = code correct, order CONCLUDED
  *   - 400/422 = incorrect code
  *   - 409 = already concluded or invalid state
+ *   - 412 = order not eligible (didn't receive DELIVERY_DROP_CODE_REQUESTED event)
  */
 export async function ifoodHandshake(
   token: string,
@@ -118,10 +120,10 @@ export async function ifoodHandshake(
   handshakeCode: string
 ): Promise<{ success: boolean; status?: number; body?: string }> {
   return new Promise((resolve) => {
-    const body = JSON.stringify({ handshakeCode })
+    const body = JSON.stringify({ code: handshakeCode })
     const options = {
       hostname: "merchant-api.ifood.com.br",
-      path: `/order/v1.0/orders/${orderId}/handshake`,
+      path: `/logistics/v1.0/orders/${orderId}/verifyDeliveryCode`,
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
