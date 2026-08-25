@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
-import https from "https"
 import { createClient } from "@supabase/supabase-js"
 
 interface ImportOption {
@@ -33,27 +32,18 @@ interface ImportItem {
 }
 
 async function downloadImage(url: string): Promise<Buffer | null> {
-  return new Promise((resolve) => {
-    https
-      .get(url, { timeout: 10000 }, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          https
-            .get(res.headers.location!, { timeout: 10000 }, (res2) => {
-              const chunks: Buffer[] = []
-              res2.on("data", (chunk) => chunks.push(chunk))
-              res2.on("end", () => resolve(Buffer.concat(chunks)))
-              res2.on("error", () => resolve(null))
-            })
-            .on("error", () => resolve(null))
-          return
-        }
-        const chunks: Buffer[] = []
-        res.on("data", (chunk) => chunks.push(chunk))
-        res.on("end", () => resolve(Buffer.concat(chunks)))
-        res.on("error", () => resolve(null))
-      })
-      .on("error", () => resolve(null))
-  })
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return null
+    const arrayBuffer = await res.arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  } catch {
+    return null
+  }
 }
 
 export async function POST(req: NextRequest) {
