@@ -3028,6 +3028,7 @@ export default function CardapioPage() {
                                     {items.map((item, iIdx) => {
                                       const itemIdx = productAdditionalOptions.indexOf(item)
                                       return (
+                                        <>
                                         <div key={itemIdx} className="flex items-center gap-2 px-3 py-2">
                                           <input
                                             type="text"
@@ -3111,6 +3112,7 @@ export default function CardapioPage() {
                                             />
                                           </div>
                                         )}
+                                        </>
                                       )
                                     })}
                                   </div>
