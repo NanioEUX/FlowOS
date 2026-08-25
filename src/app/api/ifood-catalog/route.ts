@@ -50,6 +50,7 @@ async function fetchProduct(merchantId: string, productId: string, token: string
     `/catalog/v2.0/merchants/${merchantId}/products/${productId}`,
     token
   )
+  console.log("[ifood-catalog] Product", productId, "status:", res.status, "body:", res.body.slice(0, 1000))
   if (res.status === 200) {
     try {
       return JSON.parse(res.body)
