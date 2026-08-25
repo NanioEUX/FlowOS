@@ -61,7 +61,7 @@ async function fetchIfoodCatalog(merchantId: string, token: string): Promise<{ c
   const catalogs = JSON.parse(catalogsRes.body)
   if (!Array.isArray(catalogs) || catalogs.length === 0) {
     console.log("[ifood-catalog] No catalogs found")
-    return []
+    return { categories: [], rawItems: [] }
   }
 
   console.log("[ifood-catalog] Found", catalogs.length, "catalogs")
