@@ -3085,20 +3085,18 @@ export default function CardapioPage() {
                                         {item.consumesStock && (
                                           <div className="flex flex-wrap items-center gap-2 px-3 pb-2 -mt-1">
                                             <span className="text-[10px] text-zinc-400">Consome de:</span>
-                                            <select
-                                              value={item.stockProductId}
-                                              onChange={(e) => {
-                                                const updated = [...productAdditionalOptions]
-                                                updated[itemIdx] = { ...item, stockProductId: e.target.value }
-                                                setProductAdditionalOptions(updated)
-                                              }}
-                                              className="h-6 flex-1 min-w-[120px] rounded border border-zinc-200 bg-white px-1.5 text-[11px] text-zinc-600 focus:border-amber-500 focus:outline-none"
-                                            >
-                                              <option value="">Selecionar item do estoque...</option>
-                                              {stockItems.map((item: any) => (
-                                                <option key={item.id} value={item.id}>{item.name}</option>
-                                              ))}
-                                            </select>
+                                             <div className="flex-1 min-w-[120px]">
+                                               <SearchableSelect
+                                                 value={item.stockProductId}
+                                                 onChange={(v) => {
+                                                   const updated = [...productAdditionalOptions]
+                                                   updated[itemIdx] = { ...item, stockProductId: v }
+                                                   setProductAdditionalOptions(updated)
+                                                 }}
+                                                 options={stockItems.map((s: any) => ({ value: s.id, label: s.name, sub: `(${s.quantity} ${s.unit})` }))}
+                                                 placeholder="Selecionar item do estoque..."
+                                               />
+                                             </div>
                                             <span className="text-[10px] text-zinc-400">Qtd:</span>
                                             <input
                                               type="number"
