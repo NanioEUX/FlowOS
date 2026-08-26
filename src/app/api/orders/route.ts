@@ -314,6 +314,9 @@ export async function POST(req: NextRequest) {
           tableNumber: tableNumber || null,
           isScheduled: !!isScheduled,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+          ...(orderType === "delivery" && (method || "site") !== "ifood" && {
+            deliveryCode: String(Math.floor(1000 + Math.random() * 9000)),
+          }),
         },
       })
     })

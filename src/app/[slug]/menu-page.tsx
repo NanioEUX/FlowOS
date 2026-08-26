@@ -271,7 +271,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const userClosedPaymentModalRef = useRef(false)
@@ -1635,6 +1635,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         orderType: orderType,
         paymentMethod: paymentMethod,
         orderTotal: total,
+        deliveryCode: data.order?.deliveryCode,
       })
 
       const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
@@ -4006,6 +4007,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 redeemPoints={parsedLoyalty?.redeemPoints}
                 redeemDiscount={parsedLoyalty?.redeemDiscount}
                 orderType={orderResult?.orderType}
+                deliveryCode={orderResult?.deliveryCode}
                 onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
               />

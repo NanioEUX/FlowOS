@@ -34,6 +34,7 @@ interface Props {
   redeemPoints?: number
   redeemDiscount?: number
   orderType?: string
+  deliveryCode?: string | null
   onTrack: () => void
   onContinue: () => void
 }
@@ -57,6 +58,7 @@ export function OrderConfirmationScreen({
   redeemPoints,
   redeemDiscount,
   orderType,
+  deliveryCode,
   onTrack,
   onContinue,
 }: Props) {
@@ -157,6 +159,21 @@ export function OrderConfirmationScreen({
               </div>
             </div>
           </div>
+
+          {/* Delivery Code */}
+          {deliveryCode && orderType === "delivery" && (
+            <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-5 mb-3 text-center">
+              <p className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-1">
+                Código de Confirmação da Entrega
+              </p>
+              <p className="text-4xl font-black tracking-[0.4em] text-amber-700 mb-1">
+                {deliveryCode}
+              </p>
+              <p className="text-xs text-amber-500">
+                Informe este código ao motoboy na hora da entrega
+              </p>
+            </div>
+          )}
 
           {/* Cashback earned */}
           {showLoyalty && cashEarned > 0 && (
