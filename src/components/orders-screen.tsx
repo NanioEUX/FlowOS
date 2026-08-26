@@ -532,9 +532,8 @@ export function OrdersScreen({
                         <div className="space-y-2">
                           {monthGroups[key].map(order => {
                             const items = parseItems(order.items)
-                            const isDelivered = order.status === "delivered"
-                            const isCancelled = order.status === "cancelled"
-                            const establishmentName = order.establishment?.name || ""
+                            const mainItem = items[0]
+                            const paymentLabel = paymentLabels[order.paymentMethod] || order.paymentMethod || ""
 
                             return (
                               <div
@@ -544,55 +543,45 @@ export function OrdersScreen({
                               >
                                 <div className="p-3">
                                   <div className="flex items-start gap-3">
-                                    {/* Item image or establishment logo */}
-                                    {items[0]?.image ? (
-                                      <img src={items[0].image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                                    ) : order.establishment?.logo ? (
-                                      <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                                    {/* Item image */}
+                                    {mainItem?.image ? (
+                                      <img src={mainItem.image} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                                     ) : (
-                                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                        {establishmentName.charAt(0) || "#"}
+                                      <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                        {mainItem?.name?.charAt(0) || "#"}
                                       </div>
                                     )}
 
                                     <div className="flex-1 min-w-0">
-                                      {/* Row 1: #number + badge + time + price */}
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="flex items-center gap-2 flex-wrap">
+                                      {/* Line 1: #number + pts + time ago */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
                                           <span className="text-sm font-bold" style={{ color: theme.text }}>
                                             #{order.orderNumber || order.id.slice(0, 8)}
                                           </span>
-                                          {isDelivered && (
-                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5" style={{ backgroundColor: `${theme.success}20`, color: theme.success }}>
-                                              <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
-                                            </span>
-                                          )}
-                                          {isCancelled && (
-                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444" }}>
-                                              Cancelado
-                                            </span>
-                                          )}
                                         </div>
-                                        <div className="text-right shrink-0">
-                                          <p className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</p>
-                                          <p className="text-[10px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
-                                        </div>
+                                        <p className="text-[11px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
                                       </div>
 
-                                      {/* Row 2: Establishment name */}
-                                      {establishmentName && (
-                                        <p className="text-sm font-medium mt-0.5 truncate" style={{ color: theme.text }}>
-                                          {establishmentName}
-                                        </p>
-                                      )}
-
-                                      {/* Row 3: Items summary */}
-                                      <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
-                                        {items.map((i: any) => i.name).join(" • ")}
+                                      {/* Line 2: Item name */}
+                                      <p className="text-sm font-bold mt-0.5 truncate" style={{ color: theme.text }}>
+                                        {mainItem?.name || "Pedido"}
                                       </p>
 
-                                      {/* Row 4: Pedir novamente */}
-                                      <div className="flex justify-end mt-1">
+                                      {/* Line 3: Item description (qty + options) */}
+                                      <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
+                                        {mainItem ? `${mainItem.quantity}x ${mainItem.name}` : ""}
+                                        {mainItem?.additionalOptions?.length ? ` • ${mainItem.additionalOptions.map((o: any) => o.name || o.option).join(", ")}` : ""}
+                                      </p>
+
+                                      {/* Line 4: Total + payment */}
+                                      <div className="flex items-center justify-between mt-1.5">
+                                        <div>
+                                          <span className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
+                                          {paymentLabel && (
+                                            <span className="text-[10px] ml-1" style={{ color: theme.textMutedMore }}>{paymentLabel}</span>
+                                          )}
+                                        </div>
                                         <button
                                           onClick={() => onReorder(order)}
                                           className="flex items-center gap-0.5 text-xs font-semibold"
