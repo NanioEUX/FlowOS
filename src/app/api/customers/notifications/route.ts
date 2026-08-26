@@ -34,3 +34,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ notifications: [] })
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { phone, establishmentId, markAllRead, deleteByType } = body
+    if (!phone || !establishmentId) {
+      return NextResponse.json({ ok: false })
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: { phone: phone.replace(/\D/g, ""), establishmentId },
+      select: { id: true },
+    })
+    if (!customer) return NextResponse.json({ ok: false })
+
+    if (markAllRead) {
+      await prisma.customerNotification.updateMany({
+        where: { customerId: customer.id, read: false },
+        data: { read: true },
+      })
+    }
+
+    if (deleteByType) {
+      await prisma.customerNotification.deleteMany({
+        where: { customerId: customer.id, type: deleteByType },
+      })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ ok: false })
+  }
+}

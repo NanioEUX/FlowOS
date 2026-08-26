@@ -328,7 +328,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   // Notifications
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string }[]>([])
-  const [showNotifications, setShowNotifications] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false) // kept for compat but drawer removed
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
@@ -1879,26 +1879,30 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     if (!phone) return
     const interval = setInterval(async () => {
       await loadCustomerOrders()
-      // Detect status changes and fire statusAlert even when tracking modal is closed
+      // Detect status changes and auto-clear notifications for delivered orders
       try {
         const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
         if (res.ok) {
           const data = await res.json()
-          const statusLabels: Record<string, string> = {
-            confirmed: "Pedido confirmado!",
-            preparing: "Seu pedido está sendo preparado!",
-            ready: "Pedido pronto para retirada!",
-            out_for_delivery: "Saiu para entrega!",
-            delivered: "Pedido entregue!",
-            cancelled: "Pedido cancelado",
-          }
+          let hasDelivered = false
           for (const order of data) {
             const prev = prevOrderStatusesRef.current[order.id]
-            if (prev && prev !== order.status && statusLabels[order.status]) {
-              setStatusAlert(statusLabels[order.status])
-              setTimeout(() => setStatusAlert(null), 5000)
+            if (prev && prev !== order.status) {
+              // Clear bell notifications when order is delivered
+              if (order.status === "delivered") {
+                hasDelivered = true
+              }
             }
             prevOrderStatusesRef.current[order.id] = order.status
+          }
+          // Auto-clear order notifications from bell when any order is delivered
+          if (hasDelivered) {
+            fetch("/api/customers/notifications", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
+            }).catch(() => {})
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })))
           }
         }
       } catch {}
@@ -2418,8 +2422,20 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </button>
                   {/* Divider */}
                   <span className="w-px h-4 bg-gray-300" />
-                  {/* Notification bell */}
-                  <button onClick={() => setShowNotifications(true)} className="relative flex items-center justify-center">
+                  {/* Notification bell — opens orders + clears notifications */}
+                  <button onClick={() => {
+                    setShowOrdersList(true)
+                    // Mark all notifications as read
+                    const phone = customer.phone || customerData?.phone
+                    if (phone) {
+                      fetch("/api/customers/notifications", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
+                      }).catch(() => {})
+                      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+                    }
+                  }} className="relative flex items-center justify-center">
                     <svg className="h-[18px] w-[18px] text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white bg-red-500">
@@ -3044,44 +3060,6 @@ onPaymentConfirmed={handlePaymentSuccess}
             >
               Fechar
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Notifications Drawer */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold" style={{ color: theme.text }}>Notificações</h3>
-              <button onClick={() => setShowNotifications(false)} className="rounded-lg p-1" style={{ color: theme.textMuted }}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {notifications.length === 0 ? (
-              <div className="py-8 text-center">
-                <svg className="mx-auto h-10 w-10 mb-2" style={{ color: theme.textMutedMore }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
-              </div>
-            ) : (
-              <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-                {notifications.map((n) => (
-                  <div key={n.id} className={`rounded-xl border p-3 ${n.read ? "" : "border-l-4"}`} style={{ backgroundColor: theme.bgCard, borderColor: n.read ? theme.borderCard : theme.primary }}>
-                    <div className="flex items-start gap-2">
-                      <span className="text-lg shrink-0">
-                        {n.type === "order" ? "🛒" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold" style={{ color: theme.text }}>{n.title}</p>
-                        <p className="text-[11px] mt-0.5" style={{ color: theme.textMuted }}>{n.message}</p>
-                        <p className="text-[10px] mt-1" style={{ color: theme.textMutedMore }}>{new Date(n.createdAt).toLocaleString("pt-BR")}</p>
-                      </div>
-                      {!n.read && <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: theme.primary }} />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -4126,15 +4104,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           establishmentSlug={establishment.slug}
           loyaltyConfig={parsedLoyalty}
         />
-      )}
-
-      {/* Status change alert — suppressed when orders or tracking screen is open */}
-      {statusAlert && !showOrdersList && !showTracking && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
-          <div className="rounded-lg bg-[#FF6B35] px-6 py-3 text-sm font-semibold text-white shadow-lg">
-            {statusAlert}
-          </div>
-        </div>
       )}
 
       {/* Tracking modal */}

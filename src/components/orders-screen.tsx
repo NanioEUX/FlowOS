@@ -570,25 +570,30 @@ export function OrdersScreen({
                                     )}
 
                                     <div className="flex-1 min-w-0">
-                                      {/* Line 1: #number + pts + cashback + time ago */}
+                                      {/* Line 1: #number + pts + Dia X */}
                                       <div className="flex items-center justify-between gap-2">
-                                        <span className="text-xs font-bold" style={{ color: theme.text }}>
-                                          #{order.orderNumber || order.id.slice(0, 8)}
-                                        </span>
-                                        <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs font-bold" style={{ color: theme.text }}>
+                                            #{order.orderNumber || order.id.slice(0, 8)}
+                                          </span>
                                           {calcPoints(order.total) > 0 && (
                                             <span className="text-[10px] font-bold" style={{ color: theme.success }}>
                                               +{calcPoints(order.total)} pts
                                             </span>
                                           )}
-                                          <span className="text-[10px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</span>
                                         </div>
+                                        <span className="text-[10px] shrink-0" style={{ color: theme.textMutedMore }}>
+                                          Dia {order.createdAt ? new Date(order.createdAt).getDate() : "—"}
+                                        </span>
                                       </div>
 
-                                      {/* Line 2: Item name (bold) */}
-                                      <p className="text-sm font-bold mt-0.5 truncate" style={{ color: theme.text }}>
-                                        {mainItem?.name || "Pedido"}
-                                      </p>
+                                      {/* Line 2: Item name (bold) + total at end */}
+                                      <div className="flex items-center justify-between mt-0.5">
+                                        <p className="text-sm font-bold truncate" style={{ color: theme.text }}>
+                                          {mainItem?.name || "Pedido"}
+                                        </p>
+                                        <span className="text-sm font-bold shrink-0 ml-2" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
+                                      </div>
 
                                       {/* Line 3: Options / items description */}
                                       {allOptions.length > 0 && (
@@ -597,9 +602,8 @@ export function OrdersScreen({
                                         </p>
                                       )}
 
-                                      {/* Line 4: Total + Pedir novamente */}
-                                      <div className="flex items-center justify-between mt-1.5">
-                                        <span className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
+                                      {/* Line 4: Pedir novamente */}
+                                      <div className="flex justify-end mt-1">
                                         <button
                                           onClick={() => onReorder(order)}
                                           className="flex items-center gap-0.5 text-xs font-semibold"
