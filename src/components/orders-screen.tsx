@@ -8,6 +8,7 @@ interface OrderItem {
   name: string
   quantity: number
   price: number
+  image?: string
   additionalOptions?: any[]
 }
 
@@ -267,23 +268,23 @@ export function OrdersScreen({
                         {/* Header: Pedido # + Código + Preço */}
                         <div className="flex items-start justify-between mb-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold" style={{ color: theme.text }}>
+                            <span className="text-base font-bold" style={{ color: theme.text }}>
                               Pedido #{order.orderNumber || order.id.slice(0, 8)}
                             </span>
                             {deliveryCode && (
-                              <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
+                              <span className="text-sm font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
                                 Código {deliveryCode}
                               </span>
                             )}
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
+                            <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
                           </div>
                         </div>
 
                         {/* Previsão */}
                         {elapsed && (
-                          <p className="text-xs mb-2" style={{ color: theme.success }}>
+                          <p className="text-sm mb-2 font-medium" style={{ color: theme.success }}>
                             Chega em {elapsed}
                           </p>
                         )}
@@ -310,7 +311,7 @@ export function OrdersScreen({
                                 >
                                   {isDone && <CheckCircle2 className="absolute -top-0.5 -left-0.5 h-3.5 w-3.5" style={{ color: theme.primary }} />}
                                 </div>
-                                <span className="text-[8px] mt-1 text-center leading-tight" style={{ color: isDone ? theme.text : theme.textMutedMore }}>
+                                <span className="text-[10px] mt-1 text-center leading-tight" style={{ color: isDone ? theme.text : theme.textMutedMore }}>
                                   {step.label}
                                 </span>
                               </div>
@@ -319,22 +320,35 @@ export function OrdersScreen({
                         </div>
 
                         {/* Items */}
-                        <div className="mb-3">
-                          {items.slice(0, 2).map((item, idx) => (
-                            <p key={idx} className="text-xs truncate" style={{ color: theme.text }}>
-                              {item.quantity}x {item.name}
-                            </p>
+                        <div className="mb-3 space-y-2">
+                          {items.slice(0, isExpanded ? items.length : 2).map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2.5">
+                              {item.image && (
+                                <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
+                                  {item.quantity}x {item.name}
+                                </p>
+                              </div>
+                            </div>
                           ))}
-                          {items.length > 2 && (
-                            <p className="text-[11px]" style={{ color: theme.textMutedMore }}>+{items.length - 2} mais</p>
-                          )}
-                          {!isExpanded && items.length <= 2 && (
+                          {!isExpanded && items.length > 2 && (
                             <button
                               onClick={() => setExpandedOrder(order.id)}
-                              className="text-[11px] mt-0.5 flex items-center gap-0.5"
+                              className="text-sm font-medium flex items-center gap-0.5"
+                              style={{ color: theme.primary }}
+                            >
+                              Ver mais detalhes <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {isExpanded && items.length > 2 && (
+                            <button
+                              onClick={() => setExpandedOrder(null)}
+                              className="text-sm font-medium flex items-center gap-0.5"
                               style={{ color: theme.textMutedMore }}
                             >
-                              <ChevronRight className="h-3 w-3" /> Ver detalhes
+                              <ChevronRight className="h-3.5 w-3.5 rotate-90" /> Menos detalhes
                             </button>
                           )}
                         </div>
@@ -508,7 +522,9 @@ export function OrdersScreen({
                     >
                       <div className="p-4">
                         <div className="flex items-start gap-3">
-                          {order.establishment?.logo ? (
+                          {items[0]?.image ? (
+                            <img src={items[0].image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                          ) : order.establishment?.logo ? (
                             <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
                           ) : (
                             <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
@@ -518,10 +534,7 @@ export function OrdersScreen({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="text-sm font-bold truncate" style={{ color: theme.text }}>
-                                  {order.establishment?.name || `Pedido #${order.orderNumber || order.id.slice(0, 8)}`}
-                                </p>
-                                <p className="text-xs" style={{ color: theme.textMutedMore }}>
+                                <p className="text-base font-bold truncate" style={{ color: theme.text }}>
                                   Pedido #{order.orderNumber || order.id.slice(0, 8)}
                                 </p>
                               </div>
@@ -532,20 +545,20 @@ export function OrdersScreen({
                                 }}>
                                   {isDelivered ? "Entregue" : isCancelled ? "Cancelado" : statusLabels[order.status] || order.status}
                                 </span>
-                                <p className="text-[11px] mt-1" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
+                                <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
                               </div>
                             </div>
-                            <p className="text-xs mt-1.5 truncate" style={{ color: theme.textMuted }}>
+                            <p className="text-sm mt-1.5 truncate" style={{ color: theme.textMuted }}>
                               {items.map((i: any) => i.name).join(" + ")}
                             </p>
                             <div className="flex items-center justify-between mt-2">
-                              <p className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
+                              <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
                               <button
                                 onClick={() => onReorder(order)}
-                                className="flex items-center gap-1 text-xs font-semibold"
+                                className="flex items-center gap-1 text-sm font-semibold"
                                 style={{ color: theme.primary }}
                               >
-                                Pedir novamente <ChevronRight className="h-3.5 w-3.5" />
+                                Pedir novamente <ChevronRight className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
