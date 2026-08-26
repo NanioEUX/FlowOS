@@ -305,6 +305,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const trackingEndRef = useRef<HTMLDivElement>(null)
   const prevStatusRef = useRef<string | null>(null)
+  const prevOrderStatusesRef = useRef<Record<string, string>>({})
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
   const [cancelModalTotal, setCancelModalTotal] = useState<number>(0)
   const [cancelReason, setCancelReason] = useState<string>("")
@@ -1876,8 +1877,31 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   useEffect(() => {
     const phone = customer.phone || customerData?.phone
     if (!phone) return
-    const interval = setInterval(() => {
-      loadCustomerOrders()
+    const interval = setInterval(async () => {
+      await loadCustomerOrders()
+      // Detect status changes and fire statusAlert even when tracking modal is closed
+      try {
+        const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
+        if (res.ok) {
+          const data = await res.json()
+          const statusLabels: Record<string, string> = {
+            confirmed: "Pedido confirmado!",
+            preparing: "Seu pedido está sendo preparado!",
+            ready: "Pedido pronto para retirada!",
+            out_for_delivery: "Saiu para entrega!",
+            delivered: "Pedido entregue!",
+            cancelled: "Pedido cancelado",
+          }
+          for (const order of data) {
+            const prev = prevOrderStatusesRef.current[order.id]
+            if (prev && prev !== order.status && statusLabels[order.status]) {
+              setStatusAlert(statusLabels[order.status])
+              setTimeout(() => setStatusAlert(null), 5000)
+            }
+            prevOrderStatusesRef.current[order.id] = order.status
+          }
+        }
+      } catch {}
     }, 15000)
     return () => clearInterval(interval)
   }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
@@ -4100,6 +4124,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           onRefresh={loadCustomerOrders}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
+          loyaltyConfig={parsedLoyalty}
         />
       )}
 

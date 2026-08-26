@@ -256,6 +256,31 @@ export async function PATCH(
       }
     }
 
+    // Criar notificação no sino quando o status mudar
+    if (status && status !== order.status && order.customerId) {
+      const statusLabels: Record<string, string> = {
+        confirmed: "Pedido confirmado!",
+        preparing: "Seu pedido está sendo preparado",
+        ready: "Pedido pronto para retirada!",
+        out_for_delivery: "Saiu para entrega!",
+        delivered: "Pedido entregue!",
+        cancelled: "Pedido cancelado",
+      }
+      const label = statusLabels[status] || "Status atualizado"
+      try {
+        await prisma.customerNotification.create({
+          data: {
+            type: "order_status",
+            title: label,
+            message: `Pedido #${order.orderNumber || order.id.slice(0, 8)} - ${label}`,
+            customerId: order.customerId,
+          },
+        })
+      } catch (e: any) {
+        console.error("Erro ao criar notificação:", e.message)
+      }
+    }
+
     // Notificar cliente via WhatsApp quando o status mudar (templates do bot v2)
     if (status && status !== order.status && order.customerPhone) {
       console.log(`[Order PATCH] Status mudou de "${order.status}" para "${status}" - notificando ${order.customerPhone}`)

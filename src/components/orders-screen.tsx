@@ -117,6 +117,7 @@ interface OrdersScreenProps {
   onRefresh?: () => void
   hasPhone: boolean
   establishmentSlug: string
+  loyaltyConfig?: { enabled?: boolean; pointsPerReal?: number } | null
 }
 
 export function OrdersScreen({
@@ -130,6 +131,7 @@ export function OrdersScreen({
   onRefresh,
   hasPhone,
   establishmentSlug,
+  loyaltyConfig,
 }: OrdersScreenProps) {
   const [activeTab, setActiveTab] = useState<"active" | "history">("active")
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
@@ -138,6 +140,11 @@ export function OrdersScreen({
   const [chatSending, setChatSending] = useState(false)
   const [messages, setMessages] = useState<Record<string, OrderMessage[]>>({})
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  const calcPoints = (total: number) => {
+    if (!loyaltyConfig?.enabled || !loyaltyConfig?.pointsPerReal) return 0
+    return Math.floor(total / loyaltyConfig.pointsPerReal)
+  }
 
   // Poll for order updates every 15s
   useEffect(() => {
@@ -274,11 +281,18 @@ export function OrdersScreen({
                       }}
                     >
                       <div className="p-4">
-                        {/* Header: Pedido # + Código */}
+                        {/* Header: Pedido # + Código + Pontos */}
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-base font-bold" style={{ color: theme.text }}>
-                            Pedido #{order.orderNumber || order.id.slice(0, 8)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold" style={{ color: theme.text }}>
+                              Pedido #{order.orderNumber || order.id.slice(0, 8)}
+                            </span>
+                            {calcPoints(order.total) > 0 && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${theme.success}18`, color: theme.success }}>
+                                +{calcPoints(order.total)} pts
+                              </span>
+                            )}
+                          </div>
                           {deliveryCode && (
                             <span className="text-sm font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
                               Código {deliveryCode}
@@ -555,10 +569,15 @@ export function OrdersScreen({
                                     <div className="flex-1 min-w-0">
                                       {/* Line 1: #number + pts + time ago */}
                                       <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5">
                                           <span className="text-sm font-bold" style={{ color: theme.text }}>
                                             #{order.orderNumber || order.id.slice(0, 8)}
                                           </span>
+                                          {calcPoints(order.total) > 0 && (
+                                            <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${theme.success}18`, color: theme.success }}>
+                                              +{calcPoints(order.total)} pts
+                                            </span>
+                                          )}
                                         </div>
                                         <p className="text-[11px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
                                       </div>
