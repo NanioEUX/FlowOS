@@ -4342,6 +4342,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     </div>
 
+                    {/* Delivery Code */}
+                    {trackingOrder.deliveryCode && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
+                      <div className="rounded-xl p-4 text-center" style={{ backgroundColor: `${theme.primary}08`, border: `2px solid ${theme.primary}40` }}>
+                        <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: theme.primary }}>
+                          Código de Confirmação da Entrega
+                        </p>
+                        <p className="text-4xl font-black tracking-[0.4em]" style={{ color: theme.primary }}>
+                          {trackingOrder.deliveryCode}
+                        </p>
+                        <p className="text-[11px] mt-1" style={{ color: theme.textMutedMore }}>
+                          Informe este código ao motoboy na hora da entrega
+                        </p>
+                      </div>
+                    )}
+
                     {/* Timeline */}
                     <div className="relative pl-4">
                       {flowSteps.map((step, i) => {

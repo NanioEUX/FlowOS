@@ -35,6 +35,7 @@ export async function GET(
     customerAddress: order.customerAddress,
     notes: order.notes,
     deliveryPerson: order.deliveryPerson,
+    deliveryCode: order.deliveryCode,
     method: order.method,
     createdAt: order.createdAt,
     deliveredAt: order.deliveredAt,
