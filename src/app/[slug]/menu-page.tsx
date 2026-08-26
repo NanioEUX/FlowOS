@@ -2437,7 +2437,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       key={item.id}
                       className="flex-shrink-0 w-full text-left"
                     >
-                      <div className="relative w-full rounded-2xl overflow-hidden animate-glow-featured" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
+                      <div className="relative w-full rounded-2xl overflow-hidden animate-gradient-border" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
                         {/* Image area — tap to advance slide */}
                         <button
                           onClick={() => setDestaqueSlide((prev) => (prev + 1) % featuredSections.trending.length)}
@@ -2478,7 +2478,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 setSelectedProductQty(1)
                                 setSelectedProductOptions([])
                               }}
-                              className="px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg pointer-events-auto active:scale-95 transition-transform"
+                              className="px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg pointer-events-auto active:scale-95 transition-transform animate-float"
                               style={{ backgroundColor: theme.primary }}
                             >
                               Comprar Agora
@@ -2534,7 +2534,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             onMouseUp={() => { setTimeout(() => { userInteractingRef.current = false }, 500) }}
           >
             {/* Promoções */}
-            {featuredTab === "promo" && featuredSections.promo.map((item) => (
+            {featuredTab === "promo" && featuredSections.promo.map((item, idx) => (
               <button
                 key={`promo-${item.id}`}
                 onClick={() => {
@@ -2544,8 +2544,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setSelectedProductQty(1)
                   setSelectedProductOptions([])
                 }}
-                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-promo"
-                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-promo animate-slide-in"
+                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard, animationDelay: `${idx * 80}ms` }}
               >
                 <div className="relative h-[90px] w-full">
                   {item.image ? (
@@ -2554,8 +2554,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                   )}
                   {item.originalPrice && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">
-                      {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
+                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow overflow-hidden">
+                      <span className="relative z-10">{Math.round((1 - item.price / item.originalPrice) * 100)}% OFF</span>
+                      <div className="absolute inset-0 animate-shimmer" />
                     </div>
                   )}
                 </div>
@@ -2614,7 +2615,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             ))}
 
             {/* Mais Pedidos */}
-            {featuredTab === "trending" && featuredSections.trending.map((item) => (
+            {featuredTab === "trending" && featuredSections.trending.map((item, idx) => (
               <button
                 key={`trend-${item.id}`}
                 onClick={() => {
@@ -2624,8 +2625,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setSelectedProductQty(1)
                   setSelectedProductOptions([])
                 }}
-                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-featured"
-                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-featured animate-slide-in"
+                style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard, animationDelay: `${idx * 80}ms` }}
               >
                 <div className="relative h-[90px] w-full">
                   {item.image ? (
