@@ -719,6 +719,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     ${order.orderType ? `<p><strong>Tipo:</strong> ${orderTypeLabels[order.orderType] || order.orderType}</p>` : ""}
     ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}</p>` : ""}
     ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${order.deliveryPerson}</p>` : ""}
+    ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${order.deliveryCode}</p>` : ""}
     <div class="divider"></div>
     <table>
       <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td><td class="right"><strong>Valor</strong></td></tr>
@@ -771,6 +772,11 @@ win.close()
                   #{order.orderNumber}
                 </span>
               ) : null}
+              {order.deliveryCode && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-300" title="Código de entrega">
+                  🔑 {order.deliveryCode}
+                </span>
+              )}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
               {order.isScheduled && order.deliveryDate && (
                 <span
@@ -981,6 +987,18 @@ win.close()
             </div>
             )}
           </div>
+
+          {/* Delivery Code - displayed for the admin */}
+          {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
+            <div className="mt-3 rounded-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-3 text-center">
+              <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider mb-1">
+                Código de Entrega
+              </p>
+              <p className="text-2xl font-black tracking-[0.4em] text-amber-700">
+                {order.deliveryCode}
+              </p>
+            </div>
+          )}
 
           {/* Delivery Handshake - 4-digit delivery confirmation */}
           {showHandshake && !handshakeSuccess && (
