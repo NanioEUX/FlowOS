@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
       paymentId: true,
       trackingToken: true,
       deliveryFee: true,
+      deliveryCode: true,
       updatedAt: true,
     },
   })

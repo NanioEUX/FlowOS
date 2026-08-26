@@ -4155,6 +4155,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium" style={{ color: theme.textMuted }}>
                                 #{order.orderNumber}
+                                {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
+                                  <span className="ml-2 text-[11px] font-normal" style={{ color: theme.primary }}>codigo entrega {order.deliveryCode}</span>
+                                )}
                               </p>
                               <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
                                 {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
@@ -4344,15 +4347,9 @@ onPaymentConfirmed={handlePaymentSuccess}
 
                     {/* Delivery Code */}
                     {trackingOrder.deliveryCode && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
-                      <div className="rounded-xl p-4 text-center" style={{ backgroundColor: `${theme.primary}08`, border: `2px solid ${theme.primary}40` }}>
-                        <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: theme.primary }}>
-                          Código de Confirmação da Entrega
-                        </p>
-                        <p className="text-4xl font-black tracking-[0.4em]" style={{ color: theme.primary }}>
-                          {trackingOrder.deliveryCode}
-                        </p>
-                        <p className="text-[11px] mt-1" style={{ color: theme.textMutedMore }}>
-                          Informe este código ao motoboy na hora da entrega
+                      <div className="rounded-lg px-3 py-2 text-center" style={{ backgroundColor: `${theme.primary}10` }}>
+                        <p className="text-xs font-medium" style={{ color: theme.primary }}>
+                          Código entrega: <span className="font-bold tracking-wider">{trackingOrder.deliveryCode}</span>
                         </p>
                       </div>
                     )}

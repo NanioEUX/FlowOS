@@ -162,15 +162,9 @@ export function OrderConfirmationScreen({
 
           {/* Delivery Code */}
           {deliveryCode && orderType === "delivery" && (
-            <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-5 mb-3 text-center">
-              <p className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-1">
-                Código de Confirmação da Entrega
-              </p>
-              <p className="text-4xl font-black tracking-[0.4em] text-amber-700 mb-1">
-                {deliveryCode}
-              </p>
-              <p className="text-xs text-amber-500">
-                Informe este código ao motoboy na hora da entrega
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 mb-3 text-center">
+              <p className="text-xs font-medium text-amber-600">
+                Código entrega: <span className="font-bold tracking-wider">{deliveryCode}</span>
               </p>
             </div>
           )}

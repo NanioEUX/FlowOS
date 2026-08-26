@@ -242,15 +242,9 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
         {/* Delivery Code - right at the top */}
         {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
-          <div className="mb-4 rounded-xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-5 text-center">
-            <p className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-2">
-              Código de Confirmação da Entrega
-            </p>
-            <p className="text-4xl font-black tracking-[0.4em] text-amber-700 mb-2">
-              {order.deliveryCode}
-            </p>
-            <p className="text-xs text-amber-500">
-              Informe este código ao motoboy na hora da entrega
+          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-center">
+            <p className="text-xs font-medium text-amber-600">
+              Código entrega: <span className="font-bold tracking-wider">{order.deliveryCode}</span>
             </p>
           </div>
         )}
