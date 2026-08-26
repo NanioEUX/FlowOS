@@ -13,6 +13,7 @@ import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
 import { OrderConfirmationScreen } from "@/components/order-confirmation-screen"
+import { OrdersScreen } from "@/components/orders-screen"
 import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geolocation-button"
 import { PushSubscribe } from "@/components/pwa/push-subscribe"
 import { InstallButton } from "@/components/pwa/install-button"
@@ -4082,164 +4083,22 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Orders list modal */}
       {showOrdersList && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-lg max-h-[80vh] overflow-hidden rounded-t-2xl sm:rounded-2xl flex flex-col backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-            <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.borderCard }}>
-              <h2 className="text-lg font-bold" style={{ color: theme.text }}>Seus pedidos</h2>
-              <button onClick={() => setShowOrdersList(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {!customer.phone && !customerData?.phone ? (
-                <div className="text-center py-8">
-                  <User className="mx-auto h-8 w-8" style={{ color: theme.textMutedMore }} />
-                  <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>Identifique-se para ver seus pedidos</p>
-                  <button onClick={() => { setShowOrdersList(false); openIdentifyModal() }} className="mt-2 text-sm hover:underline" style={{ color: theme.accent }}>
-                    Identificar-se
-                  </button>
-                </div>
-              ) : loadingOrders ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" style={{ color: theme.accent }} />
-                </div>
-              ) : customerOrders.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="mx-auto h-8 w-8" style={{ color: theme.textMutedMore }} />
-                  <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>Nenhum pedido encontrado</p>
-                </div>
-              ) : (
-                <div className="space-y-2" key={customerOrders.length + '-' + customerOrders.reduce((acc, o) => acc + o.updatedAt, 0)}>
-                  {customerOrders.map((order) => {
-                    const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-                    const statusColors: Record<string, string> = {
-                      pending: "bg-amber-500/10 text-amber-400",
-                      confirmed: "bg-blue-500/10 text-blue-400",
-                      preparing: "bg-orange-500/10 text-orange-400",
-                      ready: "bg-green-500/10 text-green-400",
-                      out_for_delivery: "bg-purple-500/10 text-purple-400",
-                      delivered: "bg-green-500/10 text-green-400",
-                      cancelled: "bg-red-500/10 text-red-400",
-                      payment_pending: "bg-amber-500/10 text-amber-400",
-                    }
-                    const statusLabels: Record<string, string> = {
-                      pending: "Pendente",
-                      confirmed: "Confirmado",
-                      preparing: "Preparando",
-                      ready: "Pronto",
-                      out_for_delivery: "Saiu p/ entrega",
-                      delivered: "Entregue",
-                      cancelled: "Cancelado",
-                      payment_pending: "Aguardando pagamento",
-                    }
-                    const hasPendingPayment = order.paymentStatus === "pending" && order.paymentLink
-                    const isCancelled = order.status === "cancelled"
-                    return (
-                      <div
-                        key={order.id}
-                        className="rounded-xl border p-3 transition-colors"
-                        style={{
-                          borderColor: isCancelled ? "rgba(239,68,68,0.3)" : theme.borderCard,
-                          backgroundColor: isCancelled ? "rgba(239,68,68,0.05)" : undefined,
-                        }}
-                      >
-                        <button
-                          onClick={() => {
-                            setShowOrdersList(false)
-                            if (order.trackingToken) {
-                              openTracking(order.id, `/pedido/${order.trackingToken}`)
-                            }
-                          }}
-                          className="w-full text-left"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium" style={{ color: theme.textMuted }}>
-                                #{order.orderNumber}
-                                {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
-                                  <span className="ml-2 text-[11px] font-normal" style={{ color: theme.primary }}>codigo entrega {order.deliveryCode}</span>
-                                )}
-                              </p>
-                              <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
-                                {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
-                              </p>
-                              <p className="text-xs mt-0.5" style={{ color: theme.textMutedMore }}>
-                                {new Date(order.createdAt).toLocaleDateString("pt-BR")} às {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-bold" style={{ color: theme.accent }}>{formatCurrency(order.total)}</p>
-                              <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[order.status] || ""}`} style={!statusColors[order.status] ? { backgroundColor: theme.bgCard, color: theme.textMuted } : {}}>
-                                {statusLabels[order.status] || order.status}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                        {hasPendingPayment && canCancelByCustomer(order.status) && (
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              onClick={() => {
-                                setShowOrdersList(false)
-                                checkAndOpenPayment(order.id, order.trackingToken)
-                              }}
-                              className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                              style={{ backgroundColor: theme.primary }}
-                            >
-                              <CreditCard className="inline h-4 w-4 mr-1" />
-                              Pagar agora
-                            </button>
-                            <button
-                              onClick={() => {
-                                setCancelModalOrderId(order.id)
-                                setCancelModalTotal(order.total)
-                              }}
-                              className="rounded-lg border px-3 py-2 text-sm font-medium transition-opacity hover:opacity-80"
-                              style={{ borderColor: theme.borderCard, color: theme.textMuted }}
-                            >
-                              <X className="inline h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                        {!hasPendingPayment && (
-                          <>
-                            {["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(order.status) && (
-                              <button
-                                onClick={() => {
-                                  setShowOrdersList(false)
-                                  if (order.trackingToken) {
-                                    openTracking(order.id, `/pedido/${order.trackingToken}`)
-                                  }
-                                }}
-                                className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                                style={{ backgroundColor: theme.primary }}
-                              >
-                                Acompanhar pedido
-                              </button>
-                            )}
-                            {!["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(order.status) && (
-                              <button
-                                onClick={() => {
-                                  setCart(items.map((i: any) => ({ id: i.id || i.productId || i.name, name: i.name, price: i.price, image: i.image, quantity: i.quantity })))
-                                  setShowOrdersList(false)
-                                  openCart()
-                                }}
-                                className="mt-2 w-full rounded-lg border py-2 text-sm font-medium transition-opacity hover:opacity-80"
-                                style={{ borderColor: theme.borderCard, color: theme.accent }}
-                              >
-                                <RefreshCw className="inline h-3.5 w-3.5 mr-1" />
-                                Pedir novamente
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <OrdersScreen
+          theme={theme}
+          orders={customerOrders}
+          loading={loadingOrders}
+          onClose={() => setShowOrdersList(false)}
+          onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
+          onReorder={(order) => {
+            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+            setCart(items.map((i: any) => ({ id: i.id || i.productId || i.name, name: i.name, price: i.price, image: i.image, quantity: i.quantity })))
+            setShowOrdersList(false)
+            openCart()
+          }}
+          onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
+          hasPhone={!!(customer.phone || customerData?.phone)}
+          establishmentSlug={establishment.slug}
+        />
       )}
 
       {/* Status change alert */}
