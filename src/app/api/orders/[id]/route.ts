@@ -163,7 +163,7 @@ export async function PATCH(
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
         ...(status === "out_for_delivery" && { assignedAt: new Date() }),
-        ...(status === "out_for_delivery" && order.method !== "ifood" && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
+        ...(status === "out_for_delivery" && order.method !== "ifood" && !order.deliveryCode && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
         ...(autoConfirmPayment && { paymentStatus: "paid" }),
       },

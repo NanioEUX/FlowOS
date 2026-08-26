@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
         status,
         deliveryPerson: person.name,
         ...(isOutForDelivery && { assignedAt: new Date() }),
-        ...(isOutForDelivery && isNonIfood && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
+        ...(isOutForDelivery && isNonIfood && !order.deliveryCode && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
       },
     })
