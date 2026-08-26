@@ -75,11 +75,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não encontrado ou não atribuído a você" }, { status: 404 })
     }
 
+    const isOutForDelivery = status === "out_for_delivery" && order.status !== "out_for_delivery"
+    const isNonIfood = order.method !== "ifood"
+
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
         status,
         deliveryPerson: person.name,
+        ...(isOutForDelivery && { assignedAt: new Date() }),
+        ...(isOutForDelivery && isNonIfood && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
       },
     })

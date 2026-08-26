@@ -575,7 +575,9 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const [handshakeLoading, setHandshakeLoading] = useState(false)
   const [handshakeError, setHandshakeError] = useState("")
   const [handshakeSuccess, setHandshakeSuccess] = useState(false)
-  const showHandshake = isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT" && ["out_for_delivery", "dispatched"].includes(order.status)
+  const showHandshake = ["out_for_delivery", "dispatched"].includes(order.status) && (
+    (isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT") || order.deliveryCode
+  )
 
   async function fetchMessages() {
     try {
@@ -595,7 +597,10 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     setHandshakeLoading(true)
     setHandshakeError("")
     try {
-      const res = await fetchAuth(`/api/orders/${order.id}/ifood-handshake`, {
+      const endpoint = isIfoodOrder
+        ? `/api/orders/${order.id}/ifood-handshake`
+        : `/api/orders/${order.id}/delivery-handshake`
+      const res = await fetchAuth(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handshakeCode }),
@@ -977,11 +982,11 @@ win.close()
             )}
           </div>
 
-          {/* iFood Handshake - 4-digit delivery confirmation */}
+          {/* Delivery Handshake - 4-digit delivery confirmation */}
           {showHandshake && !handshakeSuccess && (
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <p className="text-xs font-medium text-amber-700 mb-2">
-                Peça ao cliente o código de confirmação de entrega do iFood (4 últimos dígitos do celular).
+                Peça ao cliente o código de confirmação de entrega (4 últimos dígitos do celular).
               </p>
               <div className="flex items-center gap-2">
                 <input

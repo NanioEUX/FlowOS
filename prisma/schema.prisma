@@ -380,6 +380,7 @@ model Order {
   tableNumber        Int?
   deliveryPerson     String?
   deliveryPersonId   String?
+  deliveryCode       String?
   couponId           String?
   trackingToken      String?         @unique
   assignedAt         DateTime?

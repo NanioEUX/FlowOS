@@ -34,6 +34,8 @@ interface Order {
   deliveredAt: string | null
   changeFor: number | null
   ifoodDeliveryBy: string | null
+  deliveryCode: string | null
+  deliveryPersonId: string | null
 }
 
 interface PersonData {
@@ -480,7 +482,9 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
 
   const isIfoodOrder = order.method === "ifood"
   const isMerchantDelivery = order.ifoodDeliveryBy === "MERCHANT"
-  const showHandshake = isIfoodOrder && isMerchantDelivery && order.status === "out_for_delivery"
+  const showHandshake = order.status === "out_for_delivery" && (
+    (isIfoodOrder && isMerchantDelivery) || order.deliveryCode
+  )
 
   const [handshakeCode, setHandshakeCode] = useState("")
   const [handshakeLoading, setHandshakeLoading] = useState(false)
@@ -495,7 +499,10 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
     setHandshakeLoading(true)
     setHandshakeError("")
     try {
-      const res = await fetch(`/api/orders/${order.id}/ifood-handshake`, {
+      const endpoint = isIfoodOrder
+        ? `/api/orders/${order.id}/ifood-handshake`
+        : `/api/orders/${order.id}/delivery-handshake`
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handshakeCode, deliveryPersonToken: token }),
