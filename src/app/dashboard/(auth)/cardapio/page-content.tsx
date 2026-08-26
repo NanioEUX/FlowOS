@@ -2458,7 +2458,9 @@ export default function CardapioPage() {
             <CardContent className="p-6 overflow-y-auto flex-1">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">
-                  {editingProduct ? "Editar Produto" : "Novo Produto"}
+                  {editingProduct ? (
+                    <>Editar Produto <span className="text-zinc-400 font-normal">— {editingProduct.name}</span></>
+                  ) : "Novo Produto"}
                 </h3>
                 <button onClick={() => { setShowProductForm(false); setEditingProduct(null) }}>
                   <X className="h-5 w-5" />

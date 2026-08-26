@@ -2437,7 +2437,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       key={item.id}
                       className="flex-shrink-0 w-full text-left"
                     >
-                      <div className="relative w-full rounded-2xl overflow-hidden" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
+                      <div className="relative w-full rounded-2xl overflow-hidden animate-glow-featured" style={{ minHeight: "200px", backgroundColor: theme.bgCard }}>
                         {/* Image area — tap to advance slide */}
                         <button
                           onClick={() => setDestaqueSlide((prev) => (prev + 1) % featuredSections.trending.length)}
@@ -2445,7 +2445,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                           aria-label="Próximo destaque"
                         >
                           {item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover active:scale-[0.99] transition-transform" />
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover active:scale-[0.99] transition-transform animate-ken-burns" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-6xl" style={{ backgroundColor: theme.bgCard }}>🍦</div>
                           )}
@@ -2544,7 +2544,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setSelectedProductQty(1)
                   setSelectedProductOptions([])
                 }}
-                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-promo"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
                 <div className="relative h-[90px] w-full">
@@ -2624,7 +2624,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setSelectedProductQty(1)
                   setSelectedProductOptions([])
                 }}
-                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
+                className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-featured"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
               >
                 <div className="relative h-[90px] w-full">
@@ -5668,13 +5668,15 @@ function PaymentModal({
 function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   const hasPromo = (product as any).promoPrice && (product as any).onSale
   const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+  const isFeatured = (product as any).featured || hasPromo
   const hasDiscount = hasPromo || hasFeaturedDiscount
   const discountPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : null
   const discountPct = hasDiscount && discountPrice ? Math.round((1 - discountPrice / product.price) * 100) : 0
   const isCustomBadge = (product as any).badge && !["mais_vendido", "novo", "promoção"].includes((product as any).badge)
+  const glowClass = hasPromo ? "animate-glow-promo" : (product as any).featured ? "animate-glow-featured" : ""
   return (
     <div
-      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
+      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""} ${glowClass}`}
       style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       onClick={() => onSelect?.(product)}
     >
@@ -5684,7 +5686,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
+            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""} ${isFeatured ? "animate-ken-burns" : ""}`}
           />
         ) : (
           <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>

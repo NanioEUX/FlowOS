@@ -117,3 +117,34 @@
 .animate-bounce-once {
   animation: bounce-once 0.4s ease-out;
 }
+
+/* Featured/Promo glow border */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 2px var(--glow-color, rgba(251, 191, 36, 0.3)); }
+  50% { box-shadow: 0 0 16px 4px var(--glow-color, rgba(251, 191, 36, 0.5)); }
+}
+
+.animate-glow-promo {
+  animation: glow-pulse 2s ease-in-out infinite;
+  --glow-color: rgba(34, 197, 94, 0.35);
+}
+
+.animate-glow-featured {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+  --glow-color: rgba(251, 191, 36, 0.4);
+}
+
+/* Ken Burns slow zoom for carousel images */
+@keyframes ken-burns-in {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@keyframes ken-burns-out {
+  0% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.animate-ken-burns {
+  animation: ken-burns-in 8s ease-in-out infinite alternate;
+}
