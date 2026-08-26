@@ -5668,15 +5668,13 @@ function PaymentModal({
 function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   const hasPromo = (product as any).promoPrice && (product as any).onSale
   const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
-  const isFeatured = (product as any).featured || hasPromo
   const hasDiscount = hasPromo || hasFeaturedDiscount
   const discountPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : null
   const discountPct = hasDiscount && discountPrice ? Math.round((1 - discountPrice / product.price) * 100) : 0
   const isCustomBadge = (product as any).badge && !["mais_vendido", "novo", "promoção"].includes((product as any).badge)
-  const glowClass = hasPromo ? "animate-glow-promo" : (product as any).featured ? "animate-glow-featured" : ""
   return (
     <div
-      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""} ${glowClass}`}
+      className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
       style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       onClick={() => onSelect?.(product)}
     >
@@ -5686,7 +5684,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""} ${isFeatured ? "animate-ken-burns" : ""}`}
+            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
           />
         ) : (
           <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
