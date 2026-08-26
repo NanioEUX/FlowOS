@@ -9,237 +9,237 @@ datasource db {
 }
 
 model Establishment {
-  id                  String            @id @default(cuid())
-  name                String
-  slug                String            @unique
-  email               String            @unique
-  password            String
-  phone               String
-  logo                String?
-  cover               String?
-  description         String?
+  id                            String    @id @default(cuid())
+  name                          String
+  slug                          String    @unique
+  email                         String    @unique
+  password                      String
+  phone                         String
+  logo                          String?
+  cover                         String?
+  description                   String?
   // WhatsApp / Bot config
-  whatsappProvider    String?           // "evolution" | "meta" | null
-  whatsappNumber      String?           // número E.164 (ex: 5511999999999)
+  whatsappProvider              String? // "evolution" | "meta" | null
+  whatsappNumber                String? // número E.164 (ex: 5511999999999)
   // Verificação por código: lembrete automático para quem não confirmou
-  verifyReminderEnabled  Boolean       @default(false)
-  verifyReminderDelayMin Int           @default(60)
-  verifyReminderMessage  String?       @default("Olá {{nome}}! Você iniciou a verificação de cadastro no {{estabelecimento}} mas não concluiu. Para finalizar, volte ao cardápio e solicite um novo código. 😊")
+  verifyReminderEnabled         Boolean   @default(false)
+  verifyReminderDelayMin        Int       @default(60)
+  verifyReminderMessage         String?   @default("Olá {{nome}}! Você iniciou a verificação de cadastro no {{estabelecimento}} mas não concluiu. Para finalizar, volte ao cardápio e solicite um novo código. 😊")
   // Evolution API
-  evolutionBaseUrl    String?
-  evolutionApiKey     String?
-  evolutionInstanceName String?
+  evolutionBaseUrl              String?
+  evolutionApiKey               String?
+  evolutionInstanceName         String?
   // Meta Cloud (preparado pra quando migrar)
-  metaPhoneNumberId   String?
-  metaAccessToken     String?
-  metaWebhookVerifyToken String?
-  metaBusinessAccountId String?
+  metaPhoneNumberId             String?
+  metaAccessToken               String?
+  metaWebhookVerifyToken        String?
+  metaBusinessAccountId         String?
   // Meta quota monitoring
-  messagingLimit        Int?              // TIER_250, TIER_1K, etc
-  currentUsage          Int?              @default(0)
-  estimatedCostMonth    Float?            @default(0)
-  lastQuotaCheck        DateTime?
+  messagingLimit                Int? // TIER_250, TIER_1K, etc
+  currentUsage                  Int?      @default(0)
+  estimatedCostMonth            Float?    @default(0)
+  lastQuotaCheck                DateTime?
   // Bot
-  botEnabled          Boolean           @default(false)
-  botAgentName        String?           @default("Atendente")
-  botGreeting         String?
-  botMenuOptions      String?           // JSON: [{label, response}]
+  botEnabled                    Boolean   @default(false)
+  botAgentName                  String?   @default("Atendente")
+  botGreeting                   String?
+  botMenuOptions                String? // JSON: [{label, response}]
   // Bot IA (Fase 2)
-  botUseAI            Boolean           @default(false)
-  botTone             String?           // "formal" | "casual" | "direct"
-  botFAQ              String?           // texto livre com regras da casa
-  botSystemPrompt     String?           // prompt customizado (avançado)
+  botUseAI                      Boolean   @default(false)
+  botTone                       String? // "formal" | "casual" | "direct"
+  botFAQ                        String? // texto livre com regras da casa
+  botSystemPrompt               String? // prompt customizado (avançado)
   // Bot v2: inatividade
-  botInactivityEnabled  Boolean        @default(true)
-  botInactivityMinutes  Int            @default(10)
-  botInactivityMessage  String?        @default("Se precisar de algo mais, é só chamar! 😊")
+  botInactivityEnabled          Boolean   @default(true)
+  botInactivityMinutes          Int       @default(10)
+  botInactivityMessage          String?   @default("Se precisar de algo mais, é só chamar! 😊")
   // Bot v2: auto-transfer humano
-  botTransferEnabled    Boolean        @default(true)
-  botTransferKeywords   String?        @default("atendente,humano,pessoa,recepcao,recepção")
-  botTransferMessage    String?        @default("Vou chamar um atendente para te ajudar. Só um momento! 🙏")
+  botTransferEnabled            Boolean   @default(true)
+  botTransferKeywords           String?   @default("atendente,humano,pessoa,recepcao,recepção")
+  botTransferMessage            String?   @default("Vou chamar um atendente para te ajudar. Só um momento! 🙏")
   // Bot v2: delay typing (anti-ban)
-  botTypingDelayMinMs   Int            @default(1500)
-  botTypingDelayMaxMs   Int            @default(3500)
+  botTypingDelayMinMs           Int       @default(1500)
+  botTypingDelayMaxMs           Int       @default(3500)
   // Bot v2: fora de horário
-  botRespectBusinessHours Boolean      @default(false)
-  botOutsideHoursMode    String?       @default("closed") // "closed" | "scheduled"
-  botOutsideHoursMessage String?       @default("Estamos fechados no momento. Nosso horário de atendimento é:")
-  botAcceptsScheduledOrders Boolean    @default(false)
-  botScheduledOrderMessage String?     @default("Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
+  botRespectBusinessHours       Boolean   @default(false)
+  botOutsideHoursMode           String?   @default("closed") // "closed" | "scheduled"
+  botOutsideHoursMessage        String?   @default("Estamos fechados no momento. Nosso horário de atendimento é:")
+  botAcceptsScheduledOrders     Boolean   @default(false)
+  botScheduledOrderMessage      String?   @default("Aceito pedidos para agendamento! É só me dizer o que quer e pra quando. 😊")
   // Bot v2: fallback
-  botFallbackMessage    String?        @default("Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
+  botFallbackMessage            String?   @default("Não entendi muito bem 🤔 Pode me explicar com outras palavras?")
   // Bot v2: templates de status do pedido
-  botTemplateOrderConfirmed  String?   @default("✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
-  botTemplateOrderPreparing  String?   @default("👨‍🍳 Seu pedido está sendo preparado!")
-  botTemplateOrderReady      String?   @default("🛎️ Seu pedido está pronto!")
-  botTemplateOrderDelivering String?   @default("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
-  botTemplateOrderDelivered  String?   @default("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
-  botTemplateOrderCancelled  String?   @default("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
-  botTemplateOrderScheduled  String?   @default("📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
+  botTemplateOrderConfirmed     String?   @default("✅ Pedido confirmado! Já estamos preparando. Prazo estimado: 30-45 min.")
+  botTemplateOrderPreparing     String?   @default("👨‍🍳 Seu pedido está sendo preparado!")
+  botTemplateOrderReady         String?   @default("🛎️ Seu pedido está pronto!")
+  botTemplateOrderDelivering    String?   @default("🛵 Seu pedido saiu para entrega! Previsão de chegada: 20-30 min.")
+  botTemplateOrderDelivered     String?   @default("🎉 Pedido entregue! Bom apetite e obrigado pela preferência! ❤️")
+  botTemplateOrderCancelled     String?   @default("❌ Seu pedido foi cancelado. Se precisar de algo, estou aqui!")
+  botTemplateOrderScheduled     String?   @default("📅 Pedido agendado confirmado! Te esperamos no dia {data} às {hora}. Obrigado!")
   // Cobrança de automação WhatsApp
-  whatsappAutomationEnabled   Boolean    @default(false)
+  whatsappAutomationEnabled     Boolean   @default(false)
   whatsappAutomationActivatedAt DateTime?
-  whatsappAutomationPriceCents Int        @default(5000)  // R$ 50,00
-  aiMessagesUsed      Int               @default(0)
-  aiMessagesLimit     Int               @default(1000)    // limite mensal
-  aiMessagesResetAt   DateTime?
+  whatsappAutomationPriceCents  Int       @default(5000) // R$ 50,00
+  aiMessagesUsed                Int       @default(0)
+  aiMessagesLimit               Int       @default(1000) // limite mensal
+  aiMessagesResetAt             DateTime?
   // Agendamento de pedidos (encomendas)
-  scheduledMinHours       Int           @default(24)   // antecedência mínima em horas
-  scheduledPrepMinutes    Int           @default(60)   // tempo médio de preparo em minutos
-  scheduledMaxAdvanceDays Int           @default(30)   // antecedência máxima em dias
-  estimatedDeliveryMin    Int           @default(30)   // tempo mínimo estimado de entrega em minutos
-  estimatedDeliveryMax    Int           @default(45)   // tempo máximo estimado de entrega em minutos
+  scheduledMinHours             Int       @default(24) // antecedência mínima em horas
+  scheduledPrepMinutes          Int       @default(60) // tempo médio de preparo em minutos
+  scheduledMaxAdvanceDays       Int       @default(30) // antecedência máxima em dias
+  estimatedDeliveryMin          Int       @default(30) // tempo mínimo estimado de entrega em minutos
+  estimatedDeliveryMax          Int       @default(45) // tempo máximo estimado de entrega em minutos
 
-  address             String?
-  addressLat          Float?
-  addressLng          Float?
-  deliveryRadiusKm    Int?      @default(8)
-  category            String?
-  instagramUrl        String?
-  primaryColor        String            @default("#16a34a")
-  backgroundColor     String            @default("#ffffff")
-  textColor           String            @default("#1a1a2e")
-  headerColor         String            @default("#ffffff")
-  colorsPublished     Boolean           @default(false)
-  businessHours       String?           @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
-  loyaltyConfig       String?           @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10,\"redeemLimitType\":\"percentage\",\"redeemLimitValue\":30,\"minOrderToRedeem\":0}")
-  tierConfig          String?           @default("{\"enabled\":false,\"tiers\":[{\"name\":\"Bronze\",\"minSpent\":0,\"multiplier\":1,\"emoji\":\"🥉\",\"color\":\"#CD7F32\"},{\"name\":\"Prata\",\"minSpent\":300,\"multiplier\":1.5,\"emoji\":\"🥈\",\"color\":\"#C0C0C0\"},{\"name\":\"Ouro\",\"minSpent\":800,\"multiplier\":2,\"emoji\":\"🥇\",\"color\":\"#FFD700\"},{\"name\":\"Diamante\",\"minSpent\":2000,\"multiplier\":3,\"emoji\":\"💎\",\"color\":\"#B9F2FF\"}]}")
-  firstPurchaseEnabled Boolean          @default(false)
-  firstPurchaseDiscount Float?          @default(5.0)
-  firstPurchaseBonus   Int              @default(50)
-  isActive            Boolean           @default(true)
-  asaasApiKey         String?
-  asaasWalletId       String?
-  efiClientId         String?
-  efiClientSecret     String?
-  efiPixKey           String?
-  efiCertificate      String?
-  efiEnvironment      String            @default("sandbox")
-  efiWebhookToken     String?
-  paymentProvider     String            @default("asaas")
-  interClientId       String?
-  interClientSecret   String?
-  interCertificate    String?
-  interCertificatePassword String?
-  interPixKey         String?
-  pagarmeApiKey       String?
-  pagarmeEnvironment  String            @default("sandbox")
-  pagarmeWebhookKey   String?
-  pagarmeSplitReceiverId String? // ID da conta Stone/receiver para split de pagamentos (Modelo Individual)
-  flowChavePix         String?  // Chave PIX para recebimento de liquidos (Modelo Flow)
-  flowModoAtivado      Boolean? // Se o modelo Flow/Taxa Fixa foi ativado
-  paymentConfig       String            @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
-  orderConfig         String            @default("{\"delivery\":true,\"pickup\":true}")
-  deliveryFeeType     String            @default("free")
-  deliveryFeeAmount   Float?            @default(0)
-  deliveryFreeAbove   Float?            @default(0)
-  minimumOrderEnabled       Boolean        @default(false)
-  minimumOrderValue        Float?         @default(0)
-  minimumOrderApplyToDelivery Boolean    @default(true)
-  minimumOrderApplyToPickup Boolean       @default(false)
+  address                       String?
+  addressLat                    Float?
+  addressLng                    Float?
+  deliveryRadiusKm              Int?               @default(8)
+  category                      String?
+  instagramUrl                  String?
+  primaryColor                  String             @default("#16a34a")
+  backgroundColor               String             @default("#ffffff")
+  textColor                     String             @default("#1a1a2e")
+  headerColor                   String             @default("#ffffff")
+  colorsPublished               Boolean            @default(false)
+  businessHours                 String?            @default("[{\"day\":\" Segunda\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Terça\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quarta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Quinta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sexta\",\"open\":\"09:00\",\"close\":\"22:00\",\"active\":true},{\"day\":\"Sábado\",\"open\":\"09:00\",\"close\":\"23:00\",\"active\":true},{\"day\":\"Domingo\",\"open\":\"00:00\",\"close\":\"00:00\",\"active\":false}]")
+  loyaltyConfig                 String?            @default("{\"enabled\":false,\"pointsPerReal\":1,\"redeemPoints\":100,\"redeemDiscount\":10,\"redeemLimitType\":\"percentage\",\"redeemLimitValue\":30,\"minOrderToRedeem\":0}")
+  tierConfig                    String?            @default("{\"enabled\":false,\"tiers\":[{\"name\":\"Bronze\",\"minSpent\":0,\"multiplier\":1,\"emoji\":\"🥉\",\"color\":\"#CD7F32\"},{\"name\":\"Prata\",\"minSpent\":300,\"multiplier\":1.5,\"emoji\":\"🥈\",\"color\":\"#C0C0C0\"},{\"name\":\"Ouro\",\"minSpent\":800,\"multiplier\":2,\"emoji\":\"🥇\",\"color\":\"#FFD700\"},{\"name\":\"Diamante\",\"minSpent\":2000,\"multiplier\":3,\"emoji\":\"💎\",\"color\":\"#B9F2FF\"}]}")
+  firstPurchaseEnabled          Boolean            @default(false)
+  firstPurchaseDiscount         Float?             @default(5.0)
+  firstPurchaseBonus            Int                @default(50)
+  isActive                      Boolean            @default(true)
+  asaasApiKey                   String?
+  asaasWalletId                 String?
+  efiClientId                   String?
+  efiClientSecret               String?
+  efiPixKey                     String?
+  efiCertificate                String?
+  efiEnvironment                String             @default("sandbox")
+  efiWebhookToken               String?
+  paymentProvider               String             @default("asaas")
+  interClientId                 String?
+  interClientSecret             String?
+  interCertificate              String?
+  interCertificatePassword      String?
+  interPixKey                   String?
+  pagarmeApiKey                 String?
+  pagarmeEnvironment            String             @default("sandbox")
+  pagarmeWebhookKey             String?
+  pagarmeSplitReceiverId        String? // ID da conta Stone/receiver para split de pagamentos (Modelo Individual)
+  flowChavePix                  String? // Chave PIX para recebimento de liquidos (Modelo Flow)
+  flowModoAtivado               Boolean? // Se o modelo Flow/Taxa Fixa foi ativado
+  paymentConfig                 String             @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
+  orderConfig                   String             @default("{\"delivery\":true,\"pickup\":true}")
+  deliveryFeeType               String             @default("free")
+  deliveryFeeAmount             Float?             @default(0)
+  deliveryFreeAbove             Float?             @default(0)
+  minimumOrderEnabled           Boolean            @default(false)
+  minimumOrderValue             Float?             @default(0)
+  minimumOrderApplyToDelivery   Boolean            @default(true)
+  minimumOrderApplyToPickup     Boolean            @default(false)
   // Limite de valor (R$) para pedidos na entrega. Pedidos acima desse
   // valor só podem ser pagos online. Default: R$ 150.
-  maxPayOnDeliveryAmount  Float?         @default(150)
+  maxPayOnDeliveryAmount        Float?             @default(150)
   // Bloqueia novo pedido na entrega quando já existe um em andamento
   // (pending/confirmed/preparing/ready). Default: true.
-  blockConcurrentPayOnDelivery Boolean   @default(true)
+  blockConcurrentPayOnDelivery  Boolean            @default(true)
   // Bloqueio automático por cancelamentos: se um cliente cancelar N ou mais
   // pedidos em X dias, fica impedido de pagar na entrega por Y dias.
-  cancellationBlockEnabled     Boolean    @default(false)
-  cancellationBlockThreshold   Int        @default(3)
-  cancellationBlockWindowDays  Int        @default(7)
-  cancellationBlockDurationDays Int       @default(7)
-  ifoodMerchantId       String?
-  ifoodAccessToken      String?
-  ifoodRefreshToken     String?
-  ifoodEnabled          Boolean           @default(false)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  pickupMessage       String?
-  deliveryMessage     String?
-  confirmationTitle   String?
-  confirmationImage   String?
-  closedSub           String?
-  closedTitle         String?
-  defaultTheme        String            @default("dark")
-  expenseCategories   String            @default("[\"fixa\",\"variavel\",\"motoboy\",\"insumo\",\"salario\",\"aluguel\",\"energia\",\"agua\",\"internet\",\"imposto\",\"manutencao\",\"marketing\",\"outro\"]")
-  asaasCustomerId     String?
-  asaasSubscriptionId String?
-  nextPaymentAt       DateTime?
-  tableCount          Int               @default(10)
-  subscriptionPlan    String?           @default("starter")
-  subscriptionStatus  String            @default("trial")
-  trialEndsAt         DateTime?
-  trialStartsAt       DateTime?
-  cashRegisters       CashRegister[]
-  categories          Category[]
-  coupons             Coupon[]
-  customers           Customer[]
-  deliveryZones       DeliveryZone[]
-  pushSubscriptions   PushSubscription[]
-  deliveryPayments    DeliveryPayment[]
-  deliveryPeople      DeliveryPerson[]
-  expenses            Expense[]
-  orders              Order[]
-  paymentRequests     PaymentRequest[]
-  partialPayments     PartialPayment[]
-  products            Product[]
-  reviews             Review[]
-  cancellations       CancellationLog[]
-  aiUsageLogs         AIUsageLog[]
-  stockCategories     StockCategory[]
-  stockItems          StockItem[]
-  suppliers           Supplier[]
-  additionalOptions   AdditionalOption[]
-  dailyCombos         DailyCombo[]
-  stories             Story[]
-  banners             Banner[]
-  users               User[]
+  cancellationBlockEnabled      Boolean            @default(false)
+  cancellationBlockThreshold    Int                @default(3)
+  cancellationBlockWindowDays   Int                @default(7)
+  cancellationBlockDurationDays Int                @default(7)
+  ifoodMerchantId               String?
+  ifoodAccessToken              String?
+  ifoodRefreshToken             String?
+  ifoodEnabled                  Boolean            @default(false)
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime           @updatedAt
+  pickupMessage                 String?
+  deliveryMessage               String?
+  confirmationTitle             String?
+  confirmationImage             String?
+  closedSub                     String?
+  closedTitle                   String?
+  defaultTheme                  String             @default("dark")
+  expenseCategories             String             @default("[\"fixa\",\"variavel\",\"motoboy\",\"insumo\",\"salario\",\"aluguel\",\"energia\",\"agua\",\"internet\",\"imposto\",\"manutencao\",\"marketing\",\"outro\"]")
+  asaasCustomerId               String?
+  asaasSubscriptionId           String?
+  nextPaymentAt                 DateTime?
+  tableCount                    Int                @default(10)
+  subscriptionPlan              String?            @default("starter")
+  subscriptionStatus            String             @default("trial")
+  trialEndsAt                   DateTime?
+  trialStartsAt                 DateTime?
+  cashRegisters                 CashRegister[]
+  categories                    Category[]
+  coupons                       Coupon[]
+  customers                     Customer[]
+  deliveryZones                 DeliveryZone[]
+  pushSubscriptions             PushSubscription[]
+  deliveryPayments              DeliveryPayment[]
+  deliveryPeople                DeliveryPerson[]
+  expenses                      Expense[]
+  orders                        Order[]
+  paymentRequests               PaymentRequest[]
+  partialPayments               PartialPayment[]
+  products                      Product[]
+  reviews                       Review[]
+  cancellations                 CancellationLog[]
+  aiUsageLogs                   AIUsageLog[]
+  stockCategories               StockCategory[]
+  stockItems                    StockItem[]
+  suppliers                     Supplier[]
+  additionalOptions             AdditionalOption[]
+  dailyCombos                   DailyCombo[]
+  stories                       Story[]
+  banners                       Banner[]
+  users                         User[]
 }
 
 model Customer {
-  id              String        @id @default(cuid())
-  name            String?
-  phone           String        @unique
-  cpf             String?
-  email           String?
-  address         String?
-  cep             String?
-  totalOrders     Int           @default(0)
-  totalSpent      Float         @default(0)
-  loyaltyPoints   Int           @default(0)
-  tier            String        @default("bronze")
-  cancellationCount Int         @default(0)
-  blockedUntil    DateTime?     // Future: blocks payment on delivery until this date
-  lastOrderAt     DateTime?
-  needsHuman      Boolean       @default(false)
-  needsHumanAt    DateTime?
-  whatsappVerified Boolean      @default(false)
-  verifiedAt      DateTime?
-  verificationCount Int        @default(0)
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  orders          Order[]
-  reviews         Review[]
+  id                String                 @id @default(cuid())
+  name              String?
+  phone             String                 @unique
+  cpf               String?
+  email             String?
+  address           String?
+  cep               String?
+  totalOrders       Int                    @default(0)
+  totalSpent        Float                  @default(0)
+  loyaltyPoints     Int                    @default(0)
+  tier              String                 @default("bronze")
+  cancellationCount Int                    @default(0)
+  blockedUntil      DateTime? // Future: blocks payment on delivery until this date
+  lastOrderAt       DateTime?
+  needsHuman        Boolean                @default(false)
+  needsHumanAt      DateTime?
+  whatsappVerified  Boolean                @default(false)
+  verifiedAt        DateTime?
+  verificationCount Int                    @default(0)
+  establishmentId   String
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  establishment     Establishment          @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  orders            Order[]
+  reviews           Review[]
   verificationCodes VerificationCode[]
-  notifications   CustomerNotification[]
+  notifications     CustomerNotification[]
 
   @@index([establishmentId, phone])
 }
 
 model VerificationCode {
-  id              String   @id @default(cuid())
-  customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  codeHash        String
-  purpose         String   @default("whatsapp_verify")
-  attempts        Int      @default(0)
-  expiresAt       DateTime
-  used            Boolean  @default(false)
-  reminderSentAt  DateTime?
-  createdAt       DateTime @default(now())
+  id             String    @id @default(cuid())
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  codeHash       String
+  purpose        String    @default("whatsapp_verify")
+  attempts       Int       @default(0)
+  expiresAt      DateTime
+  used           Boolean   @default(false)
+  reminderSentAt DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([customerId, used])
   @@index([expiresAt])
@@ -262,142 +262,142 @@ model DeliveryPerson {
 }
 
 model Category {
-  id              String        @id @default(cuid())
-  name            String
-  order           Int           @default(0)
-  establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  products        Product[]
+  id                  String        @id @default(cuid())
+  name                String
+  order               Int           @default(0)
+  establishmentId     String
+  establishment       Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  products            Product[]
   targetMarginPercent Float?
-  priceRounding    String?    @default("none")
+  priceRounding       String?       @default("none")
 }
 
 model Product {
-  id              String             @id @default(cuid())
-  name            String
-  description     String?
-  price           Float
-  image           String?
-  isAvailable     Boolean            @default(true)
-  sendToPrep      Boolean            @default(false)
-  availableOnline     Boolean        @default(true)
-  availablePresencial Boolean        @default(true)
-  availableWhatsapp   Boolean        @default(true)
-  onSale          Boolean            @default(false)
-  promoPrice      Float?
-  isNew           Boolean            @default(false)
-  newUntil        DateTime?
-  order           Int                @default(0)
-  badge           String?
-  featured        Boolean            @default(false)
-  featuredOrder   Int                @default(0)
+  id                    String             @id @default(cuid())
+  name                  String
+  description           String?
+  price                 Float
+  image                 String?
+  isAvailable           Boolean            @default(true)
+  sendToPrep            Boolean            @default(false)
+  availableOnline       Boolean            @default(true)
+  availablePresencial   Boolean            @default(true)
+  availableWhatsapp     Boolean            @default(true)
+  onSale                Boolean            @default(false)
+  promoPrice            Float?
+  isNew                 Boolean            @default(false)
+  newUntil              DateTime?
+  order                 Int                @default(0)
+  badge                 String?
+  featured              Boolean            @default(false)
+  featuredOrder         Int                @default(0)
   featuredDiscountPrice Float?
-  categoryId      String
-  establishmentId String
-  stockItemId     String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  category        Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  stockItem       StockItem?         @relation(fields: [stockItemId], references: [id])
-  stockLinks      ProductStockLink[]
-  additionalOptions AdditionalOption[] @relation("AdditionalOptionProduct")
-  stockedByAdditionals AdditionalOption[] @relation("StockProduct")
-  comboItems      DailyComboItem[]
-  storyItems      StoryItem[]
+  categoryId            String
+  establishmentId       String
+  stockItemId           String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  category              Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  establishment         Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  stockItem             StockItem?         @relation(fields: [stockItemId], references: [id])
+  stockLinks            ProductStockLink[]
+  additionalOptions     AdditionalOption[] @relation("AdditionalOptionProduct")
+  stockedByAdditionals  AdditionalOption[] @relation("StockProduct")
+  comboItems            DailyComboItem[]
+  storyItems            StoryItem[]
 }
 
 model DailyCombo {
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
   description     String?
   price           Float
   image           String?
-  active          Boolean         @default(true)
+  active          Boolean          @default(true)
   establishmentId String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  establishment   Establishment   @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  establishment   Establishment    @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   items           DailyComboItem[]
 }
 
 model DailyComboItem {
-  id        String      @id @default(cuid())
+  id        String     @id @default(cuid())
   comboId   String
   productId String
-  quantity  Int         @default(1)
-  combo     DailyCombo  @relation(fields: [comboId], references: [id], onDelete: Cascade)
-  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int        @default(1)
+  combo     DailyCombo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model AdditionalOption {
-  id              String             @id @default(cuid())
+  id              String        @id @default(cuid())
   name            String
-  price           Float              @default(0)
-  selectionType   String             @default("single") // single, multiple, required
-  inputType       String             @default("radio") // radio, quantity
-  groupName       String?            // "Qual o ponto do seu hambúrguer?"
-  headerText      String?            // "Escolha 1 opção"
-  maxSelection    Int?               // limite de seleções (null = sem limite)
-  order           Int                @default(0)
-  groupOrder      Int                @default(0) // ordem do grupo
-  consumesStock   Boolean            @default(false)
-  stockProductId  String?            // produto de onde consome o estoque
-  stockQuantity   Float              @default(1) // quanto consome por unidade
-  stockUnit       String             @default("un") // unidade: un, kg, g, l, ml
+  price           Float         @default(0)
+  selectionType   String        @default("single") // single, multiple, required
+  inputType       String        @default("radio") // radio, quantity
+  groupName       String? // "Qual o ponto do seu hambúrguer?"
+  headerText      String? // "Escolha 1 opção"
+  maxSelection    Int? // limite de seleções (null = sem limite)
+  order           Int           @default(0)
+  groupOrder      Int           @default(0) // ordem do grupo
+  consumesStock   Boolean       @default(false)
+  stockProductId  String? // produto de onde consome o estoque
+  stockQuantity   Float         @default(1) // quanto consome por unidade
+  stockUnit       String        @default("un") // unidade: un, kg, g, l, ml
   productId       String
   establishmentId String
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  product         Product            @relation("AdditionalOptionProduct", fields: [productId], references: [id], onDelete: Cascade)
-  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  stockProduct    Product?           @relation("StockProduct", fields: [stockProductId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  product         Product       @relation("AdditionalOptionProduct", fields: [productId], references: [id], onDelete: Cascade)
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  stockProduct    Product?      @relation("StockProduct", fields: [stockProductId], references: [id], onDelete: SetNull)
 }
 
 model Order {
-  id                String          @id @default(cuid())
-  orderNumber       Int?
-  externalId        String?
-  externalDisplayId String?
-  ifoodDeliveryBy  String?  // "IFOOD" or "MERCHANT" - how iFood delivers the order
-  changeFor        Float?   // cash on delivery: amount the customer will hand to the courier
-  establishmentId   String
-  customerId        String?
-  customerName      String
-  customerPhone     String?
-  customerAddress   String?
-  orderType         String          @default("delivery")
-  paymentMethod     String          @default("online")
-  items             String
-  total             Float
-  deliveryFee       Float           @default(0)
-  status            String          @default("pending")
-  paymentId         String?
-  paymentLink       String?
-  paymentStatus     String          @default("pending")
-  notes             String?
-  method            String          @default("site")
-  tableNumber       Int?
-  deliveryPerson    String?
-  deliveryPersonId  String?
-  couponId          String?
-  trackingToken     String?         @unique
-  assignedAt        DateTime?
-  deliveredAt       DateTime?
+  id                 String          @id @default(cuid())
+  orderNumber        Int?
+  externalId         String?
+  externalDisplayId  String?
+  ifoodDeliveryBy    String? // "IFOOD" or "MERCHANT" - how iFood delivers the order
+  changeFor          Float? // cash on delivery: amount the customer will hand to the courier
+  establishmentId    String
+  customerId         String?
+  customerName       String
+  customerPhone      String?
+  customerAddress    String?
+  orderType          String          @default("delivery")
+  paymentMethod      String          @default("online")
+  items              String
+  total              Float
+  deliveryFee        Float           @default(0)
+  status             String          @default("pending")
+  paymentId          String?
+  paymentLink        String?
+  paymentStatus      String          @default("pending")
+  notes              String?
+  method             String          @default("site")
+  tableNumber        Int?
+  deliveryPerson     String?
+  deliveryPersonId   String?
+  couponId           String?
+  trackingToken      String?         @unique
+  assignedAt         DateTime?
+  deliveredAt        DateTime?
   cancellationReason String?
-  cancellationDate  DateTime?
-  cancelledBy       String?         // "customer" | "merchant" | "system"
-  cancellationCount Int             @default(0)
+  cancellationDate   DateTime?
+  cancelledBy        String? // "customer" | "merchant" | "system"
+  cancellationCount  Int             @default(0)
   // Agendamento de pedidos
-isScheduled       Boolean         @default(false)
-  deliveryDate      DateTime?       // data/hora agendada para entrega/retirada
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  customer          Customer?       @relation(fields: [customerId], references: [id])
-  deliveryPersonRel DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
-  establishment     Establishment   @relation(fields: [establishmentId], references: [id])
-  messages          OrderMessage[]
-  itemCosts         OrderItemCost[]
+  isScheduled        Boolean         @default(false)
+  deliveryDate       DateTime? // data/hora agendada para entrega/retirada
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  customer           Customer?       @relation(fields: [customerId], references: [id])
+  deliveryPersonRel  DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
+  establishment      Establishment   @relation(fields: [establishmentId], references: [id])
+  messages           OrderMessage[]
+  itemCosts          OrderItemCost[]
 
   @@unique([establishmentId, orderNumber])
   @@index([establishmentId, createdAt])
@@ -410,15 +410,15 @@ isScheduled       Boolean         @default(false)
 }
 
 model OrderItemCost {
-  id              String        @id @default(cuid())
-  orderId         String
-  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId       String?
-  productName     String
-  quantity        Float
-  unitCostCents   Int
-  totalCostCents  Int
-  createdAt       DateTime      @default(now())
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  productName    String
+  quantity       Float
+  unitCostCents  Int
+  totalCostCents Int
+  createdAt      DateTime @default(now())
 
   @@index([orderId])
 }
@@ -434,25 +434,25 @@ model StockCategory {
 }
 
 model StockItem {
-  id              String             @id @default(cuid())
-  name            String
-  unit            String             @default("un")
-  quantity        Float              @default(0)
-  minQuantity     Float              @default(0)
-  unitCost        Float              @default(0)
+  id               String             @id @default(cuid())
+  name             String
+  unit             String             @default("un")
+  quantity         Float              @default(0)
+  minQuantity      Float              @default(0)
+  unitCost         Float              @default(0)
   previousUnitCost Float?
-  supplier        String?
-  supplierId      String?
-  categoryId      String
-  establishmentId String
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  products        Product[]
-  productLinks    ProductStockLink[]
-  category        StockCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  supplierRef     Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  movements       StockMovement[]
+  supplier         String?
+  supplierId       String?
+  categoryId       String
+  establishmentId  String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  products         Product[]
+  productLinks     ProductStockLink[]
+  category         StockCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  establishment    Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  supplierRef      Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  movements        StockMovement[]
 }
 
 model Supplier {
@@ -505,7 +505,7 @@ model User {
   isActive            Boolean              @default(true)
   mustChangePassword  Boolean              @default(false)
   establishmentId     String?
-  establishment       Establishment?        @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  establishment       Establishment?       @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   paidDeliveries      DeliveryPayment[]
@@ -540,17 +540,17 @@ model DeliveryPayment {
 }
 
 model Coupon {
-  id               String   @id @default(cuid())
-  name             String   // "R$ 20 em compras acima de R$ 200" ou "Aniversário"
-  type             String   // "atingido_valor", "todos", "manual", "dias_sem_comprar"
-  conditionValue   Float    // Valor em R$ para a condição (ex: 200)
-  usageLimit       Int      @default(1) // Quantas vezes pode usar (1 = usado uma vez)
-  timesUsed        Int      @default(0) // Contador de usos
-  available        Boolean  @default(false) // Está disponível para esse cliente?
-  establishmentId  String
-  establishment    Establishment @relation(fields: [establishmentId], references: [id])
+  id              String        @id @default(cuid())
+  name            String // "R$ 20 em compras acima de R$ 200" ou "Aniversário"
+  type            String // "atingido_valor", "todos", "manual", "dias_sem_comprar"
+  conditionValue  Float // Valor em R$ para a condição (ex: 200)
+  usageLimit      Int           @default(1) // Quantas vezes pode usar (1 = usado uma vez)
+  timesUsed       Int           @default(0) // Contador de usos
+  available       Boolean       @default(false) // Está disponível para esse cliente?
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model CashRegister {
@@ -674,8 +674,8 @@ model CancellationLog {
   id              String        @id @default(cuid())
   establishmentId String
   orderId         String?
-  source          String        // "site" | "ifood" | "whatsapp" | "manual"
-  cancelledBy     String        // "customer" | "merchant" | "system"
+  source          String // "site" | "ifood" | "whatsapp" | "manual"
+  cancelledBy     String // "customer" | "merchant" | "system"
   reason          String?
   // Snapshot of the order at the moment of cancellation, so the log survives
   // even if the original Order is deleted.
@@ -695,22 +695,22 @@ model CancellationLog {
 }
 
 model AIUsageLog {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   establishmentId String
   // Customer que mandou a mensagem
   customerPhone   String?
   // Tokens consumidos
   inputTokens     Int
-  outputTokens     Int
+  outputTokens    Int
   totalTokens     Int
   // Custo estimado em centavos (input + output)
   costCents       Int
   // Modelo usado
-  model           String   @default("gpt-4o-mini")
+  model           String        @default("gpt-4o-mini")
   // Mensagem que originou (opcional, pra debug)
   userMessage     String?
-  responseLength  Int      @default(0)
-  createdAt       DateTime @default(now())
+  responseLength  Int           @default(0)
+  createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, createdAt])
@@ -726,13 +726,13 @@ model AIUsageLog {
 model CategoryTemplate {
   id               String   @id @default(cuid())
   slug             String   @unique // "pizzaria", "sorveteria", "acai"
-  name             String   // "Pizzaria", "Sorveteria", "Açaí"
-  icon             String?  // "🍕"
-  description      String?  // descrição curta
+  name             String // "Pizzaria", "Sorveteria", "Açaí"
+  icon             String? // "🍕"
+  description      String? // descrição curta
   tone             String   @default("casual") // "formal" | "casual" | "leve"
-  promptBase       String   // texto base do system prompt
+  promptBase       String // texto base do system prompt
   defaultAgentName String   @default("Atendente")
-  defaultMenuJson  String?  // menu padrão opcional (JSON)
+  defaultMenuJson  String? // menu padrão opcional (JSON)
   enabled          Boolean  @default(true) // se false, não permite escolher
   order            Int      @default(0)
   createdAt        DateTime @default(now())
@@ -744,10 +744,10 @@ model CategoryTemplate {
 // Antes de chamar a IA, o webhook consulta essas regras.
 model GlobalQuickReply {
   id        String   @id @default(cuid())
-  category  String   // "cardapio", "horario", "entrega", "pagamento", "humano"
-  label     String   // "Cardápio", "Horário de funcionamento"
-  triggers  String   // palavras-chave separadas por vírgula: "cardapio,cardápio,menu,preço"
-  response  String   // texto que o bot responde
+  category  String // "cardapio", "horario", "entrega", "pagamento", "humano"
+  label     String // "Cardápio", "Horário de funcionamento"
+  triggers  String // palavras-chave separadas por vírgula: "cardapio,cardápio,menu,preço"
+  response  String // texto que o bot responde
   enabled   Boolean  @default(true)
   order     Int      @default(0)
   matchType String   @default("any") // "any" | "all" | "exact"
@@ -759,16 +759,16 @@ model GlobalQuickReply {
 
 // Subscription de Push Notification (PWA)
 model PushSubscription {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   establishmentId String
   // Identificador do cliente (sessionStorage gera ou phone)
-  customerKey     String   // número de telefone, sessionId, etc
-  endpoint        String   @unique
+  customerKey     String // número de telefone, sessionId, etc
+  endpoint        String        @unique
   p256dh          String
   auth            String
   userAgent       String?
-  createdAt       DateTime @default(now())
-  lastUsedAt      DateTime @default(now())
+  createdAt       DateTime      @default(now())
+  lastUsedAt      DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, customerKey])
@@ -776,51 +776,51 @@ model PushSubscription {
 
 // Registro de cada tentativa de push (para depuração sem acesso aos runtime logs)
 model PushLog {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   establishmentId String
   orderNumber     String?
   customerKey     String
-  status          String    // "ok" | "no_subs" | "error" | "failed"
-  sent            Int       @default(0)
-  failed          Int       @default(0)
+  status          String // "ok" | "no_subs" | "error" | "failed"
+  sent            Int      @default(0)
+  failed          Int      @default(0)
   detail          String?
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime @default(now())
 
   @@index([establishmentId, createdAt])
 }
 
 // Zonas de entrega por distância (taxa configurável por faixa de km)
 model DeliveryZone {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   establishmentId String
-  name            String   // "Centro", "Bairros próximos"
-  minKm           Float    @default(0)
-  maxKm           Float    // 1, 3, 5, 8...
-  fee             Float    // R$ 3, R$ 5, R$ 7...
-  freeAbove       Float?   // null ou valor (ex: 30 = grátis acima de R$30)
-  estimatedMin    Int      @default(30) // minutos estimados
-  order           Int      @default(0)
-  enabled         Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  name            String // "Centro", "Bairros próximos"
+  minKm           Float         @default(0)
+  maxKm           Float // 1, 3, 5, 8...
+  fee             Float // R$ 3, R$ 5, R$ 7...
+  freeAbove       Float? // null ou valor (ex: 30 = grátis acima de R$30)
+  estimatedMin    Int           @default(30) // minutos estimados
+  order           Int           @default(0)
+  enabled         Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])
 }
 
 model Story {
-  id              String       @id @default(cuid())
+  id              String        @id @default(cuid())
   name            String
-  emoji           String       @default("🔥")
-  gradientFrom    String       @default("from-red-500")
-  gradientTo      String       @default("to-orange-500")
-  type            String       @default("manual") // "auto" | "manual"
-  autoType        String?      // "maisVendidos" | "lancamentos" | "promocoes"
-  order           Int          @default(0)
-  active          Boolean      @default(true)
+  emoji           String        @default("🔥")
+  gradientFrom    String        @default("from-red-500")
+  gradientTo      String        @default("to-orange-500")
+  type            String        @default("manual") // "auto" | "manual"
+  autoType        String? // "maisVendidos" | "lancamentos" | "promocoes"
+  order           Int           @default(0)
+  active          Boolean       @default(true)
   establishmentId String
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   items           StoryItem[]
 
@@ -839,35 +839,35 @@ model StoryItem {
 }
 
 model Banner {
-  id              String       @id @default(cuid())
+  id              String        @id @default(cuid())
   title           String
   subtitle        String?
-  ctaText         String?      @default("Ver mais")
-  ctaType         String       @default("scroll") // "scroll" | "story" | "category" | "link"
-  ctaTarget       String?      // storyId, categoryId, ou URL
-  gradientFrom    String       @default("from-primary")
-  gradientTo      String       @default("to-primary-cc")
+  ctaText         String?       @default("Ver mais")
+  ctaType         String        @default("scroll") // "scroll" | "story" | "category" | "link"
+  ctaTarget       String? // storyId, categoryId, ou URL
+  gradientFrom    String        @default("from-primary")
+  gradientTo      String        @default("to-primary-cc")
   image           String?
-  order           Int          @default(0)
-  active          Boolean      @default(true)
+  order           Int           @default(0)
+  active          Boolean       @default(true)
   establishmentId String
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])
 }
 
 model CustomerNotification {
-  id           String   @id @default(cuid())
-  type         String   @default("info") // order | cashback | promo | info
-  title        String
-  message      String
-  read         Boolean  @default(false)
-  customerId   String
-  couponId     String?  // Cupom relacionado (opcional)
-createdAt    DateTime @default(now())
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  type       String   @default("info") // order | cashback | promo | info
+  title      String
+  message    String
+  read       Boolean  @default(false)
+  customerId String
+  couponId   String? // Cupom relacionado (opcional)
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
 }
