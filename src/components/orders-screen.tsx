@@ -191,7 +191,7 @@ export function OrdersScreen({
     { key: "confirmed", label: "Confirmado" },
     { key: "preparing", label: "Preparando" },
     { key: "ready", label: "Pronto" },
-    { key: "out_for_delivery", label: "Saiu" },
+    { key: "out_for_delivery", label: "Saiu p/ Entrega" },
   ]
 
   function getTimelineIdx(order: Order) {
@@ -275,7 +275,7 @@ export function OrdersScreen({
                     >
                       <div className="p-4">
                         {/* Header: Pedido # + Código */}
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <div className="flex items-center justify-between mb-1">
                           <span className="text-base font-bold" style={{ color: theme.text }}>
                             Pedido #{order.orderNumber || order.id.slice(0, 8)}
                           </span>
@@ -508,71 +508,110 @@ export function OrdersScreen({
                 <Clock className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
                 <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido no histórico</p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {historyOrders.map(order => {
-                  const items = parseItems(order.items)
-                  const isDelivered = order.status === "delivered"
-                  const isCancelled = order.status === "cancelled"
+            ) : (() => {
+              // Group orders by month
+              const monthGroups: Record<string, Order[]> = {}
+              historyOrders.forEach(order => {
+                const d = new Date(order.createdAt)
+                const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`
+                const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+                if (!monthGroups[key]) monthGroups[key] = []
+                monthGroups[key].push(order)
+              })
+              const sortedKeys = Object.keys(monthGroups).sort().reverse()
 
-                  return (
-                    <div
-                      key={order.id}
-                      className="rounded-xl border overflow-hidden"
-                      style={{
-                        borderColor: isCancelled ? "rgba(239,68,68,0.2)" : theme.borderCard,
-                        backgroundColor: theme.bgCard,
-                      }}
-                    >
-                      <div className="p-4">
-                        <div className="flex items-start gap-3">
-                          {items[0]?.image ? (
-                            <img src={items[0].image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                          ) : order.establishment?.logo ? (
-                            <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                              {order.establishment?.name?.charAt(0) || "#"}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="text-base font-bold truncate" style={{ color: theme.text }}>
-                                  Pedido #{order.orderNumber || order.id.slice(0, 8)}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{
-                                  backgroundColor: isDelivered ? `${theme.success}15` : isCancelled ? "rgba(239,68,68,0.1)" : `${theme.primary}12`,
-                                  color: isDelivered ? theme.success : isCancelled ? "#ef4444" : theme.primary,
-                                }}>
-                                  {isDelivered ? "Entregue" : isCancelled ? "Cancelado" : statusLabels[order.status] || order.status}
-                                </span>
-                                <p className="text-xs mt-1" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
-                              </div>
-                            </div>
-                            <p className="text-sm mt-1.5 truncate" style={{ color: theme.textMuted }}>
-                              {items.map((i: any) => i.name).join(" + ")}
-                            </p>
-                            <div className="flex items-center justify-between mt-2">
-                              <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
-                              <button
-                                onClick={() => onReorder(order)}
-                                className="flex items-center gap-1 text-sm font-semibold"
-                                style={{ color: theme.primary }}
+              return (
+                <div className="space-y-5">
+                  {sortedKeys.map(key => {
+                    const monthLabel = monthGroups[key][0].createdAt
+                      ? new Date(monthGroups[key][0].createdAt).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+                      : key
+                    return (
+                      <div key={key}>
+                        <h3 className="text-sm font-bold mb-2 capitalize" style={{ color: theme.text }}>{monthLabel}</h3>
+                        <div className="space-y-2">
+                          {monthGroups[key].map(order => {
+                            const items = parseItems(order.items)
+                            const isDelivered = order.status === "delivered"
+                            const isCancelled = order.status === "cancelled"
+                            const establishmentName = order.establishment?.name || ""
+
+                            return (
+                              <div
+                                key={order.id}
+                                className="rounded-xl overflow-hidden"
+                                style={{ backgroundColor: theme.bgCard }}
                               >
-                                Pedir novamente <ChevronRight className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
+                                <div className="p-3">
+                                  <div className="flex items-start gap-3">
+                                    {/* Logo */}
+                                    {order.establishment?.logo ? (
+                                      <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                                    ) : (
+                                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                        {establishmentName.charAt(0) || "#"}
+                                      </div>
+                                    )}
+
+                                    <div className="flex-1 min-w-0">
+                                      {/* Row 1: #number + badge + time + price */}
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm font-bold" style={{ color: theme.text }}>
+                                            #{order.orderNumber || order.id.slice(0, 8)}
+                                          </span>
+                                          {isDelivered && (
+                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5" style={{ backgroundColor: `${theme.success}20`, color: theme.success }}>
+                                              <CheckCircle2 className="h-2.5 w-2.5" /> Entregue
+                                            </span>
+                                          )}
+                                          {isCancelled && (
+                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444" }}>
+                                              Cancelado
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <p className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</p>
+                                          <p className="text-[10px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Row 2: Establishment name */}
+                                      {establishmentName && (
+                                        <p className="text-sm font-medium mt-0.5 truncate" style={{ color: theme.text }}>
+                                          {establishmentName}
+                                        </p>
+                                      )}
+
+                                      {/* Row 3: Items summary */}
+                                      <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
+                                        {items.map((i: any) => i.name).join(" • ")}
+                                      </p>
+
+                                      {/* Row 4: Pedir novamente */}
+                                      <div className="flex justify-end mt-1">
+                                        <button
+                                          onClick={() => onReorder(order)}
+                                          className="flex items-center gap-0.5 text-xs font-semibold"
+                                          style={{ color: theme.primary }}
+                                        >
+                                          Pedir novamente <ChevronRight className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
+                    )
+                  })}
+                </div>
+              )
+            })()
           )}
         </div>
       </div>

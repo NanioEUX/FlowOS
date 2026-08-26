@@ -4103,8 +4103,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         />
       )}
 
-      {/* Status change alert — suppressed when orders screen is open */}
-      {statusAlert && !showOrdersList && (
+      {/* Status change alert — suppressed when orders or tracking screen is open */}
+      {statusAlert && !showOrdersList && !showTracking && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
           <div className="rounded-lg bg-[#FF6B35] px-6 py-3 text-sm font-semibold text-white shadow-lg">
             {statusAlert}
