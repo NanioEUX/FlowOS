@@ -241,10 +241,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
         </div>
 
         {/* Delivery Code - right at the top */}
-        {order.deliveryCode && (
-          (order.orderType === "pickup" && order.status === "ready") ||
-          (order.orderType !== "pickup" && order.status === "out_for_delivery")
-        ) && (
+        {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
           <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-center">
             <p className="text-xs font-medium text-amber-600">
               Código entrega: <span className="font-bold tracking-wider">{order.deliveryCode}</span>

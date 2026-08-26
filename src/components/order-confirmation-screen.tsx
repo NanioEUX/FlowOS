@@ -161,7 +161,7 @@ export function OrderConfirmationScreen({
           </div>
 
           {/* Delivery Code */}
-          {deliveryCode && orderType === "delivery" && (
+          {deliveryCode && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 mb-3 text-center">
               <p className="text-xs font-medium text-amber-600">
                 Código entrega: <span className="font-bold tracking-wider">{deliveryCode}</span>
