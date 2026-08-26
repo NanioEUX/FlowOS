@@ -547,7 +547,10 @@ export function OrdersScreen({
                           {monthGroups[key].map(order => {
                             const items = parseItems(order.items)
                             const mainItem = items[0]
-                            const paymentLabel = paymentLabels[order.paymentMethod] || order.paymentMethod || ""
+
+                            const allOptions = items.flatMap((i: any) =>
+                              (i.additionalOptions || []).map((o: any) => o.name || o.option).filter(Boolean)
+                            )
 
                             return (
                               <div
@@ -557,50 +560,46 @@ export function OrdersScreen({
                               >
                                 <div className="p-3">
                                   <div className="flex items-start gap-3">
-                                    {/* Item image */}
+                                    {/* Item image - circular */}
                                     {mainItem?.image ? (
-                                      <img src={mainItem.image} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                                      <img src={mainItem.image} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
                                     ) : (
-                                      <div className="w-14 h-14 rounded-lg flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
                                         {mainItem?.name?.charAt(0) || "#"}
                                       </div>
                                     )}
 
                                     <div className="flex-1 min-w-0">
-                                      {/* Line 1: #number + pts + time ago */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-sm font-bold" style={{ color: theme.text }}>
-                                            #{order.orderNumber || order.id.slice(0, 8)}
-                                          </span>
+                                      {/* Line 1: #number + pts + cashback + time ago */}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-bold" style={{ color: theme.text }}>
+                                          #{order.orderNumber || order.id.slice(0, 8)}
+                                        </span>
+                                        <div className="flex items-center gap-1.5 shrink-0">
                                           {calcPoints(order.total) > 0 && (
-                                            <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${theme.success}18`, color: theme.success }}>
+                                            <span className="text-[10px] font-bold" style={{ color: theme.success }}>
                                               +{calcPoints(order.total)} pts
                                             </span>
                                           )}
+                                          <span className="text-[10px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</span>
                                         </div>
-                                        <p className="text-[11px]" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
                                       </div>
 
-                                      {/* Line 2: Item name */}
+                                      {/* Line 2: Item name (bold) */}
                                       <p className="text-sm font-bold mt-0.5 truncate" style={{ color: theme.text }}>
                                         {mainItem?.name || "Pedido"}
                                       </p>
 
-                                      {/* Line 3: Item description (qty + options) */}
-                                      <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
-                                        {mainItem ? `${mainItem.quantity}x ${mainItem.name}` : ""}
-                                        {mainItem?.additionalOptions?.length ? ` • ${mainItem.additionalOptions.map((o: any) => o.name || o.option).join(", ")}` : ""}
-                                      </p>
+                                      {/* Line 3: Options / items description */}
+                                      {allOptions.length > 0 && (
+                                        <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
+                                          {allOptions.join(" • ")}
+                                        </p>
+                                      )}
 
-                                      {/* Line 4: Total + payment */}
+                                      {/* Line 4: Total + Pedir novamente */}
                                       <div className="flex items-center justify-between mt-1.5">
-                                        <div>
-                                          <span className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
-                                          {paymentLabel && (
-                                            <span className="text-[10px] ml-1" style={{ color: theme.textMutedMore }}>{paymentLabel}</span>
-                                          )}
-                                        </div>
+                                        <span className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
                                         <button
                                           onClick={() => onReorder(order)}
                                           className="flex items-center gap-0.5 text-xs font-semibold"
