@@ -4008,8 +4008,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 redeemDiscount={parsedLoyalty?.redeemDiscount}
                 orderType={orderResult?.orderType}
                 deliveryCode={orderResult?.deliveryCode}
-                onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]) }}
-                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null) }}
+                onTrack={() => { openTracking(orderResult?.orderId || ""); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setCustomer(prev => ({ ...prev, notes: "" })) }}
+                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => ({ ...prev, notes: "" })) }}
               />
             )}
           </div>
@@ -4061,7 +4061,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               <>
                 {orderResult?.orderId && (
                   <button onClick={() => {
-                    setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking()
+                    setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking(); setCustomer(prev => ({ ...prev, notes: "" }))
                   }} className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
                     style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                     <ExternalLink className="h-4 w-4" /> Acompanhar pedido
@@ -4070,6 +4070,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <button onClick={() => {
                   setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false)
                   setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                  setCustomer(prev => ({ ...prev, notes: "" }))
                 }} className="w-full py-2.5 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
                   Fechar
                 </button>
