@@ -539,13 +539,15 @@ export function OrdersScreen({
                             return (
                               <div
                                 key={order.id}
-                                className="rounded-xl overflow-hidden"
-                                style={{ backgroundColor: theme.bgCard }}
+                                className="rounded-xl overflow-hidden border"
+                                style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard }}
                               >
                                 <div className="p-3">
                                   <div className="flex items-start gap-3">
-                                    {/* Logo */}
-                                    {order.establishment?.logo ? (
+                                    {/* Item image or establishment logo */}
+                                    {items[0]?.image ? (
+                                      <img src={items[0].image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                                    ) : order.establishment?.logo ? (
                                       <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
                                     ) : (
                                       <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
