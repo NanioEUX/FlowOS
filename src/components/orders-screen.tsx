@@ -207,6 +207,20 @@ export function OrdersScreen({
     card_pickup: "Cartão na retirada",
   }
 
+  function timeAgo(date: string | Date): string {
+    const now = Date.now()
+    const then = new Date(date).getTime()
+    const diffMin = Math.floor((now - then) / 60000)
+    if (diffMin < 1) return "agora"
+    if (diffMin < 60) return `${diffMin}min`
+    const diffH = Math.floor(diffMin / 60)
+    if (diffH < 24) return `${diffH}h`
+    const diffD = Math.floor(diffH / 24)
+    if (diffD === 1) return "ontem"
+    if (diffD < 7) return `${diffD}d`
+    return new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage }}>
       {/* Header */}
@@ -479,58 +493,57 @@ export function OrdersScreen({
                     }}
                   >
                     <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          {order.establishment?.logo ? (
-                            <img src={order.establishment.logo} alt="" className="w-10 h-10 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                              {order.establishment?.name?.charAt(0) || "#"}
+                      <div className="flex items-start gap-3">
+                        {/* Establishment logo */}
+                        {order.establishment?.logo ? (
+                          <img src={order.establishment.logo} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                            {order.establishment?.name?.charAt(0) || "#"}
+                          </div>
+                        )}
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-bold truncate" style={{ color: theme.text }}>
+                                {order.establishment?.name || `Pedido #${order.orderNumber || order.id.slice(0, 8)}`}
+                              </p>
+                              <p className="text-xs" style={{ color: theme.textMutedMore }}>
+                                Pedido #{order.orderNumber || order.id.slice(0, 8)}
+                              </p>
                             </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-bold" style={{ color: theme.text }}>
-                              Pedido #{order.orderNumber || order.id.slice(0, 8)}
-                            </p>
-                            <p className="text-xs" style={{ color: theme.textMutedMore }}>
-                              {new Date(order.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                            </p>
+                            <div className="text-right shrink-0">
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{
+                                backgroundColor: isDelivered ? `${theme.success}15` : isCancelled ? "rgba(239,68,68,0.1)" : `${theme.primary}12`,
+                                color: isDelivered ? theme.success : isCancelled ? "#ef4444" : theme.primary,
+                              }}>
+                                {isDelivered ? "Entregue" : isCancelled ? "Cancelado" : statusLabels[order.status] || order.status}
+                              </span>
+                              <p className="text-[11px] mt-1" style={{ color: theme.textMutedMore }}>{timeAgo(order.createdAt)}</p>
+                            </div>
+                          </div>
+
+                          {/* Items summary */}
+                          <p className="text-xs mt-1.5 truncate" style={{ color: theme.textMuted }}>
+                            {items.map((i: any) => i.name).join(" + ")}
+                          </p>
+
+                          {/* Price + Reorder */}
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
+                            <button
+                              onClick={() => onReorder(order)}
+                              className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                              style={{ color: theme.primary }}
+                            >
+                              Pedir novamente
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{
-                            backgroundColor: isDelivered ? `${theme.success}15` : isCancelled ? "rgba(239,68,68,0.1)" : `${theme.primary}12`,
-                            color: isDelivered ? theme.success : isCancelled ? "#ef4444" : theme.primary,
-                          }}>
-                            {isDelivered ? "Entregue" : isCancelled ? "Cancelado" : statusLabels[order.status] || order.status}
-                          </span>
-                        </div>
                       </div>
-
-                      {/* Items */}
-                      <div className="mt-2 pt-2 border-t" style={{ borderColor: theme.borderSubtle }}>
-                        {items.slice(0, 3).map((item, idx) => (
-                          <p key={idx} className="text-xs truncate" style={{ color: theme.textMuted }}>
-                            {item.quantity}x {item.name}
-                          </p>
-                        ))}
-                        {items.length > 3 && (
-                          <p className="text-[11px] mt-0.5" style={{ color: theme.textMutedMore }}>
-                            +{items.length - 3} mais
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Reorder button */}
-                      <button
-                        onClick={() => onReorder(order)}
-                        className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-                        style={{ backgroundColor: theme.primary, color: "#fff" }}
-                      >
-                        Pedir novamente
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
                 )
