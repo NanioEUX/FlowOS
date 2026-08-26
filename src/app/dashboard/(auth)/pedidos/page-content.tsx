@@ -575,7 +575,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const [handshakeLoading, setHandshakeLoading] = useState(false)
   const [handshakeError, setHandshakeError] = useState("")
   const [handshakeSuccess, setHandshakeSuccess] = useState(false)
-  const showHandshake = ["out_for_delivery", "dispatched"].includes(order.status) && (
+  const showHandshake = (["out_for_delivery", "dispatched"].includes(order.status) || (order.orderType === "pickup" && order.status === "ready")) && (
     (isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT") || order.deliveryCode
   )
 
@@ -772,7 +772,7 @@ win.close()
                   #{order.orderNumber}
                 </span>
               ) : null}
-              {order.deliveryCode && (
+              {order.deliveryCode && order.orderType !== "delivery" && ["ready", "out_for_delivery"].includes(order.status) && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-300" title="Código de entrega">
                   🔑 {order.deliveryCode}
                 </span>
@@ -988,8 +988,8 @@ win.close()
             )}
           </div>
 
-          {/* Delivery Code - displayed for the admin */}
-          {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
+          {/* Delivery Code - displayed for the admin (pickup orders only, when ready) */}
+          {order.deliveryCode && order.orderType !== "delivery" && ["ready", "out_for_delivery"].includes(order.status) && (
             <div className="mt-3 rounded-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-3 text-center">
               <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider mb-1">
                 Código de Entrega
@@ -1004,7 +1004,9 @@ win.close()
           {showHandshake && !handshakeSuccess && (
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <p className="text-xs font-medium text-amber-700 mb-2">
-                Peça ao cliente o código de confirmação de entrega (4 últimos dígitos do celular).
+                {order.orderType === "pickup"
+                  ? "Peça o código de confirmação ao cliente na hora da retirada."
+                  : "Peça ao cliente o código de confirmação na hora da entrega."}
               </p>
               <div className="flex items-center gap-2">
                 <input

@@ -4346,7 +4346,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
 
                     {/* Delivery Code */}
-                    {trackingOrder.deliveryCode && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
+                    {trackingOrder.deliveryCode && (
+                      (trackingOrder.orderType === "pickup" && trackingOrder.status === "ready") ||
+                      (trackingOrder.orderType !== "pickup" && trackingOrder.status === "out_for_delivery")
+                    ) && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
                       <div className="rounded-lg px-3 py-2 text-center" style={{ backgroundColor: `${theme.primary}10` }}>
                         <p className="text-xs font-medium" style={{ color: theme.primary }}>
                           Código entrega: <span className="font-bold tracking-wider">{trackingOrder.deliveryCode}</span>
