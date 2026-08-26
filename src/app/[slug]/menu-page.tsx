@@ -2807,8 +2807,9 @@ onPaymentConfirmed={handlePaymentSuccess}
               <ClipboardList className="h-5 w-5" />
               <span className="text-[10px] font-medium">Pedidos</span>
               {mounted && activeOrdersCount > 0 && (
-                <span className="absolute -top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
-                  {activeOrdersCount}
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white shadow-sm" style={{ backgroundColor: theme.primary }}>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40" style={{ backgroundColor: theme.primary }} />
+                  <span className="relative">{activeOrdersCount}</span>
                 </span>
               )}
               {activeOrdersCount === 0 && hasEstablishmentReply && (
@@ -4096,13 +4097,14 @@ onPaymentConfirmed={handlePaymentSuccess}
             openCart()
           }}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
+          onRefresh={loadCustomerOrders}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
         />
       )}
 
-      {/* Status change alert */}
-      {statusAlert && (
+      {/* Status change alert — suppressed when orders screen is open */}
+      {statusAlert && !showOrdersList && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
           <div className="rounded-lg bg-[#FF6B35] px-6 py-3 text-sm font-semibold text-white shadow-lg">
             {statusAlert}

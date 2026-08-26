@@ -114,6 +114,7 @@ interface OrdersScreenProps {
   onOpenTracking: (orderId: string, trackingUrl: string) => void
   onReorder: (order: Order) => void
   onOpenIdentify: () => void
+  onRefresh?: () => void
   hasPhone: boolean
   establishmentSlug: string
 }
@@ -126,6 +127,7 @@ export function OrdersScreen({
   onOpenTracking,
   onReorder,
   onOpenIdentify,
+  onRefresh,
   hasPhone,
   establishmentSlug,
 }: OrdersScreenProps) {
@@ -136,6 +138,13 @@ export function OrdersScreen({
   const [chatSending, setChatSending] = useState(false)
   const [messages, setMessages] = useState<Record<string, OrderMessage[]>>({})
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Poll for order updates every 15s
+  useEffect(() => {
+    if (!onRefresh) return
+    const interval = setInterval(() => onRefresh(), 15000)
+    return () => clearInterval(interval)
+  }, [onRefresh])
 
   const activeOrders = orders.filter(o => ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
   const historyOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status) || (o.status === "pending" && o.paymentStatus === "expired"))
@@ -265,21 +274,16 @@ export function OrdersScreen({
                       }}
                     >
                       <div className="p-4">
-                        {/* Header: Pedido # + Código + Preço */}
-                        <div className="flex items-start justify-between mb-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-base font-bold" style={{ color: theme.text }}>
-                              Pedido #{order.orderNumber || order.id.slice(0, 8)}
+                        {/* Header: Pedido # + Código */}
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-base font-bold" style={{ color: theme.text }}>
+                            Pedido #{order.orderNumber || order.id.slice(0, 8)}
+                          </span>
+                          {deliveryCode && (
+                            <span className="text-sm font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
+                              Código {deliveryCode}
                             </span>
-                            {deliveryCode && (
-                              <span className="text-sm font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
-                                Código {deliveryCode}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-base font-bold" style={{ color: theme.primary }}>{formatCurrency(order.total)}</p>
-                          </div>
+                          )}
                         </div>
 
                         {/* Previsão */}
@@ -367,16 +371,16 @@ export function OrdersScreen({
                         )}
 
                         {/* Total */}
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs" style={{ color: theme.textMutedMore }}>Total pago</span>
-                          <div className="text-right">
-                            <span className="text-sm font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
-                            {order.paymentMethod && (
-                              <span className="text-[10px] ml-1" style={{ color: theme.textMutedMore }}>
-                                {paymentLabels[order.paymentMethod] || order.paymentMethod}
-                              </span>
-                            )}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: theme.textMutedMore }}>Total pago</span>
+                            <span className="text-base font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
                           </div>
+                          {order.paymentMethod && (
+                            <p className="text-xs text-right mt-0.5" style={{ color: theme.textMutedMore }}>
+                              {paymentLabels[order.paymentMethod] || order.paymentMethod}
+                            </p>
+                          )}
                         </div>
 
                         {/* Expanded details */}
