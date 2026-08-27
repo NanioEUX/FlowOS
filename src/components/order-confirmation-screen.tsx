@@ -175,8 +175,8 @@ export function OrderConfirmationScreen({
               <div className="flex items-center gap-2">
                 <Gift className="h-5 w-5" style={{ color: theme.success }} />
                 <div>
-                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} pontos</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} pontos ({fmt(pointsToR$(loyaltyBalance))})</p>
+                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} pts</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} pts ({fmt(pointsToR$(loyaltyBalance))})</p>
                 </div>
               </div>
             </div>

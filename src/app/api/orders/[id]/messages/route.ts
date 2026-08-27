@@ -91,7 +91,10 @@ export async function POST(
   // Notificar cliente: criar notificação interna + push notification
   if (sender === "establishment") {
     try {
-      const order = await prisma.order.findUnique({ where: { id: params.id } })
+      const order = await prisma.order.findUnique({
+        where: { id: params.id },
+        include: { establishment: { select: { slug: true } } },
+      })
       if (order?.customerId && order?.customerPhone) {
         // 1. Criar notificação interna no banco
         await prisma.customerNotification.create({
@@ -107,7 +110,7 @@ export async function POST(
         const pushPayload = {
           title: "Nova mensagem do estabelecimento",
           body: body.message.trim().slice(0, 200),
-          url: `/pedido/${order.id}/tracking`,
+          url: order.establishment?.slug ? `/${order.establishment.slug}?orders=1` : "/",
           tag: `msg-${order.id}`,
         }
         await sendPush(order.establishmentId, order.customerPhone, pushPayload)

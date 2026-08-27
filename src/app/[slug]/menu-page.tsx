@@ -1703,36 +1703,20 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     } catch {}
   }
 
-  // Auto-open tracking modal when URL has ?track=token (from push notification click)
+  // Auto-open orders screen when URL has ?orders=1 (from push notification click)
   useEffect(() => {
     if (typeof window === "undefined") return
     const params = new URLSearchParams(window.location.search)
-    const trackToken = params.get("track")
-    if (!trackToken) return
+    const openOrders = params.get("orders")
+    if (!openOrders) return
 
     // Clean URL immediately
     const cleanUrl = window.location.pathname
     window.history.replaceState({}, "", cleanUrl)
 
-    // Fetch order data and open tracking modal
-    ;(async () => {
-      try {
-        const orderRes = await fetch(`/api/tracking/${trackToken}`)
-        if (!orderRes.ok) return
-        const orderData = await orderRes.json()
-
-        setTrackingOrder(orderData)
-        prevStatusRef.current = orderData.status
-        setHasEstablishmentReply(false)
-        prevMsgCountRef.current = 0
-        setShowTracking(true)
-
-        // Fetch messages
-        const msgRes = await fetch(`/api/orders/${orderData.id}/messages?token=${trackToken}`)
-        if (msgRes.ok) setTrackingMessages(await msgRes.json())
-      } catch {}
-    })()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // Open orders screen on Em Andamento tab
+    setShowOrdersList(true)
+  }, [])
 
   useEffect(() => {
     if (!showTracking) return
@@ -2414,10 +2398,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
                     </span>
                   </button>
-                  {/* Cashback */}
+                  {/* Points */}
                   <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
                     <span className="text-[12px] font-bold text-gray-800">
-                      R$ {pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount).toFixed(2).replace(".", ",")}
+                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pts
                     </span>
                   </button>
                   {/* Divider */}
@@ -3192,7 +3176,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     </div>
                     <p className="mt-2 text-xs text-white/80">
-                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pontos = {formatCurrency(pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}
+                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerData?.loyaltyPoints || customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}
                     </p>
                   </div>
                 )}
@@ -3820,8 +3804,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4" style={{ color: theme.primary }} />
                       <div>
-                        <div className="text-xs font-semibold" style={{ color: theme.text }}>Usar meu cashback</div>
-                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>{customerLoyaltyPoints} cash = R$ {customerLoyaltyPoints},00</div>
+                        <div className="text-xs font-semibold" style={{ color: theme.text }}>Usar meus pontos</div>
+                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
                       </div>
                     </div>
                     <button onClick={() => setUseLoyalty(!useLoyalty)}
