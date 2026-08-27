@@ -27,6 +27,7 @@ interface Props {
   couponDiscount: number
   firstPurchaseDiscount: number
   firstPurchaseBonus: number
+  loyaltyDiscount: number
   total: number
   showLoyalty: boolean
   cashEarned: number
@@ -53,6 +54,7 @@ export function OrderConfirmationScreen({
   couponDiscount,
   firstPurchaseDiscount,
   firstPurchaseBonus,
+  loyaltyDiscount,
   total,
   showLoyalty,
   cashEarned,
@@ -155,6 +157,11 @@ export function OrderConfirmationScreen({
               {firstPurchaseDiscount > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.success }}>
                   <span>1ª compra</span><span>-{fmt(firstPurchaseDiscount)}</span>
+                </div>
+              )}
+              {loyaltyDiscount > 0 && (
+                <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                  <span>Desconto (pontos)</span><span>-{fmt(loyaltyDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base pt-1" style={{ color: theme.text }}>

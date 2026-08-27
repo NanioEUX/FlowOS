@@ -203,15 +203,27 @@ export function OrdersScreen({
     setChatSending(false)
   }
 
-  const activeTimelineSteps = [
-    { key: "confirmed", label: "Confirmado" },
-    { key: "preparing", label: "Preparando" },
-    { key: "ready", label: "Pronto" },
-    { key: "out_for_delivery", label: "Saiu p/ Entrega" },
-  ]
+  function getActiveTimelineSteps(order: Order) {
+    if (order.orderType === "pickup") {
+      return [
+        { key: "confirmed", label: "Confirmado" },
+        { key: "preparing", label: "Preparando" },
+        { key: "ready", label: "Pronto para Retirada" },
+      ]
+    }
+    return [
+      { key: "confirmed", label: "Confirmado" },
+      { key: "preparing", label: "Preparando" },
+      { key: "ready", label: "Pronto" },
+      { key: "out_for_delivery", label: "Saiu p/ Entrega" },
+    ]
+  }
 
   function getTimelineIdx(order: Order) {
-    const statusOrder = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+    const isPickup = order.orderType === "pickup"
+    const statusOrder = isPickup
+      ? ["pending", "confirmed", "preparing", "ready"]
+      : ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
     return statusOrder.indexOf(order.status)
   }
 
@@ -320,7 +332,7 @@ export function OrdersScreen({
 
                         {/* Timeline — 4 steps: Confirmado, Preparando, Pronto, Saiu */}
                         <div className="flex items-center gap-0 my-3">
-                          {activeTimelineSteps.map((step, i) => {
+                          {getActiveTimelineSteps(order).map((step, i) => {
                             const stepIdx = ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
                             const isCompleted = flowIdx > stepIdx || (flowIdx === stepIdx)
                             const isCurrent = flowIdx === stepIdx + 1 || (step.key === "confirmed" && order.status === "confirmed") || (step.key === "preparing" && order.status === "preparing") || (step.key === "ready" && order.status === "ready") || (step.key === "out_for_delivery" && order.status === "out_for_delivery")

@@ -4561,6 +4561,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 couponDiscount={couponDiscount}
                 firstPurchaseDiscount={firstPurchaseDiscountValue}
                 firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
+                loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
                 cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier : 0}
