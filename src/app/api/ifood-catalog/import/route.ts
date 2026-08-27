@@ -134,6 +134,8 @@ export async function POST(req: NextRequest) {
             onSale: item.originalPrice > item.price,
             promoPrice: item.originalPrice > item.price ? item.price : null,
             order: 0,
+            ifoodItemId: item.id || null,
+            ifoodGroupId: item.ifoodGroupId || null,
           },
         })
 

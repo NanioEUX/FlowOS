@@ -619,6 +619,26 @@ if (!data.error) {
       if (res.ok) {
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
+
+        // Auto-sync business hours to iFood if enabled
+        if (form.ifoodEnabled && form.ifoodMerchantId) {
+          try {
+            const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+            const operatingHours = businessHours.map((h: any) => ({
+              dayOfWeek: dayMap.indexOf(h.day),
+              open: h.open,
+              close: h.close,
+              active: h.active,
+            }))
+            await fetchAuth("/api/ifood-catalog/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "update_hours", operatingHours }),
+            })
+          } catch (e) {
+            console.error("[config] iFood hours sync error:", e)
+          }
+        }
       }
     } catch (err) {
       console.error(err)

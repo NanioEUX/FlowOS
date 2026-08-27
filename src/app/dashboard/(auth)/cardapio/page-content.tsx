@@ -96,6 +96,8 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+  const [ifoodEnabled, setIfoodEnabled] = useState(false)
+  const [ifoodMerchantId, setIfoodMerchantId] = useState<string | null>(null)
   const [promoModal, setPromoModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentOnSale: boolean; currentPromoPrice: number | null }>({
     open: false, productId: "", productName: "", currentPrice: 0, currentOnSale: false, currentPromoPrice: null
   })
@@ -250,6 +252,8 @@ export default function CardapioPage() {
     }
     if (estRes.ok) {
       const data = await estRes.json()
+      setIfoodEnabled(data.ifoodEnabled || false)
+      setIfoodMerchantId(data.ifoodMerchantId || null)
       setForm({
         name: data.name || "",
         phone: data.phone || "",
@@ -661,6 +665,56 @@ export default function CardapioPage() {
       toast(newValue ? "Item irá para preparo" : "Item não vai para preparo", "success")
     } catch (err) {
       console.error("[toggleSendToPrep] error:", err)
+      toast("Erro ao atualizar produto", "error")
+    }
+  }
+
+  async function toggleAvailable(product: Product) {
+    if (!establishmentId) return
+    const newValue = !product.isAvailable
+    try {
+      const res = await fetchAuth(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAvailable: newValue }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast(err.error || "Erro ao atualizar produto", "error")
+        return
+      }
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          products: cat.products.map((p) =>
+            p.id === product.id ? { ...p, isAvailable: newValue } : p
+          ),
+        }))
+      )
+      toast(newValue ? "Item disponível" : "Item pausado", "success")
+
+      // Sync to iFood if enabled and product has iFood mapping
+      if (ifoodEnabled && ifoodMerchantId && (product as any).ifoodItemId && (product as any).ifoodGroupId) {
+        try {
+          const syncRes = await fetchAuth("/api/ifood-catalog/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update_status",
+              groupId: (product as any).ifoodGroupId,
+              itemId: (product as any).ifoodItemId,
+              status: newValue ? "AVAILABLE" : "UNAVAILABLE",
+            }),
+          })
+          if (syncRes.ok) {
+            toast(newValue ? "Sincronizado com iFood" : "Pausado no iFood", "success")
+          }
+        } catch (e) {
+          console.error("[toggleAvailable] iFood sync error:", e)
+        }
+      }
+    } catch (err) {
+      console.error("[toggleAvailable] error:", err)
       toast("Erro ao atualizar produto", "error")
     }
   }
@@ -1652,6 +1706,25 @@ export default function CardapioPage() {
                             </button>
                             <button
                               type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAvailable(product) }}
+                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
+                                product.isAvailable
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                              title={product.isAvailable ? "Disponível (clique para pausar)" : "Pausado (clique para disponibilizar)"}
+                            >
+                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                product.isAvailable ? "bg-green-500" : "bg-red-400"
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </span>
+                              {product.isAvailable ? "Ativo" : "Pausado"}
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
                               className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                                 (product as any).onSale
@@ -1782,6 +1855,24 @@ export default function CardapioPage() {
                           }`} />
                         </span>
                         {product.sendToPrep ? "Preparo" : "Sem preparo"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleAvailable(product)}
+                        className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
+                          product.isAvailable
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                          product.isAvailable ? "bg-green-500" : "bg-red-400"
+                        }`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                            product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
+                          }`} />
+                        </span>
+                        {product.isAvailable ? "Ativo" : "Pausado"}
                       </button>
                     </div>
                   ))}

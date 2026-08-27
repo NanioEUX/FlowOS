@@ -161,6 +161,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
             optionGroups: item.optionGroups.filter((og) => selectedOptionGroups[og.id]),
             targetCategoryId: categoryMappings[cat.ifoodCategoryId] || null,
             ifoodCategoryName: cat.ifoodName,
+            ifoodGroupId: cat.ifoodCategoryId,
           })
         }
       })
