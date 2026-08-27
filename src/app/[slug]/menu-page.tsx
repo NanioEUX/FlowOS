@@ -552,6 +552,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       const data = await res.json()
       if (data && !data.notFound) {
         setCustomerData(data)
+        setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
+        setCustomerTier(data.tier || "bronze")
         setCustomer((prev) => ({
           ...prev,
           name: data.name || prev.name,
@@ -2134,6 +2136,8 @@ const handlePaymentSuccess = useCallback(() => {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
+          setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
+          setCustomerTier(data.tier || "bronze")
           markSessionVerified()
         }
       } catch {}
@@ -2179,6 +2183,8 @@ const handlePaymentSuccess = useCallback(() => {
           setShowVerifyModal(false)
           setVerifyCode("")
           setCustomerData(data)
+          setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
+          setCustomerTier(data.tier || "bronze")
           markSessionVerified()
         }
       } catch {}
