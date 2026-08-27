@@ -2430,10 +2430,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     } else {
                       setShowNotifDropdown(prev => !prev)
                     }
-                  }} className="relative flex items-center justify-center">
-                    <svg className="h-[18px] w-[18px] text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                  }} className="relative flex items-center justify-center p-1">
+                    <svg className="h-6 w-6" style={{ color: theme.text }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                     {notifications.filter(n => !n.read).length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white bg-red-500">
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-red-500">
                         {notifications.filter(n => !n.read).length}
                       </span>
                     )}
@@ -2453,53 +2453,78 @@ onPaymentConfirmed={handlePaymentSuccess}
       {showNotifDropdown && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 z-[59]" onClick={() => setShowNotifDropdown(false)} />
-          <div className="fixed top-0 left-0 right-0 z-[60] px-4 pt-2" style={{ paddingTop: "calc(8px + env(safe-area-inset-top, 0px))" }}>
-          <div className="mx-auto max-w-lg rounded-2xl border shadow-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard }}>
-            <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: theme.borderCard }}>
-              <span className="text-sm font-bold" style={{ color: theme.text }}>Notificações</span>
-              <button onClick={() => setShowNotifDropdown(false)} className="text-xs" style={{ color: theme.textMutedMore }}>✕</button>
+          <div className="fixed inset-0 z-[59]" onClick={() => {
+            // Delete all unread notifications when closing
+            setNotifications(prev => [])
+            const phone = customer.phone || customerData?.phone
+            if (phone) {
+              fetch("/api/customers/notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
+              }).catch(() => {})
+            }
+            setShowNotifDropdown(false)
+          }} />
+          <div className="fixed left-0 right-0 z-[60] px-4" style={{ top: "calc(88px + env(safe-area-inset-top, 0px))" }}>
+            <div className="mx-auto max-w-3xl rounded-2xl border overflow-hidden" style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard, boxShadow: "0 12px 40px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15)" }}>
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: theme.borderCard }}>
+                <span className="text-base font-bold" style={{ color: theme.text }}>Notificações</span>
+                <button onClick={() => {
+                  setNotifications(prev => [])
+                  const phone = customer.phone || customerData?.phone
+                  if (phone) {
+                    fetch("/api/customers/notifications", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
+                    }).catch(() => {})
+                  }
+                  setShowNotifDropdown(false)
+                }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgPage, color: theme.textMuted }}>
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {notifications.filter(n => !n.read).length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
+                </div>
+              ) : (
+                <div className="max-h-[50vh] overflow-y-auto">
+                  {notifications.filter(n => !n.read).slice(0, 10).map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        setShowNotifDropdown(false)
+                        if (n.type === "order_status") {
+                          setShowOrdersList(true)
+                        }
+                        // Delete this notification
+                        setNotifications(prev => prev.filter(x => x.id !== n.id))
+                        const phone = customer.phone || customerData?.phone
+                        if (phone) {
+                          fetch("/api/customers/notifications", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ phone, establishmentId: establishment.id, deleteId: n.id }),
+                          }).catch(() => {})
+                        }
+                      }}
+                      className="w-full flex items-start gap-3 px-4 py-3.5 text-left border-b last:border-b-0"
+                      style={{ borderColor: theme.borderCard, backgroundColor: `${theme.primary}05` }}
+                    >
+                      <span className="text-xl shrink-0 mt-0.5">
+                        {n.type === "order_status" ? "📦" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{n.title}</p>
+                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: theme.textMuted }}>{n.message}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            {notifications.filter(n => !n.read).length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-xs" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
-              </div>
-            ) : (
-              <div className="max-h-[50vh] overflow-y-auto">
-                {notifications.filter(n => !n.read).slice(0, 10).map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => {
-                      setShowNotifDropdown(false)
-                      if (n.type === "order_status") {
-                        setShowOrdersList(true)
-                      }
-                      // Delete this notification
-                      setNotifications(prev => prev.filter(x => x.id !== n.id))
-                      const phone = customer.phone || customerData?.phone
-                      if (phone) {
-                        fetch("/api/customers/notifications", {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ phone, establishmentId: establishment.id, deleteId: n.id }),
-                        }).catch(() => {})
-                      }
-                    }}
-                    className="w-full flex items-start gap-3 px-4 py-3 text-left border-b border-l-4"
-                    style={{ borderColor: theme.primary, backgroundColor: `${theme.primary}08` }}
-                  >
-                    <span className="text-base shrink-0 mt-0.5">
-                      {n.type === "order_status" ? "📦" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold truncate" style={{ color: theme.text }}>{n.title}</p>
-                      <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: theme.textMuted }}>{n.message}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           </div>
         </>
       )}
