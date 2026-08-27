@@ -156,6 +156,15 @@ export function OrdersScreen({
   const activeOrders = orders.filter(o => ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
   const historyOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status) || (o.status === "pending" && o.paymentStatus === "expired"))
 
+  const hasActive = activeOrders.length > 0
+
+  // Auto-switch to history when no active orders
+  useEffect(() => {
+    if (!hasActive && activeTab === "active") {
+      setActiveTab("history")
+    }
+  }, [hasActive])
+
   const fetchMessages = useCallback(async (orderId: string, token: string) => {
     try {
       const res = await fetch(`/api/orders/${orderId}/messages?token=${token}`)
@@ -226,14 +235,16 @@ export function OrdersScreen({
 
         {/* Tabs */}
         <div className="flex border-b shrink-0" style={{ borderColor: theme.borderCard }}>
-          <button
-            onClick={() => setActiveTab("active")}
-            className="flex-1 py-2.5 text-sm font-semibold text-center relative"
-            style={{ color: activeTab === "active" ? theme.primary : theme.textMutedMore }}
-          >
-            Em Andamento {activeOrders.length > 0 && <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: theme.primary }}>{activeOrders.length}</span>}
-            {activeTab === "active" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
-          </button>
+          {hasActive && (
+            <button
+              onClick={() => setActiveTab("active")}
+              className="flex-1 py-2.5 text-sm font-semibold text-center relative"
+              style={{ color: activeTab === "active" ? theme.primary : theme.textMutedMore }}
+            >
+              Em Andamento {activeOrders.length > 0 && <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: theme.primary }}>{activeOrders.length}</span>}
+              {activeTab === "active" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
+            </button>
+          )}
           <button
             onClick={() => setActiveTab("history")}
             className="flex-1 py-2.5 text-sm font-semibold text-center relative"
@@ -544,13 +555,10 @@ export function OrdersScreen({
                       <div key={key}>
                         <h3 className="text-sm font-bold mb-2 capitalize" style={{ color: theme.text }}>{monthLabel}</h3>
                         <div className="space-y-2">
-                          {monthGroups[key].map(order => {
+                           {monthGroups[key].map(order => {
                             const items = parseItems(order.items)
-                            const mainItem = items[0]
-
-                            const allOptions = items.flatMap((i: any) =>
-                              (i.additionalOptions || []).map((o: any) => o.name || o.option).filter(Boolean)
-                            )
+                            const firstItem = items[0]
+                            const itemNames = items.map((i: any) => i.name).filter(Boolean)
 
                             return (
                               <div
@@ -561,11 +569,11 @@ export function OrdersScreen({
                                 <div className="p-3">
                                   <div className="flex items-start gap-3">
                                     {/* Item image - circular */}
-                                    {mainItem?.image ? (
-                                      <img src={mainItem.image} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                                    {firstItem?.image ? (
+                                      <img src={firstItem.image} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
                                     ) : (
                                       <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                        {mainItem?.name?.charAt(0) || "#"}
+                                        {firstItem?.name?.charAt(0) || "#"}
                                       </div>
                                     )}
 
@@ -587,20 +595,13 @@ export function OrdersScreen({
                                         </span>
                                       </div>
 
-                                      {/* Line 2: Item name (bold) + total at end */}
+                                      {/* Line 2: All items joined + total at end */}
                                       <div className="flex items-center justify-between mt-0.5">
                                         <p className="text-sm font-bold truncate" style={{ color: theme.text }}>
-                                          {mainItem?.name || "Pedido"}
+                                          {itemNames.join(" • ") || "Pedido"}
                                         </p>
                                         <span className="text-sm font-bold shrink-0 ml-2" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
                                       </div>
-
-                                      {/* Line 3: Options / items description */}
-                                      {allOptions.length > 0 && (
-                                        <p className="text-xs mt-0.5 truncate" style={{ color: theme.textMutedMore }}>
-                                          {allOptions.join(" • ")}
-                                        </p>
-                                      )}
 
                                       {/* Line 4: Pedir novamente */}
                                       <div className="flex justify-end mt-1">

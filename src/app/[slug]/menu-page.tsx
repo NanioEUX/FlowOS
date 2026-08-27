@@ -328,7 +328,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   // Notifications
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string }[]>([])
-  const [showNotifications, setShowNotifications] = useState(false) // kept for compat but drawer removed
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false)
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
@@ -2422,20 +2422,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </button>
                   {/* Divider */}
                   <span className="w-px h-4 bg-gray-300" />
-                  {/* Notification bell — opens orders + clears notifications */}
-                  <button onClick={() => {
-                    setShowOrdersList(true)
-                    // Mark all notifications as read
-                    const phone = customer.phone || customerData?.phone
-                    if (phone) {
-                      fetch("/api/customers/notifications", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
-                      }).catch(() => {})
-                      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-                    }
-                  }} className="relative flex items-center justify-center">
+                  {/* Notification bell — toggles dropdown */}
+                  <button onClick={() => setShowNotifDropdown(prev => !prev)} className="relative flex items-center justify-center">
                     <svg className="h-[18px] w-[18px] text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white bg-red-500">
@@ -2453,6 +2441,65 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
       </div>
+
+      {/* Notification dropdown */}
+      {showNotifDropdown && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-[59]" onClick={() => setShowNotifDropdown(false)} />
+          <div className="fixed top-0 left-0 right-0 z-[60] px-4 pt-2" style={{ paddingTop: "calc(8px + env(safe-area-inset-top, 0px))" }}>
+          <div className="mx-auto max-w-lg rounded-2xl border shadow-xl overflow-hidden" style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard }}>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: theme.borderCard }}>
+              <span className="text-sm font-bold" style={{ color: theme.text }}>Notificações</span>
+              <button onClick={() => setShowNotifDropdown(false)} className="text-xs" style={{ color: theme.textMutedMore }}>✕</button>
+            </div>
+            {notifications.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="text-xs" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
+              </div>
+            ) : (
+              <div className="max-h-[50vh] overflow-y-auto">
+                {notifications.slice(0, 10).map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => {
+                      setShowNotifDropdown(false)
+                      if (n.type === "order_status") {
+                        // Open orders in Em Andamento tab
+                        setShowOrdersList(true)
+                      }
+                      // Mark as read
+                      if (!n.read) {
+                        setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+                        const phone = customer.phone || customerData?.phone
+                        if (phone) {
+                          fetch("/api/customers/notifications", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
+                          }).catch(() => {})
+                        }
+                      }
+                    }}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b ${n.read ? "" : "border-l-4"}`}
+                    style={{ borderColor: n.read ? theme.borderCard : theme.primary, backgroundColor: n.read ? "transparent" : `${theme.primary}08` }}
+                  >
+                    <span className="text-base shrink-0 mt-0.5">
+                      {n.type === "order_status" ? "📦" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate" style={{ color: theme.text }}>{n.title}</p>
+                      <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: theme.textMuted }}>{n.message}</p>
+                    </div>
+                    {!n.read && <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: theme.primary }} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          </div>
+        </>
+      )}
 
       {/* Spacer for fixed header */}
       <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
