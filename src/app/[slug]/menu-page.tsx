@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -311,6 +311,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cancelReason, setCancelReason] = useState<string>("")
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
+  const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number; items?: CartItem[] } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
@@ -615,6 +617,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cepAddress, setCepAddress] = useState<any>(null)
   const [cepLoading, setCepLoading] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
+  const [showAddressForm, setShowAddressForm] = useState(false)
+  const [addressForm, setAddressForm] = useState({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" })
+  const [addressFormLoading, setAddressFormLoading] = useState(false)
+  const [addressFormError, setAddressFormError] = useState("")
   const [addressSaved, setAddressSaved] = useState(false)
   const [cepError, setCepError] = useState("")
   const [orderError, setOrderError] = useState("")
@@ -928,9 +934,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     else setStoryProducts([])
   }
 
-  const fullAddress = cepAddress
-    ? `${cepAddress.logradouro}, ${customer.address || "s/n"} - ${cepAddress.bairro}, ${cepAddress.localidade} - ${cepAddress.uf}`
-    : customer.address
+  // Use selected address from new system, fallback to old system
+  const selectedAddr = addresses.find(a => a.id === selectedAddressId)
+  const fullAddress = selectedAddr
+    ? `${selectedAddr.street}, ${selectedAddr.number}${selectedAddr.neighborhood ? ` - ${selectedAddr.neighborhood}` : ``}, ${selectedAddr.city} - ${selectedAddr.state}`
+    : cepAddress
+      ? `${cepAddress.logradouro}, ${customer.address || "s/n"} - ${cepAddress.bairro}, ${cepAddress.localidade} - ${cepAddress.uf}`
+      : customer.address
 
   async function lookupCep() {
     if (cep.length !== 8) return
@@ -960,6 +970,85 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setCepAddress(null)
     setCepError("")
   }, [cep, orderType])
+
+  // Address management
+  async function fetchAddresses(customerId: string) {
+    try {
+      const res = await fetch(`/api/addresses?customerId=${customerId}`)
+      const data = await res.json()
+      if (data.addresses) {
+        setAddresses(data.addresses)
+        // Auto-select default or first
+        const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0]
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id)
+        }
+      }
+    } catch { }
+  }
+
+  async function deleteAddress(addressId: string) {
+    if (!customerData?.id) return
+    try {
+      await fetch(`/api/addresses?id=${addressId}&customerId=${customerData.id}`, { method: "DELETE" })
+      await fetchAddresses(customerData.id)
+    } catch { }
+  }
+
+  async function saveNewAddress() {
+    if (!customerData?.id) return
+    setAddressFormLoading(true)
+    setAddressFormError("")
+    try {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: customerData.id,
+          label: addressForm.label || null,
+          street: addressForm.street,
+          number: addressForm.number,
+          neighborhood: addressForm.neighborhood || null,
+          city: addressForm.city,
+          state: addressForm.state,
+          cep: addressForm.cep,
+          complement: addressForm.complement || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAddressFormError(data.error || "Erro ao salvar endereço")
+        return
+      }
+      await fetchAddresses(customerData.id)
+      setShowAddressForm(false)
+      setAddressForm({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" })
+    } catch {
+      setAddressFormError("Erro ao salvar endereço")
+    } finally {
+      setAddressFormLoading(false)
+    }
+  }
+
+  async function lookupAddressCep() {
+    if (addressForm.cep.length !== 8) return
+    setAddressFormLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${addressForm.cep}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setAddressForm(prev => ({
+          ...prev,
+          street: data.logradouro || "",
+          neighborhood: data.bairro || "",
+          city: data.localidade || "",
+          state: data.uf || "",
+        }))
+      }
+    } catch { } finally {
+      setAddressFormLoading(false)
+    }
+  }
 
   const [identifying, setIdentifying] = useState(false)
   const [customerData, setCustomerData] = useState<CustomerData | null>(null)
@@ -1096,6 +1185,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           if (data.cep) {
             setCep(data.cep)
           }
+          // Fetch saved addresses
+          fetchAddresses(data.id)
         } else {
           setCustomerData(null)
           // Reset verified state too — customer deleted or never existed
@@ -3303,57 +3394,205 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
                       </div>
                       <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Meus endereços</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                        {addresses.length}/3
+                      </span>
                       <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "enderecos" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
                     </button>
                     {expandedProfileItem === "enderecos" && (
                       <div className="px-4 pb-4 space-y-3">
-                        {customer.address ? (
-                          <div className="rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
-                            <p className="text-sm" style={{ color: theme.text }}>{customer.address}</p>
+                        {/* Address list */}
+                        {addresses.map((addr) => (
+                          <div key={addr.id} className="rounded-lg p-3 space-y-2" style={{ backgroundColor: theme.bgInput, border: addr.isDefault ? `1px solid ${theme.primary}40` : "none" }}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Home className="h-3.5 w-3.5" style={{ color: theme.textMuted }} />
+                                  <span className="text-xs font-semibold" style={{ color: theme.text }}>{addr.label || "Endereço"}</span>
+                                  {addr.isDefault && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                                      Principal
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm" style={{ color: theme.text }}>{addr.street}, {addr.number}</p>
+                                {addr.neighborhood && <p className="text-xs" style={{ color: theme.textMuted }}>{addr.neighborhood}</p>}
+                                <p className="text-xs" style={{ color: theme.textMuted }}>{addr.city} - {addr.state}</p>
+                                <p className="text-xs" style={{ color: theme.textMuted }}>CEP: {addr.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}</p>
+                                {addr.complement && <p className="text-xs" style={{ color: theme.textMuted }}>{addr.complement}</p>}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (confirm("Excluir este endereço?")) {
+                                    deleteAddress(addr.id)
+                                  }
+                                }}
+                                className="p-2 rounded-full transition-colors"
+                                style={{ color: "#ef4444" }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhum endereço cadastrado</p>
+                        ))}
+
+                        {addresses.length === 0 && (
+                          <p className="text-sm text-center py-2" style={{ color: theme.textMutedMore }}>Nenhum endereço cadastrado</p>
                         )}
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
-                          <input
-                            value={cep}
-                            onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                            placeholder="00000-000"
-                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                          />
-                        </div>
-                        {cepAddress && (
-                          <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: theme.bgInput }}>
-                            <p className="text-sm font-medium" style={{ color: theme.text }}>{cepAddress.logradouro}, {cepAddress.bairro}</p>
-                            <p className="text-xs" style={{ color: theme.textMutedMore }}>{cepAddress.localidade} - {cepAddress.uf}</p>
-                          </div>
+
+                        {/* Add new address button (always shown, limit checked on save) */}
+                        {addresses.length < 3 && (
+                          <button
+                            onClick={() => setShowAddressForm(true)}
+                            className="w-full rounded-lg border-2 border-dashed py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                            style={{ borderColor: `${theme.primary}40`, color: theme.primary }}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Adicionar novo endereço
+                          </button>
                         )}
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>Complemento e número</label>
-                          <input
-                            value={customer.address || ""}
-                            onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                            placeholder="Ex: Rua das Flores, 123 - Apt 4"
-                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(customer))
-                            setExpandedProfileItem(null)
-                          }}
-                          className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
-                          style={{ backgroundColor: theme.primary }}
-                        >
-                          Salvar endereço
-                        </button>
+
+                        {addresses.length >= 3 && (
+                          <p className="text-xs text-center" style={{ color: theme.textMutedMore }}>Limite de 3 endereços atingido. Exclua um para adicionar outro.</p>
+                        )}
                       </div>
                     )}
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
                   </div>
+
+                  {/* Address form modal */}
+                  {showAddressForm && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                      <div className="w-full max-w-lg rounded-t-2xl p-4 space-y-3 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: theme.bgCard }}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-base font-semibold" style={{ color: theme.text }}>Novo endereço</h3>
+                          <button onClick={() => { setShowAddressForm(false); setAddressFormError("") }} className="p-1">
+                            <X className="h-5 w-5" style={{ color: theme.textMuted }} />
+                          </button>
+                        </div>
+
+                        {addressFormError && (
+                          <p className="text-xs text-center py-2 rounded-lg" style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{addressFormError}</p>
+                        )}
+
+                        {/* Label */}
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Nome (opcional)</label>
+                          <input
+                            value={addressForm.label}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, label: e.target.value }))}
+                            placeholder="Ex: Casa, Trabalho"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+
+                        {/* CEP */}
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
+                            <input
+                              value={addressForm.cep}
+                              onChange={(e) => setAddressForm(prev => ({ ...prev, cep: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                              placeholder="00000-000"
+                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                            />
+                          </div>
+                          {addressForm.cep.length === 8 && (
+                            <button
+                              onClick={lookupAddressCep}
+                              className="mt-5 text-xs hover:underline"
+                              style={{ color: theme.primary }}
+                            >
+                              Buscar
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Street */}
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Rua</label>
+                          <input
+                            value={addressForm.street}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, street: e.target.value }))}
+                            placeholder="Rua, Avenida..."
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+
+                        {/* Number + Complement */}
+                        <div className="flex gap-2">
+                          <div className="w-1/3">
+                            <label className="text-xs" style={{ color: theme.textMuted }}>Número</label>
+                            <input
+                              value={addressForm.number}
+                              onChange={(e) => setAddressForm(prev => ({ ...prev, number: e.target.value }))}
+                              placeholder="123"
+                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs" style={{ color: theme.textMuted }}>Complemento</label>
+                            <input
+                              value={addressForm.complement}
+                              onChange={(e) => setAddressForm(prev => ({ ...prev, complement: e.target.value }))}
+                              placeholder="Apt 4, Bloco B..."
+                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Neighborhood */}
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Bairro</label>
+                          <input
+                            value={addressForm.neighborhood}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, neighborhood: e.target.value }))}
+                            placeholder="Bairro"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+
+                        {/* City + State */}
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs" style={{ color: theme.textMuted }}>Cidade</label>
+                            <input
+                              value={addressForm.city}
+                              onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                              placeholder="Cidade"
+                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                            />
+                          </div>
+                          <div className="w-16">
+                            <label className="text-xs" style={{ color: theme.textMuted }}>UF</label>
+                            <input
+                              value={addressForm.state}
+                              onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                              placeholder="SC"
+                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={saveNewAddress}
+                          disabled={addressFormLoading || !addressForm.street || !addressForm.number || !addressForm.city || !addressForm.state || !addressForm.cep}
+                          className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                          style={{ backgroundColor: theme.primary }}
+                        >
+                          {addressFormLoading ? "Salvando..." : "Salvar endereço"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Formas de pagamento */}
                   <div>
@@ -3945,13 +4184,67 @@ onPaymentConfirmed={handlePaymentSuccess}
               <div className="max-w-lg mx-auto space-y-4 pb-4">
                 {/* Address (delivery) */}
                 {orderType === "delivery" ? (
-                  <div className="space-y-2">
-                    {addressSaved && cepAddress ? (
-                      <div className="rounded-xl p-3 text-sm space-y-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                        <p style={{ color: theme.text }}>{cepAddress.logradouro}, {customer.address} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>
-                        <button type="button" onClick={() => setAddressSaved(false)} className="text-xs hover:underline" style={{ color: theme.accent }}>Alterar endereço</button>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
+
+                    {/* Address cards */}
+                    {addresses.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                        {addresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddressId(addr.id)
+                              setCustomer(prev => ({ ...prev, address: addr.number }))
+                              setCep(addr.cep)
+                              setAddressSaved(true)
+                            }}
+                            className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
+                            style={{
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
+                              border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Home className="h-3.5 w-3.5" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.textMuted }} />
+                              <span className="text-xs font-semibold truncate" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.text }}>
+                                {addr.label || "Endereço"}
+                              </span>
+                              {addr.isDefault && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>
+                              {addr.street}, {addr.number} - {addr.city}
+                            </p>
+                          </button>
+                        ))}
                       </div>
-                    ) : (
+                    )}
+
+                    {/* Selected address full info */}
+                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && (
+                      <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                        {(() => {
+                          const selected = addresses.find(a => a.id === selectedAddressId)!
+                          return (
+                            <>
+                              <p style={{ color: theme.text }}>
+                                {selected.street}, {selected.number} - {selected.neighborhood ? `${selected.neighborhood}, ` : ``}{selected.city} - {selected.state}
+                              </p>
+                              <p className="text-xs" style={{ color: theme.textMuted }}>CEP: {selected.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}</p>
+                              {selected.complement && <p className="text-xs" style={{ color: theme.textMuted }}>{selected.complement}</p>}
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {/* No addresses — show CEP input */}
+                    {addresses.length === 0 && (
                       <>
                         <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
                         <div className="flex gap-2">
@@ -3981,6 +4274,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                           </button>
                         )}
                       </>
+                    )}
+
+                    {/* Change address button */}
+                    {addresses.length > 0 && (
+                      <button type="button" onClick={() => setAddressSaved(false)}
+                        className="text-xs hover:underline" style={{ color: theme.accent }}>
+                        Alterar endereço
+                      </button>
                     )}
                   </div>
                 ) : (

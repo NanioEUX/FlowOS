@@ -225,8 +225,28 @@ model Customer {
   reviews           Review[]
   verificationCodes VerificationCode[]
   notifications     CustomerNotification[]
+  addresses         CustomerAddress[]
 
   @@index([establishmentId, phone])
+}
+
+model CustomerAddress {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label        String?  // "Casa", "Trabalho", etc.
+  street       String
+  number       String
+  neighborhood String?
+  city         String
+  state        String
+  cep          String
+  complement   String?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerId])
 }
 
 model VerificationCode {
