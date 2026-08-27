@@ -5,7 +5,16 @@ const IFOOD_AUTH = "/authentication/v1.0/oauth/token"
 const IFOOD_EVENTS = "/order/v1.0/events:polling"
 const IFOOD_ORDERS = "/order/v1.0/orders"
 
+// Token cache: key = clientId, value = { accessToken, expiresAt }
+const tokenCache = new Map<string, { accessToken: string; expiresAt: number }>()
+
 export async function getIfoodAuth(clientId: string, clientSecret: string): Promise<{ accessToken: string } | null> {
+  // Return cached token if still valid (with 5min safety margin)
+  const cached = tokenCache.get(clientId)
+  if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) {
+    return { accessToken: cached.accessToken }
+  }
+
   return new Promise((resolve) => {
     const data = new URLSearchParams({ grantType: "client_credentials", clientId, clientSecret }).toString()
     const options = { hostname: IFOOD_API, path: IFOOD_AUTH, method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(data), "Accept-Encoding": "identity" } }
@@ -19,6 +28,14 @@ export async function getIfoodAuth(clientId: string, clientSecret: string): Prom
             console.error("[ifood auth] HTTP", res.statusCode, body.slice(0, 200))
             resolve(null)
             return
+          }
+          // Cache the token with expiry
+          if (parsed.accessToken) {
+            const expiresIn = parsed.expiresIn || 3600 // default 1h
+            tokenCache.set(clientId, {
+              accessToken: parsed.accessToken,
+              expiresAt: Date.now() + expiresIn * 1000,
+            })
           }
           resolve(parsed)
         } catch {

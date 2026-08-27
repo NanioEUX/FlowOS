@@ -213,7 +213,7 @@ export async function PATCH(
               const confirmResult = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, "confirm", order.ifoodDeliveryBy ?? undefined)
               console.log("[ifood status update] auto-confirm on accept:", { orderId: order.externalId, success: confirmResult.success, status: confirmResult.status })
             }
-            const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action, order.ifoodDeliveryBy ?? undefined)
+            const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action, order.ifoodDeliveryBy ?? undefined, action === "cancel" ? (cancellationReason || undefined) : undefined)
             console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, isMerchantDelivery })
           } else if (status === "delivered" && !isMerchantDelivery) {
             console.log("[ifood sync] iFood delivery: skipping (iFood auto-concludes after dispatch)", { orderId: order.externalId })

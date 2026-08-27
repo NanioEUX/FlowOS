@@ -1049,7 +1049,6 @@ if (!data.error) {
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-zinc-900">iFood</h3>
-              <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">Em breve</span>
             </div>
             <p className="text-sm text-zinc-500">Integração com iFood para receber pedidos automaticamente.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">

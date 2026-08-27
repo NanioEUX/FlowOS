@@ -28,7 +28,7 @@ function pathForAction(action: string): string {
   }
 }
 
-function callEndpoint(action: string, token: string, merchantId: string, orderId: string, deliveredBy?: string): Promise<{ success: boolean; status?: number; body?: string }> {
+function callEndpoint(action: string, token: string, merchantId: string, orderId: string, deliveredBy?: string, cancelReason?: string): Promise<{ success: boolean; status?: number; body?: string }> {
   return new Promise((resolve) => {
     const suffix = pathForAction(action)
     if (!suffix) {
@@ -36,10 +36,12 @@ function callEndpoint(action: string, token: string, merchantId: string, orderId
       return
     }
 
-    // readyToPickup and dispatch require deliveredBy
     let requestBody: any = {}
     if (action === "readyToPickup" || action === "dispatch") {
       requestBody.deliveredBy = deliveredBy || "MERCHANT"
+    }
+    if (action === "cancel") {
+      requestBody.reason = cancelReason || "Pedido cancelado pelo estabelecimento"
     }
 
     const body = JSON.stringify(requestBody)
@@ -77,10 +79,11 @@ export async function updateIfoodStatus(
   merchantId: string,
   orderId: string,
   action: string,
-  deliveredBy?: string
+  deliveredBy?: string,
+  cancelReason?: string
 ): Promise<{ success: boolean; status?: number; body?: string; tried?: string[] }> {
   const tried: string[] = [action]
-  let result = await callEndpoint(action, token, merchantId, orderId, deliveredBy)
+  let result = await callEndpoint(action, token, merchantId, orderId, deliveredBy, cancelReason)
 
   // Fallback: if /readyForPickup returns 404 (sandbox limitation), fall back to
   // /confirm (idempotent) so the order at least reaches CFM state.
@@ -89,7 +92,7 @@ export async function updateIfoodStatus(
     result.status === 404
   ) {
     tried.push("confirm")
-    const fallback = await callEndpoint("confirm", token, merchantId, orderId)
+    const fallback = await callEndpoint("confirm", token, merchantId, orderId, deliveredBy, cancelReason)
     if (fallback.success) {
       return { ...fallback, tried }
     }

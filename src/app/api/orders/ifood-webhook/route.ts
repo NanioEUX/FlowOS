@@ -65,7 +65,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, msg: "no establishment enabled" })
     }
 
-    const est = establishments[0]
+    // Helper: find the correct establishment for an event
+    // First try matching via existing order, then fallback to first enabled
+    async function findEstablishment(orderId: string) {
+      // Try to find via existing order
+      const existingOrder = await prisma.order.findFirst({
+        where: { externalId: orderId },
+        select: { establishmentId: true },
+      })
+      if (existingOrder) {
+        return establishments.find(e => e.id === existingOrder.establishmentId) || establishments[0]
+      }
+      return establishments[0]
+    }
 
     let created = 0
     let updated = 0
@@ -88,6 +100,8 @@ export async function POST(req: NextRequest) {
         console.log("[ifood webhook] keepalive received, ok")
         continue
       }
+
+      const est = await findEstablishment(orderId)
 
       if (["PLACED", "CFM", "CONFIRMED"].includes(code)) {
         const existing = await prisma.order.findFirst({
