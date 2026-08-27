@@ -36,6 +36,7 @@ interface Props {
   orderType?: string
   deliveryCode?: string | null
   deliveryAddress?: string | null
+  establishmentAddress?: string | null
   onTrack: () => void
   onContinue: () => void
 }
@@ -61,6 +62,7 @@ export function OrderConfirmationScreen({
   orderType,
   deliveryCode,
   deliveryAddress,
+  establishmentAddress,
   onTrack,
   onContinue,
 }: Props) {
@@ -163,13 +165,27 @@ export function OrderConfirmationScreen({
           </div>
 
           {/* Delivery Address */}
-          {deliveryAddress && orderType === "delivery" && (
+          {orderType === "delivery" && deliveryAddress && (
             <div className="rounded-xl p-3 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
               <div className="flex items-center gap-2 mb-1">
                 <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
-                <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Ponto de Coleta e Entrega</span>
+                <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Endereço da entrega</span>
               </div>
               <p className="text-sm" style={{ color: theme.text }}>{deliveryAddress}</p>
+            </div>
+          )}
+
+          {/* Pickup Address */}
+          {orderType === "pickup" && establishmentAddress && (
+            <div className="rounded-xl p-3 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Retirar no local</span>
+              </div>
+              <p className="text-sm" style={{ color: theme.text }}>{establishmentAddress}</p>
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishmentAddress || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.primary }}>
+                Abrir no Maps
+              </a>
             </div>
           )}
 
@@ -219,9 +235,6 @@ export function OrderConfirmationScreen({
         >
           Acompanhar pedido <ArrowRight className="h-4 w-4" />
         </button>
-        <p className="text-center text-xs mt-2" style={{ color: theme.textMutedMore }}>
-          Acompanhe o status em tempo real
-        </p>
       </div>
     </div>
   )

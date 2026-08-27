@@ -2299,6 +2299,15 @@ const handlePaymentSuccess = useCallback(() => {
     pending: "Pedido Recebido",
     confirmed: "Confirmado",
     preparing: "Preparando",
+    ready: "Pronto para Retirada",
+    out_for_delivery: "Saiu para Entrega",
+    delivered: "Entregue",
+  }
+
+  const statusLabelsDelivery: Record<string, string> = {
+    pending: "Pedido Recebido",
+    confirmed: "Confirmado",
+    preparing: "Preparando",
     ready: "Pronto",
     out_for_delivery: "Saiu para Entrega",
     delivered: "Entregue",
@@ -3993,6 +4002,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex-1">
                         <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
                         <p className="text-sm" style={{ color: theme.accentMid }}>{establishment.address}</p>
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
+                          Abrir no Maps
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -4228,6 +4240,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div>
                         <div className="text-xs font-semibold" style={{ color: theme.text }}>Usar meus pontos</div>
                         <div className="text-[10px]" style={{ color: theme.textMutedMore }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
+                        {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount && (
+                          <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Máx. {parsedLoyalty.redeemPoints} pts/pedido = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto</div>
+                        )}
                       </div>
                     </div>
                     <button onClick={() => setUseLoyalty(!useLoyalty)}
@@ -4364,9 +4379,15 @@ onPaymentConfirmed={handlePaymentSuccess}
 
                 {/* Pickup address — compact display */}
                 {orderType === "pickup" && establishment.address && (
-                  <div className="rounded-xl p-3 text-sm border" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
-                    <StoreIcon className="inline h-4 w-4 mr-1" />
-                    Retirada no local: {establishment.address}
+                  <div className="rounded-xl p-3 text-sm border space-y-1" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
+                    <div className="flex items-center gap-2">
+                      <StoreIcon className="h-4 w-4" />
+                      <span className="font-medium">Retirada no local</span>
+                    </div>
+                    <p>{establishment.address}</p>
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline inline-block">
+                      Abrir no Maps
+                    </a>
                   </div>
                 )}
 
@@ -4503,6 +4524,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
                       </div>
                     )}
+                    {useLoyalty && loyaltyDiscount > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                        <span>Desconto (pontos)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-bold" style={{ color: theme.text }}>
                       <span>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
@@ -4542,6 +4568,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 orderType={orderResult?.orderType}
                 deliveryCode={orderResult?.deliveryCode}
                 deliveryAddress={orderType === "delivery" ? fullAddress : null}
+                establishmentAddress={establishment.address || null}
                 onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
@@ -4667,7 +4694,11 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (() => {
-                const flowSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+                const isPickup = trackingOrder.orderType === "pickup"
+                const allSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+                const flowSteps = isPickup
+                  ? ["pending", "confirmed", "preparing", "ready"]
+                  : allSteps
                 const flowIdx = flowSteps.indexOf(trackingOrder.status)
                 const cancelled = trackingOrder.status === "cancelled"
                 const createdAt = trackingOrder.createdAt ? new Date(trackingOrder.createdAt) : null
@@ -4685,7 +4716,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {/* Status header */}
                     <div className="text-center">
                       <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
-                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{statusLabels[trackingOrder.status] || trackingOrder.status}</h3>
+                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{(isPickup ? statusLabels : statusLabelsDelivery)[trackingOrder.status] || trackingOrder.status}</h3>
                       <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
                     </div>
 
@@ -4740,6 +4771,20 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     )}
 
+                    {/* Pickup address with Maps link */}
+                    {isPickup && establishment.address && (
+                      <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                          <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Local de retirada</span>
+                        </div>
+                        <p className="text-sm" style={{ color: theme.text }}>{establishment.address}</p>
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.primary }}>
+                          Abrir no Maps
+                        </a>
+                      </div>
+                    )}
+
                     {/* Timeline */}
                     <div className="relative pl-4">
                       {flowSteps.map((step, i) => {
@@ -4769,7 +4814,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             {/* Label */}
                             <div className="pt-0.5 pb-4 min-w-0 flex-1">
                               <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
-                                {statusLabels[step]}
+                                {(isPickup ? statusLabels : statusLabelsDelivery)[step]}
                               </span>
                               {isCurrent && estimatedTime && (
                                 <span className="ml-2 text-[11px] font-medium" style={{ color: theme.primary }}>{estimatedTime}</span>
