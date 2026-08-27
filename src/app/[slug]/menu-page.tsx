@@ -322,6 +322,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [pushNotification, setPushNotification] = useState<{ title: string; body: string; url: string } | null>(null)
   const [showCustomerProfile, setShowCustomerProfile] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
+  const [expandedProfileItem, setExpandedProfileItem] = useState<string | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
@@ -3129,13 +3130,12 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="w-full max-w-lg rounded-t-2xl border-t backdrop-blur-xl overflow-hidden" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             {/* Close button */}
             <div className="absolute top-4 right-4 z-10">
-              <button onClick={() => { setShowCustomerProfile(false); setEditingProfile(false) }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgCard }}>
+              <button onClick={() => { setShowCustomerProfile(false); setExpandedProfileItem(null) }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgCard }}>
                 <X className="h-4 w-4" style={{ color: theme.textMuted }} />
               </button>
             </div>
 
-            {!editingProfile ? (
-              <div className="max-h-[85vh] overflow-y-auto pb-6">
+            <div className="max-h-[85vh] overflow-y-auto pb-6">
                 {/* Header with Avatar + Name + Tier */}
                 <div className="px-5 pt-5 pb-4">
                   <div className="flex items-center gap-3.5">
@@ -3210,80 +3210,193 @@ onPaymentConfirmed={handlePaymentSuccess}
                   )
                 })()}
 
-                {/* Quick Actions — 3 columns */}
-                <div className="mx-4 mb-5 grid grid-cols-3 gap-2.5">
-                  <button
-                    onClick={() => { setShowCustomerProfile(false); setShowOrdersList(true) }}
-                    className="flex flex-col items-center gap-1.5 rounded-xl py-3.5 transition-colors"
-                    style={{ backgroundColor: theme.bgCard }}
-                  >
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}15` }}>
-                      <ShoppingBag className="h-5 w-5" style={{ color: theme.primary }} />
+                {/* Stats Row */}
+                {customerData && (
+                  <div className="mx-4 mb-4 flex items-center gap-4 rounded-xl px-4 py-3" style={{ backgroundColor: theme.bgCard }}>
+                    <div className="flex items-center gap-2.5 flex-1">
+                      <span className="text-2xl">📦</span>
+                      <div>
+                        <p className="text-lg font-bold" style={{ color: theme.text }}>{customerData.totalOrders || 0}</p>
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Pedidos realizados</p>
+                      </div>
                     </div>
-                    <span className="text-[11px] font-semibold" style={{ color: theme.text }}>
-                      {customerData?.totalOrders || 0} pedidos
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowCustomerProfile(false)
-                      setShowCart(true)
-                      setCartStep("cart")
-                    }}
-                    className="flex flex-col items-center gap-1.5 rounded-xl py-3.5 transition-colors"
-                    style={{ backgroundColor: theme.bgCard }}
-                  >
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}15` }}>
-                      <Repeat className="h-5 w-5" style={{ color: theme.primary }} />
+                    <div className="h-8 w-px" style={{ backgroundColor: theme.borderSubtle }} />
+                    <div className="flex items-center gap-2.5 flex-1">
+                      <span className="text-2xl">💰</span>
+                      <div>
+                        <p className="text-lg font-bold" style={{ color: theme.text }}>{formatCurrency((customerData?.realTotalSpent ?? customerData?.totalSpent) || 0)}</p>
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Economizados</p>
+                      </div>
                     </div>
-                    <span className="text-[11px] font-semibold" style={{ color: theme.text }}>Pedir novamente</span>
-                  </button>
-                  <button
-                    onClick={() => { setShowCustomerProfile(false); openIdentifyModal() }}
-                    className="flex flex-col items-center gap-1.5 rounded-xl py-3.5 transition-colors"
-                    style={{ backgroundColor: theme.bgCard }}
-                  >
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}15` }}>
-                      <MapPin className="h-5 w-5" style={{ color: theme.primary }} />
-                    </div>
-                    <span className="text-[11px] font-semibold" style={{ color: theme.text }}>Endereços</span>
-                  </button>
-                </div>
+                  </div>
+                )}
 
-                {/* Section: MINHA CONTA */}
-                <div className="mx-4 mb-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: theme.textMutedMore }}>Minha Conta</p>
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard }}>
+                {/* Menu Items — flat list, expandable */}
+                <div className="mx-4 rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard }}>
+
+                  {/* Meus dados pessoais */}
+                  <div>
                     <button
-                      onClick={() => setEditingProfile(true)}
+                      onClick={() => setExpandedProfileItem(expandedProfileItem === "dados" ? null : "dados")}
                       className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
                     >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
                         <User className="h-4 w-4" style={{ color: theme.primary }} />
                       </div>
                       <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Meus dados pessoais</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                      <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "dados" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
                     </button>
+                    {expandedProfileItem === "dados" && (
+                      <div className="px-4 pb-4 space-y-3">
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Nome</label>
+                          <input
+                            value={customer.name}
+                            onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
+                          <input
+                            value={phoneInput}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
+                              let formatted = raw
+                              if (raw.length > 2) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`
+                              if (raw.length > 7) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`
+                              setPhoneInput(formatted)
+                            }}
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const phoneRaw = phoneInput.replace(/\D/g, "")
+                            if (!sessionVerified) {
+                              setExpandedProfileItem(null)
+                              setShowCustomerProfile(false)
+                              markVerifySessionStart()
+                              setShowVerifyModal(true)
+                              setVerifyError("")
+                              return
+                            }
+                            if (customerData?.id) {
+                              try {
+                                await fetch("/api/customers", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    id: customerData.id,
+                                    name: customer.name,
+                                    phone: phoneRaw,
+                                    cpf: customer.cpf,
+                                    establishmentId: establishment.id,
+                                  }),
+                                })
+                              } catch {}
+                            }
+                            localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, phone: phoneRaw }))
+                            setExpandedProfileItem(null)
+                          }}
+                          className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
+                          style={{ backgroundColor: theme.primary }}
+                        >
+                          Salvar
+                        </button>
+                      </div>
+                    )}
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
+                  </div>
+
+                  {/* Endereços */}
+                  <div>
                     <button
-                      onClick={() => { setShowCustomerProfile(false); openIdentifyModal() }}
+                      onClick={() => setExpandedProfileItem(expandedProfileItem === "enderecos" ? null : "enderecos")}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
+                    >
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
+                        <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                      </div>
+                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Meus endereços</span>
+                      <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "enderecos" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
+                    </button>
+                    {expandedProfileItem === "enderecos" && (
+                      <div className="px-4 pb-4 space-y-3">
+                        {customer.address ? (
+                          <div className="rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
+                            <p className="text-sm" style={{ color: theme.text }}>{customer.address}</p>
+                          </div>
+                        ) : (
+                          <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhum endereço cadastrado</p>
+                        )}
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
+                          <input
+                            value={cep}
+                            onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                            placeholder="00000-000"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        {cepAddress && (
+                          <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: theme.bgInput }}>
+                            <p className="text-sm font-medium" style={{ color: theme.text }}>{cepAddress.logradouro}, {cepAddress.bairro}</p>
+                            <p className="text-xs" style={{ color: theme.textMutedMore }}>{cepAddress.localidade} - {cepAddress.uf}</p>
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Complemento e número</label>
+                          <input
+                            value={customer.address || ""}
+                            onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                            placeholder="Ex: Rua das Flores, 123 - Apt 4"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(customer))
+                            setExpandedProfileItem(null)
+                          }}
+                          className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
+                          style={{ backgroundColor: theme.primary }}
+                        >
+                          Salvar endereço
+                        </button>
+                      </div>
+                    )}
+                    <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
+                  </div>
+
+                  {/* Formas de pagamento */}
+                  <div>
+                    <button
+                      onClick={() => setExpandedProfileItem(expandedProfileItem === "pagamento" ? null : "pagamento")}
                       className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
                     >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
                         <CreditCard className="h-4 w-4" style={{ color: theme.primary }} />
                       </div>
                       <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Formas de pagamento</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                      <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "pagamento" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
                     </button>
+                    {expandedProfileItem === "pagamento" && (
+                      <div className="px-4 pb-4">
+                        <p className="text-sm" style={{ color: theme.textMutedMore }}>Em breve você poderá cadastrar seus cartões aqui.</p>
+                      </div>
+                    )}
+                    <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
                   </div>
-                </div>
 
-                {/* Section: BENEFÍCIOS */}
-                <div className="mx-4 mb-2 mt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: theme.textMutedMore }}>Benefícios</p>
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard }}>
+                  {/* Histórico de pedidos */}
+                  <div>
                     <button
-                      onClick={() => { setShowCustomerProfile(false); setShowOrdersList(true) }}
+                      onClick={() => { setExpandedProfileItem(null); setShowCustomerProfile(false); setShowOrdersList(true) }}
                       className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
                     >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
@@ -3293,67 +3406,66 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
                     </button>
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
-                    <button
-                      onClick={() => { setShowCustomerProfile(false); openIdentifyModal() }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
-                    >
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
-                        <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
-                      </div>
-                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Meus endereços</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-                    </button>
-                    <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
-                    <button
-                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
-                    >
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "#fef3c7" }}>
-                        <Gift className="h-4 w-4 text-amber-500" />
-                      </div>
-                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Indique e ganhe {formatCurrency(parsedLoyalty?.redeemDiscount || 10)}</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">Novo</span>
-                    </button>
                   </div>
-                </div>
 
-                {/* Section: PREFERÊNCIAS */}
-                <div className="mx-4 mb-2 mt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: theme.textMutedMore }}>Preferências</p>
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: theme.bgCard }}>
-                    <div className="flex items-center gap-3 px-4 py-3.5">
+                  {/* Cupons de desconto */}
+                  <div>
+                    <button
+                      onClick={() => setExpandedProfileItem(expandedProfileItem === "cupons" ? null : "cupons")}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
+                    >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
-                        <Bell className="h-4 w-4" style={{ color: theme.primary }} />
+                        <Tag className="h-4 w-4" style={{ color: theme.primary }} />
                       </div>
-                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Notificações</span>
-                      <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
-                    </div>
+                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Cupons de desconto</span>
+                      <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "cupons" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
+                    </button>
+                    {expandedProfileItem === "cupons" && (
+                      <div className="px-4 pb-4">
+                        <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhum cupom disponível no momento.</p>
+                      </div>
+                    )}
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
-                    <button className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70">
+                  </div>
+
+                  {/* Notificações — texto + toggle */}
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
+                      <Bell className="h-4 w-4" style={{ color: theme.primary }} />
+                    </div>
+                    <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Notificações</span>
+                    <PushSubscribe establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
+                  </div>
+                  <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
+
+                  {/* Ajuda e suporte */}
+                  <div>
+                    <button
+                      onClick={() => setExpandedProfileItem(expandedProfileItem === "ajuda" ? null : "ajuda")}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
+                    >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
                         <HelpCircle className="h-4 w-4" style={{ color: theme.primary }} />
                       </div>
                       <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Ajuda e suporte</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                      <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProfileItem === "ajuda" ? "rotate-90" : ""}`} style={{ color: theme.textMutedMore }} />
                     </button>
-                    <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
-                    <button className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70">
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
-                        <Shield className="h-4 w-4" style={{ color: theme.primary }} />
+                    {expandedProfileItem === "ajuda" && (
+                      <div className="px-4 pb-4">
+                        <p className="text-sm" style={{ color: theme.textMutedMore }}>Em caso de dúvidas, entre em contato pelo WhatsApp do estabelecimento.</p>
                       </div>
-                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Segurança da conta</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-                    </button>
+                    )}
                   </div>
                 </div>
 
                 {/* Install App */}
-                <div className="mx-4 mt-3">
+                <div className="mx-4 mt-4">
                   <InstallButton />
                 </div>
 
                 {/* Logout */}
                 {(customer.phone || customerData?.phone) && (
-                  <div className="mx-4 mt-4">
+                  <div className="mx-4 mt-3">
                     <button
                       onClick={() => setShowLogoutConfirm(true)}
                       className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors border"
@@ -3365,80 +3477,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
               </div>
-            ) : (
-              /* Edit Mode */
-              <div className="p-6 space-y-3">
-                <div>
-                  <label className="text-xs" style={{ color: theme.textMuted }}>Nome</label>
-                  <input
-                    value={customer.name}
-                    onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
-                  <input
-                    value={phoneInput}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
-                      let formatted = raw
-                      if (raw.length > 2) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`
-                      if (raw.length > 7) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`
-                      setPhoneInput(formatted)
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => setEditingProfile(false)}
-                    className="flex-1 rounded-lg py-2.5 text-sm font-medium border hover:opacity-80"
-                    style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderCard }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const phoneRaw = phoneInput.replace(/\D/g, "")
-                      const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                      if (!sessionVerified) {
-                        setEditingProfile(false)
-                        setShowCustomerProfile(false)
-                        markVerifySessionStart()
-                        setShowVerifyModal(true)
-                        setVerifyError("")
-                        return
-                      }
-                      if (customerData?.id) {
-                        try {
-                          await fetch("/api/customers", {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              id: customerData.id,
-                              name: customer.name,
-                              phone: phoneRaw,
-                              cpf: customer.cpf,
-                              establishmentId: establishment.id,
-                            }),
-                          })
-                        } catch {}
-                      }
-                      localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, phone: phoneRaw }))
-                      setEditingProfile(false)
-                      setShowCustomerProfile(false)
-                    }}
-                    className="flex-1 rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90"
-                    style={{ backgroundColor: theme.primary }}
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
