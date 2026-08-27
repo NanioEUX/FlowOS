@@ -618,6 +618,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cepLoading, setCepLoading] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
   const [showAddressForm, setShowAddressForm] = useState(false)
+  const [showPaymentAddressPicker, setShowPaymentAddressPicker] = useState(false)
   const [addressForm, setAddressForm] = useState({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" })
   const [addressFormLoading, setAddressFormLoading] = useState(false)
   const [addressFormError, setAddressFormError] = useState("")
@@ -4015,7 +4016,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Address selection (delivery) — Tela 1 */}
                 {orderType === "delivery" && cart.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
+                      {addresses.length > 0 && addresses.length < 3 && (
+                        <button type="button" onClick={() => setShowAddressForm(true)} className="text-xs font-medium" style={{ color: theme.primary }}>
+                          + Novo endereço
+                        </button>
+                      )}
+                    </div>
 
                     {/* Address cards */}
                     {addresses.length > 0 && (
@@ -4052,24 +4060,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                             </p>
                           </button>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Selected address full info */}
-                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && (
-                      <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                        {(() => {
-                          const selected = addresses.find(a => a.id === selectedAddressId)!
-                          return (
-                            <>
-                              <p style={{ color: theme.text }}>
-                                {selected.street}, {selected.number} - {selected.neighborhood ? `${selected.neighborhood}, ` : ``}{selected.city} - {selected.state}
-                              </p>
-                              <p className="text-xs" style={{ color: theme.textMuted }}>CEP: {selected.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}</p>
-                              {selected.complement && <p className="text-xs" style={{ color: theme.textMuted }}>{selected.complement}</p>}
-                            </>
-                          )
-                        })()}
                       </div>
                     )}
 
@@ -4280,30 +4270,72 @@ onPaymentConfirmed={handlePaymentSuccess}
               <div className="max-w-lg mx-auto space-y-4 pb-4">
                 {/* Selected address — compact display with alterar */}
                 {orderType === "delivery" && (
-                  <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
-                        <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Entregando em:</span>
+                  <div className="space-y-3">
+                    {/* Address cards — expandable */}
+                    {showPaymentAddressPicker && addresses.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                        {addresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddressId(addr.id)
+                              setCustomer(prev => ({ ...prev, address: addr.number }))
+                              setCep(addr.cep)
+                              setAddressSaved(true)
+                              setShowPaymentAddressPicker(false)
+                            }}
+                            className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
+                            style={{
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
+                              border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Home className="h-3.5 w-3.5" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.textMuted }} />
+                              <span className="text-xs font-semibold truncate" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.text }}>
+                                {addr.label || "Endereço"}
+                              </span>
+                              {addr.isDefault && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>
+                              {addr.street}, {addr.number} - {addr.city}
+                            </p>
+                          </button>
+                        ))}
                       </div>
-                      <button type="button" onClick={() => setCartStep("cart")} className="text-xs hover:underline" style={{ color: theme.accent }}>
-                        Alterar
-                      </button>
-                    </div>
-                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) ? (
-                      (() => {
-                        const selected = addresses.find(a => a.id === selectedAddressId)!
-                        return (
-                          <p className="text-sm mt-1" style={{ color: theme.text }}>
-                            {selected.label ? `${selected.label} — ` : ``}{selected.street}, {selected.number}{selected.neighborhood ? ` - ${selected.neighborhood}` : ``}, {selected.city} - {selected.state}
-                          </p>
-                        )
-                      })()
-                    ) : fullAddress ? (
-                      <p className="text-sm mt-1" style={{ color: theme.text }}>{fullAddress}</p>
-                    ) : (
-                      <p className="text-sm mt-1" style={{ color: theme.textMutedMore }}>Nenhum endereço selecionado</p>
                     )}
+
+                    {/* Selected address info card */}
+                    <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                          <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Entregando em:</span>
+                        </div>
+                        <button type="button" onClick={() => setShowPaymentAddressPicker(!showPaymentAddressPicker)} className="text-xs hover:underline" style={{ color: theme.accent }}>
+                          {showPaymentAddressPicker ? "Fechar" : "Alterar"}
+                        </button>
+                      </div>
+                      {selectedAddressId && addresses.find(a => a.id === selectedAddressId) ? (
+                        (() => {
+                          const selected = addresses.find(a => a.id === selectedAddressId)!
+                          return (
+                            <p className="text-sm mt-1" style={{ color: theme.text }}>
+                              {selected.label ? `${selected.label} — ` : ``}{selected.street}, {selected.number}{selected.neighborhood ? ` - ${selected.neighborhood}` : ``}, {selected.city} - {selected.state}
+                            </p>
+                          )
+                        })()
+                      ) : fullAddress ? (
+                        <p className="text-sm mt-1" style={{ color: theme.text }}>{fullAddress}</p>
+                      ) : (
+                        <p className="text-sm mt-1" style={{ color: theme.textMutedMore }}>Nenhum endereço selecionado</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
