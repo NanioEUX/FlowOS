@@ -4012,6 +4012,102 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
 
+                {/* Address selection (delivery) — Tela 1 */}
+                {orderType === "delivery" && cart.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
+
+                    {/* Address cards */}
+                    {addresses.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                        {addresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddressId(addr.id)
+                              setCustomer(prev => ({ ...prev, address: addr.number }))
+                              setCep(addr.cep)
+                              setAddressSaved(true)
+                            }}
+                            className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
+                            style={{
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
+                              border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Home className="h-3.5 w-3.5" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.textMuted }} />
+                              <span className="text-xs font-semibold truncate" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.text }}>
+                                {addr.label || "Endereço"}
+                              </span>
+                              {addr.isDefault && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>
+                              {addr.street}, {addr.number} - {addr.city}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selected address full info */}
+                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && (
+                      <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                        {(() => {
+                          const selected = addresses.find(a => a.id === selectedAddressId)!
+                          return (
+                            <>
+                              <p style={{ color: theme.text }}>
+                                {selected.street}, {selected.number} - {selected.neighborhood ? `${selected.neighborhood}, ` : ``}{selected.city} - {selected.state}
+                              </p>
+                              <p className="text-xs" style={{ color: theme.textMuted }}>CEP: {selected.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}</p>
+                              {selected.complement && <p className="text-xs" style={{ color: theme.textMuted }}>{selected.complement}</p>}
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {/* No addresses — show CEP input */}
+                    {addresses.length === 0 && (
+                      <>
+                        <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
+                        <div className="flex gap-2">
+                          <div className="space-y-1">
+                            <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
+                            <input placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                              className="w-32 h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
+                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved && !!cepAddress} />
+                          </div>
+                          {cep.length === 8 && !cepLoading && (
+                            <button type="button" onClick={lookupCep} className="mt-6 text-xs hover:underline self-start" style={{ color: theme.accent }}>Buscar</button>
+                          )}
+                          {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin" style={{ color: theme.textMutedMore }} />}
+                        </div>
+                        {cepError && <p className="text-xs text-red-400">{cepError}</p>}
+                        {cepAddress && <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>}
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
+                          <input placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
+                        </div>
+                        {cepAddress && customer.address && (
+                          <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }}
+                            className="w-full rounded-xl px-4 py-2 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: theme.primary }}>
+                            Salvar endereço
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* Pending order notice */}
                 {pendingOrderNumber && (
                   <div className="rounded-xl p-2 text-center" style={{ backgroundColor: `${theme.primary}15`, border: `1px solid ${theme.primary}30` }}>
@@ -4134,102 +4230,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       style={{ borderColor: useLoyalty ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty ? theme.primary : "transparent" }}>
                       {useLoyalty && <Check className="h-3 w-3 text-white" />}
                     </button>
-                  </div>
-                )}
-
-                {/* Address selection (delivery) — Tela 1 */}
-                {orderType === "delivery" && cart.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
-
-                    {/* Address cards */}
-                    {addresses.length > 0 && (
-                      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-                        {addresses.map((addr) => (
-                          <button
-                            key={addr.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedAddressId(addr.id)
-                              setCustomer(prev => ({ ...prev, address: addr.number }))
-                              setCep(addr.cep)
-                              setAddressSaved(true)
-                            }}
-                            className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
-                            style={{
-                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
-                              border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
-                            }}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <Home className="h-3.5 w-3.5" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.textMuted }} />
-                              <span className="text-xs font-semibold truncate" style={{ color: selectedAddressId === addr.id ? theme.primary : theme.text }}>
-                                {addr.label || "Endereço"}
-                              </span>
-                              {addr.isDefault && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
-                                  Principal
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] leading-tight truncate" style={{ color: theme.textMuted }}>
-                              {addr.street}, {addr.number} - {addr.city}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Selected address full info */}
-                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && (
-                      <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                        {(() => {
-                          const selected = addresses.find(a => a.id === selectedAddressId)!
-                          return (
-                            <>
-                              <p style={{ color: theme.text }}>
-                                {selected.street}, {selected.number} - {selected.neighborhood ? `${selected.neighborhood}, ` : ``}{selected.city} - {selected.state}
-                              </p>
-                              <p className="text-xs" style={{ color: theme.textMuted }}>CEP: {selected.cep.replace(/(\d{5})(\d{3})/, "$1-$2")}</p>
-                              {selected.complement && <p className="text-xs" style={{ color: theme.textMuted }}>{selected.complement}</p>}
-                            </>
-                          )
-                        })()}
-                      </div>
-                    )}
-
-                    {/* No addresses — show CEP input */}
-                    {addresses.length === 0 && (
-                      <>
-                        <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
-                        <div className="flex gap-2">
-                          <div className="space-y-1">
-                            <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
-                            <input placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                              className="w-32 h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved && !!cepAddress} />
-                          </div>
-                          {cep.length === 8 && !cepLoading && (
-                            <button type="button" onClick={lookupCep} className="mt-6 text-xs hover:underline self-start" style={{ color: theme.accent }}>Buscar</button>
-                          )}
-                          {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin" style={{ color: theme.textMutedMore }} />}
-                        </div>
-                        {cepError && <p className="text-xs text-red-400">{cepError}</p>}
-                        {cepAddress && <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>}
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
-                          <input placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
-                        </div>
-                        {cepAddress && customer.address && (
-                          <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }}
-                            className="w-full rounded-xl px-4 py-2 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: theme.primary }}>
-                            Salvar endereço
-                          </button>
-                        )}
-                      </>
-                    )}
                   </div>
                 )}
 
