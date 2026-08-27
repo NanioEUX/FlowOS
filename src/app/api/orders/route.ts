@@ -13,7 +13,7 @@ export const revalidate = 5
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, tableNumber, waiterName, changeFor, isScheduled, deliveryDate } = body
+    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, firstPurchaseDiscount, couponDiscount, tableNumber, waiterName, changeFor, isScheduled, deliveryDate } = body
 
     console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method)
 
@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
     const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
     const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
     const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
-    let calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue)
+    const couponDiscountValue = couponDiscount ? (typeof couponDiscount === "string" ? parseFloat(couponDiscount) : couponDiscount) : 0
+    const firstPurchaseDiscountValue = firstPurchaseDiscount ? (typeof firstPurchaseDiscount === "string" ? parseFloat(firstPurchaseDiscount) : firstPurchaseDiscount) : 0
+    let calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue - couponDiscountValue - firstPurchaseDiscountValue)
 
     const isPayOnDelivery =
       paymentMethod &&

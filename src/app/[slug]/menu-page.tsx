@@ -1675,6 +1675,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           total,
           deliveryFee,
           couponId: couponData?.id || undefined,
+          couponDiscount: couponDiscount || 0,
+          firstPurchaseDiscount: firstPurchaseDiscountValue || 0,
           useLoyalty: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct),
           loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? (parsedLoyalty?.redeemPoints || 0) : 0,
           loyaltyDiscount: loyaltyDiscount + (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0),
