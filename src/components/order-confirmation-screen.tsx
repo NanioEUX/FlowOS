@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Gift, Sparkles, ArrowRight } from "lucide-react"
+import { CheckCircle, Gift, Sparkles, ArrowRight, MapPin } from "lucide-react"
 
 interface ConfirmationItemOption {
   name: string
@@ -35,6 +35,7 @@ interface Props {
   redeemDiscount?: number
   orderType?: string
   deliveryCode?: string | null
+  deliveryAddress?: string | null
   onTrack: () => void
   onContinue: () => void
 }
@@ -59,6 +60,7 @@ export function OrderConfirmationScreen({
   redeemDiscount,
   orderType,
   deliveryCode,
+  deliveryAddress,
   onTrack,
   onContinue,
 }: Props) {
@@ -159,6 +161,17 @@ export function OrderConfirmationScreen({
               </div>
             </div>
           </div>
+
+          {/* Delivery Address */}
+          {deliveryAddress && orderType === "delivery" && (
+            <div className="rounded-xl p-3 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Ponto de Coleta e Entrega</span>
+              </div>
+              <p className="text-sm" style={{ color: theme.text }}>{deliveryAddress}</p>
+            </div>
+          )}
 
           {/* Delivery Code */}
           {deliveryCode && (

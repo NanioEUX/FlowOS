@@ -3461,140 +3461,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
                   </div>
 
-                  {/* Address form modal */}
-                  {showAddressForm && (
-                    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                      <div className="w-full max-w-lg rounded-t-2xl p-4 space-y-3 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: theme.bgCard }}>
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-base font-semibold" style={{ color: theme.text }}>Novo endereço</h3>
-                          <button onClick={() => { setShowAddressForm(false); setAddressFormError("") }} className="p-1">
-                            <X className="h-5 w-5" style={{ color: theme.textMuted }} />
-                          </button>
-                        </div>
-
-                        {addressFormError && (
-                          <p className="text-xs text-center py-2 rounded-lg" style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{addressFormError}</p>
-                        )}
-
-                        {/* Label */}
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>Nome (opcional)</label>
-                          <input
-                            value={addressForm.label}
-                            onChange={(e) => setAddressForm(prev => ({ ...prev, label: e.target.value }))}
-                            placeholder="Ex: Casa, Trabalho"
-                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                          />
-                        </div>
-
-                        {/* CEP */}
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
-                            <input
-                              value={addressForm.cep}
-                              onChange={(e) => setAddressForm(prev => ({ ...prev, cep: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
-                              placeholder="00000-000"
-                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                            />
-                          </div>
-                          {addressForm.cep.length === 8 && (
-                            <button
-                              onClick={lookupAddressCep}
-                              className="mt-5 text-xs hover:underline"
-                              style={{ color: theme.primary }}
-                            >
-                              Buscar
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Street */}
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>Rua</label>
-                          <input
-                            value={addressForm.street}
-                            onChange={(e) => setAddressForm(prev => ({ ...prev, street: e.target.value }))}
-                            placeholder="Rua, Avenida..."
-                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                          />
-                        </div>
-
-                        {/* Number + Complement */}
-                        <div className="flex gap-2">
-                          <div className="w-1/3">
-                            <label className="text-xs" style={{ color: theme.textMuted }}>Número</label>
-                            <input
-                              value={addressForm.number}
-                              onChange={(e) => setAddressForm(prev => ({ ...prev, number: e.target.value }))}
-                              placeholder="123"
-                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-xs" style={{ color: theme.textMuted }}>Complemento</label>
-                            <input
-                              value={addressForm.complement}
-                              onChange={(e) => setAddressForm(prev => ({ ...prev, complement: e.target.value }))}
-                              placeholder="Apt 4, Bloco B..."
-                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Neighborhood */}
-                        <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>Bairro</label>
-                          <input
-                            value={addressForm.neighborhood}
-                            onChange={(e) => setAddressForm(prev => ({ ...prev, neighborhood: e.target.value }))}
-                            placeholder="Bairro"
-                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                          />
-                        </div>
-
-                        {/* City + State */}
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="text-xs" style={{ color: theme.textMuted }}>Cidade</label>
-                            <input
-                              value={addressForm.city}
-                              onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
-                              placeholder="Cidade"
-                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                            />
-                          </div>
-                          <div className="w-16">
-                            <label className="text-xs" style={{ color: theme.textMuted }}>UF</label>
-                            <input
-                              value={addressForm.state}
-                              onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
-                              placeholder="SC"
-                              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={saveNewAddress}
-                          disabled={addressFormLoading || !addressForm.street || !addressForm.number || !addressForm.city || !addressForm.state || !addressForm.cep}
-                          className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                          style={{ backgroundColor: theme.primary }}
-                        >
-                          {addressFormLoading ? "Salvando..." : "Salvar endereço"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Formas de pagamento */}
                   <div>
                     <button
@@ -3699,6 +3565,140 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
               </div>
+          </div>
+        </div>
+      )}
+
+      {/* Address form modal — independent (works from cart too) */}
+      {showAddressForm && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="w-full max-w-lg rounded-t-2xl p-4 space-y-3 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: theme.bgCard }}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold" style={{ color: theme.text }}>Novo endereço</h3>
+              <button onClick={() => { setShowAddressForm(false); setAddressFormError("") }} className="p-1">
+                <X className="h-5 w-5" style={{ color: theme.textMuted }} />
+              </button>
+            </div>
+
+            {addressFormError && (
+              <p className="text-xs text-center py-2 rounded-lg" style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{addressFormError}</p>
+            )}
+
+            {/* Label */}
+            <div>
+              <label className="text-xs" style={{ color: theme.textMuted }}>Nome (opcional)</label>
+              <input
+                value={addressForm.label}
+                onChange={(e) => setAddressForm(prev => ({ ...prev, label: e.target.value }))}
+                placeholder="Ex: Casa, Trabalho"
+                className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+              />
+            </div>
+
+            {/* CEP */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
+                <input
+                  value={addressForm.cep}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, cep: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                  placeholder="00000-000"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+              {addressForm.cep.length === 8 && (
+                <button
+                  onClick={lookupAddressCep}
+                  className="mt-5 text-xs hover:underline"
+                  style={{ color: theme.primary }}
+                >
+                  Buscar
+                </button>
+              )}
+            </div>
+
+            {/* Street */}
+            <div>
+              <label className="text-xs" style={{ color: theme.textMuted }}>Rua</label>
+              <input
+                value={addressForm.street}
+                onChange={(e) => setAddressForm(prev => ({ ...prev, street: e.target.value }))}
+                placeholder="Rua, Avenida..."
+                className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+              />
+            </div>
+
+            {/* Number + Complement */}
+            <div className="flex gap-2">
+              <div className="w-1/3">
+                <label className="text-xs" style={{ color: theme.textMuted }}>Número</label>
+                <input
+                  value={addressForm.number}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, number: e.target.value }))}
+                  placeholder="123"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs" style={{ color: theme.textMuted }}>Complemento</label>
+                <input
+                  value={addressForm.complement}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, complement: e.target.value }))}
+                  placeholder="Apt 4, Bloco B..."
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+            </div>
+
+            {/* Neighborhood */}
+            <div>
+              <label className="text-xs" style={{ color: theme.textMuted }}>Bairro</label>
+              <input
+                value={addressForm.neighborhood}
+                onChange={(e) => setAddressForm(prev => ({ ...prev, neighborhood: e.target.value }))}
+                placeholder="Bairro"
+                className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+              />
+            </div>
+
+            {/* City + State */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs" style={{ color: theme.textMuted }}>Cidade</label>
+                <input
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Cidade"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+              <div className="w-16">
+                <label className="text-xs" style={{ color: theme.textMuted }}>UF</label>
+                <input
+                  value={addressForm.state}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                  placeholder="SC"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={saveNewAddress}
+              disabled={addressFormLoading || !addressForm.street || !addressForm.number || !addressForm.city || !addressForm.state || !addressForm.cep}
+              className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: theme.primary }}
+            >
+              {addressFormLoading ? "Salvando..." : "Salvar endereço"}
+            </button>
           </div>
         </div>
       )}
@@ -4195,13 +4195,28 @@ onPaymentConfirmed={handlePaymentSuccess}
 
                 {/* Coupon */}
                 {cart.length > 0 && (
-                  <div className="flex gap-2">
-                    <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
-                    <button onClick={validateCoupon} disabled={couponLoading}
-                      className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
-                    </button>
+                  <div className="space-y-1">
+                    <div className="flex gap-2">
+                      <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
+                      <button onClick={validateCoupon} disabled={couponLoading}
+                        className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                      </button>
+                    </div>
+                    {couponError && <p className="text-xs text-red-400">{couponError}</p>}
+                    {couponData && (
+                      <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                          <span className="text-xs font-medium" style={{ color: theme.success }}>{couponData.code}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold" style={{ color: theme.success }}>-{formatCurrency(couponDiscount)}</span>
+                          <button onClick={removeCoupon} className="p-0.5"><X className="h-3.5 w-3.5" style={{ color: theme.success }} /></button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -4253,6 +4268,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <span style={{ color: theme.text }}>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
                     </div>
+                    {parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                        <span className="text-xs font-medium" style={{ color: theme.success }}>
+                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -4484,6 +4507,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <span>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
                     </div>
+                    {parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                        <span className="text-xs font-medium" style={{ color: theme.success }}>
+                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -4510,6 +4541,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 redeemDiscount={parsedLoyalty?.redeemDiscount}
                 orderType={orderResult?.orderType}
                 deliveryCode={orderResult?.deliveryCode}
+                deliveryAddress={orderType === "delivery" ? fullAddress : null}
                 onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
