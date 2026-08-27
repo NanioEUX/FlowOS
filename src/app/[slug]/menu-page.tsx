@@ -3703,7 +3703,7 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-4 py-3">
+          <div className="flex-shrink-0 max-w-lg mx-auto w-full flex items-center justify-between px-4 py-3">
             <h2 className="text-lg font-bold" style={{ color: theme.text }}>
               {cartStep === "cart" ? "Seu pedido" : cartStep === "payment" ? "Finalizar pedido" : "Pedido confirmado!"}
             </h2>
@@ -4160,7 +4160,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
 
           {/* Fixed bottom buttons — always in same position */}
-          <div className="flex-shrink-0 px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
                 {isBelowMinimum && (
@@ -4699,7 +4699,8 @@ onPaymentConfirmed={handlePaymentSuccess}
       {selectedProduct && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedProduct(null); setEditingCartItemId(null) }} />
-          <div className="absolute inset-x-0 bottom-0 top-12 rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out", backgroundColor: theme.bgPage }}>
+          <div className="absolute inset-x-0 bottom-0 top-12 flex justify-center">
+          <div className="w-full max-w-lg rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out", backgroundColor: theme.bgPage }}>
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
               <div className="w-10 h-1 rounded-full" style={{ backgroundColor: theme.borderSubtle }}></div>
@@ -4937,10 +4938,9 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
             </div>
           </div>
+          </div>
         </div>
       )}
-
-      {/* Bottom Sheet for Additional Options */}
       {bottomSheetProduct && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBottomSheetProduct(null)} />
