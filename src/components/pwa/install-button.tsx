@@ -19,9 +19,12 @@ export function InstallButton({ className }: { className?: string }) {
   if (!canInstall) {
     return (
       <div className={className}>
-        <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "#71717a" }}>
-          <span>📱</span>
-          <span>Abra pelo Safari e toque em "Adicionar à Tela de Início"</span>
+        <div className="flex items-start gap-2 text-xs" style={{ color: "#71717a" }}>
+          <span className="text-base leading-none mt-0.5">📤</span>
+          <span className="leading-tight">
+            <span className="font-medium">Adicione à tela inicial</span><br />
+            Toque no ícone 📤 e depois em "Adicionar à Tela de Início"
+          </span>
         </div>
       </div>
     )

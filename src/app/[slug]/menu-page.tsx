@@ -3162,13 +3162,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </span>
                       )}
                     </div>
-                    <button
-                      onClick={() => setEditingProfile(true)}
-                      className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: theme.bgCard }}
-                    >
-                      <Pencil className="h-4 w-4" style={{ color: theme.textMuted }} />
-                    </button>
                   </div>
                 </div>
 
@@ -3195,17 +3188,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                           }
                         </p>
                       </div>
-                      {currentPts >= ptsNeeded && (
-                        <button
-                          onClick={() => {
-                            setShowCustomerProfile(false)
-                            setShowCart(true)
-                          }}
-                          className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold bg-white/20 hover:bg-white/30 text-white transition-colors backdrop-blur-sm"
-                        >
-                          Usar no próximo pedido
-                        </button>
-                      )}
                     </div>
                   )
                 })()}

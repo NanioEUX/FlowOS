@@ -175,15 +175,11 @@ export function PushSubscribe({ establishmentId, customerKey }: { establishmentI
     <button
       onClick={toggleNotifications}
       disabled={loading}
-      className="flex items-center justify-between w-full rounded-lg p-3 transition-all"
-      style={{ backgroundColor: enabled ? "rgba(34,197,94,0.1)" : "rgba(0,0,0,0.03)" }}
+      className="flex items-center justify-between w-full py-0 transition-all"
     >
-      <div className="flex items-center gap-2">
-        <span>{enabled ? "🔔" : "🔕"}</span>
-        <span className="text-sm font-medium" style={{ color: enabled ? "#16a34a" : "#71717a" }}>
-          {loading ? "Processando..." : enabled ? "Notificações ativas" : "Notificações desativadas"}
-        </span>
-      </div>
+      <span className="text-sm font-medium" style={{ color: "#71717a" }}>
+        {loading ? "Processando..." : enabled ? "Ativadas" : "Desativadas"}
+      </span>
       <div
         className="relative h-6 w-11 rounded-full transition-colors"
         style={{ backgroundColor: enabled ? "#22c55e" : "#d4d4d8" }}
