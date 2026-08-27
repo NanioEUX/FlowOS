@@ -4137,53 +4137,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
 
-                {/* Price summary */}
-                {cart.length > 0 && (
-                  <div className="pt-2 space-y-1">
-                    <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                      <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
-                    </div>
-                    {deliveryFee > 0 && (
-                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                        <span>Taxa de entrega</span><span>{formatCurrency(deliveryFee)}</span>
-                      </div>
-                    )}
-                    {couponDiscount > 0 && (
-                      <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
-                        <span>Desconto (cupom)</span><span>-{formatCurrency(couponDiscount)}</span>
-                      </div>
-                    )}
-                    {loyaltyDiscount > 0 && (
-                      <div className="flex justify-between text-sm text-amber-400">
-                        <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
-                      </div>
-                    )}
-                    {firstPurchaseDiscountValue > 0 && (
-                      <div className="flex justify-between text-sm text-green-400">
-                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
-                      <span style={{ color: theme.text }}>Total</span>
-                      <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Delivery estimate */}
-                {cart.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMutedMore }}>
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Previsão de entrega: <strong style={{ color: theme.text }}>35-45 min</strong></span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {cartStep === "payment" && (
-              <div className="max-w-lg mx-auto space-y-4 pb-4">
-                {/* Address (delivery) */}
-                {orderType === "delivery" ? (
+                {/* Address selection (delivery) — Tela 1 */}
+                {orderType === "delivery" && cart.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-sm font-medium" style={{ color: theme.textSubtle }}>MEUS ENDEREÇOS</p>
 
@@ -4275,19 +4230,88 @@ onPaymentConfirmed={handlePaymentSuccess}
                         )}
                       </>
                     )}
+                  </div>
+                )}
 
-                    {/* Change address button */}
-                    {addresses.length > 0 && (
-                      <button type="button" onClick={() => setAddressSaved(false)}
-                        className="text-xs hover:underline" style={{ color: theme.accent }}>
-                        Alterar endereço
+                {/* Price summary */}
+                {cart.length > 0 && (
+                  <div className="pt-2 space-y-1">
+                    <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                      <span>Subtotal</span><span>{formatCurrency(subtotal)}</span>
+                    </div>
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                        <span>Taxa de entrega</span><span>{formatCurrency(deliveryFee)}</span>
+                      </div>
+                    )}
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: theme.accent }}>
+                        <span>Desconto (cupom)</span><span>-{formatCurrency(couponDiscount)}</span>
+                      </div>
+                    )}
+                    {loyaltyDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-amber-400">
+                        <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                      </div>
+                    )}
+                    {firstPurchaseDiscountValue > 0 && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Desconto (1ª compra)</span><span>-{formatCurrency(firstPurchaseDiscountValue)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-2 text-lg font-bold" style={{ borderColor: theme.borderCard }}>
+                      <span style={{ color: theme.text }}>Total</span>
+                      <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery estimate */}
+                {cart.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMutedMore }}>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Previsão de entrega: <strong style={{ color: theme.text }}>35-45 min</strong></span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {cartStep === "payment" && (
+              <div className="max-w-lg mx-auto space-y-4 pb-4">
+                {/* Selected address — compact display with alterar */}
+                {orderType === "delivery" && (
+                  <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+                        <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Entregando em:</span>
+                      </div>
+                      <button type="button" onClick={() => setCartStep("cart")} className="text-xs hover:underline" style={{ color: theme.accent }}>
+                        Alterar
                       </button>
+                    </div>
+                    {selectedAddressId && addresses.find(a => a.id === selectedAddressId) ? (
+                      (() => {
+                        const selected = addresses.find(a => a.id === selectedAddressId)!
+                        return (
+                          <p className="text-sm mt-1" style={{ color: theme.text }}>
+                            {selected.label ? `${selected.label} — ` : ``}{selected.street}, {selected.number}{selected.neighborhood ? ` - ${selected.neighborhood}` : ``}, {selected.city} - {selected.state}
+                          </p>
+                        )
+                      })()
+                    ) : fullAddress ? (
+                      <p className="text-sm mt-1" style={{ color: theme.text }}>{fullAddress}</p>
+                    ) : (
+                      <p className="text-sm mt-1" style={{ color: theme.textMutedMore }}>Nenhum endereço selecionado</p>
                     )}
                   </div>
-                ) : (
+                )}
+
+                {/* Pickup address — compact display */}
+                {orderType === "pickup" && establishment.address && (
                   <div className="rounded-xl p-3 text-sm border" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
                     <StoreIcon className="inline h-4 w-4 mr-1" />
-                    Retirada no local: {establishment.address || "Consulte o estabelecimento"}
+                    Retirada no local: {establishment.address}
                   </div>
                 )}
 
@@ -4469,11 +4493,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum}
+                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : "Finalizar pedido"}
+                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
                 {!lastOrder?.paymentLink && !pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
