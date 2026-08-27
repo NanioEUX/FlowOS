@@ -1641,6 +1641,26 @@ export default function CardapioPage() {
                             </button>
                           </div>
 
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAvailable(product) }}
+                            className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                              product.isAvailable
+                                ? "bg-green-100 text-green-600"
+                                : "bg-red-100 text-red-500"
+                            }`}
+                            title={product.isAvailable ? "Disponível (clique para pausar)" : "Pausado (clique para disponibilizar)"}
+                            style={{ width: 32, height: 32 }}
+                          >
+                            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                              product.isAvailable ? "bg-green-500" : "bg-red-400"
+                            }`}>
+                              <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
+                              }`} />
+                            </span>
+                          </button>
+
                           {product.image ? (
                             <img
                               src={product.image}
@@ -1703,25 +1723,6 @@ export default function CardapioPage() {
                                 }`} />
                               </span>
                               {product.sendToPrep ? "Preparo" : "Sem preparo"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAvailable(product) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                product.isAvailable
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                              title={product.isAvailable ? "Disponível (clique para pausar)" : "Pausado (clique para disponibilizar)"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                product.isAvailable ? "bg-green-500" : "bg-red-400"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
-                              </span>
-                              {product.isAvailable ? "Ativo" : "Pausado"}
                             </button>
                             <button
                               type="button"
@@ -1813,6 +1814,24 @@ export default function CardapioPage() {
                 <div className="divide-y divide-zinc-100">
                   {cat.products.filter(p => p.sendToPrep).map((product: any) => (
                     <div key={product.id} className="flex items-center gap-3 px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleAvailable(product)}
+                        className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                          product.isAvailable
+                            ? "bg-green-100 text-green-600"
+                            : "bg-red-100 text-red-500"
+                        }`}
+                        style={{ width: 28, height: 28 }}
+                      >
+                        <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
+                          product.isAvailable ? "bg-green-500" : "bg-red-400"
+                        }`}>
+                          <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                            product.isAvailable ? "translate-x-3" : "translate-x-0.5"
+                          }`} />
+                        </span>
+                      </button>
                       {product.image ? (
                         <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
@@ -1855,24 +1874,6 @@ export default function CardapioPage() {
                           }`} />
                         </span>
                         {product.sendToPrep ? "Preparo" : "Sem preparo"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggleAvailable(product)}
-                        className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                          product.isAvailable
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                          product.isAvailable ? "bg-green-500" : "bg-red-400"
-                        }`}>
-                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                            product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
-                          }`} />
-                        </span>
-                        {product.isAvailable ? "Ativo" : "Pausado"}
                       </button>
                     </div>
                   ))}
