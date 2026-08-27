@@ -256,7 +256,7 @@ export async function PATCH(
       }
     }
 
-    // Criar notificação no sino quando o status mudar
+    // Criar notificação no sino quando o status mudar (substitui a anterior)
     if (status && status !== order.status && order.customerId) {
       const statusLabels: Record<string, string> = {
         confirmed: "Pedido confirmado!",
@@ -268,6 +268,14 @@ export async function PATCH(
       }
       const label = statusLabels[status] || "Status atualizado"
       try {
+        // Deletar notificações anteriores de status deste pedido
+        await prisma.customerNotification.deleteMany({
+          where: {
+            customerId: order.customerId,
+            type: "order_status",
+          },
+        })
+        // Criar notificação nova
         await prisma.customerNotification.create({
           data: {
             type: "order_status",

@@ -2422,8 +2422,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </button>
                   {/* Divider */}
                   <span className="w-px h-4 bg-gray-300" />
-                  {/* Notification bell — toggles dropdown */}
-                  <button onClick={() => setShowNotifDropdown(prev => !prev)} className="relative flex items-center justify-center">
+                  {/* Notification bell — toggles dropdown, or opens orders if no notifications */}
+                  <button onClick={() => {
+                    const unread = notifications.filter(n => !n.read).length
+                    if (unread === 0) {
+                      setShowOrdersList(true)
+                    } else {
+                      setShowNotifDropdown(prev => !prev)
+                    }
+                  }} className="relative flex items-center justify-center">
                     <svg className="h-[18px] w-[18px] text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white bg-red-500">
@@ -2453,36 +2460,33 @@ onPaymentConfirmed={handlePaymentSuccess}
               <span className="text-sm font-bold" style={{ color: theme.text }}>Notificações</span>
               <button onClick={() => setShowNotifDropdown(false)} className="text-xs" style={{ color: theme.textMutedMore }}>✕</button>
             </div>
-            {notifications.length === 0 ? (
+            {notifications.filter(n => !n.read).length === 0 ? (
               <div className="py-6 text-center">
                 <p className="text-xs" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
               </div>
             ) : (
               <div className="max-h-[50vh] overflow-y-auto">
-                {notifications.slice(0, 10).map((n) => (
+                {notifications.filter(n => !n.read).slice(0, 10).map((n) => (
                   <button
                     key={n.id}
                     onClick={() => {
                       setShowNotifDropdown(false)
                       if (n.type === "order_status") {
-                        // Open orders in Em Andamento tab
                         setShowOrdersList(true)
                       }
-                      // Mark as read
-                      if (!n.read) {
-                        setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
-                        const phone = customer.phone || customerData?.phone
-                        if (phone) {
-                          fetch("/api/customers/notifications", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
-                          }).catch(() => {})
-                        }
+                      // Delete this notification
+                      setNotifications(prev => prev.filter(x => x.id !== n.id))
+                      const phone = customer.phone || customerData?.phone
+                      if (phone) {
+                        fetch("/api/customers/notifications", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ phone, establishmentId: establishment.id, deleteId: n.id }),
+                        }).catch(() => {})
                       }
                     }}
-                    className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b ${n.read ? "" : "border-l-4"}`}
-                    style={{ borderColor: n.read ? theme.borderCard : theme.primary, backgroundColor: n.read ? "transparent" : `${theme.primary}08` }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left border-b border-l-4"
+                    style={{ borderColor: theme.primary, backgroundColor: `${theme.primary}08` }}
                   >
                     <span className="text-base shrink-0 mt-0.5">
                       {n.type === "order_status" ? "📦" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
@@ -2491,7 +2495,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <p className="text-xs font-semibold truncate" style={{ color: theme.text }}>{n.title}</p>
                       <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: theme.textMuted }}>{n.message}</p>
                     </div>
-                    {!n.read && <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: theme.primary }} />}
                   </button>
                 ))}
               </div>
@@ -4600,31 +4603,6 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       <InstallPromptToast show={showInstallPrompt} />
-
-      {/* Push notification toast — above bottom nav */}
-      {pushNotification && (
-        <div
-          className="fixed bottom-16 left-3 right-3 z-[60] animate-slideUp pointer-events-none"
-        >
-          <div
-            className="mx-auto max-w-md rounded-2xl p-3 flex items-center gap-3 pointer-events-auto"
-            style={{
-              backgroundColor: theme.bgPage === "#0a0a0f" ? "#27272a" : "#ffffff",
-              border: `1px solid ${theme.bgPage === "#0a0a0f" ? "#3f3f46" : "#e5e7eb"}`,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)",
-            }}
-            onClick={() => setPushNotification(null)}
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full text-lg shrink-0" style={{ backgroundColor: theme.primary + "20" }}>
-              📦
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{pushNotification.title}</p>
-              <p className="text-xs truncate" style={{ color: theme.textMuted }}>{pushNotification.body}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Product Detail Modal */}
       {selectedProduct && (

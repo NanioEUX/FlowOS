@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { phone, establishmentId, markAllRead, deleteByType } = body
+    const { phone, establishmentId, markAllRead, deleteByType, deleteId } = body
     if (!phone || !establishmentId) {
       return NextResponse.json({ ok: false })
     }
@@ -59,6 +59,12 @@ export async function PATCH(req: NextRequest) {
     if (deleteByType) {
       await prisma.customerNotification.deleteMany({
         where: { customerId: customer.id, type: deleteByType },
+      })
+    }
+
+    if (deleteId) {
+      await prisma.customerNotification.deleteMany({
+        where: { customerId: customer.id, id: deleteId },
       })
     }
 

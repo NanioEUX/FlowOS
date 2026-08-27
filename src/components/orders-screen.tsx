@@ -557,8 +557,6 @@ export function OrdersScreen({
                         <div className="space-y-2">
                            {monthGroups[key].map(order => {
                             const items = parseItems(order.items)
-                            const firstItem = items[0]
-                            const itemNames = items.map((i: any) => i.name).filter(Boolean)
 
                             return (
                               <div
@@ -567,53 +565,55 @@ export function OrdersScreen({
                                 style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard }}
                               >
                                 <div className="p-3">
-                                  <div className="flex items-start gap-3">
-                                    {/* Item image - circular */}
-                                    {firstItem?.image ? (
-                                      <img src={firstItem.image} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
-                                    ) : (
-                                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                        {firstItem?.name?.charAt(0) || "#"}
-                                      </div>
-                                    )}
-
-                                    <div className="flex-1 min-w-0">
-                                      {/* Line 1: #number + pts + Dia X */}
-                                      <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-xs font-bold" style={{ color: theme.text }}>
-                                            #{order.orderNumber || order.id.slice(0, 8)}
-                                          </span>
-                                          {calcPoints(order.total) > 0 && (
-                                            <span className="text-[10px] font-bold" style={{ color: theme.success }}>
-                                              +{calcPoints(order.total)} pts
-                                            </span>
-                                          )}
-                                        </div>
-                                        <span className="text-[10px] shrink-0" style={{ color: theme.textMutedMore }}>
-                                          Dia {order.createdAt ? new Date(order.createdAt).getDate() : "—"}
+                                  {/* Line 1: #number + pts + Dia X */}
+                                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-bold" style={{ color: theme.text }}>
+                                        #{order.orderNumber || order.id.slice(0, 8)}
+                                      </span>
+                                      {calcPoints(order.total) > 0 && (
+                                        <span className="text-[10px] font-bold" style={{ color: theme.success }}>
+                                          +{calcPoints(order.total)} pts
                                         </span>
-                                      </div>
-
-                                      {/* Line 2: All items joined + total at end */}
-                                      <div className="flex items-center justify-between mt-0.5">
-                                        <p className="text-sm font-bold truncate" style={{ color: theme.text }}>
-                                          {itemNames.join(" • ") || "Pedido"}
-                                        </p>
-                                        <span className="text-sm font-bold shrink-0 ml-2" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
-                                      </div>
-
-                                      {/* Line 4: Pedir novamente */}
-                                      <div className="flex justify-end mt-1">
-                                        <button
-                                          onClick={() => onReorder(order)}
-                                          className="flex items-center gap-0.5 text-xs font-semibold"
-                                          style={{ color: theme.primary }}
-                                        >
-                                          Pedir novamente <ChevronRight className="h-3.5 w-3.5" />
-                                        </button>
-                                      </div>
+                                      )}
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
+                                      <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                                        Dia {order.createdAt ? new Date(order.createdAt).getDate() : "—"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Items list */}
+                                  <div className="space-y-1.5">
+                                    {items.map((item: any, idx: number) => (
+                                      <div key={idx} className="flex items-center gap-2.5">
+                                        {item.image ? (
+                                          <img src={item.image} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                                        ) : (
+                                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
+                                            {item.name?.charAt(0) || "#"}
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-semibold truncate" style={{ color: theme.text }}>
+                                            {item.quantity}x {item.name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Pedir novamente */}
+                                  <div className="flex justify-end mt-2">
+                                    <button
+                                      onClick={() => onReorder(order)}
+                                      className="flex items-center gap-0.5 text-xs font-semibold"
+                                      style={{ color: theme.primary }}
+                                    >
+                                      Pedir novamente <ChevronRight className="h-3.5 w-3.5" />
+                                    </button>
                                   </div>
                                 </div>
                               </div>
