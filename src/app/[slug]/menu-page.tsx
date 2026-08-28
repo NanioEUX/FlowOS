@@ -226,15 +226,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     }
   }, [darkMode, hasCustomColors, establishment])
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(`pedefacil-cart-${establishment.slug}`)
-        if (saved) return JSON.parse(saved)
-      } catch {}
-    }
-    return []
-  })
+  const [cart, setCart] = useState<CartItem[]>([])
+  
+  // Load cart from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`pedefacil-cart-${establishment.slug}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.length > 0) setCart(parsed)
+      }
+    } catch {}
+  }, [establishment.slug])
 
   // Save cart to localStorage
   useEffect(() => {
