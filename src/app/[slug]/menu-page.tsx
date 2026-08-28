@@ -140,8 +140,7 @@ function getFirstName(name: string): string {
   return name.split(" ")[0]
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours()
+function getGreetingFromHour(hour: number): string {
   if (hour >= 5 && hour < 12) return "Bom dia"
   if (hour >= 12 && hour < 18) return "Boa tarde"
   return "Boa noite"
@@ -160,9 +159,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const { toast } = useToast()
   const [darkMode] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [greeting, setGreeting] = useState("Olá")
 
   useEffect(() => {
     setMounted(true)
+    setGreeting(getGreetingFromHour(new Date().getHours()))
   }, [])
 
   const theme = useMemo(() => {
@@ -652,6 +653,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   }, [establishment.businessHours])
 
   const isOpen = useMemo(() => {
+    if (!mounted) return true
     if (!parsedBusinessHours) return true
     const now = new Date()
     const dayIndex = now.getDay()
@@ -665,7 +667,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const openMinutes = openH * 60 + openM
     const closeMinutes = closeH * 60 + closeM
     return currentMinutes >= openMinutes && currentMinutes < closeMinutes
-  }, [parsedBusinessHours])
+  }, [parsedBusinessHours, mounted])
 
   const closedMessage = useMemo(() => {
     if (!parsedBusinessHours || isOpen) return null
@@ -2499,7 +2501,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               <div className="flex-1 min-w-0">
                 {sessionVerified && (customer.name || customerData?.name) ? (
                   <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
-                    {getGreeting()}, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                    {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
                 ) : (
                   <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
