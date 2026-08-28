@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { buscarEstimativa99 } from "@/lib/integrations/nine-nine"
 
 /**
  * Calcula distância (Haversine), taxa de entrega e tempo estimado.
@@ -24,9 +23,6 @@ export async function GET(req: Request) {
       addressLat: true,
       addressLng: true,
       deliveryRadiusKm: true,
-      tipoEntregaAtiva: true,
-      api99Key: true,
-      api99EmployeeId: true,
       deliveryZones: {
         where: { enabled: true },
         orderBy: { order: "asc" },
@@ -40,37 +36,6 @@ export async function GET(req: Request) {
       reason: "Estabelecimento sem localização configurada",
     })
   }
-
-  // ── Modo 99Entrega: busca estimativa na API externa ──
-  if (establishment.tipoEntregaAtiva === "99entrega" && establishment.api99Key && establishment.api99EmployeeId) {
-    const estimativa = await buscarEstimativa99(
-      establishment.api99Key,
-      establishment.api99EmployeeId,
-      establishment.addressLat,
-      establishment.addressLng,
-      lat,
-      lng
-    )
-
-    if (!estimativa.success) {
-      return NextResponse.json({
-        available: false,
-        reason: estimativa.error || "Erro ao consultar 99Entrega",
-      })
-    }
-
-    return NextResponse.json({
-      available: true,
-      distanceKm: null,
-      fee: estimativa.estimatedValue || 0,
-      estimatedMin: estimativa.estimatedTime || 30,
-      zoneName: "99Entrega",
-      freeAbove: null,
-      provedor: "99entrega",
-    })
-  }
-
-  // ── Modo Entrega Própria: lógica Haversine existente (INALTERADA) ──
 
   const distanceKm = haversineKm(
     lat, lng,
