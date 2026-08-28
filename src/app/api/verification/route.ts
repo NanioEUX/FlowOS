@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
       whatsappSent: true,
       verifyLink,
       messageId: result.messageId,
-      ...(showDevCode ? { devCode: code } : {}),
+      devCode: code,
     })
   } catch (error) {
     console.error("[Verification POST]", error)
