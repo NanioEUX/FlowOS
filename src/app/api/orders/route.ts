@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     const couponDiscountValue = couponDiscount ? (typeof couponDiscount === "string" ? parseFloat(couponDiscount) : couponDiscount) : 0
     const firstPurchaseDiscountValue = firstPurchaseDiscount ? (typeof firstPurchaseDiscount === "string" ? parseFloat(firstPurchaseDiscount) : firstPurchaseDiscount) : 0
     let calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue - couponDiscountValue - firstPurchaseDiscountValue)
+    console.log("[Orders POST] totals:", { subtotal, deliveryFeeValue, loyaltyDiscountValue, couponDiscountValue, firstPurchaseDiscountValue, calculatedTotal })
 
     const isPayOnDelivery =
       paymentMethod &&
@@ -171,15 +172,12 @@ export async function POST(req: NextRequest) {
         const isFirstOrder = deliveredAgg._count === 0
 
         // Bônus primeira compra (só se WhatsApp verificado)
-        let firstPurchaseDiscountValue = 0
+        // NOTA: O desconto de primeira compra já é subtraído pelo client via
+        // firstPurchaseDiscount no body (linha 39). Não aplicar novamente aqui
+        // para evitar double-subtract.
         let firstPurchaseBonusValue = 0
         if (isFirstOrder && establishment.firstPurchaseEnabled && customer.whatsappVerified) {
-          firstPurchaseDiscountValue = establishment.firstPurchaseDiscount || 0
           firstPurchaseBonusValue = establishment.firstPurchaseBonus || 0
-          // Adicionar desconto ao cálculo
-          if (firstPurchaseDiscountValue > 0) {
-            calculatedTotal = Math.max(0, calculatedTotal - firstPurchaseDiscountValue)
-          }
         }
 
         let pointsDelta = 0

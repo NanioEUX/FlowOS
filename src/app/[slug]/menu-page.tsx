@@ -551,7 +551,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [establishment.slug])
 
-  async function applyLocalVerified(phoneDigits: string) {    try {
+  async function applyLocalVerified(phoneDigits: string) {
+    try {
       const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
       console.log("[applyLocalVerified] phone:", phoneDigits, "loyaltyPoints:", data?.loyaltyPoints, "tier:", data?.tier, "notFound:", data?.notFound)
@@ -565,8 +566,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           address: data.address || prev.address,
           cpf: data.cpf || prev.cpf,
         }))
+      } else {
+        console.warn("[applyLocalVerified] Customer not found for phone:", phoneDigits)
       }
-    } catch {}
+    } catch (err: any) {
+      console.error("[applyLocalVerified] FAILED to re-sync customer:", phoneDigits, err?.message || err)
+    }
   }
 
   function handleOtpChange(index: number, value: string) {
@@ -2040,7 +2045,13 @@ const handlePaymentSuccess = useCallback(() => {
       return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
     })
     loadCustomerOrders()
-  }, [establishment.slug, loadCustomerOrders])
+    // Re-sync customer loyalty points after payment confirmation
+    setUseLoyalty(false)
+    if (customer.phone) {
+      const phoneDigits = customer.phone.replace(/\D/g, "")
+      applyLocalVerified(phoneDigits)
+    }
+  }, [establishment.slug, loadCustomerOrders, customer.phone])
 
   // Listen for push notifications from service worker → refresh orders + show toast
   useEffect(() => {
