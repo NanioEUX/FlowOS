@@ -550,6 +550,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   async function applyLocalVerified(phoneDigits: string) {    try {
       const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
+      console.log("[applyLocalVerified] phone:", phoneDigits, "loyaltyPoints:", data?.loyaltyPoints, "tier:", data?.tier, "notFound:", data?.notFound)
       if (data && !data.notFound) {
         setCustomerData(data)
         setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
@@ -1079,16 +1080,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0)
 
   const loyaltyDiscount = useMemo(() => {
-    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return 0
+    const _debug = { useLoyalty, enabled: parsedLoyalty?.enabled, pts: customerLoyaltyPoints, subtotal, config: parsedLoyalty }
+    if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) { console.log("[loyaltyDiscount] BLOCKED (first guard):", _debug); return 0 }
     const pointsNeeded = parsedLoyalty.redeemPoints || 100
     if (parsedLoyalty.redeemType === "product") {
       return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
     }
     const discount = parsedLoyalty.redeemDiscount || 10
-    if (customerLoyaltyPoints < pointsNeeded) return 0
+    if (customerLoyaltyPoints < pointsNeeded) { console.log("[loyaltyDiscount] BLOCKED (points < needed):", _debug, { pointsNeeded }); return 0 }
 
     const minOrder = parsedLoyalty.minOrderToRedeem || 0
-    if (minOrder > 0 && subtotal < minOrder) return 0
+    if (minOrder > 0 && subtotal < minOrder) { console.log("[loyaltyDiscount] BLOCKED (below min):", _debug, { minOrder }); return 0 }
 
     const limitType = parsedLoyalty.redeemLimitType || "percentage"
     const limitValue = parsedLoyalty.redeemLimitValue || 30
@@ -1100,7 +1102,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       maxDiscount = limitValue
     }
 
-    return Math.min(discount, maxDiscount)
+    const result = Math.min(discount, maxDiscount)
+    console.log("[loyaltyDiscount] RESULT:", { result, discount, maxDiscount, ..._debug })
+    return result
   }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
 
   const loyaltyFreeProduct = useMemo(() => {
@@ -1714,6 +1718,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setCart([])
       localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
       setChangeFor("")
+      setUseLoyalty(false)
+
+      // Re-sync customer loyalty points from server after order
+      if (customer.phone) {
+        const phoneDigits = customer.phone.replace(/\D/g, "")
+        applyLocalVerified(phoneDigits)
+      }
 
       // If payment link exists, close cart (payment modal will take over).
       // Otherwise, stay in cart and show confirmation step.
@@ -4009,7 +4020,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
                       <div className="flex-1">
                         <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
-                        <p className="text-sm" style={{ color: theme.accentMid }}>{establishment.address}</p>
+                        <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
                         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
                           Abrir no Maps
                         </a>
@@ -4246,14 +4257,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4" style={{ color: theme.primary }} />
                       <div>
-                        <div className="text-xs font-semibold" style={{ color: theme.text }}>Usar meus pontos</div>
-                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
+                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meus pontos</div>
+                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
                         {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount && (
                           <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Máx. {parsedLoyalty.redeemPoints} pts/pedido = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto</div>
                         )}
                       </div>
                     </div>
-                    <button onClick={() => setUseLoyalty(!useLoyalty)}
+                    <button onClick={() => { const next = !useLoyalty; console.log("[loyalty] toggle clicked:", { next, customerLoyaltyPoints, parsedLoyalty, subtotal }); setUseLoyalty(next); }}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${useLoyalty ? "" : ""}`}
                       style={{ borderColor: useLoyalty ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty ? theme.primary : "transparent" }}>
                       {useLoyalty && <Check className="h-3 w-3 text-white" />}
@@ -4302,13 +4313,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
 
-                {/* Delivery estimate */}
-                {cart.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMutedMore }}>
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Previsão de entrega: <strong style={{ color: theme.text }}>35-45 min</strong></span>
-                  </div>
-                )}
+               
+                
               </div>
             )}
 
@@ -4386,17 +4392,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
 
                 {/* Pickup address — compact display */}
-                {orderType === "pickup" && establishment.address && (
-                  <div className="rounded-xl p-3 text-sm border space-y-1" style={{ backgroundColor: theme.accentLight, color: theme.accent, borderColor: theme.accentLight }}>
-                    <div className="flex items-center gap-2">
-                      <StoreIcon className="h-4 w-4" />
-                      <span className="font-medium">Retirada no local</span>
-                    </div>
-                    <p>{establishment.address}</p>
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline inline-block">
-                      Abrir no Maps
-                    </a>
-                  </div>
+                                        {orderType === "pickup" && establishment.address && (
+                                          <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
+                                            <div className="flex items-start gap-2">
+                                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
+                                              <div className="flex-1">
+                                                <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
+                                                <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
+                                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
+                                                  Abrir no Maps
+                                                </a>
+                                              </div>
+                                            </div>
+                                          </div>
                 )}
 
                 {/* Notes */}
@@ -4578,8 +4586,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 deliveryCode={orderResult?.deliveryCode}
                 deliveryAddress={orderType === "delivery" ? fullAddress : null}
                 establishmentAddress={establishment.address || null}
-                onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
-                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
+                onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
+                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
             )}
           </div>
@@ -4631,14 +4639,14 @@ onPaymentConfirmed={handlePaymentSuccess}
               <>
                 {orderResult?.orderId && (
                   <button onClick={() => {
-                    setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking(); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
+                    setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking(); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
                   }} className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
                     style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                     <ExternalLink className="h-4 w-4" /> Acompanhar pedido
                   </button>
                 )}
                 <button onClick={() => {
-                  setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false)
+                  setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); setUseLoyalty(false)
                   setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
                   setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
                 }} className="w-full py-2.5 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
