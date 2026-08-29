@@ -59,13 +59,22 @@ export default function DeliveryZonesPage() {
     enabled: true,
   })
 
+  // 99Entrega config
+  const [tipoEntregaAtiva, setTipoEntregaAtiva] = useState<"propria" | "99entrega">("propria")
+  const [api99Key, setApi99Key] = useState("")
+  const [api99EmployeeId, setApi99EmployeeId] = useState("")
+  const [saving99, setSaving99] = useState(false)
+  const [saved99, setSaved99] = useState(false)
+  const [showApi99Key, setShowApi99Key] = useState(false)
+
   async function loadData() {
     if (!establishmentId) return
     setLoading(true)
     try {
-      const [zonesRes, estabRes] = await Promise.all([
+      const [zonesRes, estabRes, configRes] = await Promise.all([
         fetch(`/api/establishments/${establishmentId}/delivery-zones`),
         fetch(`/api/establishments/${establishmentId}`).then((r) => r.json()),
+        fetch(`/api/establishments/${establishmentId}/delivery-config`).then((r) => r.json()),
       ])
 
       const zonesData = await zonesRes.json()
@@ -78,6 +87,12 @@ export default function DeliveryZonesPage() {
           addressLng: estabRes.addressLng ?? null,
           deliveryRadiusKm: estabRes.deliveryRadiusKm ?? 8,
         })
+      }
+
+      if (configRes && !configRes.error) {
+        setTipoEntregaAtiva(configRes.tipoEntregaAtiva || "propria")
+        setApi99Key(configRes.api99Key || "")
+        setApi99EmployeeId(configRes.api99EmployeeId || "")
       }
     } catch (e: any) {
       setError(e.message)
@@ -170,6 +185,34 @@ export default function DeliveryZonesPage() {
     })
   }
 
+  async function saveDeliveryConfig() {
+    if (!establishmentId) return
+    setSaving99(true)
+    setSaved99(false)
+    try {
+      const res = await fetch(`/api/establishments/${establishmentId}/delivery-config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipoEntregaAtiva,
+          api99Key: tipoEntregaAtiva === "99entrega" ? api99Key : null,
+          api99EmployeeId: tipoEntregaAtiva === "99entrega" ? api99EmployeeId : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Erro ao salvar configuração")
+        return
+      }
+      setSaved99(true)
+      setTimeout(() => setSaved99(false), 3000)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSaving99(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-8">
@@ -195,6 +238,65 @@ export default function DeliveryZonesPage() {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>
       )}
+
+      {/* Seletor de Modo de Entrega */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
+        <h2 className="text-lg font-semibold text-zinc-900 mb-1">🚚 Modo de Entrega</h2>
+        <p className="text-xs text-zinc-500 mb-4">Escolha como as entregas serão processadas</p>
+        
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <button
+            onClick={() => setTipoEntregaAtiva("propria")}
+            className={`p-4 rounded-xl border-2 text-left transition-all ${
+              tipoEntregaAtiva === "propria"
+                ? "border-green-500 bg-green-50"
+                : "border-zinc-200 hover:border-zinc-300"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-4 h-4 rounded-full border-2 ${
+                tipoEntregaAtiva === "propria" ? "border-green-500 bg-green-500" : "border-zinc-300"
+              }`} />
+              <div>
+                <p className="font-medium text-zinc-900">Entrega Própria</p>
+                <p className="text-xs text-zinc-500">Tabela por KM (taxa fixa por zona)</p>
+              </div>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => setTipoEntregaAtiva("99entrega")}
+            className={`p-4 rounded-xl border-2 text-left transition-all ${
+              tipoEntregaAtiva === "99entrega"
+                ? "border-green-500 bg-green-50"
+                : "border-zinc-200 hover:border-zinc-300"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-4 h-4 rounded-full border-2 ${
+                tipoEntregaAtiva === "99entrega" ? "border-green-500 bg-green-500" : "border-zinc-300"
+              }`} />
+              <div>
+                <p className="font-medium text-zinc-900">99Entrega</p>
+                <p className="text-xs text-zinc-500">Preço dinâmico via API externa</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {tipoEntregaAtiva === "99entrega" && (
+          <div className="flex gap-2">
+            <button
+              onClick={saveDeliveryConfig}
+              disabled={saving99}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
+            >
+              {saving99 ? "Salvando..." : "Salvar configuração"}
+            </button>
+            {saved99 && <span className="text-green-600 text-sm self-center">✅ Salvo!</span>}
+          </div>
+        )}
+      </div>
 
       {/* Localização do estabelecimento */}
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
@@ -253,115 +355,173 @@ export default function DeliveryZonesPage() {
         </div>
       </div>
 
-      {/* Adicionar zona */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-zinc-900 mb-1">➕ Nova zona de entrega</h2>
-        <p className="text-xs text-zinc-500 mb-4">Ex: &ldquo;Centro&rdquo; de 0 a 1km, taxa R$ 3</p>
+      {/* Seção condicional: 99Entrega ou Zonas Próprias */}
+      {tipoEntregaAtiva === "99entrega" ? (
+        /* Configuração 99Entrega */
+        <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-zinc-900 mb-1">🔑 Configuração 99Entrega</h2>
+          <p className="text-xs text-zinc-500 mb-4">Credenciais da API Corporativa da 99</p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-zinc-600 mb-1">Chave de API Corporativa (x-api-key)</label>
+              <div className="relative">
+                <input
+                  type={showApi99Key ? "text" : "password"}
+                  value={api99Key}
+                  onChange={(e) => setApi99Key(e.target.value)}
+                  placeholder="Sua chave de API da 99"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApi99Key(!showApi99Key)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                >
+                  {showApi99Key ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs text-zinc-600 mb-1">Employee ID (Identificador de Gestor)</label>
+              <input
+                type="text"
+                value={api99EmployeeId}
+                onChange={(e) => setApi99EmployeeId(e.target.value)}
+                placeholder="ID do funcionário/gestor"
+                className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+            </div>
 
-        <div className="grid grid-cols-7 gap-2 mb-3">
-          <input
-            placeholder="Nome"
-            value={newZone.name}
-            onChange={(e) => setNewZone({ ...newZone, name: e.target.value })}
-            className="col-span-2 px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="De (km)"
-            value={newZone.minKm}
-            onChange={(e) => setNewZone({ ...newZone, minKm: parseFloat(e.target.value) || 0 })}
-            className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="Até (km)"
-            value={newZone.maxKm}
-            onChange={(e) => setNewZone({ ...newZone, maxKm: parseFloat(e.target.value) || 1 })}
-            className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="Taxa R$"
-            value={newZone.fee}
-            onChange={(e) => setNewZone({ ...newZone, fee: parseFloat(e.target.value) || 0 })}
-            className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="Grátis >R$"
-            value={newZone.freeAbove}
-            onChange={(e) => setNewZone({ ...newZone, freeAbove: e.target.value })}
-            className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
-          <input
-            type="number"
-            placeholder="Min"
-            value={newZone.estimatedMin}
-            onChange={(e) => setNewZone({ ...newZone, estimatedMin: parseInt(e.target.value) || 30 })}
-            className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
-          />
+            <div className="pt-4 border-t border-zinc-100">
+              <div className="flex gap-2">
+                <button
+                  onClick={saveDeliveryConfig}
+                  disabled={saving99 || !api99Key || !api99EmployeeId}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
+                >
+                  {saving99 ? "Salvando..." : "Salvar credenciais"}
+                </button>
+                {saved99 && <span className="text-green-600 text-sm self-center">✅ Salvo!</span>}
+              </div>
+            </div>
+          </div>
         </div>
+      ) : (
+        /* Zonas de Entrega Própria (fluxo existente - INALTERADO) */
+        <>
+          {/* Adicionar zona */}
+          <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-zinc-900 mb-1">➕ Nova zona de entrega</h2>
+            <p className="text-xs text-zinc-500 mb-4">Ex: &ldquo;Centro&rdquo; de 0 a 1km, taxa R$ 3</p>
 
-        <button
-          onClick={addZone}
-          disabled={saving || !newZone.name}
-          className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
-        >
-          + Adicionar zona
-        </button>
-      </div>
+            <div className="grid grid-cols-7 gap-2 mb-3">
+              <input
+                placeholder="Nome"
+                value={newZone.name}
+                onChange={(e) => setNewZone({ ...newZone, name: e.target.value })}
+                className="col-span-2 px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                step="0.1"
+                placeholder="De (km)"
+                value={newZone.minKm}
+                onChange={(e) => setNewZone({ ...newZone, minKm: parseFloat(e.target.value) || 0 })}
+                className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Até (km)"
+                value={newZone.maxKm}
+                onChange={(e) => setNewZone({ ...newZone, maxKm: parseFloat(e.target.value) || 1 })}
+                className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Taxa R$"
+                value={newZone.fee}
+                onChange={(e) => setNewZone({ ...newZone, fee: parseFloat(e.target.value) || 0 })}
+                className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Grátis >R$"
+                value={newZone.freeAbove}
+                onChange={(e) => setNewZone({ ...newZone, freeAbove: e.target.value })}
+                className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Min"
+                value={newZone.estimatedMin}
+                onChange={(e) => setNewZone({ ...newZone, estimatedMin: parseInt(e.target.value) || 30 })}
+                className="px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+              />
+            </div>
 
-      {/* Lista de zonas */}
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 border-b border-zinc-200">
-            <tr className="text-left text-zinc-500 uppercase text-xs">
-              <th className="py-3 px-4">Nome</th>
-              <th className="py-3 px-4">Distância</th>
-              <th className="py-3 px-4">Taxa</th>
-              <th className="py-3 px-4">Grátis acima</th>
-              <th className="py-3 px-4">Tempo</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {zones.map((z) => (
-              <tr key={z.id} className="border-b border-zinc-100">
-                <td className="py-3 px-4 font-medium">{z.name}</td>
-                <td className="py-3 px-4 text-zinc-600">{z.minKm} - {z.maxKm} km</td>
-                <td className="py-3 px-4 text-zinc-900 font-medium">R$ {z.fee.toFixed(2)}</td>
-                <td className="py-3 px-4 text-zinc-600">{z.freeAbove ? `R$ ${z.freeAbove.toFixed(2)}` : "—"}</td>
-                <td className="py-3 px-4 text-zinc-600">~{z.estimatedMin} min</td>
-                <td className="py-3 px-4">
-                  <button
-                    onClick={() => toggleZone(z)}
-                    className={`text-xs px-2 py-1 rounded-full ${z.enabled ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"}`}
-                  >
-                    {z.enabled ? "Ativa" : "Inativa"}
-                  </button>
-                </td>
-                <td className="py-3 px-4">
-                  <button onClick={() => deleteZone(z.id)} className="text-red-600 hover:underline text-xs">
-                    Excluir
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {zones.length === 0 && (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-zinc-500 text-sm">
-                  Nenhuma zona configurada. Adicione a primeira acima.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            <button
+              onClick={addZone}
+              disabled={saving || !newZone.name}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
+            >
+              + Adicionar zona
+            </button>
+          </div>
+
+          {/* Lista de zonas */}
+          <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-zinc-50 border-b border-zinc-200">
+                <tr className="text-left text-zinc-500 uppercase text-xs">
+                  <th className="py-3 px-4">Nome</th>
+                  <th className="py-3 px-4">Distância</th>
+                  <th className="py-3 px-4">Taxa</th>
+                  <th className="py-3 px-4">Grátis acima</th>
+                  <th className="py-3 px-4">Tempo</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {zones.map((z) => (
+                  <tr key={z.id} className="border-b border-zinc-100">
+                    <td className="py-3 px-4 font-medium">{z.name}</td>
+                    <td className="py-3 px-4 text-zinc-600">{z.minKm} - {z.maxKm} km</td>
+                    <td className="py-3 px-4 text-zinc-900 font-medium">R$ {z.fee.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-zinc-600">{z.freeAbove ? `R$ ${z.freeAbove.toFixed(2)}` : "—"}</td>
+                    <td className="py-3 px-4 text-zinc-600">~{z.estimatedMin} min</td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => toggleZone(z)}
+                        className={`text-xs px-2 py-1 rounded-full ${z.enabled ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"}`}
+                      >
+                        {z.enabled ? "Ativa" : "Inativa"}
+                      </button>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button onClick={() => deleteZone(z.id)} className="text-red-600 hover:underline text-xs">
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {zones.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-zinc-500 text-sm">
+                      Nenhuma zona configurada. Adicione a primeira acima.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   )
 }

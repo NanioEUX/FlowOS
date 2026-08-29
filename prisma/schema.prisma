@@ -153,6 +153,10 @@ model Establishment {
   ifoodAccessToken              String?
   ifoodRefreshToken             String?
   ifoodEnabled                  Boolean            @default(false)
+  // 99Entrega - Logística externa
+  tipoEntregaAtiva              String             @default("propria") // "propria" | "99entrega"
+  api99Key                      String?                                // x-api-key da 99 Empresas
+  api99EmployeeId               String?                                // ID do gestor para API
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
   pickupMessage                 String?
@@ -414,6 +418,13 @@ model Order {
   // Agendamento de pedidos
   isScheduled        Boolean         @default(false)
   deliveryDate       DateTime? // data/hora agendada para entrega/retirada
+  // 99Entrega - Rastreamento de provedor externo
+  entregaProvedor         String?  @default("propria") // "propria" | "99entrega"
+  entrega99RideId         String?                       // ID da corrida na 99
+  entregaStatusProvedor   String?                       // Status bruto da corrida 99
+  entregaPrecoCusto       Float?                        // Custo real pago à 99
+  entregaLinkRastreamento String?                       // Link de rastreamento 99
+  entregaPinCode          String?                       // PIN de validação 99
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   customer           Customer?       @relation(fields: [customerId], references: [id])
@@ -829,6 +840,16 @@ model DeliveryZone {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
   @@index([establishmentId, order])
+}
+
+// Logs de webhooks recebidos da 99Entrega (auditoria)
+model LogWebhook99 {
+  id                  String   @id @default(cuid())
+  pedidoId            String?
+  rideId              String?
+  payload             Json
+  statusProcessamento String   @default("pendente") // "pendente" | "processado" | "erro"
+  createdAt           DateTime @default(now())
 }
 
 model Story {
