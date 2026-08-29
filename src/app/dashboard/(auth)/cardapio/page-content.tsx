@@ -1575,20 +1575,20 @@ export default function CardapioPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
                           <button
                             onClick={() => moveCategory(cat.id, "up")}
                             disabled={catIdx === 0}
-                            className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                            className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30"
                           >
-                            <ArrowUp className="h-3.5 w-3.5" />
+                            <ArrowUp className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => moveCategory(cat.id, "down")}
                             disabled={catIdx === categories.length - 1}
-                            className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                            className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30"
                           >
-                            <ArrowDown className="h-3.5 w-3.5" />
+                            <ArrowDown className="h-4 w-4" />
                           </button>
                         </div>
                         <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name) }}>
