@@ -1256,20 +1256,28 @@ export default function CardapioPage() {
     const swapIdx = direction === "up" ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= sorted.length) return
 
-    const a = sorted[idx]
-    const b = sorted[swapIdx]
+    // Optimistic: swap locally + reassign orders immediately
+    const prevCategories = [...categories]
+    const newSorted = [...sorted]
+    const temp = newSorted[idx]
+    newSorted[idx] = newSorted[swapIdx]
+    newSorted[swapIdx] = temp
+    const withNewOrder = newSorted.map((p, i) => ({ ...p, order: i }))
+    setCategories(categories.map((c) => c.id === categoryId ? { ...c, products: withNewOrder } : c))
 
-    await fetchAuth(`/api/products/${a.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: b.order }),
-    })
-    await fetchAuth(`/api/products/${b.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: a.order }),
-    })
-    loadData()
+    // Save to DB in background
+    try {
+      for (const p of withNewOrder) {
+        await fetchAuth(`/api/products/${p.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: p.order }),
+        })
+      }
+    } catch {
+      setCategories(prevCategories)
+      loadData()
+    }
   }
 
   async function moveCategory(categoryId: string, direction: "up" | "down") {
@@ -1279,22 +1287,29 @@ export default function CardapioPage() {
     const swapIdx = direction === "up" ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= sorted.length) return
 
-    // Swap in the local array
-    const temp = sorted[idx]
-    sorted[idx] = sorted[swapIdx]
-    sorted[swapIdx] = temp
+    // Optimistic: swap locally + reassign orders immediately
+    const prevCategories = [...categories]
+    const newSorted = [...sorted]
+    const temp = newSorted[idx]
+    newSorted[idx] = newSorted[swapIdx]
+    newSorted[swapIdx] = temp
+    const withNewOrder = newSorted.map((c, i) => ({ ...c, order: i }))
+    setCategories(withNewOrder)
 
-    // Reassign sequential order values to ALL categories
-    for (let i = 0; i < sorted.length; i++) {
-      if (sorted[i].order !== i) {
-        await fetchAuth(`/api/categories/${sorted[i].id}`, {
+    // Save to DB in background (no await on UI)
+    try {
+      for (const c of withNewOrder) {
+        await fetchAuth(`/api/categories/${c.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: i }),
+          body: JSON.stringify({ order: c.order }),
         })
       }
+    } catch {
+      // On error, revert and refetch
+      setCategories(prevCategories)
+      loadData()
     }
-    loadData()
   }
 
   // === STORY FUNCTIONS ===
