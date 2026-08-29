@@ -27,9 +27,11 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Busc
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [open])
 
   useEffect(() => {
     if (open) {
@@ -47,44 +49,6 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Busc
     }
   }, [open])
 
-  const dropdown = open ? (
-    <div style={dropdownStyle} className="rounded-lg border border-zinc-200 bg-white shadow-lg">
-      <div className="flex items-center gap-2 border-b border-zinc-100 px-3 py-2">
-        <Search className="h-3.5 w-3.5 text-zinc-400" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={placeholder}
-          className="flex-1 bg-transparent text-xs text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
-        />
-        {search && (
-          <button type="button" onClick={() => setSearch("")} className="text-zinc-400 hover:text-zinc-600">
-            <X className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-      <div className="max-h-48 overflow-y-auto py-1">
-        {filtered.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-zinc-400">{emptyText}</p>
-        ) : (
-          filtered.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setSearch(""); setOpen(false) }}
-              className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${opt.value === value ? "bg-green-50 text-green-700 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}
-            >
-              {opt.label}
-              {opt.sub && <span className="ml-1 text-zinc-400">{opt.sub}</span>}
-            </button>
-          ))
-        )}
-      </div>
-    </div>
-  ) : null
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -101,7 +65,48 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Busc
           </button>
         )}
       </button>
-      {typeof document !== "undefined" && createPortal(dropdown, document.body)}
+      {open && typeof document !== "undefined" && createPortal(
+        <div
+          style={dropdownStyle}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="rounded-lg border border-zinc-200 bg-white shadow-lg"
+        >
+          <div className="flex items-center gap-2 border-b border-zinc-100 px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-zinc-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={placeholder}
+              className="flex-1 bg-transparent text-xs text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch("")} className="text-zinc-400 hover:text-zinc-600">
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <div className="max-h-48 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-zinc-400">{emptyText}</p>
+            ) : (
+              filtered.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { onChange(opt.value); setSearch(""); setOpen(false) }}
+                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${opt.value === value ? "bg-green-50 text-green-700 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}
+                >
+                  {opt.label}
+                  {opt.sub && <span className="ml-1 text-zinc-400">{opt.sub}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
