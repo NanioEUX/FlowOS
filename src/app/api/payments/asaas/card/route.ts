@@ -8,21 +8,24 @@ const ASAAS_API_URL = IS_SANDBOX
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, creditCard, creditCardHolderInfo } = await req.json()
+    const { orderId, creditCard, creditCardHolderInfo, establishmentId } = await req.json()
     console.log("[Card] Request received:", JSON.stringify({ orderId, creditCardHolderInfo: { name: creditCardHolderInfo?.name, cpf: creditCardHolderInfo?.cpf, email: creditCardHolderInfo?.email, phone: creditCardHolderInfo?.phone } }))
     const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1"
 
-    if (!orderId || !creditCard || !creditCardHolderInfo) {
+    if (!orderId || !creditCard || !creditCardHolderInfo || !establishmentId) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { asaasApiKey: true, name: true } } },
+      include: { establishment: { select: { id: true, asaasApiKey: true, name: true } } },
     })
 
     if (!order) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+    if (order.establishmentId !== establishmentId) {
+      return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
     if (!order.paymentId) {
       return NextResponse.json({ error: "Pedido não possui cobrança" }, { status: 400 })

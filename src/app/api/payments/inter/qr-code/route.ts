@@ -4,12 +4,12 @@ import { createInterPixCharge, getInterPixQrCode, generateInterTxId } from "@/li
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json()
+    const { orderId, establishmentId } = await req.json()
 
     console.log("[Inter QR Code] Request received:", { orderId })
 
-    if (!orderId) {
-      return NextResponse.json({ error: "orderId obrigatório" }, { status: 400 })
+    if (!orderId || !establishmentId) {
+      return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       include: {
         establishment: {
           select: {
+            id: true,
             interClientId: true,
             interClientSecret: true,
             interCertificate: true,
@@ -31,6 +32,10 @@ export async function POST(req: NextRequest) {
     if (!order) {
       console.log("[Inter QR Code] Order not found:", orderId)
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+
+    if (order.establishmentId !== establishmentId) {
+      return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
     const est = order.establishment

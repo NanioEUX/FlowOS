@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/addresses?customerId=xxx
+async function verifyCustomerOwnership(customerId: string, establishmentId: string | null): Promise<boolean> {
+  if (!establishmentId) return false
+  const customer = await prisma.customer.findFirst({
+    where: { id: customerId, establishmentId },
+    select: { id: true },
+  })
+  return !!customer
+}
+
+// GET /api/addresses?customerId=xxx&establishmentId=xxx
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const customerId = searchParams.get("customerId")
-    if (!customerId) {
-      return NextResponse.json({ error: "customerId required" }, { status: 400 })
+    const establishmentId = searchParams.get("establishmentId")
+    if (!customerId || !establishmentId) {
+      return NextResponse.json({ error: "customerId and establishmentId required" }, { status: 400 })
+    }
+
+    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
+      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
     }
 
     const addresses = await prisma.customerAddress.findMany({
@@ -26,10 +40,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { customerId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+    const { customerId, establishmentId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
 
-    if (!customerId || !street || !number || !city || !state || !cep) {
+    if (!customerId || !establishmentId || !street || !number || !city || !state || !cep) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
+    }
+
+    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
+      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
     }
 
     // Check limit (max 3 addresses)
@@ -75,10 +93,14 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { id, customerId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+    const { id, customerId, establishmentId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
 
-    if (!id || !customerId) {
-      return NextResponse.json({ error: "id and customerId required" }, { status: 400 })
+    if (!id || !customerId || !establishmentId) {
+      return NextResponse.json({ error: "id, customerId and establishmentId required" }, { status: 400 })
+    }
+
+    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
+      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
     }
 
     // If setting as default, unset others
@@ -111,15 +133,20 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE /api/addresses?id=xxx&customerId=xxx
+// DELETE /api/addresses?id=xxx&customerId=xxx&establishmentId=xxx
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
     const customerId = searchParams.get("customerId")
+    const establishmentId = searchParams.get("establishmentId")
 
-    if (!id || !customerId) {
-      return NextResponse.json({ error: "id and customerId required" }, { status: 400 })
+    if (!id || !customerId || !establishmentId) {
+      return NextResponse.json({ error: "id, customerId and establishmentId required" }, { status: 400 })
+    }
+
+    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
+      return NextResponse.json({ error: "Endereço não encontrado" }, { status: 404 })
     }
 
     const address = await prisma.customerAddress.findUnique({ where: { id } })

@@ -39,8 +39,8 @@ export async function GET(req: Request) {
     }
     if (orderId || orderNumber) {
       const order = orderId
-        ? await prisma.order.findUnique({ where: { id: orderId } })
-        : await prisma.order.findFirst({ where: { orderNumber: Number(orderNumber) } })
+        ? await prisma.order.findFirst({ where: { id: orderId, establishmentId: establishmentId || undefined } })
+        : await prisma.order.findFirst({ where: { orderNumber: Number(orderNumber), establishmentId: establishmentId || undefined } })
       if (order) {
         const rawPhone = order.customerPhone || ""
         const keys = [rawPhone, rawPhone.replace(/\D/g, "")].filter(

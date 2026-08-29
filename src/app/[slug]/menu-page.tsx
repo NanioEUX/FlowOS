@@ -993,7 +993,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // Address management
   async function fetchAddresses(customerId: string) {
     try {
-      const res = await fetch(`/api/addresses?customerId=${customerId}`)
+      const res = await fetch(`/api/addresses?customerId=${customerId}&establishmentId=${establishment.id}`)
       const data = await res.json()
       if (data.addresses) {
         setAddresses(data.addresses)
@@ -1009,7 +1009,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   async function deleteAddress(addressId: string) {
     if (!customerData?.id) return
     try {
-      await fetch(`/api/addresses?id=${addressId}&customerId=${customerData.id}`, { method: "DELETE" })
+      await fetch(`/api/addresses?id=${addressId}&customerId=${customerData.id}&establishmentId=${establishment.id}`, { method: "DELETE" })
       await fetchAddresses(customerData.id)
     } catch { }
   }
@@ -1024,6 +1024,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId: customerData.id,
+          establishmentId: establishment.id,
           label: addressForm.label || null,
           street: addressForm.street,
           number: addressForm.number,
@@ -5620,7 +5621,7 @@ function PaymentModal({
           const res = await fetch(qrEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId }),
+            body: JSON.stringify({ orderId, establishmentId }),
             signal: controller.signal,
           })
           if (controller.signal.aborted) return
@@ -5760,6 +5761,7 @@ function PaymentModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId,
+          establishmentId,
           creditCard: { number: cardNumber, expiry: cardExpiry, cvv: cardCvv },
           creditCardHolderInfo: {
             name: cardName,

@@ -3,21 +3,25 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json()
+    const { orderId, establishmentId } = await req.json()
 
     console.log("[Pagar.me QR Code] Request received:", { orderId, environment: process.env.PAGARME_ENVIRONMENT })
 
-    if (!orderId) {
-      return NextResponse.json({ error: "orderId obrigatório" }, { status: 400 })
+    if (!orderId || !establishmentId) {
+      return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { pagarmeApiKey: true, name: true, pagarmeEnvironment: true, pagarmeSplitReceiverId: true } } },
+      include: { establishment: { select: { id: true, pagarmeApiKey: true, name: true, pagarmeEnvironment: true, pagarmeSplitReceiverId: true } } },
     })
 
     if (!order) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+
+    if (order.establishmentId !== establishmentId) {
+      return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
     if (!order.paymentId) {

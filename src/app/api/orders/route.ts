@@ -163,6 +163,7 @@ export async function POST(req: NextRequest) {
         const deliveredAgg = await prisma.order.aggregate({
           where: {
             customerId: customer.id,
+            establishmentId,
             status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
           },
           _sum: { total: true },

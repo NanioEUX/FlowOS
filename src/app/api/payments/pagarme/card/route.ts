@@ -4,19 +4,23 @@ import { createCardTransaction } from "@/lib/integrations/pagarme"
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, cardToken, installments } = await req.json()
+    const { orderId, cardToken, installments, establishmentId } = await req.json()
 
-    if (!orderId || !cardToken) {
-      return NextResponse.json({ error: "orderId e cardToken obrigatórios" }, { status: 400 })
+    if (!orderId || !cardToken || !establishmentId) {
+      return NextResponse.json({ error: "orderId, cardToken e establishmentId obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { pagarmeApiKey: true, name: true, pagarmeEnvironment: true, pagarmeSplitReceiverId: true } } },
+      include: { establishment: { select: { id: true, pagarmeApiKey: true, name: true, pagarmeEnvironment: true, pagarmeSplitReceiverId: true } } },
     })
 
     if (!order) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+
+    if (order.establishmentId !== establishmentId) {
+      return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
     if (!order.establishment.pagarmeApiKey) {

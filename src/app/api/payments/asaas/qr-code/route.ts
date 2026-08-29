@@ -8,22 +8,26 @@ const ASAAS_API_URL =
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json()
+    const { orderId, establishmentId } = await req.json()
 
     console.log("[QR Code] Request received:", { orderId, environment: process.env.ASAAS_ENVIRONMENT, apiUrl: ASAAS_API_URL })
 
-    if (!orderId) {
-      return NextResponse.json({ error: "orderId obrigatório" }, { status: 400 })
+    if (!orderId || !establishmentId) {
+      return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { asaasApiKey: true, name: true } } },
+      include: { establishment: { select: { id: true, asaasApiKey: true, name: true } } },
     })
 
     if (!order) {
       console.log("[QR Code] Order not found:", orderId)
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+
+    if (order.establishmentId !== establishmentId) {
+      return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
     if (!order.paymentId) {

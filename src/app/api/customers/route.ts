@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
     const deliveredOrders = await prisma.order.aggregate({
       where: {
         customerId: customer.id,
+        establishmentId,
         status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
       },
       _sum: { total: true },
@@ -119,6 +120,15 @@ export async function PUT(req: NextRequest) {
 
     if (!id || !establishmentId) {
       return NextResponse.json({ error: "id e establishmentId são obrigatórios" }, { status: 400 })
+    }
+
+    // Verify customer belongs to this establishment
+    const existing = await prisma.customer.findFirst({
+      where: { id, establishmentId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
     }
 
     const cpfDigits = cpf?.replace(/\D/g, "")

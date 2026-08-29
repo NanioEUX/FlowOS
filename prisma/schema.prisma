@@ -204,7 +204,7 @@ model Establishment {
 model Customer {
   id                String                 @id @default(cuid())
   name              String?
-  phone             String                 @unique
+  phone             String
   cpf               String?
   email             String?
   address           String?
@@ -231,6 +231,7 @@ model Customer {
   notifications     CustomerNotification[]
   addresses         CustomerAddress[]
 
+  @@unique([establishmentId, phone])
   @@index([establishmentId, phone])
 }
 

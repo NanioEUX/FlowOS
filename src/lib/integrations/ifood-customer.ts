@@ -30,7 +30,7 @@ export async function upsertIfoodCustomer(establishmentId: string, customerData:
 
   // Increment stats
   await prisma.customer.update({
-    where: { phone },
+    where: { id: customer.id },
     data: {
       totalOrders: { increment: 1 },
       lastOrderAt: new Date(),
