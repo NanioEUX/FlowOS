@@ -1552,7 +1552,7 @@ export default function CardapioPage() {
             </div>
           </div>
 
-          {categories.sort((a, b) => a.order - b.order).map((cat, catIdx) => {
+          {[...categories].sort((a, b) => a.order - b.order).map((cat, catIdx) => {
             const sorted = [...cat.products].sort((a, b) => a.order - b.order)
             return (
               <Card key={cat.id}>
