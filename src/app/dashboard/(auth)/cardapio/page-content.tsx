@@ -1279,19 +1279,21 @@ export default function CardapioPage() {
     const swapIdx = direction === "up" ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= sorted.length) return
 
-    const a = sorted[idx]
-    const b = sorted[swapIdx]
+    // Swap in the local array
+    const temp = sorted[idx]
+    sorted[idx] = sorted[swapIdx]
+    sorted[swapIdx] = temp
 
-    await fetchAuth(`/api/categories/${a.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: b.order }),
-    })
-    await fetchAuth(`/api/categories/${b.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: a.order }),
-    })
+    // Reassign sequential order values to ALL categories
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].order !== i) {
+        await fetchAuth(`/api/categories/${sorted[i].id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: i }),
+        })
+      }
+    }
     loadData()
   }
 
