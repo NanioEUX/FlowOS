@@ -304,6 +304,7 @@ export default function CardapioPage() {
 
   async function addCategory() {
     if (!newCategoryName.trim() || !establishmentId) return
+    const maxOrder = categories.reduce((max, c) => Math.max(max, c.order), 0)
     await fetchAuth("/api/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -311,6 +312,7 @@ export default function CardapioPage() {
         type: "category",
         name: newCategoryName,
         establishmentId,
+        order: maxOrder + 1,
       }),
     })
     setNewCategoryName("")
@@ -1270,6 +1272,29 @@ export default function CardapioPage() {
     loadData()
   }
 
+  async function moveCategory(categoryId: string, direction: "up" | "down") {
+    const sorted = [...categories].sort((a, b) => a.order - b.order)
+    const idx = sorted.findIndex((c) => c.id === categoryId)
+    if (idx === -1) return
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sorted.length) return
+
+    const a = sorted[idx]
+    const b = sorted[swapIdx]
+
+    await fetchAuth(`/api/categories/${a.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: b.order }),
+    })
+    await fetchAuth(`/api/categories/${b.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: a.order }),
+    })
+    loadData()
+  }
+
   // === STORY FUNCTIONS ===
   const STORY_EMOJI_OPTIONS = ["🔥", "🎁", "✨", "💰", "🥗", "🚫", "🍕", "🍔", "🍣", "🍰", "☕", "🍺", "🥤", "🎉", "⭐", "💝", "🌿", "💪"]
   const STORY_GRADIENT_OPTIONS = [
@@ -1527,7 +1552,7 @@ export default function CardapioPage() {
             </div>
           </div>
 
-          {categories.map((cat) => {
+          {categories.sort((a, b) => a.order - b.order).map((cat, catIdx) => {
             const sorted = [...cat.products].sort((a, b) => a.order - b.order)
             return (
               <Card key={cat.id}>
@@ -1549,9 +1574,27 @@ export default function CardapioPage() {
                         <Button size="sm" variant="ghost" onClick={() => setEditingCategoryId(null)}>Cancelar</Button>
                       </div>
                     ) : (
-                      <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name) }}>
-                        {cat.name}
-                      </h3>
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={() => moveCategory(cat.id, "up")}
+                            disabled={catIdx === 0}
+                            className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                          >
+                            <GripVertical className="h-3 w-3 -rotate-90" />
+                          </button>
+                          <button
+                            onClick={() => moveCategory(cat.id, "down")}
+                            disabled={catIdx === categories.length - 1}
+                            className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                          >
+                            <GripVertical className="h-3 w-3 rotate-90" />
+                          </button>
+                        </div>
+                        <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name) }}>
+                          {cat.name}
+                        </h3>
+                      </div>
                     )}
                     <div className="flex items-center gap-2">
                       <button
