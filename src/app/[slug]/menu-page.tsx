@@ -3190,12 +3190,15 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
             </div>
             <div className="space-y-3">
+              {/* Telefone — sempre visível, fica readonly após envio do código */}
               <div>
                 <label className="text-xs" style={{ color: theme.textMuted }}>WhatsApp</label>
                 <input
                   placeholder="(47) 99999-9999"
                   value={phoneInput}
+                  readOnly={!!(whatsappSent || verifyDevCode)}
                   onChange={(e) => {
+                    if (whatsappSent || verifyDevCode) return
                     const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
                     let formatted = raw
                     if (raw.length > 2) formatted = `(${raw.slice(0, 2)}) ${raw.slice(2)}`
@@ -3203,9 +3206,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     setPhoneInput(formatted)
                   }}
                   className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                  style={{ backgroundColor: (whatsappSent || verifyDevCode) ? theme.bgCard : theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1, cursor: (whatsappSent || verifyDevCode) ? "not-allowed" : "text" }}
                 />
               </div>
+
+              {/* Nome — sempre visível, readonly se já tem dados */}
               <div>
                 <label className="text-xs flex items-center justify-between" style={{ color: theme.textMuted }}>
                   <span>Seu nome</span>
@@ -3230,8 +3235,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 />
               </div>
 
-              {/* Etapa 1: Botão enviar código */}
-              {verifyStep === 1 && (
+              {/* Botão enviar código — aparece quando o código ainda NÃO foi enviado */}
+              {!whatsappSent && !verifyDevCode && (
                 <>
                   <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido.</p>
                   <Button
@@ -3241,7 +3246,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                         setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
                         markVerifySessionStart()
                         await sendVerificationCode()
-                        setVerifyStep(2)
                       }
                     }}
                     className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
@@ -3253,10 +3257,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </>
               )}
 
-              {/* Etapa 2: Código OTP + Confirmar */}
-              {verifyStep === 2 && (
+              {/* Código OTP — aparece APÓS enviar o código (mesmo modal, sem troca de tela) */}
+              {(whatsappSent || verifyDevCode) && (
                 <>
-                  {whatsappSent && !verifyDevCode && (
+                  {whatsappSent && (
                     <div className="rounded-lg border-2 p-3 text-center" style={{ borderColor: `${theme.success}50`, backgroundColor: `${theme.success}15` }}>
                       <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.success }}>✓ Código enviado no WhatsApp</p>
                       <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Verifique as mensagens do seu WhatsApp</p>
@@ -3339,6 +3343,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {verifySending ? "Reenviando..." : "Reenviar código"}
                   </button>
                 </>
+              )}
+
+              {verifyError && !whatsappSent && !verifyDevCode && (
+                <p className="text-sm text-red-400">{verifyError}</p>
               )}
             </div>
           </div>
