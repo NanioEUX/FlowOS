@@ -1558,7 +1558,7 @@ export default function CardapioPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowIfoodWizard(true)} className="gap-2">
+              <Button variant="primary" onClick={() => setShowIfoodWizard(true)} className="gap-2">
                 <Download className="h-4 w-4" />
                 Importar do iFood
               </Button>
@@ -1569,10 +1569,25 @@ export default function CardapioPage() {
             </div>
           </div>
 
+          {/* Category quick-nav pills */}
+          {categories.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {[...categories].sort((a, b) => a.order - b.order).map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => document.getElementById(`category-${cat.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className="shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {[...categories].sort((a, b) => a.order - b.order).map((cat, catIdx) => {
             const sorted = [...cat.products].sort((a, b) => a.order - b.order)
             return (
-              <Card key={cat.id}>
+              <Card key={cat.id} id={`category-${cat.id}`}>
                 <CardContent className="p-4">
                   <div className="mb-4 flex items-center justify-between">
                     {editingCategoryId === cat.id ? (
@@ -1623,7 +1638,7 @@ export default function CardapioPage() {
                         className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                           cat.targetMarginPercent != null
                             ? "bg-green-50 text-green-700 hover:bg-green-100"
-                            : "text-zinc-400 hover:text-zinc-600"
+                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
                         }`}
                       >
                         {cat.targetMarginPercent != null ? (
@@ -1639,12 +1654,12 @@ export default function CardapioPage() {
                         )}
                       </button>
                       {cat.targetMarginPercent != null && (
-                        <Button size="sm" variant="ghost" onClick={() => updateCategoryPrices(cat)} className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                        <Button size="sm" variant="outline" onClick={() => updateCategoryPrices(cat)} className="text-xs font-bold text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700">
                           <AlertTriangle className="h-3 w-3 mr-1" />
                           Atualizar preços
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => openNewProduct(cat.id)}>
+                      <Button size="sm" variant="primary" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
                         Adicionar
                       </Button>
@@ -1701,25 +1716,30 @@ export default function CardapioPage() {
                             </button>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAvailable(product) }}
-                            className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
-                              product.isAvailable
-                                ? "bg-green-100 text-green-600"
-                                : "bg-red-100 text-red-500"
-                            }`}
-                            title={product.isAvailable ? "Disponível (clique para pausar)" : "Pausado (clique para disponibilizar)"}
-                            style={{ width: 32, height: 32 }}
-                          >
-                            <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                              product.isAvailable ? "bg-green-500" : "bg-red-400"
-                            }`}>
-                              <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
-                              }`} />
+                          <div className="flex flex-col items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAvailable(product) }}
+                              className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                                product.isAvailable
+                                  ? "bg-green-100 text-green-600"
+                                  : "bg-red-100 text-red-500"
+                              }`}
+                              title={product.isAvailable ? "Disponível (clique para pausar)" : "Pausado (clique para disponibilizar)"}
+                              style={{ width: 32, height: 32 }}
+                            >
+                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                product.isAvailable ? "bg-green-500" : "bg-red-400"
+                              }`}>
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  product.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </span>
+                            </button>
+                            <span className={`text-[9px] font-medium ${product.isAvailable ? "text-green-600" : "text-red-500"}`}>
+                              {product.isAvailable ? "Ativo" : "Inativo"}
                             </span>
-                          </button>
+                          </div>
 
                           {product.image ? (
                             <img
@@ -1824,9 +1844,10 @@ export default function CardapioPage() {
                             </button>
                             <button
                               onClick={() => editProduct(product)}
-                              className="text-zinc-400 hover:text-zinc-400"
+                              className="flex items-center gap-1 text-zinc-500 hover:text-green-600 transition-colors"
                             >
                               <Pencil className="h-4 w-4" />
+                              <span className="text-xs font-medium">Editar</span>
                             </button>
                             <button
                               onClick={() => handleDeleteProduct(product.id, product.name)}
@@ -1874,24 +1895,29 @@ export default function CardapioPage() {
                 <div className="divide-y divide-zinc-100">
                   {cat.products.filter(p => p.sendToPrep).map((product: any) => (
                     <div key={product.id} className="flex items-center gap-3 px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleAvailable(product)}
-                        className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
-                          product.isAvailable
-                            ? "bg-green-100 text-green-600"
-                            : "bg-red-100 text-red-500"
-                        }`}
-                        style={{ width: 28, height: 28 }}
-                      >
-                        <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
-                          product.isAvailable ? "bg-green-500" : "bg-red-400"
-                        }`}>
-                          <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
-                            product.isAvailable ? "translate-x-3" : "translate-x-0.5"
-                          }`} />
+                      <div className="flex flex-col items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleAvailable(product)}
+                          className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                            product.isAvailable
+                              ? "bg-green-100 text-green-600"
+                              : "bg-red-100 text-red-500"
+                          }`}
+                          style={{ width: 28, height: 28 }}
+                        >
+                          <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
+                            product.isAvailable ? "bg-green-500" : "bg-red-400"
+                          }`}>
+                            <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                              product.isAvailable ? "translate-x-3" : "translate-x-0.5"
+                            }`} />
+                          </span>
+                        </button>
+                        <span className={`text-[9px] font-medium ${product.isAvailable ? "text-green-600" : "text-red-500"}`}>
+                          {product.isAvailable ? "Ativo" : "Inativo"}
                         </span>
-                      </button>
+                      </div>
                       {product.image ? (
                         <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
