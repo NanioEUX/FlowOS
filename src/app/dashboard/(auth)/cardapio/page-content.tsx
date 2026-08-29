@@ -1581,14 +1581,14 @@ export default function CardapioPage() {
                             disabled={catIdx === 0}
                             className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
                           >
-                            <GripVertical className="h-3 w-3 -rotate-90" />
+                            <ArrowUp className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => moveCategory(cat.id, "down")}
                             disabled={catIdx === categories.length - 1}
                             className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
                           >
-                            <GripVertical className="h-3 w-3 rotate-90" />
+                            <ArrowDown className="h-3.5 w-3.5" />
                           </button>
                         </div>
                         <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name) }}>
