@@ -256,6 +256,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [showCheckout, setShowCheckout] = useState(false)
   const [cartStep, setCartStep] = useState<"cart" | "payment" | "confirmation">("cart")
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [verifyStep, setVerifyStep] = useState<1 | 2>(1)
   const [verifyCode, setVerifyCode] = useState("")
   const [verifySending, setVerifySending] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -493,7 +494,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         setCustomerData(refreshedData)
       }
       setShowVerifyModal(false)
+      setShowIdentifyModal(false)
+      setVerifyStep(1)
       setVerifyCode("")
+      setWhatsappSent(false)
+      setVerifyDevCode("")
       applyLocalVerified(phoneDigits)
       markSessionVerified()
     } catch (e: any) {
@@ -1250,7 +1255,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         openIdentifyModal()
       } else {
         markVerifySessionStart()
-        setShowVerifyModal(true)
+        setShowIdentifyModal(true)
+        setVerifyStep(2)
         setVerifyError("")
       }
       return
@@ -1579,7 +1585,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     if (!sessionVerified) {
       console.log("[submitOrder] RETORNO: sessao nao verificada")
       markVerifySessionStart()
-      setShowVerifyModal(true)
+      setShowIdentifyModal(true)
+      setVerifyStep(2)
       setVerifyError("")
       setOrdering(false)
       orderingRef.current = false
@@ -2069,10 +2076,10 @@ const handlePaymentSuccess = useCallback(() => {
 
   // Auto-foco no primeiro campo OTP ao abrir o modal de verificação
   useEffect(() => {
-    if (showVerifyModal) {
+    if (showIdentifyModal && verifyStep === 2) {
       setTimeout(() => otpInputsRef.current[0]?.focus(), 150)
     }
-  }, [showVerifyModal])
+  }, [showIdentifyModal, verifyStep])
 
   // Auto-cola: quando o modal abre, tenta ler o código que o cliente copiou
   // Validação do código: usuário deve clicar "Confirmar" manualmente
@@ -2090,8 +2097,12 @@ const handlePaymentSuccess = useCallback(() => {
       if (verifyAppliedRef.current) return
       verifyAppliedRef.current = true
       setShowVerifyModal(false)
+      setShowIdentifyModal(false)
+      setVerifyStep(1)
       setVerifyError("")
       setVerifyCode("")
+      setWhatsappSent(false)
+      setVerifyDevCode("")
       // Phone pode não estar em estado na PWA (ex.: navegando sem modal);
       // tenta ler do marcador de verificação gravado pelo link.
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
@@ -2161,7 +2172,11 @@ const handlePaymentSuccess = useCallback(() => {
         if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
           verifyAppliedRef.current = true
           setShowVerifyModal(false)
+          setShowIdentifyModal(false)
+          setVerifyStep(1)
           setVerifyCode("")
+          setWhatsappSent(false)
+          setVerifyDevCode("")
           setCustomerData(data)
           setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
           setCustomerTier(data.tier || "bronze")
@@ -2208,7 +2223,11 @@ const handlePaymentSuccess = useCallback(() => {
         if (data && !data.notFound && data.whatsappVerified && verifiedAt > sessionStart && Date.now() - verifiedAt < 5 * 60 * 1000) {
           verifyAppliedRef.current = true
           setShowVerifyModal(false)
+          setShowIdentifyModal(false)
+          setVerifyStep(1)
           setVerifyCode("")
+          setWhatsappSent(false)
+          setVerifyDevCode("")
           setCustomerData(data)
           setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
           setCustomerTier(data.tier || "bronze")
@@ -2224,7 +2243,7 @@ const handlePaymentSuccess = useCallback(() => {
       clearInterval(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput, showVerifyModal])
+  }, [establishment.id, establishment.slug, sessionVerified, customer.phone, customerData?.phone, phoneInput, showIdentifyModal, verifyStep])
 
   // Link de verificação (ex.: ?code=123456&phone=5511999999999):
   // valida automaticamente, avisa a PWA aberta e decide se fecha a aba.
@@ -2244,7 +2263,8 @@ const handlePaymentSuccess = useCallback(() => {
     if (phoneDigits.length < 10) {
       setVerifyError("Link de verificação inválido")
       markVerifySessionStart()
-      setShowVerifyModal(true)
+      setShowIdentifyModal(true)
+      setVerifyStep(2)
       return
     }
 
@@ -2284,14 +2304,19 @@ const handlePaymentSuccess = useCallback(() => {
         } catch {}
 
         setShowVerifyModal(false)
+        setShowIdentifyModal(false)
+        setVerifyStep(1)
         setVerifyCode("")
+        setWhatsappSent(false)
+        setVerifyDevCode("")
 
         // Fluxo simples: validação concluída e o usuário já está logado. O
         // cardápio abre direto nesta aba, sem tela de sucesso nem heartbeat.
       } catch (e: any) {
         setVerifyError(e.message)
         markVerifySessionStart()
-        setShowVerifyModal(true)
+        setShowIdentifyModal(true)
+        setVerifyStep(2)
       } finally {
         setVerifying(false)
       }
@@ -3062,7 +3087,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setShowCustomerProfile(true)
                 } else if (customer.phone && customer.name) {
                   markVerifySessionStart()
-                  setShowVerifyModal(true)
+                  setShowIdentifyModal(true)
+                  setVerifyStep(2)
                   setVerifyError("")
                 } else {
                   openIdentifyModal()
@@ -3155,8 +3181,11 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold" style={{ color: theme.text }}>Identificar-se</h2>
-              <button onClick={() => setShowIdentifyModal(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
+                <Shield className="h-5 w-5" style={{ color: theme.accent }} />
+                Confirmar WhatsApp
+              </h2>
+              <button onClick={() => { setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -3200,28 +3229,117 @@ onPaymentConfirmed={handlePaymentSuccess}
                   }}
                 />
               </div>
-              <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido. CPF só é necessário para pagamento online (PIX/Cartão).</p>
-              <Button
-                onClick={async () => {
-                  const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-                  const cpfOk = !cpfDigits || (cpfDigits.length === 11 && isValidCpf(customer.cpf || ""))
-                  const finalName = customer.name || customerData?.name || ""
-                  if (finalName && phoneInput.replace(/\D/g, "").length >= 11 && cpfOk) {
-                    setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
-                    setShowIdentifyModal(false)
-                    // Verificação WhatsApp SEMPRE obrigatória (anti-fraude / novo device)
-                    markVerifySessionStart()
-                    setTimeout(() => {
-                      setShowVerifyModal(true)
-                      setVerifyError("")
-                    }, 300)
-                  }
-                }}
-                className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
-                disabled={!(customer.name || customerData?.name) || phoneInput.replace(/\D/g, "").length < 11}
-              >
-                Confirmar
-              </Button>
+
+              {/* Etapa 1: Botão enviar código */}
+              {verifyStep === 1 && (
+                <>
+                  <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido.</p>
+                  <Button
+                    onClick={async () => {
+                      const finalName = customer.name || customerData?.name || ""
+                      if (finalName && phoneInput.replace(/\D/g, "").length >= 11) {
+                        setCustomer((prev) => ({ ...prev, name: finalName, phone: phoneInput.replace(/\D/g, "") }))
+                        markVerifySessionStart()
+                        await sendVerificationCode()
+                        setVerifyStep(2)
+                      }
+                    }}
+                    className="w-full bg-gradient-to-r from-[#FF6B35] to-[#E55A2B] hover:opacity-90"
+                    disabled={!(customer.name || customerData?.name) || phoneInput.replace(/\D/g, "").length < 11 || verifySending}
+                  >
+                    {verifySending ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : <Send className="mr-2 inline h-4 w-4" />}
+                    Enviar código via WhatsApp
+                  </Button>
+                </>
+              )}
+
+              {/* Etapa 2: Código OTP + Confirmar */}
+              {verifyStep === 2 && (
+                <>
+                  {whatsappSent && !verifyDevCode && (
+                    <div className="rounded-lg border-2 p-3 text-center" style={{ borderColor: `${theme.success}50`, backgroundColor: `${theme.success}15` }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.success }}>✓ Código enviado no WhatsApp</p>
+                      <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Verifique as mensagens do seu WhatsApp</p>
+                    </div>
+                  )}
+
+                  {verifyDevCode && (
+                    <div className="rounded-lg border-2 border-amber-500/50 bg-amber-500/15 p-3 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">⚠ WhatsApp não entregou — código visível</p>
+                      <p className="mt-1 font-mono text-3xl font-bold tracking-widest text-amber-300">{verifyDevCode}</p>
+                      <button
+                        type="button"
+                        onClick={() => setVerifyCode(verifyDevCode)}
+                        className="mt-2 text-xs font-medium text-amber-400 underline hover:text-amber-300"
+                      >
+                        Usar este código
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <label className="block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
+                      <button
+                        type="button"
+                        onClick={pasteVerifyCode}
+                        className="flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline"
+                        style={{ color: theme.accent }}
+                      >
+                        <ClipboardList className="h-3.5 w-3.5" />
+                        Colar
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <input
+                          key={i}
+                          ref={(el) => { otpInputsRef.current[i] = el }}
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete={i === 0 ? "one-time-code" : "off"}
+                          maxLength={1}
+                          value={verifyCode[i] || ""}
+                          onChange={(e) => handleOtpChange(i, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                          onPaste={handleOtpPaste}
+                          aria-label={`Dígito ${i + 1} do código`}
+                          className="h-14 w-full rounded-lg border text-center text-2xl font-bold focus:outline-none focus:ring-2"
+                          style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-center text-[10px]" style={{ color: theme.textMutedMore }}>
+                      Copie o código no WhatsApp e volte aqui — ele é preenchido sozinho. Se não, toque em Colar.
+                    </p>
+                  </div>
+
+                  {verifyError && (
+                    <p className="text-sm text-red-400">{verifyError}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitVerifyCode}
+                    disabled={verifying || verifyCode.length < 6}
+                    className="w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
+                    style={{ backgroundColor: theme.accent }}
+                  >
+                    {verifying ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : null}
+                    Confirmar e entrar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={sendVerificationCode}
+                    disabled={verifySending}
+                    className="w-full text-center text-xs underline"
+                    style={{ color: theme.textMutedMore }}
+                  >
+                    {verifySending ? "Reenviando..." : "Reenviar código"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -3397,7 +3515,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                               setExpandedProfileItem(null)
                               setShowCustomerProfile(false)
                               markVerifySessionStart()
-                              setShowVerifyModal(true)
+                              setShowIdentifyModal(true)
+                              setVerifyStep(2)
                               setVerifyError("")
                               return
                             }
@@ -3789,133 +3908,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                 Sair
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Verify WhatsApp Modal (first purchase) */}
-      {showVerifyModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
-                <Shield className="h-5 w-5" style={{ color: theme.accent }} />
-                Confirmar WhatsApp
-              </h2>
-              <button onClick={() => setShowVerifyModal(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
-              Enviaremos um código de 6 dígitos.
-            </p>
-
-            <div className="mb-4 rounded-lg p-3" style={{ backgroundColor: theme.bgInput }}>
-              <p className="text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Seu número</p>
-              <p className="text-sm font-medium" style={{ color: theme.text }}>
-                {(() => {
-                  const digits = String(customer.phone || "").replace(/\D/g, "").slice(0, 11)
-                  if (!digits) return "Não informado"
-                  if (digits.length <= 2) return `(${digits}`
-                  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-                  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-                })()}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={sendVerificationCode}
-              disabled={verifySending}
-              className="w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
-              style={{ backgroundColor: theme.primary }}
-            >
-              {verifySending ? (
-                <Loader2 className="inline h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 inline h-4 w-4" />
-              )}
-              Enviar código por WhatsApp
-            </button>
-
-            {whatsappSent && !verifyDevCode && (
-              <div className="mt-3 rounded-lg border-2 p-4 text-center" style={{ borderColor: `${theme.success}50`, backgroundColor: `${theme.success}15` }}>
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: theme.success }}>✓ Código enviado no WhatsApp</p>
-                <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Verifique as mensagens do seu WhatsApp</p>
-              </div>
-            )}
-
-            {verifyDevCode && (
-              <div className="mt-3 rounded-lg border-2 border-amber-500/50 bg-amber-500/15 p-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">⚠ WhatsApp não entregou — código visível</p>
-                <p className="mt-1 font-mono text-3xl font-bold tracking-widest text-amber-300">{verifyDevCode}</p>
-                <button
-                  type="button"
-                  onClick={() => setVerifyCode(verifyDevCode)}
-                  className="mt-2 text-xs font-medium text-amber-400 underline hover:text-amber-300"
-                >
-                  Usar este código
-                </button>
-                <p className="mt-2 text-[10px] text-amber-500/70">Use o código acima para continuar</p>
-              </div>
-            )}
-
-            <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between">
-                <label className="block text-xs uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Código recebido</label>
-                <button
-                  type="button"
-                  onClick={pasteVerifyCode}
-                  className="flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline"
-                  style={{ color: theme.accent }}
-                >
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  Colar
-                </button>
-              </div>
-              <div className="flex gap-2">
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { otpInputsRef.current[i] = el }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete={i === 0 ? "one-time-code" : "off"}
-                    maxLength={1}
-                    value={verifyCode[i] || ""}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    onPaste={handleOtpPaste}
-                    aria-label={`Dígito ${i + 1} do código`}
-                    className="h-14 w-full rounded-lg border text-center text-2xl font-bold focus:outline-none focus:ring-2"
-                    style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                  />
-                ))}
-              </div>
-              <p className="mt-2 text-center text-[10px]" style={{ color: theme.textMutedMore }}>
-                Copie o código no WhatsApp e volte aqui — ele é preenchido sozinho. Se não, toque em Colar.
-              </p>
-            </div>
-
-            {verifyError && (
-              <p className="mt-2 text-sm text-red-400">{verifyError}</p>
-            )}
-
-            <button
-              type="button"
-              onClick={submitVerifyCode}
-              disabled={verifying || verifyCode.length < 6}
-              className="mt-3 w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-50"
-              style={{ backgroundColor: theme.accent }}
-            >
-              {verifying ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : null}
-              Confirmar e continuar
-            </button>
-
-            <p className="mt-3 text-center text-xs" style={{ color: theme.textMutedMore }}>
-              Não recebeu? Clique em &ldquo;Enviar código&rdquo; novamente.
-            </p>
           </div>
         </div>
       )}

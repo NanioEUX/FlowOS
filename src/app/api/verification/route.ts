@@ -40,13 +40,31 @@ export async function POST(req: NextRequest) {
     })
 
     if (!customer) {
-      customer = await prisma.customer.create({
-        data: {
-          phone: phoneDigits,
-          establishmentId,
-          ...(name ? { name } : {}),
-        },
+      // Try to find by phone only (customer may exist at another establishment)
+      const existingByPhone = await prisma.customer.findUnique({
+        where: { phone: phoneDigits },
       })
+
+      if (existingByPhone) {
+        // Customer exists at another establishment — update establishmentId to link here
+        // and optionally update name
+        customer = await prisma.customer.update({
+          where: { id: existingByPhone.id },
+          data: {
+            establishmentId,
+            ...(name ? { name } : {}),
+          },
+        })
+      } else {
+        // New customer — create record
+        customer = await prisma.customer.create({
+          data: {
+            phone: phoneDigits,
+            establishmentId,
+            ...(name ? { name } : {}),
+          },
+        })
+      }
     } else if (name && !customer.name) {
       // Update name if customer exists but doesn't have one yet
       customer = await prisma.customer.update({
