@@ -1448,22 +1448,24 @@ export default function CardapioPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="flex items-center gap-2 text-2xl font-bold text-zinc-900">
+      <h2 className="flex items-center gap-3 text-2xl font-bold text-zinc-900">
         Cardápio
         {establishmentSlug && (
           <>
             <a href={`/${establishmentSlug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-normal text-green-600 hover:text-green-700">
               <ExternalLink className="h-4 w-4" />
-              Ver público
+              Link cardápio
             </a>
+            <Button variant="outline" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium">
+              <Download className="h-4 w-4" />
+              Importar cardápio do iFood
+            </Button>
             <button
               onClick={() => {
                 const next = !showPreview
                 setShowPreview(next)
                 if (next && establishmentSlug) {
-                  // Reset position when opening split view
                   setPreviewPos({ x: -1, y: -1 })
-                  // Force iframe load
                   setTimeout(() => {
                     if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}`
                     if (previewIframeMobileRef.current) previewIframeMobileRef.current.src = `/${establishmentSlug}`
@@ -1473,7 +1475,7 @@ export default function CardapioPage() {
               className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${showPreview ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
             >
               <Eye className="h-4 w-4" />
-              Preview
+              Preview cardápio
             </button>
           </>
         )}
@@ -1555,13 +1557,9 @@ export default function CardapioPage() {
       {/* Produtos Tab */}
       {activeTab === "produtos" && (
         <>
-          <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
             <div className="flex gap-2">
-              <Button variant="primary" onClick={() => setShowIfoodWizard(true)} className="gap-2">
-                <Download className="h-4 w-4" />
-                Importar do iFood
-              </Button>
               <Button onClick={() => setShowCategoryForm(true)}>
                 <Plus className="mr-1 h-4 w-4" />
                 Nova Categoria
