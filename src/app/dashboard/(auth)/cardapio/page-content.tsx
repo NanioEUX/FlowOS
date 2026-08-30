@@ -2993,6 +2993,9 @@ export default function CardapioPage() {
                               {productLinks.map((link) => {
                                 const item = stockItems.find((s) => s.id === link.stockItemId)
                                 if (!item) return null
+                                const qty = Number(link.quantity) || 0
+                                const converted = convertQuantity(qty, link.unit || "un", item.unit || "un")
+                                const lineCost = converted !== null ? converted * (item.unitCost || 0) : null
                                 return (
                                   <div key={link.stockItemId} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
                                     <span className="flex-1 text-xs text-zinc-700">{item.name}</span>
@@ -3027,6 +3030,9 @@ export default function CardapioPage() {
                                       <option value="L">L</option>
                                       <option value="un">un</option>
                                     </select>
+                                    {lineCost !== null && lineCost > 0 && (
+                                      <span className="text-[10px] font-medium text-zinc-400 tabular-nums w-16 text-right">{formatCurrency(lineCost)}</span>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => setProductLinks(productLinks.filter((l) => l.stockItemId !== link.stockItemId))}
@@ -3071,26 +3077,6 @@ export default function CardapioPage() {
                         <p className="text-xs text-amber-700">⚠️ Unidades incompatíveis — o custo pode estar incompleto. Verifique se as unidades dos insumos são compatíveis com as do estoque.</p>
                       </div>
                     )}
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-zinc-700">Destaque</label>
-                      <div className="flex flex-wrap gap-2">
-                        {BADGE_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setProductForm({ ...productForm, badge: productForm.badge === opt.value ? "" : opt.value })}
-                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                              productForm.badge === opt.value
-                                ? "border-green-600 bg-green-600/10 text-green-600"
-                                : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
-                            }`}
-                          >
-                            {opt.icon && <opt.icon className="mr-1 inline h-3 w-3" />}
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 )}
 
