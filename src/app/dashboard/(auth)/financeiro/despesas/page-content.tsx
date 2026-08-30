@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon, ChevronDown, Search, AlertTriangle, CalendarCheck, Repeat, Settings, ArrowRight, CheckCircle } from "lucide-react"
+import { Plus, Trash2, Loader2, X, Pencil, Download, RotateCcw, DollarSign, Image as ImageIcon, ChevronDown, Search, AlertTriangle, CalendarCheck, Repeat, Settings, ArrowRight, CheckCircle, Package } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -112,6 +112,21 @@ export default function DespesasPage() {
   const [renameValue, setRenameValue] = useState("")
   const [moveToCat, setMoveToCat] = useState("")
   const [processing, setProcessing] = useState(false)
+
+  // Stock linking state
+  const [linkToStock, setLinkToStock] = useState(false)
+  const [stockItems, setStockItems] = useState<any[]>([])
+  const [stockItemId, setStockItemId] = useState("")
+  const [stockQuantity, setStockQuantity] = useState("")
+  const [stockUnit, setStockUnit] = useState("")
+  const [stockUnitCost, setStockUnitCost] = useState("")
+
+  useEffect(() => {
+    if (!establishmentId) return
+    fetchAuth(`/api/stock?establishmentId=${establishmentId}`).then((r) => r.json()).then((data) => {
+      setStockItems(Array.isArray(data.items) ? data.items : [])
+    }).catch(() => {})
+  }, [establishmentId])
 
   useEffect(() => {
     if (!establishmentId) return
@@ -225,6 +240,7 @@ export default function DespesasPage() {
 
   function openCreate() {
     setEditingId(null); setForm(emptyForm); setFormType("lancamento"); setLinkToCash(!!cashRegister); setShowForm(true)
+    setLinkToStock(false); setStockItemId(""); setStockQuantity(""); setStockUnit(""); setStockUnitCost("")
   }
   function openEdit(expense: Expense) {
     setEditingId(expense.id); setFormType(expense.type as ExpenseType)
@@ -240,18 +256,27 @@ export default function DespesasPage() {
     try {
       const payload: any = { description: form.description, amount, category: form.category, paymentMethod: form.paymentMethod, type: formType, date: formType === "lancamento" ? (form.date || undefined) : null, dueDate: form.dueDate || undefined, recurrenceStart: form.recurrenceStart || undefined, recurrenceEnd: form.recurrenceEnd || undefined, recurrenceFreq: form.recurrenceFreq, isRecurring: formType === "recorrente", establishmentId }
       if (linkToCash && cashRegister) payload.cashRegisterId = cashRegister.id
+      if (linkToStock && stockItemId && stockQuantity && stockUnit) {
+        payload.stockLink = { stockItemId, quantity: Number(stockQuantity) || 0, unit: stockUnit, unitCost: Number(stockUnitCost.replace(",", ".")) || 0 }
+      }
       if (editingId) {
         const res = await fetchAuth(`/api/expenses/${editingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         if (res.ok) { toast("Despesa atualizada", "success"); window.dispatchEvent(new Event("expenses-updated")) } else { toast("Erro ao atualizar", "error") }
       } else {
         const res = await fetchAuth("/api/expenses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        if (res.ok) { const r = await res.json(); toast(`${r.count || 1} despesa(s) criada(s)`, "success"); window.dispatchEvent(new Event("expenses-updated")) } else { toast("Erro ao criar", "error") }
+        if (res.ok) {
+          const r = await res.json()
+          toast(`${r.count || 1} despesa(s) criada(s)`, "success")
+          if (r.stockAlert) toast(r.stockAlert, "success")
+          window.dispatchEvent(new Event("expenses-updated"))
+        } else { toast("Erro ao criar", "error") }
       }
       // Reload
       const params = new URLSearchParams({ establishmentId: establishmentId! })
       const refreshed = await fetchAuth(`/api/expenses?${params}`).then((r) => r.json())
       setExpenses(Array.isArray(refreshed) ? refreshed : [])
       setShowForm(false)
+      setLinkToStock(false); setStockItemId(""); setStockQuantity(""); setStockUnit(""); setStockUnitCost("")
     } finally { setSaving(false) }
   }
 
@@ -420,6 +445,44 @@ export default function DespesasPage() {
               {formType === "recorrente" && (<><div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Início *</label><input type="date" value={form.recurrenceStart} onChange={(e) => setForm({ ...form, recurrenceStart: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Fim (opcional)</label><input type="date" value={form.recurrenceEnd} onChange={(e) => setForm({ ...form, recurrenceEnd: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div></div>{getRecurrencePreview() && <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-[11px] text-purple-700">{getRecurrencePreview()}</div>}</>)}
               <div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Categoria</label><SearchableSelect value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={categories.map((c) => ({ value: c, label: categoryLabels[c] || c }))} placeholder="Selecionar..." /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Pagamento</label><SearchableSelect value={form.paymentMethod} onChange={(v) => setForm({ ...form, paymentMethod: v })} options={Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))} placeholder="Selecionar..." /></div></div>
               {cashRegister && <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-amber-200 bg-amber-50 p-2"><input type="checkbox" checked={linkToCash} onChange={(e) => setLinkToCash(e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500" /><div><span className="text-xs font-medium text-zinc-700">Vincular ao caixa aberto</span><p className="text-[10px] text-zinc-500">Aparece no fechamento do dia</p></div></label>}
+              {form.category === "insumo" && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={linkToStock} onChange={(e) => setLinkToStock(e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500" />
+                    <div className="flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-blue-600" />
+                      <span className="text-xs font-medium text-zinc-700">Atualizar estoque automaticamente</span>
+                    </div>
+                  </label>
+                  {linkToStock && (
+                    <div className="space-y-2 pl-6">
+                      <div>
+                        <label className="mb-1 block text-[10px] font-medium text-zinc-500">Insumo</label>
+                        <SearchableSelect value={stockItemId} onChange={(v) => {
+                          setStockItemId(v)
+                          const item = stockItems.find((s: any) => s.id === v)
+                          if (item) { setStockUnit(item.unit || "un"); setStockUnitCost(item.unitCost ? String(item.unitCost).replace(".", ",") : "") }
+                        }} options={stockItems.map((s: any) => ({ value: s.id, label: s.name, sub: `(${s.quantity} ${s.unit})` }))} placeholder="Selecionar insumo..." />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-medium text-zinc-500">Quantidade</label>
+                          <input type="number" min="0.01" step="0.01" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} placeholder="0" className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-2 text-xs text-center text-zinc-700 focus:border-blue-500 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-medium text-zinc-500">Unidade</label>
+                          <SearchableSelect value={stockUnit} onChange={setStockUnit} options={[{ value: "g", label: "g" }, { value: "kg", label: "kg" }, { value: "ml", label: "ml" }, { value: "L", label: "L" }, { value: "un", label: "un" }]} placeholder="Un" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-medium text-zinc-500">Custo unit. (R$)</label>
+                          <input type="text" value={stockUnitCost} onChange={(e) => setStockUnitCost(e.target.value)} placeholder="0,00" className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-2 text-xs text-center text-zinc-700 focus:border-blue-500 focus:outline-none" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-blue-600">Será criada uma entrada no estoque deste insumo</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex gap-2 border-t border-zinc-200 px-4 py-3"><Button onClick={() => setShowForm(false)} variant="outline" className="flex-1">Cancelar</Button><Button onClick={handleSave} disabled={saving} className="flex-1 bg-green-600 hover:bg-green-700">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingId ? "Salvar" : formType === "recorrente" ? "Criar recorrência" : "Criar"}</Button></div>
           </div>

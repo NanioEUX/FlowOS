@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { convertQuantity } from "@/lib/units"
 
 export async function GET(req: NextRequest) {
   const establishmentId = req.nextUrl.searchParams.get("establishmentId")
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
     description, amount, category, date, dueDate, type,
     paymentMethod, isRecurring, recurrenceFreq,
     recurrenceStart, recurrenceEnd,
-    receiptUrl, cashRegisterId, establishmentId,
+    receiptUrl, cashRegisterId, establishmentId, stockLink,
   } = await req.json()
 
   if (!description || !amount || !establishmentId) {
@@ -216,5 +217,47 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json(expense)
+  // Create stock entry if linked
+  let stockAlert = null
+  if (stockLink && stockLink.stockItemId && stockLink.quantity > 0 && stockLink.unit) {
+    const stockItem = await prisma.stockItem.findUnique({ where: { id: stockLink.stockItemId } })
+    if (stockItem) {
+      const enteredQty = stockLink.quantity
+      const enteredUnit = stockLink.unit
+      const stockUnit = stockItem.unit || "un"
+      const converted = convertQuantity(enteredQty, enteredUnit, stockUnit)
+      if (converted !== null) {
+        const newQty = stockItem.quantity + converted
+        const updateData: any = { quantity: newQty }
+        if (stockLink.unitCost > 0) {
+          const oldCost = stockItem.unitCost
+          const newCost = stockLink.unitCost
+          if (Math.abs(newCost - oldCost) > 0.01) {
+            if (stockItem.quantity > 0) {
+              const avgCost = ((stockItem.quantity * oldCost) + (converted * newCost)) / (stockItem.quantity + converted)
+              updateData.unitCost = Math.round(avgCost * 100) / 100
+            } else {
+              updateData.unitCost = newCost
+            }
+            updateData.previousUnitCost = oldCost
+          }
+        }
+        await prisma.stockItem.update({ where: { id: stockLink.stockItemId }, data: updateData })
+        await prisma.stockMovement.create({
+          data: {
+            type: "entry",
+            quantity: converted,
+            unitCost: stockLink.unitCost || null,
+            notes: `Compra: ${description}`,
+            itemId: stockLink.stockItemId,
+          },
+        })
+        stockAlert = `Estoque de ${stockItem.name} atualizado: +${converted} ${stockUnit}`
+      } else {
+        stockAlert = `Unidades incompatíveis para ${stockItem.name} — estoque não atualizado`
+      }
+    }
+  }
+
+  return NextResponse.json({ ...expense, stockAlert })
 }
