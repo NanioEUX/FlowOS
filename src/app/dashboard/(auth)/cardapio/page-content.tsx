@@ -127,10 +127,10 @@ export default function CardapioPage() {
     for (const link of productLinks) {
       const item = stockItems.find((s) => s.id === link.stockItemId)
       if (!item) continue
+      if (!link.unit) continue
       const qty = Number(link.quantity) || 0
-      const linkUnit = link.unit || "un"
       const stockUnit = item.unit || "un"
-      const converted = convertQuantity(qty, linkUnit, stockUnit)
+      const converted = convertQuantity(qty, link.unit, stockUnit)
       if (converted === null) { unitError = true; continue }
       cost += converted * (item.unitCost || 0)
     }
@@ -154,10 +154,10 @@ export default function CardapioPage() {
     for (const link of links) {
       const item = stockItems.find((s: any) => s.id === link.stockItemId)
       if (!item) continue
+      if (!link.unit) continue
       const qty = Number(link.quantity) || 0
-      const linkUnit = link.unit || "un"
       const stockUnit = item.unit || "un"
-      const converted = convertQuantity(qty, linkUnit, stockUnit)
+      const converted = convertQuantity(qty, link.unit, stockUnit)
       if (converted === null) continue
       cost += converted * (item.unitCost || 0)
     }
@@ -372,10 +372,10 @@ export default function CardapioPage() {
       for (const link of productLinks) {
         const item = stockItems.find((s: any) => s.id === link.stockItemId)
         if (!item) continue
+        if (!link.unit) continue
         const qty = Number(link.quantity) || 0
-        const linkUnit = link.unit || "un"
         const stockUnit = item.unit || "un"
-        const converted = convertQuantity(qty, linkUnit, stockUnit)
+        const converted = convertQuantity(qty, link.unit, stockUnit)
         if (converted === null) continue
         cost += converted * (item.unitCost || 0)
       }
@@ -2994,8 +2994,9 @@ export default function CardapioPage() {
                                 const item = stockItems.find((s) => s.id === link.stockItemId)
                                 if (!item) return null
                                 const qty = Number(link.quantity) || 0
-                                const converted = convertQuantity(qty, link.unit || "un", item.unit || "un")
-                                const lineCost = converted !== null ? converted * (item.unitCost || 0) : null
+                                const lineCost = link.unit && qty > 0
+                                  ? (() => { const c = convertQuantity(qty, link.unit, item.unit || "un"); return c !== null ? c * (item.unitCost || 0) : null })()
+                                  : null
                                 return (
                                   <div key={link.stockItemId} className="flex items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
                                     <span className="flex-1 text-xs text-zinc-700">{item.name}</span>
@@ -3011,25 +3012,27 @@ export default function CardapioPage() {
                                           )
                                         )
                                       }
+                                      placeholder="Qtd"
                                       className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-xs text-center text-zinc-700 focus:border-green-600 focus:outline-none"
                                     />
-                                    <select
+                                    <SearchableSelect
                                       value={link.unit}
-                                      onChange={(e) =>
+                                      onChange={(v) =>
                                         setProductLinks(
                                           productLinks.map((l) =>
-                                            l.stockItemId === link.stockItemId ? { ...l, unit: e.target.value } : l
+                                            l.stockItemId === link.stockItemId ? { ...l, unit: v } : l
                                           )
                                         )
                                       }
-                                      className="h-7 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                    >
-                                      <option value="g">g</option>
-                                      <option value="kg">kg</option>
-                                      <option value="ml">ml</option>
-                                      <option value="L">L</option>
-                                      <option value="un">un</option>
-                                    </select>
+                                      options={[
+                                        { value: "g", label: "g" },
+                                        { value: "kg", label: "kg" },
+                                        { value: "ml", label: "ml" },
+                                        { value: "L", label: "L" },
+                                        { value: "un", label: "un" },
+                                      ]}
+                                      placeholder="Unidade"
+                                    />
                                     {lineCost !== null && lineCost > 0 && (
                                       <span className="text-[10px] font-medium text-zinc-400 tabular-nums w-16 text-right">{formatCurrency(lineCost)}</span>
                                     )}
