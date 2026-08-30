@@ -3049,9 +3049,7 @@ export default function CardapioPage() {
                             value=""
                             onChange={(v) => {
                               if (v && !productLinks.find((l) => l.stockItemId === v)) {
-                                const item = stockItems.find((s) => s.id === v)
-                                const defaultUnit = item?.unit || "un"
-                                setProductLinks([...productLinks, { stockItemId: v, quantity: "1", unit: defaultUnit }])
+                                setProductLinks([...productLinks, { stockItemId: v, quantity: "", unit: "" }])
                               }
                             }}
                             options={stockItems.filter((s) => !productLinks.find((l) => l.stockItemId === s.id)).map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}
