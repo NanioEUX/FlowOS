@@ -1558,7 +1558,7 @@ export default function CardapioPage() {
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowIfoodWizard(true)} className="gap-2">
+              <Button variant="secondary" onClick={() => setShowIfoodWizard(true)} className="gap-2">
                 <Download className="h-4 w-4" />
                 Importar do iFood
               </Button>
@@ -1659,7 +1659,7 @@ export default function CardapioPage() {
                           Atualizar preços
                         </Button>
                       )}
-                      <Button size="sm" variant="secondary" onClick={() => openNewProduct(cat.id)}>
+                      <Button size="sm" variant="primary" onClick={() => openNewProduct(cat.id)}>
                         <Plus className="h-4 w-4" />
                         Adicionar
                       </Button>
