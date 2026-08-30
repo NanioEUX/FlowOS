@@ -1558,7 +1558,7 @@ export default function CardapioPage() {
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setShowIfoodWizard(true)} className="gap-2">
+              <Button variant="primary" onClick={() => setShowIfoodWizard(true)} className="gap-2">
                 <Download className="h-4 w-4" />
                 Importar do iFood
               </Button>
@@ -1638,7 +1638,7 @@ export default function CardapioPage() {
                         className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                           cat.targetMarginPercent != null
                             ? "bg-green-50 text-green-700 hover:bg-green-100"
-                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                            : "bg-green-600 text-white hover:bg-green-700"
                         }`}
                       >
                         {cat.targetMarginPercent != null ? (
