@@ -159,7 +159,7 @@ export default function DashboardLayout({
       {/* Sidebar — blue gradient */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 transform border-r border-white/[.08] transition-transform",
+          "fixed inset-y-0 left-0 z-40 w-64 flex flex-col transform border-r border-white/[.08] transition-transform overflow-hidden",
           "bg-gradient-to-b from-[#1a3a5c] to-[#0d2137]",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -185,7 +185,7 @@ export default function DashboardLayout({
           </button>
         </div>
 
-        <nav className="relative p-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           {navItems.map((item) => {
             const alertLevel = item.perm === "estoque" ? stockAlert : "none"
             const chatUnread = item.href === "/dashboard/chat" ? unreadChatCount : 0
@@ -325,12 +325,12 @@ export default function DashboardLayout({
         </nav>
 
         {user?.role === "admin" && (
-          <div className="relative px-3 pb-2">
+          <div className="shrink-0 px-3 pb-2">
             <SubscriptionBadge establishment={establishment} />
           </div>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/[.1] p-3">
+        <div className="shrink-0 border-t border-white/[.1] p-3">
           <a href="https://flowos.fs.app" target="_blank" className="flex items-center justify-center gap-1.5 py-2 text-[11px] text-white/25 hover:text-white/40 transition-colors">
             <FlowOSLogo size={12} variant="icon" />
             Powered by FlowOS
