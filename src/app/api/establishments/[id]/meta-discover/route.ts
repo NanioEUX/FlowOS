@@ -89,18 +89,6 @@ export async function POST(
 
     console.log("[Meta Discover] Final token starts with:", accessToken.substring(0, 10), "length:", accessToken.length)
 
-    // Validate token with a simple API call
-    const validateRes = await fetch(
-      "https://graph.facebook.com/v21.0/me?fields=id,name",
-      { headers: { Authorization: "Bearer " + accessToken } }
-    )
-    const validateData = await validateRes.json()
-    console.log("[Meta Discover] Token validation:", JSON.stringify(validateData))
-    if (validateData.error) {
-      console.error("[Meta Discover] Token is invalid:", validateData.error.message)
-      return NextResponse.json({ success: false, error: "Token inválido: " + validateData.error.message + ". Reconecte o WhatsApp." }, { status: 400 })
-    }
-
     const phones: Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }> = []
 
     const headers = { Authorization: "Bearer " + accessToken }
