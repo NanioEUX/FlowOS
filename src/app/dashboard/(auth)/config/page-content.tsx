@@ -279,7 +279,7 @@ function MetaConfig({
       <p className="text-xs text-zinc-500">
         Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
       </p>
-      <EmbeddedSignupButton />
+      <EmbeddedSignupButton onComplete={() => window.location.reload()} />
     </div>
   )
 }
