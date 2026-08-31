@@ -128,6 +128,34 @@ export async function POST(
       },
     })
 
+    // Step 6: Register phone number with WhatsApp Cloud API
+    if (phoneNumberId) {
+      console.log("[Meta Embedded Signup] Registering phone number:", phoneNumberId)
+      try {
+        const regRes = await fetch(
+          `https://graph.facebook.com/v21.0/${phoneNumberId}/register`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              pin: "123456",
+            }),
+          }
+        )
+        const regData = await regRes.json()
+        console.log("[Meta Embedded Signup] Register response:", JSON.stringify(regData))
+        if (!regRes.ok) {
+          console.error("[Meta Embedded Signup] Register failed:", regData.error?.message)
+        }
+      } catch (regErr: any) {
+        console.error("[Meta Embedded Signup] Register error:", regErr.message)
+      }
+    }
+
     console.log(`[Meta Embedded Signup] SUCCESS - Connected establishment ${id.slice(0, 8)} — phone: ${phoneInfo?.display_phone_number}`)
 
     return NextResponse.json({
