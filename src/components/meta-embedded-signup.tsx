@@ -286,11 +286,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           } else {
             console.log("[Meta Embedded Signup] Connected but NO authResponse!")
           }
-        } else if (response.status === "not_authorized" || response.status === "unknown") {
-          console.log("[Meta Embedded Signup] Login cancelled or denied:", response.status)
+        } else if (response.status === "not_authorized") {
+          console.log("[Meta Embedded Signup] Login denied:", response.status)
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
           setLoading(false)
-          setResult({ success: false, error: "Login cancelado ou permissao negada." })
+          setResult({ success: false, error: "Permissao negada pelo usuario." })
+        } else if (response.status === "unknown") {
+          console.log("[Meta Embedded Signup] Status unknown — waiting for postMessage...")
         } else {
           console.log("[Meta Embedded Signup] Unknown status:", response.status)
         }
