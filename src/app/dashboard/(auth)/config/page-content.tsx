@@ -222,10 +222,14 @@ function MetaConfig({
   establishmentId,
   metaPhoneNumberId,
   metaAccessToken,
+  whatsappNumber,
+  onComplete,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
   metaAccessToken: string
+  whatsappNumber?: string
+  onComplete?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
@@ -255,7 +259,7 @@ function MetaConfig({
               <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
                 ✓ CONECTADO
               </span>
-              <span className="text-sm font-medium text-green-900">{metaPhoneNumberId}</span>
+              <span className="text-sm font-medium text-green-900">{whatsappNumber || metaPhoneNumberId}</span>
             </div>
             <p className="mt-1 text-xs text-green-700">
               Meta Cloud API ativa via Embedded Signup.
@@ -279,7 +283,7 @@ function MetaConfig({
       <p className="text-xs text-zinc-500">
         Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
       </p>
-      <EmbeddedSignupButton onComplete={() => window.location.reload()} />
+      <EmbeddedSignupButton onComplete={onComplete} />
     </div>
   )
 }
@@ -420,7 +424,7 @@ export default function ConfigPage() {
     { day: "Domingo", open: "00:00", close: "00:00", active: false },
   ])
 
-  useEffect(() => {
+  function reloadData() {
     if (!establishmentId) return
     fetchAuth(`/api/establishments?id=${establishmentId}`)
       .then((r) => r.json())
@@ -527,6 +531,11 @@ if (!data.error) {
           }
         }
       })
+  }
+
+  useEffect(() => {
+    if (!establishmentId) return
+    reloadData()
   }, [establishmentId])
 
   async function handleSave(e: React.FormEvent) {
@@ -1686,6 +1695,8 @@ if (!data.error) {
                 establishmentId={establishmentId}
                 metaPhoneNumberId={metaPhoneNumberId}
                 metaAccessToken={metaAccessToken}
+                whatsappNumber={whatsappNumber}
+                onComplete={reloadData}
               />
             )}
 
