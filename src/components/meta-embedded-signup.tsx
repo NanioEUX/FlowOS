@@ -64,24 +64,22 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
   const sendToServer = useCallback(async (code: string, phoneNumberId: string | null, wabaId: string | null) => {
     const redirectUri = window.location.origin
-    const debug: string[] = []
-    debug.push("code=" + code.substring(0, 10) + "..., phone=" + phoneNumberId + ", waba=" + wabaId)
 
-    const isToken = code.length > 80 || code.includes(".")
     const payload: any = { phoneNumberId, wabaId, redirectUri }
-    if (isToken) {
-      console.log("[Meta Embedded Signup] Input is a token (length:", code.length, "), sending as accessToken")
-      payload.accessToken = code
-      payload.code = null
-    } else {
-      payload.code = code
-      if (pendingTokenRef.current) {
-        console.log("[Meta Embedded Signup] Also sending pendingTokenRef (length:", pendingTokenRef.current.length, ")")
-        payload.accessToken = pendingTokenRef.current
+    if (code && code !== "no_code") {
+      const isToken = code.length > 80 || code.includes(".")
+      if (isToken) {
+        payload.accessToken = code
+      } else {
+        payload.code = code
       }
     }
 
-    console.log("[Meta Embedded Signup] Sending to server - isToken:", isToken, "code:", !!payload.code, "accessToken:", !!payload.accessToken)
+    if (pendingTokenRef.current) {
+      payload.accessToken = pendingTokenRef.current
+    }
+
+    console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId)
 
     const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
       method: "POST",
@@ -89,14 +87,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     })
 
     const data = await res.json()
-    debug.push("Server: " + JSON.stringify(data))
     console.log("[Meta Embedded Signup] Server response:", data)
 
     if (data.success) {
-      setResult({ success: true, phone: data.phoneNumber, debug })
+      setResult({ success: true, phone: data.phoneNumber || phoneNumberId, debug: [] })
       onComplete?.()
     } else {
-      setResult({ success: false, error: data.error || "Erro desconhecido", debug })
+      setResult({ success: false, error: data.error || "Erro desconhecido", debug: [] })
     }
   }, [establishmentId, onComplete])
 
@@ -212,20 +209,36 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         const phoneNumberId = phone_number_id || phoneId
         const wabaId = waba_id || whatsappBusinessAccountId
 
+        console.log("[Meta Embedded Signup] WA_EMBEDDED_SIGNUP data keys:", Object.keys(parsed.data))
+        console.log("[Meta Embedded Signup] WA_EMBEDDED_SIGNUP full data:", JSON.stringify(parsed.data))
+        console.log("[Meta Embedded Signup] Extracted - phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "msgCode:", msgCode ? "EXISTS" : "MISSING")
+
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
         let finalCode = msgCode || pendingCodeRef.current
 
         if (!finalCode) {
-          console.log("[Meta Embedded Signup] No code in postMessage. Trying FB.getLoginStatus...")
+          console.log("[Meta Embedded Signup] No code yet. Waiting 3s for FB.login callback...")
+          for (let attempt = 0; attempt < 6; attempt++) {
+            await new Promise((r) => setTimeout(r, 500))
+            if (pendingCodeRef.current) {
+              finalCode = pendingCodeRef.current
+              console.log("[Meta Embedded Signup] Got code from pendingCodeRef after", (attempt + 1) * 500, "ms")
+              break
+            }
+          }
+        }
+
+        if (!finalCode) {
+          console.log("[Meta Embedded Signup] Still no code. Trying getLoginStatus...")
           try {
             const statusRes = await new Promise<any>((resolve) => {
-              window.FB?.getLoginStatus((r: any) => resolve(r))
+              window.FB?.getLoginStatus((r: any) => resolve(r), true)
             })
             console.log("[Meta Embedded Signup] getLoginStatus:", JSON.stringify(statusRes))
             if (statusRes?.authResponse?.code) {
               finalCode = statusRes.authResponse.code
-            } else if (statusRes?.authResponse?.accessToken) {
+            } else if (statusRes?.authResponse?.accessToken && statusRes.authResponse.accessToken.length > 100) {
               finalCode = statusRes.authResponse.accessToken
             }
           } catch (e: any) {
@@ -233,12 +246,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           }
         }
 
-        if (!finalCode) {
-          console.log("[Meta Embedded Signup] ERROR - no code available. dataKeys:", Object.keys(parsed.data), "full:", JSON.stringify(parsed).substring(0, 500))
-          setResult({ success: false, error: "Codigo nao recebido do Meta. Tente novamente." })
-          setLoading(false)
-          return
-        }
+        console.log("[Meta Embedded Signup] Final decision - code:", finalCode ? "YES (len=" + finalCode.length + ")" : "NO", "phoneNumberId:", phoneNumberId, "wabaId:", wabaId)
 
         console.log("[Meta Embedded Signup] Sending to server...")
         pendingCodeRef.current = null
@@ -246,7 +254,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setResult(null)
 
         try {
-          await sendToServer(finalCode, phoneNumberId || null, wabaId || null)
+          await sendToServer(finalCode || "no_code", phoneNumberId || null, wabaId || null)
         } catch (err: any) {
           console.log("[Meta Embedded Signup] ERROR sending to server:", err.message)
           setResult({ success: false, error: "Erro ao salvar: " + err.message })
@@ -295,42 +303,35 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     window.FB.login(
       (response: any) => {
-        console.log("[Meta Embedded Signup] FB.login callback received")
-        console.log("[Meta Embedded Signup] FB.login status:", response.status)
-        console.log("[Meta Embedded Signup] FB.login response:", JSON.stringify(response, null, 2))
+        console.log("[Meta Embedded Signup] FB.login callback RAW:", JSON.stringify(response))
+        console.log("[Meta Embedded Signup] FB.login status:", response?.status)
+        console.log("[Meta Embedded Signup] FB.login authResponse:", JSON.stringify(response?.authResponse))
 
-        if (response.status === "connected") {
-          console.log("[Meta Embedded Signup] User connected!")
-          if (response.authResponse) {
-            console.log("[Meta Embedded Signup] authResponse keys:", Object.keys(response.authResponse))
+        if (response?.authResponse) {
+          const ar = response.authResponse
+          console.log("[Meta Embedded Signup] authResponse keys:", Object.keys(ar))
+          console.log("[Meta Embedded Signup] authResponse.code:", ar.code ? "EXISTS (len=" + ar.code.length + ")" : "MISSING")
+          console.log("[Meta Embedded Signup] authResponse.accessToken:", ar.accessToken ? "EXISTS (len=" + ar.accessToken.length + ")" : "MISSING")
+          console.log("[Meta Embedded Signup] authResponse.signedRequest:", ar.signedRequest ? "EXISTS" : "MISSING")
 
-            if (response.authResponse.code) {
-              console.log("[Meta Embedded Signup] Got code from FB.login callback, length:", response.authResponse.code.length)
-              pendingCodeRef.current = response.authResponse.code
-              console.log("[Meta Embedded Signup] Code stored. Waiting for postMessage from popup...")
-            } else if (response.authResponse.accessToken) {
-              console.log("[Meta Embedded Signup] No code but got accessToken, length:", response.authResponse.accessToken.length)
-              pendingCodeRef.current = response.authResponse.accessToken
-            } else {
-              console.log("[Meta Embedded Signup] Connected but NO code - waiting for postMessage...")
-            }
-          } else {
-            console.log("[Meta Embedded Signup] Connected but NO authResponse!")
+          if (ar.code) {
+            pendingCodeRef.current = ar.code
+            console.log("[Meta Embedded Signup] Stored CODE from callback")
+          } else if (ar.accessToken) {
+            pendingCodeRef.current = ar.accessToken
+            console.log("[Meta Embedded Signup] Stored ACCESS TOKEN from callback (no code available)")
           }
-        } else if (response.status === "not_authorized") {
-          console.log("[Meta Embedded Signup] Login denied:", response.status)
+        } else {
+          console.log("[Meta Embedded Signup] NO authResponse in callback. status:", response?.status)
+          if (response?.status === "connected") {
+            console.log("[Meta Embedded Signup] Status is connected but no authResponse - this is unexpected")
+          }
+        }
+
+        if (response?.status === "not_authorized") {
           if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
           setLoading(false)
           setResult({ success: false, error: "Permissao negada pelo usuario." })
-        } else {
-          console.log("[Meta Embedded Signup] Status:", response.status, "- checking authResponse...")
-          if (response.authResponse?.code) {
-            console.log("[Meta Embedded Signup] Got code from non-connected status, length:", response.authResponse.code.length)
-            pendingCodeRef.current = response.authResponse.code
-          } else if (response.authResponse?.accessToken) {
-            console.log("[Meta Embedded Signup] Got accessToken from non-connected status")
-            pendingCodeRef.current = response.authResponse.accessToken
-          }
         }
       },
       {
