@@ -28,48 +28,78 @@ export async function POST(
 
     console.log("[Meta Discover] META_APP_ID:", META_APP_ID)
 
-    const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
-    const redirectUris = [
-      origin,
-      origin + "/",
-      "https://www.facebook.com/connect/login/success.html",
-      "",
-    ]
+    // Detect if the input is already a token (not a code)
+    const isToken = code.length > 80 || code.startsWith("EAA")
+    let accessToken: string
 
-    console.log("[Meta Discover] Trying redirect URIs:", redirectUris)
+    if (isToken) {
+      console.log("[Meta Discover] Input is already an access token, length:", code.length, "skipping code exchange")
+      accessToken = code
+    } else {
+      const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
+      const redirectUris = [
+        origin,
+        origin + "/",
+        "https://www.facebook.com/connect/login/success.html",
+        "",
+      ]
 
-    let shortToken: string | null = null
-    for (const uri of redirectUris) {
-      console.log("[Meta Discover] Trying URI:", uri)
-      const tokenRes = await fetch(
-        "https://graph.facebook.com/v21.0/oauth/access_token?client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&redirect_uri=" + encodeURIComponent(uri) + "&code=" + code,
+      console.log("[Meta Discover] Trying redirect URIs:", redirectUris)
+
+      let shortToken: string | null = null
+      for (const uri of redirectUris) {
+        console.log("[Meta Discover] Trying URI:", uri)
+        const tokenRes = await fetch(
+          "https://graph.facebook.com/v21.0/oauth/access_token?client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&redirect_uri=" + encodeURIComponent(uri) + "&code=" + code,
+          { method: "GET" }
+        )
+        const tokenData = await tokenRes.json()
+        console.log("[Meta Discover] Token response:", JSON.stringify(tokenData))
+        if (tokenRes.ok && tokenData.access_token && tokenData.access_token.length < 300) {
+          shortToken = tokenData.access_token as string
+          console.log("[Meta Discover] Token OK with redirect_uri:", uri, "token length:", shortToken.length, "starts with:", shortToken.substring(0, 10))
+          break
+        } else {
+          console.log("[Meta Discover] Failed:", uri, "-", tokenData.error?.message)
+        }
+      }
+
+      if (!shortToken) {
+        console.log("[Meta Discover] ERROR - All token exchange attempts failed")
+        return NextResponse.json({ success: false, error: "Falha ao trocar codigo por token" }, { status: 400 })
+      }
+
+      console.log("[Meta Discover] Exchanging short token for long token...")
+      console.log("[Meta Discover] Short token length:", shortToken.length, "starts with:", shortToken.substring(0, 5))
+      const longTokenRes = await fetch(
+        "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&fb_exchange_token=" + shortToken,
         { method: "GET" }
       )
-      const tokenData = await tokenRes.json()
-      console.log("[Meta Discover] Token response:", JSON.stringify(tokenData))
-      if (tokenRes.ok && tokenData.access_token) {
-        shortToken = tokenData.access_token as string
-        console.log("[Meta Discover] Token OK with redirect_uri:", uri, "token length:", shortToken.length)
-        break
+      const longTokenData = await longTokenRes.json()
+      console.log("[Meta Discover] Long token response:", JSON.stringify(longTokenData))
+
+      if (longTokenData.access_token && longTokenData.access_token.length < 300) {
+        accessToken = longTokenData.access_token
+        console.log("[Meta Discover] Using long-lived token, length:", accessToken.length)
       } else {
-        console.log("[Meta Discover] Failed:", uri, "-", tokenData.error?.message)
+        accessToken = shortToken
+        console.log("[Meta Discover] Long token exchange returned invalid token, using short token. length:", accessToken.length)
       }
     }
 
-    if (!shortToken) {
-      console.log("[Meta Discover] ERROR - All token exchange attempts failed")
-      return NextResponse.json({ success: false, error: "Falha ao trocar codigo por token" }, { status: 400 })
-    }
+    console.log("[Meta Discover] Final token starts with:", accessToken.substring(0, 10), "length:", accessToken.length)
 
-    console.log("[Meta Discover] Exchanging short token for long token...")
-    const longTokenRes = await fetch(
-      "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&fb_exchange_token=" + shortToken,
-      { method: "GET" }
+    // Validate token with a simple API call
+    const validateRes = await fetch(
+      "https://graph.facebook.com/v21.0/me?fields=id,name",
+      { headers: { Authorization: "Bearer " + accessToken } }
     )
-    const longTokenData = await longTokenRes.json()
-    console.log("[Meta Discover] Long token response:", JSON.stringify(longTokenData))
-    const accessToken = longTokenData.access_token || shortToken
-    console.log("[Meta Discover] Final token length:", accessToken.length)
+    const validateData = await validateRes.json()
+    console.log("[Meta Discover] Token validation:", JSON.stringify(validateData))
+    if (validateData.error) {
+      console.error("[Meta Discover] Token is invalid:", validateData.error.message)
+      return NextResponse.json({ success: false, error: "Token inválido: " + validateData.error.message + ". Reconecte o WhatsApp." }, { status: 400 })
+    }
 
     const phones: Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }> = []
 

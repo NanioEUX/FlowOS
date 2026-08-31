@@ -33,7 +33,11 @@ export async function POST(
     // Use existing token if provided (from meta-discover), otherwise exchange code
     let accessToken: string
     if (existingToken) {
-      console.log("[Meta Embedded Signup] Using existing token from meta-discover, length:", existingToken.length)
+      console.log("[Meta Embedded Signup] Using existing token from meta-discover, length:", existingToken.length, "starts with:", existingToken.substring(0, 10))
+      if (existingToken.length > 300) {
+        console.error("[Meta Embedded Signup] Token is too long, likely malformed. Length:", existingToken.length)
+        return NextResponse.json({ success: false, error: "Token inválido (muito longo). Tente desconectar e reconectar." }, { status: 400 })
+      }
       accessToken = existingToken
     } else {
       // Step 1: Exchange code for short-lived token
@@ -93,7 +97,20 @@ export async function POST(
       console.log("[Meta Embedded Signup] Final token length:", accessToken.length)
     }
 
-    // Step 3: Get WABA details
+    // Step 3: Validate token with a simple API call
+    console.log("[Meta Embedded Signup] Validating token...")
+    const meRes = await fetch(
+      `https://graph.facebook.com/v21.0/me?fields=id,name`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const meData = await meRes.json()
+    console.log("[Meta Embedded Signup] Token validation:", JSON.stringify(meData))
+    if (meData.error) {
+      console.error("[Meta Embedded Signup] Token is invalid:", meData.error.message)
+      return NextResponse.json({ success: false, error: "Token inválido: " + meData.error.message + ". Reconecte o WhatsApp." }, { status: 400 })
+    }
+
+    // Step 4: Get WABA details
     let wabaInfo: any = null
     if (wabaId) {
       console.log("[Meta Embedded Signup] Fetching WABA details:", wabaId)
@@ -154,17 +171,17 @@ export async function POST(
       },
     })
 
-    // Step 6: Register phone number with WhatsApp Cloud API using App Access Token
-    if (phoneNumberId) {
-      const appAccessToken = `${META_APP_ID}|${META_APP_SECRET}`
-      console.log("[Meta Embedded Signup] Registering phone number:", phoneNumberId, "with App Token")
+    // Step 6: Register phone number with WhatsApp Cloud API
+    // The /register endpoint requires a User Token with whatsapp_business_messaging permission
+    if (phoneNumberId && accessToken && accessToken.length < 300 && accessToken.startsWith("EAA")) {
+      console.log("[Meta Embedded Signup] Registering phone number:", phoneNumberId, "with user token")
       try {
         const regRes = await fetch(
           `https://graph.facebook.com/v21.0/${phoneNumberId}/register`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${appAccessToken}`,
+              Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -181,6 +198,8 @@ export async function POST(
       } catch (regErr: any) {
         console.error("[Meta Embedded Signup] Register error:", regErr.message)
       }
+    } else if (phoneNumberId) {
+      console.log("[Meta Embedded Signup] Skipping register - token invalid (length:", accessToken?.length, "starts with:", accessToken?.substring(0, 10), ")")
     }
 
     console.log(`[Meta Embedded Signup] SUCCESS - Connected establishment ${id.slice(0, 8)} — phone: ${displayPhone} — phoneNumberId: ${phoneNumberId}`)

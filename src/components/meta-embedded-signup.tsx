@@ -70,12 +70,18 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     const isToken = code.length > 80 || code.includes(".")
     const payload: any = { phoneNumberId, wabaId, redirectUri }
     if (isToken) {
+      console.log("[Meta Embedded Signup] Input is a token (length:", code.length, "), sending as accessToken")
       payload.accessToken = code
       payload.code = null
     } else {
       payload.code = code
-      if (pendingTokenRef.current) payload.accessToken = pendingTokenRef.current
+      if (pendingTokenRef.current) {
+        console.log("[Meta Embedded Signup] Also sending pendingTokenRef (length:", pendingTokenRef.current.length, ")")
+        payload.accessToken = pendingTokenRef.current
+      }
     }
+
+    console.log("[Meta Embedded Signup] Sending to server - isToken:", isToken, "code:", !!payload.code, "accessToken:", !!payload.accessToken)
 
     const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
       method: "POST",
