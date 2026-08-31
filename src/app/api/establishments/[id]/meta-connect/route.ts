@@ -41,26 +41,31 @@ export async function POST(
         },
       })
 
-      // Register phone number with WhatsApp Cloud API
-      try {
-        const regRes = await fetch(
-          `https://graph.facebook.com/v21.0/${metaPhoneNumberId}/register`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${metaAccessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              pin: "123456",
-            }),
-          }
-        )
-        const regData = await regRes.json()
-        console.log("[Meta Connect] Register response:", JSON.stringify(regData))
-      } catch (regErr: any) {
-        console.error("[Meta Connect] Register error:", regErr.message)
+      // Register phone number with WhatsApp Cloud API using App Access Token
+      if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
+        console.error("[Meta Connect] META_APP_ID or META_APP_SECRET not configured - skipping register")
+      } else {
+        const appAccessToken = `${process.env.META_APP_ID}|${process.env.META_APP_SECRET}`
+        try {
+          const regRes = await fetch(
+            `https://graph.facebook.com/v21.0/${metaPhoneNumberId}/register`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${appAccessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                messaging_product: "whatsapp",
+                pin: "123456",
+              }),
+            }
+          )
+          const regData = await regRes.json()
+          console.log("[Meta Connect] Register response:", JSON.stringify(regData))
+        } catch (regErr: any) {
+          console.error("[Meta Connect] Register error:", regErr.message)
+        }
       }
 
       return NextResponse.json({

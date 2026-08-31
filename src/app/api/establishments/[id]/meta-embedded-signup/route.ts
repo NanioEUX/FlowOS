@@ -83,7 +83,13 @@ export async function POST(
       )
       const longTokenData = await longTokenRes.json()
       console.log("[Meta Embedded Signup] Long token response:", JSON.stringify(longTokenData))
-      accessToken = longTokenData.access_token || shortToken
+      if (longTokenData.access_token) {
+        accessToken = longTokenData.access_token
+        console.log("[Meta Embedded Signup] Long token obtained, length:", accessToken.length)
+      } else {
+        console.log("[Meta Embedded Signup] Long token exchange failed, using short token")
+        accessToken = shortToken
+      }
       console.log("[Meta Embedded Signup] Final token length:", accessToken.length)
     }
 
@@ -148,16 +154,17 @@ export async function POST(
       },
     })
 
-    // Step 6: Register phone number with WhatsApp Cloud API
+    // Step 6: Register phone number with WhatsApp Cloud API using App Access Token
     if (phoneNumberId) {
-      console.log("[Meta Embedded Signup] Registering phone number:", phoneNumberId)
+      const appAccessToken = `${META_APP_ID}|${META_APP_SECRET}`
+      console.log("[Meta Embedded Signup] Registering phone number:", phoneNumberId, "with App Token")
       try {
         const regRes = await fetch(
           `https://graph.facebook.com/v21.0/${phoneNumberId}/register`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${accessToken}`,
+              Authorization: `Bearer ${appAccessToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
