@@ -103,6 +103,7 @@ export async function POST(
 
     // Step 4: Get phone number details
     let phoneInfo: any = null
+    let displayPhone = ""
     if (phoneNumberId) {
       console.log("[Meta Embedded Signup] Fetching phone details:", phoneNumberId)
       const phoneRes = await fetch(
@@ -111,12 +112,31 @@ export async function POST(
       )
       phoneInfo = await phoneRes.json()
       console.log("[Meta Embedded Signup] Phone info:", JSON.stringify(phoneInfo))
+      displayPhone = phoneInfo?.display_phone_number || ""
+
+      // Fallback: try via WABA phone_numbers list
+      if (!displayPhone && wabaId) {
+        console.log("[Meta Embedded Signup] Fallback: listing phones from WABA:", wabaId)
+        const listRes = await fetch(
+          `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers?fields=display_phone_number,verified_name,id`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        )
+        const listData = await listRes.json()
+        console.log("[Meta Embedded Signup] WABA phones:", JSON.stringify(listData))
+        const match = listData?.data?.find((p: any) => p.id === phoneNumberId)
+        if (match?.display_phone_number) {
+          displayPhone = match.display_phone_number
+        } else if (listData?.data?.length > 0) {
+          displayPhone = listData.data[0].display_phone_number || ""
+        }
+      }
     } else {
       console.log("[Meta Embedded Signup] No phoneNumberId provided")
     }
 
     // Step 5: Save to establishment
     console.log("[Meta Embedded Signup] Saving to database...")
+    console.log("[Meta Embedded Signup] displayPhone:", displayPhone, "phoneNumberId:", phoneNumberId)
     await prisma.establishment.update({
       where: { id },
       data: {
@@ -124,7 +144,7 @@ export async function POST(
         metaAccessToken: accessToken,
         metaPhoneNumberId: phoneNumberId || null,
         metaBusinessAccountId: wabaId || wabaInfo?.id || null,
-        whatsappNumber: phoneInfo?.display_phone_number || null,
+        whatsappNumber: displayPhone || null,
       },
     })
 
@@ -156,11 +176,11 @@ export async function POST(
       }
     }
 
-    console.log(`[Meta Embedded Signup] SUCCESS - Connected establishment ${id.slice(0, 8)} — phone: ${phoneInfo?.display_phone_number}`)
+    console.log(`[Meta Embedded Signup] SUCCESS - Connected establishment ${id.slice(0, 8)} — phone: ${displayPhone} — phoneNumberId: ${phoneNumberId}`)
 
     return NextResponse.json({
       success: true,
-      phoneNumber: phoneInfo?.display_phone_number,
+      phoneNumber: displayPhone || phoneInfo?.display_phone_number,
       verifiedName: phoneInfo?.verified_name,
       wabaId: wabaId || wabaInfo?.id,
     })
