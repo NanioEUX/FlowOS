@@ -23,10 +23,16 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   const [result, setResult] = useState<{ success: boolean; error?: string; phone?: string; debug?: string[] } | null>(null)
   const [selectingPhone, setSelectingPhone] = useState(false)
   const [phoneOptions, setPhoneOptions] = useState<Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }>>([])
+  const [debugLog, setDebugLog] = useState<string[]>([])
   const fbInitRef = useRef(false)
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingCodeRef = useRef<string | null>(null)
   const pendingTokenRef = useRef<string | null>(null)
+
+  const addDebug = useCallback((msg: string) => {
+    console.log("[Meta Embedded Signup]", msg)
+    setDebugLog(prev => [...prev.slice(-20), new Date().toLocaleTimeString() + " " + msg])
+  }, [])
 
   useEffect(() => {
     if (!META_APP_ID || fbInitRef.current) return
@@ -88,6 +94,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     const data = await res.json()
     console.log("[Meta Embedded Signup] Server response:", data)
+    addDebug("Server response: success=" + data.success + " phone=" + (data.phoneNumber || "null") + " error=" + (data.error || "none"))
 
     if (data.success) {
       setResult({ success: true, phone: data.phoneNumber || phoneNumberId, debug: [] })
@@ -198,57 +205,54 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       } else if (typeof data === "object") {
         parsed = data
       } else {
-        console.log("[Meta Embedded Signup] REJECTED - unknown data type:", typeof data)
         return
       }
-
-      console.log("[Meta Embedded Signup] Parsed message type:", parsed.type, "keys:", Object.keys(parsed))
 
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
         const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, code: msgCode } = parsed.data
         const phoneNumberId = phone_number_id || phoneId
         const wabaId = waba_id || whatsappBusinessAccountId
 
-        console.log("[Meta Embedded Signup] WA_EMBEDDED_SIGNUP data keys:", Object.keys(parsed.data))
-        console.log("[Meta Embedded Signup] WA_EMBEDDED_SIGNUP full data:", JSON.stringify(parsed.data))
-        console.log("[Meta Embedded Signup] Extracted - phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "msgCode:", msgCode ? "EXISTS" : "MISSING")
+        addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId)
+        addDebug("postMessage code: " + (msgCode ? "SIM (len=" + msgCode.length + ")" : "NAO"))
+        addDebug("pendingCodeRef: " + (pendingCodeRef.current ? "SIM (len=" + pendingCodeRef.current.length + ")" : "VAZIO"))
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
         let finalCode = msgCode || pendingCodeRef.current
 
         if (!finalCode) {
-          console.log("[Meta Embedded Signup] No code yet. Waiting 3s for FB.login callback...")
+          addDebug("Aguardando 3s pro callback do FB...")
           for (let attempt = 0; attempt < 6; attempt++) {
             await new Promise((r) => setTimeout(r, 500))
             if (pendingCodeRef.current) {
               finalCode = pendingCodeRef.current
-              console.log("[Meta Embedded Signup] Got code from pendingCodeRef after", (attempt + 1) * 500, "ms")
+              addDebug("pegou code do pendingCodeRef: len=" + finalCode.length)
               break
             }
           }
         }
 
         if (!finalCode) {
-          console.log("[Meta Embedded Signup] Still no code. Trying getLoginStatus...")
+          addDebug("Tentando getLoginStatus...")
           try {
             const statusRes = await new Promise<any>((resolve) => {
               window.FB?.getLoginStatus((r: any) => resolve(r), true)
             })
-            console.log("[Meta Embedded Signup] getLoginStatus:", JSON.stringify(statusRes))
+            addDebug("getLoginStatus: " + (statusRes?.authResponse?.code ? "tem code" : statusRes?.authResponse?.accessToken ? "tem token (len=" + statusRes.authResponse.accessToken.length + ")" : "VAZIO"))
             if (statusRes?.authResponse?.code) {
               finalCode = statusRes.authResponse.code
             } else if (statusRes?.authResponse?.accessToken && statusRes.authResponse.accessToken.length > 100) {
               finalCode = statusRes.authResponse.accessToken
             }
           } catch (e: any) {
-            console.log("[Meta Embedded Signup] getLoginStatus failed:", e.message)
+            addDebug("getLoginStatus erro: " + e.message)
           }
         }
 
-        console.log("[Meta Embedded Signup] Final decision - code:", finalCode ? "YES (len=" + finalCode.length + ")" : "NO", "phoneNumberId:", phoneNumberId, "wabaId:", wabaId)
+        addDebug("code final: " + (finalCode ? "SIM (len=" + finalCode.length + " starts=" + finalCode.substring(0,5) + ")" : "NAO"))
 
-        console.log("[Meta Embedded Signup] Sending to server...")
+        addDebug("Enviando pro server...")
         pendingCodeRef.current = null
         setLoading(true)
         setResult(null)
@@ -256,7 +260,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         try {
           await sendToServer(finalCode || "no_code", phoneNumberId || null, wabaId || null)
         } catch (err: any) {
-          console.log("[Meta Embedded Signup] ERROR sending to server:", err.message)
+          addDebug("ERRO server: " + err.message)
           setResult({ success: false, error: "Erro ao salvar: " + err.message })
         } finally {
           setLoading(false)
@@ -303,29 +307,23 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     window.FB.login(
       (response: any) => {
-        console.log("[Meta Embedded Signup] FB.login callback RAW:", JSON.stringify(response))
-        console.log("[Meta Embedded Signup] FB.login status:", response?.status)
-        console.log("[Meta Embedded Signup] FB.login authResponse:", JSON.stringify(response?.authResponse))
+        addDebug("FB.login callback: status=" + response?.status)
+        addDebug("authResponse: " + (response?.authResponse ? "EXISTS" : "NULL"))
 
         if (response?.authResponse) {
           const ar = response.authResponse
-          console.log("[Meta Embedded Signup] authResponse keys:", Object.keys(ar))
-          console.log("[Meta Embedded Signup] authResponse.code:", ar.code ? "EXISTS (len=" + ar.code.length + ")" : "MISSING")
-          console.log("[Meta Embedded Signup] authResponse.accessToken:", ar.accessToken ? "EXISTS (len=" + ar.accessToken.length + ")" : "MISSING")
-          console.log("[Meta Embedded Signup] authResponse.signedRequest:", ar.signedRequest ? "EXISTS" : "MISSING")
+          addDebug("code: " + (ar.code ? "SIM (len=" + ar.code.length + ")" : "NAO"))
+          addDebug("accessToken: " + (ar.accessToken ? "SIM (len=" + ar.accessToken.length + ")" : "NAO"))
 
           if (ar.code) {
             pendingCodeRef.current = ar.code
-            console.log("[Meta Embedded Signup] Stored CODE from callback")
+            addDebug("Salvou CODE no pendingCodeRef")
           } else if (ar.accessToken) {
             pendingCodeRef.current = ar.accessToken
-            console.log("[Meta Embedded Signup] Stored ACCESS TOKEN from callback (no code available)")
+            addDebug("Salvou TOKEN no pendingCodeRef (sem code)")
           }
         } else {
-          console.log("[Meta Embedded Signup] NO authResponse in callback. status:", response?.status)
-          if (response?.status === "connected") {
-            console.log("[Meta Embedded Signup] Status is connected but no authResponse - this is unexpected")
-          }
+          addDebug("SEM authResponse! status=" + response?.status)
         }
 
         if (response?.status === "not_authorized") {
@@ -402,14 +400,19 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
                 <XCircle className="h-4 w-4" />
                 <span>{result.error}</span>
               </div>
-              {result.debug && result.debug.length > 0 && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-[10px] text-red-600 underline">Debug</summary>
-                  <pre className="mt-1 whitespace-pre-wrap text-[10px] text-red-700/70">{result.debug.join("\n")}</pre>
-                </details>
-              )}
             </div>
           )}
+        </div>
+      )}
+
+      {debugLog.length > 0 && (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+          <div className="mb-1 text-[10px] font-semibold text-zinc-500">Debug (visivel na tela):</div>
+          <div className="max-h-40 overflow-y-auto space-y-0.5">
+            {debugLog.map((line, i) => (
+              <div key={i} className="text-[10px] font-mono text-zinc-600 break-all">{line}</div>
+            ))}
+          </div>
         </div>
       )}
 
