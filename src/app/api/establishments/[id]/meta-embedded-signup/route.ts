@@ -21,8 +21,8 @@ export async function POST(
     console.log("[Meta Embedded Signup] redirectUri:", redirectUri)
     console.log("[Meta Embedded Signup] existingToken:", !!existingToken)
 
-    if (!code) {
-      return NextResponse.json({ success: false, error: "Código não fornecido" }, { status: 400 })
+    if (!code && !existingToken) {
+      return NextResponse.json({ success: false, error: "Código ou token não fornecido" }, { status: 400 })
     }
 
     if (!META_APP_ID || !META_APP_SECRET) {
