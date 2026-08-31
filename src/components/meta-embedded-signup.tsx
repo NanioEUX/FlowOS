@@ -202,22 +202,34 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       console.log("[Meta Embedded Signup] Parsed message type:", parsed.type, "keys:", Object.keys(parsed))
 
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
-        const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, code } = parsed.data
+        const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, code: msgCode } = parsed.data
         const phoneNumberId = phone_number_id || phoneId
         const wabaId = waba_id || whatsappBusinessAccountId
-        console.log("[Meta Embedded Signup] Got WA_EMBEDDED_SIGNUP:", {
-          phone_number_id, phoneId, waba_id, whatsappBusinessAccountId,
-          resolved: { phoneNumberId, wabaId },
-          hasCode: !!code, codeLength: code?.length,
-          dataKeys: Object.keys(parsed.data),
-        })
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
-        const finalCode = code || pendingCodeRef.current
+        let finalCode = msgCode || pendingCodeRef.current
+
         if (!finalCode) {
-          console.log("[Meta Embedded Signup] ERROR - no code available. pendingCodeRef:", !!pendingCodeRef.current)
-          setResult({ success: false, error: "Codigo nao recebido do Meta" })
+          console.log("[Meta Embedded Signup] No code in postMessage. Trying FB.getLoginStatus...")
+          try {
+            const statusRes = await new Promise<any>((resolve) => {
+              window.FB?.getLoginStatus((r: any) => resolve(r))
+            })
+            console.log("[Meta Embedded Signup] getLoginStatus:", JSON.stringify(statusRes))
+            if (statusRes?.authResponse?.code) {
+              finalCode = statusRes.authResponse.code
+            } else if (statusRes?.authResponse?.accessToken) {
+              finalCode = statusRes.authResponse.accessToken
+            }
+          } catch (e: any) {
+            console.log("[Meta Embedded Signup] getLoginStatus failed:", e.message)
+          }
+        }
+
+        if (!finalCode) {
+          console.log("[Meta Embedded Signup] ERROR - no code available. dataKeys:", Object.keys(parsed.data), "full:", JSON.stringify(parsed).substring(0, 500))
+          setResult({ success: false, error: "Codigo nao recebido do Meta. Tente novamente." })
           setLoading(false)
           return
         }
