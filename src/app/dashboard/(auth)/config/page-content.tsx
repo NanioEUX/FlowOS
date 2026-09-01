@@ -444,16 +444,14 @@ function MetaConfig({
 
           {/* Billing link */}
           <div className="mt-3 pt-2 border-t border-green-200">
-            {metaBusinessAccountId && (
-              <a
-                href={`https://facebook.com/settings/billing/payments/?business_id=${metaBusinessAccountId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[10px] text-green-700 hover:text-green-900 underline"
-              >
-                Vincular cartao na Meta
-              </a>
-            )}
+            <a
+              href="https://business.facebook.com/settings/billing/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-green-700 hover:text-green-900 underline"
+            >
+              Vincular cartao na Meta
+            </a>
             <label className="flex items-center gap-1.5 mt-2 cursor-pointer">
               <input type="checkbox" className="w-3 h-3 rounded border-green-300" />
               <span className="text-[10px] text-green-700">Ja vinculei o cartao</span>
