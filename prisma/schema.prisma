@@ -43,6 +43,13 @@ model Establishment {
   currentUsage                  Int?      @default(0)
   estimatedCostMonth            Float?    @default(0)
   lastQuotaCheck                DateTime?
+  // Meta consumption tracking (per-message pricing)
+  consumoMarketing              Int       @default(0)
+  consumoUtility                Int       @default(0)
+  consumoAuthentication         Int       @default(0)
+  consumoService                Int       @default(0)
+  consumoPeriodo                String?   // "2026-09" for monthly reset
+  metaBillingConfigured         Boolean   @default(false)
   // Bot
   botEnabled                    Boolean   @default(false)
   botAgentName                  String?   @default("Atendente")

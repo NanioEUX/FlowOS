@@ -103,6 +103,34 @@ export async function POST(req: NextRequest) {
         const status = value.statuses[0]
         const phoneNumberId = value.metadata?.phone_number_id
 
+        // Track consumption if billable
+        if (status.pricing?.billable && status.pricing?.category && phoneNumberId) {
+          try {
+            const category = status.pricing.category
+            const periodo = new Date().toISOString().slice(0, 7) // "2026-09"
+            const fieldMap: Record<string, string> = {
+              marketing: "consumoMarketing",
+              utility: "consumoUtility",
+              authentication: "consumoAuthentication",
+              authentication_international: "consumoAuthentication",
+              service: "consumoService",
+            }
+            const field = fieldMap[category]
+            if (field) {
+              await prisma.$executeRawUnsafe(
+                `UPDATE "Establishment" 
+                 SET "${field}" = "${field}" + 1, "consumoPeriodo" = $1
+                 WHERE "metaPhoneNumberId" = $2 AND "consumoPeriodo" = $1`,
+                periodo,
+                phoneNumberId
+              )
+              console.log(`[Meta Webhook] Consumption tracked: ${category} for ${phoneNumberId}`)
+            }
+          } catch (e: any) {
+            console.error("[Meta Webhook] Consumption tracking error:", e.message)
+          }
+        }
+
         // Error 131048: messaging limit reached
         if (status.errors?.[0]?.code === 131048 && phoneNumberId) {
           console.warn(`[Meta Webhook] Quota limit error 131048 for phone ${phoneNumberId}`)

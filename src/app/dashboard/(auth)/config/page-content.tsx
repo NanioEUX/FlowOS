@@ -226,6 +226,12 @@ function MetaConfig({
   metaProfilePictureUrl,
   metaBusinessAccountId,
   metaBusinessName,
+  consumoMarketing,
+  consumoUtility,
+  consumoAuthentication,
+  consumoService,
+  consumoPeriodo,
+  metaBillingConfigured,
   logo,
   onComplete,
 }: {
@@ -236,6 +242,12 @@ function MetaConfig({
   metaProfilePictureUrl?: string
   metaBusinessAccountId?: string
   metaBusinessName?: string
+  consumoMarketing?: number
+  consumoUtility?: number
+  consumoAuthentication?: number
+  consumoService?: number
+  consumoPeriodo?: string
+  metaBillingConfigured?: boolean
   logo?: string
   onComplete?: () => void
 }) {
@@ -244,6 +256,19 @@ function MetaConfig({
   const [syncing, setSyncing] = useState(false)
   const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || logo || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
+
+  // Monthly reset check
+  const periodoAtual = new Date().toISOString().slice(0, 7)
+  const needsReset = consumoPeriodo && consumoPeriodo !== periodoAtual && isConnected
+
+  // Auto-reset consumption on period change
+  useEffect(() => {
+    if (needsReset && establishmentId) {
+      fetchAuth(`/api/establishments/${establishmentId}/meta-consumption-reset`, {
+        method: "POST",
+      }).then(() => onComplete?.()).catch(() => {})
+    }
+  }, [needsReset, establishmentId, onComplete])
 
   const handleDisconnect = async () => {
     if (!establishmentId) return
@@ -383,6 +408,58 @@ function MetaConfig({
           </div>
           <p className="w-full text-[10px] text-green-600">JPG ou PNG, max 5MB, min 640x640px</p>
         </div>
+
+        {/* Billing Section */}
+        <div className="border-t border-green-200 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold text-green-900">Consumo Mensal</h4>
+            <span className="text-[10px] text-green-600">{consumoPeriodo || "Sem dados"}</span>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px]">
+              <span className="text-green-700">Templates enviados:</span>
+              <span className="font-semibold text-green-900">
+                {(consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0)}
+              </span>
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-green-700">Mensagens de servico:</span>
+              <span className="font-semibold text-green-900">{consumoService || 0}</span>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-2">
+              <div className="h-1.5 bg-green-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(((consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0)) / 25, 100)}%` }}
+                />
+              </div>
+              <p className="text-[9px] text-green-600 mt-1">
+                {((consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0))} de 2.500 templates
+              </p>
+            </div>
+          </div>
+
+          {/* Billing link */}
+          <div className="mt-3 pt-2 border-t border-green-200">
+            {metaBusinessAccountId && (
+              <a
+                href={`https://facebook.com/settings/billing/payments/?business_id=${metaBusinessAccountId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] text-green-700 hover:text-green-900 underline"
+              >
+                Vincular cartao na Meta
+              </a>
+            )}
+            <label className="flex items-center gap-1.5 mt-2 cursor-pointer">
+              <input type="checkbox" className="w-3 h-3 rounded border-green-300" />
+              <span className="text-[10px] text-green-700">Ja vinculei o cartao</span>
+            </label>
+          </div>
+        </div>
       </div>
     )
   }
@@ -478,6 +555,12 @@ export default function ConfigPage() {
   const [metaProfilePictureUrl, setMetaProfilePictureUrl] = useState("")
   const [metaBusinessAccountId, setMetaBusinessAccountId] = useState("")
   const [metaBusinessName, setMetaBusinessName] = useState("")
+  const [consumoMarketing, setConsumoMarketing] = useState(0)
+  const [consumoUtility, setConsumoUtility] = useState(0)
+  const [consumoAuthentication, setConsumoAuthentication] = useState(0)
+  const [consumoService, setConsumoService] = useState(0)
+  const [consumoPeriodo, setConsumoPeriodo] = useState("")
+  const [metaBillingConfigured, setMetaBillingConfigured] = useState(false)
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
   const [botGreeting, setBotGreeting] = useState("")
@@ -597,6 +680,12 @@ if (!data.error) {
           setMetaProfilePictureUrl(data.metaProfilePictureUrl || "")
           setMetaBusinessAccountId(data.metaBusinessAccountId || "")
           setMetaBusinessName(data.metaBusinessName || "")
+          setConsumoMarketing(data.consumoMarketing || 0)
+          setConsumoUtility(data.consumoUtility || 0)
+          setConsumoAuthentication(data.consumoAuthentication || 0)
+          setConsumoService(data.consumoService || 0)
+          setConsumoPeriodo(data.consumoPeriodo || "")
+          setMetaBillingConfigured(data.metaBillingConfigured || false)
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
           setBotGreeting(data.botGreeting || "")
@@ -1815,6 +1904,12 @@ if (!data.error) {
                 metaProfilePictureUrl={metaProfilePictureUrl}
                 metaBusinessAccountId={metaBusinessAccountId}
                 metaBusinessName={metaBusinessName}
+                consumoMarketing={consumoMarketing}
+                consumoUtility={consumoUtility}
+                consumoAuthentication={consumoAuthentication}
+                consumoService={consumoService}
+                consumoPeriodo={consumoPeriodo}
+                metaBillingConfigured={metaBillingConfigured}
                 logo={form.logo}
                 onComplete={reloadData}
               />
