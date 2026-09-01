@@ -73,11 +73,12 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     const payload: any = { phoneNumberId, wabaId, redirectUri }
     if (code && code !== "no_code") {
-      const isToken = code.length > 80 || code.includes(".")
-      if (isToken) {
+      if (code.startsWith("EAA")) {
         payload.accessToken = code
+        addDebug("Sending as ACCESS TOKEN (starts with EAA)")
       } else {
         payload.code = code
+        addDebug("Sending as CODE (len=" + code.length + ")")
       }
     }
 
@@ -236,14 +237,14 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
-        let finalCode = msgCode && msgCode.length < 200 ? msgCode : null
+        let finalCode = msgCode || null
 
         addDebug("Aguardando 5s pro FB processar...")
         for (let attempt = 0; attempt < 10; attempt++) {
           await new Promise((r) => setTimeout(r, 500))
-          if (pendingCodeRef.current && pendingCodeRef.current.length < 200) {
+          if (pendingCodeRef.current) {
             finalCode = pendingCodeRef.current
-            addDebug("pegou code valido: len=" + finalCode.length)
+            addDebug("pegou code do callback: len=" + finalCode.length)
             break
           }
         }
@@ -340,11 +341,9 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           addDebug("code: " + (ar.code ? "len=" + ar.code.length : "NAO"))
           addDebug("accessToken: " + (ar.accessToken ? "len=" + ar.accessToken.length : "NAO"))
 
-          if (ar.code && ar.code.length < 200) {
+          if (ar.code) {
             pendingCodeRef.current = ar.code
-            addDebug("Salvou CODE curto (len=" + ar.code.length + ")")
-          } else if (ar.code) {
-            addDebug("CODE ignorado (len=" + ar.code.length + " > 200, invalido)")
+            addDebug("Salvou CODE (len=" + ar.code.length + " starts=" + ar.code.substring(0, 8) + ")")
           }
 
           if (ar.accessToken && ar.accessToken.length > 100) {
