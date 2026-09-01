@@ -40,9 +40,8 @@ export async function POST(
 
     const metaFormData = new FormData()
     metaFormData.append("messaging_product", "whatsapp")
-    metaFormData.append("file", new Blob([buffer], { type: file.type }), {
-      filename: `profile.${file.type === "image/png" ? "png" : "jpg"}`,
-    })
+    const blob = new Blob([buffer], { type: file.type })
+    metaFormData.append("file", blob, `profile.${file.type === "image/png" ? "png" : "jpg"}`)
 
     const metaRes = await fetch(
       `https://graph.facebook.com/v21.0/${establishment.metaPhoneNumberId}/whatsapp_business_profile`,
