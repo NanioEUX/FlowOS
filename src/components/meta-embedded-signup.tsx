@@ -75,10 +75,8 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     if (code && code !== "no_code") {
       if (code.startsWith("EAA")) {
         payload.accessToken = code
-        addDebug("Sending as ACCESS TOKEN (starts with EAA)")
       } else {
         payload.code = code
-        addDebug("Sending as CODE (len=" + code.length + ")")
       }
     }
 
@@ -217,68 +215,40 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         const wabaId = waba_id || whatsappBusinessAccountId
 
         addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId)
-        addDebug("postMessage code: " + (msgCode ? "len=" + msgCode.length : "NAO"))
-
-        const ar = window.FB?.getAuthResponse?.()
-        addDebug("getAuthResponse: " + JSON.stringify(ar ? { accessToken: !!ar.accessToken, code: !!ar.code, userID: ar.userID } : "null"))
-        if (ar?.accessToken) {
-          addDebug("TOKEN from getAuthResponse: len=" + ar.accessToken.length + " starts=" + ar.accessToken.substring(0, 6))
-          pendingTokenRef.current = ar.accessToken
-        }
-
-        try {
-          const meResp = await new Promise<any>((resolve) => {
-            window.FB?.api?.('/me', (r: any) => resolve(r))
-          })
-          addDebug("FB.api('/me'): " + JSON.stringify(meResp))
-        } catch (e: any) {
-          addDebug("FB.api('/me') error: " + e.message)
-        }
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
         let finalCode = msgCode || null
 
-        addDebug("Aguardando 5s pro FB processar...")
+        addDebug("Aguardando code do FB.login callback...")
         for (let attempt = 0; attempt < 10; attempt++) {
           await new Promise((r) => setTimeout(r, 500))
           if (pendingCodeRef.current) {
             finalCode = pendingCodeRef.current
-            addDebug("pegou code do callback: len=" + finalCode.length)
+            addDebug("code recebido: len=" + finalCode.length)
             break
           }
         }
 
         if (!finalCode) {
-          addDebug("Sem code valido. Tentando getLoginStatus...")
+          addDebug("FB.login nao retornou code. Tentando getLoginStatus...")
           try {
-            const [cachedRes, forcedRes] = await Promise.all([
-              new Promise<any>((resolve) => {
-                window.FB?.getLoginStatus((r: any) => resolve(r))
-              }),
-              new Promise<any>((resolve) => {
-                window.FB?.getLoginStatus((r: any) => resolve(r), true)
-              })
-            ])
-            addDebug("getLoginStatus(cached) status: " + cachedRes?.status)
-            addDebug("getLoginStatus(forced) status: " + forcedRes?.status)
-            const bestRes = forcedRes?.status === "connected" ? forcedRes : cachedRes
-            addDebug("best status: " + bestRes?.status)
-            addDebug("best code: " + (bestRes?.authResponse?.code ? "len=" + bestRes.authResponse.code.length : "NAO"))
-            addDebug("best token: " + (bestRes?.authResponse?.accessToken ? "len=" + bestRes.authResponse.accessToken.length : "NAO"))
-            if (bestRes?.authResponse?.code && bestRes.authResponse.code.length < 200) {
-              finalCode = bestRes.authResponse.code
-            } else if (bestRes?.authResponse?.accessToken && bestRes.authResponse.accessToken.length > 100) {
-              finalCode = bestRes.authResponse.accessToken
+            const statusRes = await new Promise<any>((resolve) => {
+              window.FB?.getLoginStatus((r: any) => resolve(r), true)
+            })
+            addDebug("getLoginStatus: " + statusRes?.status)
+            if (statusRes?.authResponse?.code) {
+              finalCode = statusRes.authResponse.code
+            } else if (statusRes?.authResponse?.accessToken) {
+              finalCode = statusRes.authResponse.accessToken
             }
           } catch (e: any) {
             addDebug("getLoginStatus erro: " + e.message)
           }
         }
 
-        addDebug("code final: " + (finalCode ? "len=" + finalCode.length + " starts=" + finalCode.substring(0, 6) : "NENHUM"))
+        addDebug("code final: " + (finalCode ? "len=" + finalCode.length : "NENHUM"))
 
-        addDebug("Enviando pro server...")
         pendingCodeRef.current = null
         setLoading(true)
         setResult(null)
@@ -333,25 +303,22 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     window.FB.login(
       (response: any) => {
-        addDebug("FB.login callback: status=" + response?.status)
-        addDebug("authResponse: " + (response?.authResponse ? "EXISTS" : "NULL"))
+        addDebug("FB.login: status=" + response?.status)
 
         if (response?.authResponse) {
           const ar = response.authResponse
-          addDebug("code: " + (ar.code ? "len=" + ar.code.length : "NAO"))
-          addDebug("accessToken: " + (ar.accessToken ? "len=" + ar.accessToken.length : "NAO"))
 
           if (ar.code) {
             pendingCodeRef.current = ar.code
-            addDebug("Salvou CODE (len=" + ar.code.length + " starts=" + ar.code.substring(0, 8) + ")")
+            addDebug("code recebido: len=" + ar.code.length)
           }
 
-          if (ar.accessToken && ar.accessToken.length > 100) {
+          if (ar.accessToken) {
             pendingTokenRef.current = ar.accessToken
-            addDebug("Salvou accessToken (len=" + ar.accessToken.length + ")")
+            addDebug("token recebido: len=" + ar.accessToken.length)
           }
         } else {
-          addDebug("SEM authResponse! status=" + response?.status)
+          addDebug("SEM authResponse")
         }
 
         if (response?.status === "not_authorized") {
