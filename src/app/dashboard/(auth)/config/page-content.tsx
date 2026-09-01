@@ -223,17 +223,19 @@ function MetaConfig({
   metaPhoneNumberId,
   metaAccessToken,
   whatsappNumber,
+  metaProfilePictureUrl,
   onComplete,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
   metaAccessToken: string
   whatsappNumber?: string
+  metaProfilePictureUrl?: string
   onComplete?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
@@ -420,6 +422,7 @@ export default function ConfigPage() {
   const [metaPhoneNumberId, setMetaPhoneNumberId] = useState("")
   const [metaAccessToken, setMetaAccessToken] = useState("")
   const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState("")
+  const [metaProfilePictureUrl, setMetaProfilePictureUrl] = useState("")
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
   const [botGreeting, setBotGreeting] = useState("")
@@ -536,6 +539,7 @@ if (!data.error) {
           setMetaPhoneNumberId(data.metaPhoneNumberId || "")
           setMetaAccessToken(data.metaAccessToken || "")
           setMetaWebhookVerifyToken(data.metaWebhookVerifyToken || "")
+          setMetaProfilePictureUrl(data.metaProfilePictureUrl || "")
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
           setBotGreeting(data.botGreeting || "")
@@ -1751,6 +1755,7 @@ if (!data.error) {
                 metaPhoneNumberId={metaPhoneNumberId}
                 metaAccessToken={metaAccessToken}
                 whatsappNumber={whatsappNumber}
+                metaProfilePictureUrl={metaProfilePictureUrl}
                 onComplete={reloadData}
               />
             )}

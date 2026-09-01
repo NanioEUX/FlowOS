@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { compressAndUploadImage } from "@/lib/image-upload"
 
 export async function POST(
   req: NextRequest,
@@ -35,13 +36,10 @@ export async function POST(
       return NextResponse.json({ success: false, error: "WhatsApp Meta nao conectado" }, { status: 400 })
     }
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    const metaFormData = new FormData()
-    metaFormData.append("messaging_product", "whatsapp")
-    const blob = new Blob([buffer], { type: file.type })
-    metaFormData.append("file", blob, `profile.${file.type === "image/png" ? "png" : "jpg"}`)
+    const { url, error: uploadError } = await compressAndUploadImage(file)
+    if (uploadError || !url) {
+      return NextResponse.json({ success: false, error: uploadError || "Erro ao enviar imagem" }, { status: 500 })
+    }
 
     const metaRes = await fetch(
       `https://graph.facebook.com/v21.0/${establishment.metaPhoneNumberId}/whatsapp_business_profile`,
@@ -49,21 +47,29 @@ export async function POST(
         method: "POST",
         headers: {
           Authorization: `Bearer ${establishment.metaAccessToken}`,
+          "Content-Type": "application/json",
         },
-        body: metaFormData,
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          profile_picture_url: url,
+        }),
       }
     )
 
     const metaData = await metaRes.json()
-    console.log("[Meta Profile Picture] Response:", JSON.stringify(metaData))
+    console.log("[Meta Profile Picture] Meta response:", JSON.stringify(metaData))
 
     if (metaRes.ok && metaData.success) {
-      return NextResponse.json({ success: true })
+      await prisma.establishment.update({
+        where: { id },
+        data: { metaProfilePictureUrl: url },
+      })
+      return NextResponse.json({ success: true, url })
     }
 
     return NextResponse.json({
       success: false,
-      error: metaData?.error?.message || "Erro ao enviar foto para Meta",
+      error: metaData?.error?.message || "Erro ao atualizar foto na Meta",
       details: metaData,
     })
   } catch (error: any) {
