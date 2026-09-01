@@ -60,11 +60,12 @@ export async function POST(
     }
 
     const uploadId = sessionData.id
+    const cleanId = uploadId.startsWith("upload:") ? uploadId : `upload:${uploadId}`
 
     console.log("[Meta Profile] Step 2: Uploading image binary...")
 
     const uploadRes = await fetch(
-      `https://graph.facebook.com/v21.0/upload:${uploadId}`,
+      `https://graph.facebook.com/v21.0/${cleanId}`,
       {
         method: "POST",
         headers: {
