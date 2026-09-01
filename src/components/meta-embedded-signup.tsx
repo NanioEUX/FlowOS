@@ -85,21 +85,22 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       payload.accessToken = pendingTokenRef.current
     }
 
-    // Get user name/picture from FB SDK (client-side, using user's token)
+    // Get user name/picture from Graph API using the user's token (not system user)
     try {
       const userToken = pendingTokenRef.current || (code.startsWith("EAA") ? code : null)
-      if (userToken && window.FB) {
-        const userData = await new Promise<any>((resolve) => {
-          window.FB.api("/me?fields=id,name,picture.type(large)", (res: any) => resolve(res))
-        })
-        if (userData && userData.name) {
+      if (userToken) {
+        const userRes = await fetch(`https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${userToken}`)
+        const userData = await userRes.json()
+        if (userData && userData.name && !userData.name.includes("System User")) {
           payload.userName = userData.name
           payload.userPicture = userData.picture?.data?.url || ""
-          addDebug("User info from FB SDK: " + userData.name)
+          addDebug("User info: " + userData.name)
+        } else {
+          addDebug("Graph /me returned system user or error")
         }
       }
     } catch (e: any) {
-      addDebug("FB.api /me failed: " + e.message)
+      addDebug("Graph /me failed: " + e.message)
     }
 
     console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "businessId:", businessId)
