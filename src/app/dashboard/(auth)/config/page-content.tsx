@@ -240,7 +240,7 @@ function MetaConfig({
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || metaUserPicture || logo || null)
+  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || logo || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
