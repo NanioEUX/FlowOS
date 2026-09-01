@@ -85,6 +85,23 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       payload.accessToken = pendingTokenRef.current
     }
 
+    // Get user name/picture from FB SDK (client-side, using user's token)
+    try {
+      const userToken = pendingTokenRef.current || (code.startsWith("EAA") ? code : null)
+      if (userToken && window.FB) {
+        const userData = await new Promise<any>((resolve) => {
+          window.FB.api("/me?fields=id,name,picture.type(large)", (res: any) => resolve(res))
+        })
+        if (userData && userData.name) {
+          payload.userName = userData.name
+          payload.userPicture = userData.picture?.data?.url || ""
+          addDebug("User info from FB SDK: " + userData.name)
+        }
+      }
+    } catch (e: any) {
+      addDebug("FB.api /me failed: " + e.message)
+    }
+
     console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "businessId:", businessId)
 
     const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {

@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id } = params
     const body = await req.json()
-    const { code, phoneNumberId, wabaId, redirectUri, accessToken: existingToken } = body
+    const { code, phoneNumberId, wabaId, redirectUri, accessToken: existingToken, userName: clientUserName, userPicture: clientUserPicture } = body
 
     console.log("[Meta Embedded Signup] ========== START ==========")
     console.log("[Meta Embedded Signup] Establishment ID:", id)
@@ -20,6 +20,7 @@ export async function POST(
     console.log("[Meta Embedded Signup] wabaId:", wabaId)
     console.log("[Meta Embedded Signup] redirectUri:", redirectUri)
     console.log("[Meta Embedded Signup] existingToken:", !!existingToken, "length:", existingToken?.length)
+    console.log("[Meta Embedded Signup] clientUserName:", clientUserName)
 
     if (!code && !existingToken) {
       console.log("[Meta Embedded Signup] No code or token provided, saving IDs only")
@@ -105,23 +106,26 @@ export async function POST(
       }
     }
 
-    // Step 2.5: Get user name and picture from /me using SHORT token (before exchange)
-    let metaUserName = ""
-    let metaUserPicture = ""
-    if (shortToken) {
+    // Step 2.5: Get user name and picture - prefer client-side data, fallback to API
+    let metaUserName = clientUserName || ""
+    let metaUserPicture = clientUserPicture || ""
+    
+    // If client didn't provide, try API with short token
+    if (!metaUserName && shortToken) {
       try {
         const userRes = await fetch(
           `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${shortToken}`,
           { method: "GET" }
         )
         const userData = await userRes.json()
-        console.log("[Meta Embedded Signup] User info:", JSON.stringify(userData))
+        console.log("[Meta Embedded Signup] User info from API:", JSON.stringify(userData))
         metaUserName = userData?.name || ""
         metaUserPicture = userData?.picture?.data?.url || ""
       } catch (e: any) {
         console.log("[Meta Embedded Signup] User info fetch failed:", e.message)
       }
     }
+    console.log("[Meta Embedded Signup] Final user name:", metaUserName)
 
     // Step 2.6: Get business name from WABA
     let metaBusinessName = ""
