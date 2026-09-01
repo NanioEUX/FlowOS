@@ -304,19 +304,59 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       return
     }
 
-    console.log("[Meta Embedded Signup] Calling FB.login with config_id:", META_CONFIG_ID)
+    console.log("[Meta Embedded Signup] Starting hybrid flow: public_profile first, then Embedded Signup")
     setResult(null)
     setLoading(true)
     pendingCodeRef.current = null
+    pendingUserInfoRef.current = null
 
     loadingTimeoutRef.current = setTimeout(() => {
       setLoading(false)
       setResult({ success: false, error: "Tempo esgotado. Tente novamente." })
     }, 120000)
 
+    // Step 1: Get human user profile with public_profile scope
     window.FB.login(
       (response: any) => {
-        addDebug("FB.login: status=" + response?.status)
+        addDebug("FB.login (public_profile): status=" + response?.status)
+
+        if (response?.authResponse) {
+          const userToken = response.authResponse.accessToken
+          addDebug("User token recebido: len=" + userToken.length)
+
+          // Get user name from Graph API
+          fetch(`https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${userToken}`)
+            .then(r => r.json())
+            .then(userData => {
+              if (userData && userData.name) {
+                pendingUserInfoRef.current = { name: userData.name, picture: userData.picture?.data?.url || "" }
+                addDebug("User info capturado: " + userData.name)
+              } else {
+                addDebug("Nao foi possivel capturar nome do usuario")
+              }
+            })
+            .catch(e => addDebug("Erro ao buscar user info: " + e.message))
+            .finally(() => {
+              // Step 2: Launch Embedded Signup for WhatsApp
+              launchEmbeddedSignup()
+            })
+        } else {
+          addDebug("User cancelou login public_profile")
+          if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+          setLoading(false)
+          setResult({ success: false, error: "Login cancelado pelo usuario." })
+        }
+      },
+      { scope: "public_profile" }
+    )
+  }
+
+  const launchEmbeddedSignup = () => {
+    console.log("[Meta Embedded Signup] Launching Embedded Signup with config_id:", META_CONFIG_ID)
+
+    window.FB.login(
+      (response: any) => {
+        addDebug("FB.login (Embedded Signup): status=" + response?.status)
 
         if (response?.authResponse) {
           const ar = response.authResponse
@@ -329,19 +369,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           if (ar.accessToken) {
             pendingTokenRef.current = ar.accessToken
             addDebug("token recebido: len=" + ar.accessToken.length)
-
-            // Try to get user info immediately with this token
-            fetch(`https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${ar.accessToken}`)
-              .then(r => r.json())
-              .then(userData => {
-                if (userData && userData.name && !userData.name.includes("System User")) {
-                  pendingUserInfoRef.current = { name: userData.name, picture: userData.picture?.data?.url || "" }
-                  addDebug("User info capturado: " + userData.name)
-                } else {
-                  addDebug("Token retornou system user")
-                }
-              })
-              .catch(e => addDebug("Erro ao buscar user info: " + e.message))
           }
         } else {
           addDebug("SEM authResponse")
