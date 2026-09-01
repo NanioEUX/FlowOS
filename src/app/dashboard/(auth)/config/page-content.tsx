@@ -224,6 +224,9 @@ function MetaConfig({
   metaAccessToken,
   whatsappNumber,
   metaProfilePictureUrl,
+  metaUserName,
+  metaUserPicture,
+  metaBusinessName,
   logo,
   onComplete,
 }: {
@@ -232,13 +235,16 @@ function MetaConfig({
   metaAccessToken: string
   whatsappNumber?: string
   metaProfilePictureUrl?: string
+  metaUserName?: string
+  metaUserPicture?: string
+  metaBusinessName?: string
   logo?: string
   onComplete?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || logo || null)
+  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || metaUserPicture || logo || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
@@ -324,9 +330,21 @@ function MetaConfig({
               </span>
               <span className="text-sm font-medium text-green-900">{whatsappNumber || metaPhoneNumberId}</span>
             </div>
-            <p className="mt-1 text-xs text-green-700">
-              Meta Cloud API ativa via Embedded Signup.
-            </p>
+            {metaUserName && (
+              <p className="mt-1 text-xs text-green-700">
+                Conectado como: <span className="font-semibold">{metaUserName}</span>
+              </p>
+            )}
+            {metaBusinessName && (
+              <p className="text-xs text-green-700">
+                Empresa: <span className="font-semibold">{metaBusinessName}</span>
+              </p>
+            )}
+            {!metaUserName && !metaBusinessName && (
+              <p className="mt-1 text-xs text-green-700">
+                Meta Cloud API ativa via Embedded Signup.
+              </p>
+            )}
           </div>
           <button
             onClick={handleDisconnect}
@@ -462,6 +480,9 @@ export default function ConfigPage() {
   const [metaAccessToken, setMetaAccessToken] = useState("")
   const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState("")
   const [metaProfilePictureUrl, setMetaProfilePictureUrl] = useState("")
+  const [metaUserName, setMetaUserName] = useState("")
+  const [metaUserPicture, setMetaUserPicture] = useState("")
+  const [metaBusinessName, setMetaBusinessName] = useState("")
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
   const [botGreeting, setBotGreeting] = useState("")
@@ -579,6 +600,9 @@ if (!data.error) {
           setMetaAccessToken(data.metaAccessToken || "")
           setMetaWebhookVerifyToken(data.metaWebhookVerifyToken || "")
           setMetaProfilePictureUrl(data.metaProfilePictureUrl || "")
+          setMetaUserName(data.metaUserName || "")
+          setMetaUserPicture(data.metaUserPicture || "")
+          setMetaBusinessName(data.metaBusinessName || "")
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
           setBotGreeting(data.botGreeting || "")
@@ -1795,6 +1819,9 @@ if (!data.error) {
                 metaAccessToken={metaAccessToken}
                 whatsappNumber={whatsappNumber}
                 metaProfilePictureUrl={metaProfilePictureUrl}
+                metaUserName={metaUserName}
+                metaUserPicture={metaUserPicture}
+                metaBusinessName={metaBusinessName}
                 logo={form.logo}
                 onComplete={reloadData}
               />

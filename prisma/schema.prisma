@@ -35,6 +35,9 @@ model Establishment {
   metaWebhookVerifyToken        String?
   metaBusinessAccountId         String?
   metaProfilePictureUrl         String?
+  metaUserName                  String?
+  metaUserPicture               String?
+  metaBusinessName              String?
   // Meta quota monitoring
   messagingLimit                Int? // TIER_250, TIER_1K, etc
   currentUsage                  Int?      @default(0)

@@ -28,6 +28,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingCodeRef = useRef<string | null>(null)
   const pendingTokenRef = useRef<string | null>(null)
+  const pendingBusinessIdRef = useRef<string | null>(null)
 
   const addDebug = useCallback((msg: string) => {
     console.log("[Meta Embedded Signup]", msg)
@@ -68,10 +69,10 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     }
   }, [])
 
-  const sendToServer = useCallback(async (code: string, phoneNumberId: string | null, wabaId: string | null) => {
+  const sendToServer = useCallback(async (code: string, phoneNumberId: string | null, wabaId: string | null, businessId: string | null) => {
     const redirectUri = window.location.origin
 
-    const payload: any = { phoneNumberId, wabaId, redirectUri }
+    const payload: any = { phoneNumberId, wabaId, businessId, redirectUri }
     if (code && code !== "no_code") {
       if (code.startsWith("EAA")) {
         payload.accessToken = code
@@ -84,7 +85,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       payload.accessToken = pendingTokenRef.current
     }
 
-    console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId)
+    console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "businessId:", businessId)
 
     const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
       method: "POST",
@@ -156,7 +157,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
       const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
         method: "POST",
-        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, redirectUri: window.location.origin, accessToken: pendingTokenRef.current }),
+        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, businessId: pendingBusinessIdRef.current, redirectUri: window.location.origin, accessToken: pendingTokenRef.current }),
       })
 
       const data = await res.json()
@@ -174,6 +175,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       setLoading(false)
       pendingCodeRef.current = null
       pendingTokenRef.current = null
+      pendingBusinessIdRef.current = null
     }
   }, [establishmentId, onComplete])
 
@@ -210,14 +212,16 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       }
 
       if (parsed.type === "WA_EMBEDDED_SIGNUP" && parsed.data) {
-        const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, code: msgCode } = parsed.data
+        const { phone_number_id, phoneId, waba_id, whatsappBusinessAccountId, business_id, code: msgCode } = parsed.data
         const phoneNumberId = phone_number_id || phoneId
         const wabaId = waba_id || whatsappBusinessAccountId
+        const businessId = business_id || null
 
-        addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId)
+        addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId + " business=" + businessId)
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
+        pendingBusinessIdRef.current = businessId
         let finalCode = msgCode || null
 
         addDebug("Aguardando code do FB.login callback...")
@@ -254,7 +258,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         setResult(null)
 
         try {
-          await sendToServer(finalCode || "no_code", phoneNumberId || null, wabaId || null)
+          await sendToServer(finalCode || "no_code", phoneNumberId || null, wabaId || null, businessId || null)
         } catch (err: any) {
           addDebug("ERRO server: " + err.message)
           setResult({ success: false, error: "Erro ao salvar: " + err.message })

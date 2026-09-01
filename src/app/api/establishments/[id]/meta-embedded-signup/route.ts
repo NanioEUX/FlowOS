@@ -102,6 +102,40 @@ export async function POST(
       }
     }
 
+    // Step 2.5: Get user name and picture from /me
+    let metaUserName = ""
+    let metaUserPicture = ""
+    if (accessToken) {
+      try {
+        const userRes = await fetch(
+          `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${accessToken}`,
+          { method: "GET" }
+        )
+        const userData = await userRes.json()
+        console.log("[Meta Embedded Signup] User info:", JSON.stringify(userData))
+        metaUserName = userData?.name || ""
+        metaUserPicture = userData?.picture?.data?.url || ""
+      } catch (e: any) {
+        console.log("[Meta Embedded Signup] User info fetch failed:", e.message)
+      }
+    }
+
+    // Step 2.6: Get business name from WABA
+    let metaBusinessName = ""
+    if (accessToken && wabaId) {
+      try {
+        const wabaRes = await fetch(
+          `https://graph.facebook.com/v21.0/${wabaId}?fields=id,name,owner_business_info&access_token=${accessToken}`,
+          { method: "GET" }
+        )
+        const wabaData = await wabaRes.json()
+        console.log("[Meta Embedded Signup] WABA info:", JSON.stringify(wabaData))
+        metaBusinessName = wabaData?.owner_business_info?.name || wabaData?.name || ""
+      } catch (e: any) {
+        console.log("[Meta Embedded Signup] WABA info fetch failed:", e.message)
+      }
+    }
+
     // Step 3: Save to database - IDs come from request, NOT from API
     console.log("[Meta Embedded Signup] Saving to database...")
     console.log("[Meta Embedded Signup] phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "displayPhone:", displayPhone)
@@ -115,6 +149,9 @@ export async function POST(
         metaBusinessAccountId: wabaId || null,
         ...(displayPhone ? { whatsappNumber: displayPhone } : {}),
         whatsappAutomationEnabled: true,
+        ...(metaUserName ? { metaUserName } : {}),
+        ...(metaUserPicture ? { metaUserPicture } : {}),
+        ...(metaBusinessName ? { metaBusinessName } : {}),
       },
     })
 
