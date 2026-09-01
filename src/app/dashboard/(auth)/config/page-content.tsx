@@ -266,8 +266,10 @@ function MetaConfig({
     try {
       const formData = new FormData()
       formData.append("file", file)
-      const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-profile-picture`, {
+      const token = localStorage.getItem("auth_token")
+      const res = await fetch(`/api/establishments/${establishmentId}/meta-profile-picture`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       })
       const data = await res.json()
