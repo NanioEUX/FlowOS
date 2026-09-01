@@ -336,6 +336,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         config_id: META_CONFIG_ID,
         response_type: "code",
         override_default_response_type: true,
+        scope: "public_profile,whatsapp_business_management,whatsapp_business_messaging",
         extras: {
           setup: {},
         },
