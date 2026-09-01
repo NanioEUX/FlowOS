@@ -238,7 +238,7 @@ function MetaConfig({
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || null)
+  const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || logo || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
@@ -301,6 +301,7 @@ function MetaConfig({
       })
       const data = await res.json()
       if (data.success) {
+        setPreview(logo)
         alert("Logo sincronizada com sucesso!")
       } else {
         alert("Erro: " + (data.error || "Erro desconhecido"))
