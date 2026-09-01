@@ -27,6 +27,7 @@ export async function POST(
 
     // Step 1: Get access token
     let accessToken: string | null = null
+    let shortToken: string | null = null
     const diagnostics: string[] = []
 
     diagnostics.push("received: code=" + (code || "null") + " existingToken=" + (existingToken ? "len=" + existingToken.length + " starts=" + existingToken.substring(0, 6) : "null"))
@@ -34,6 +35,7 @@ export async function POST(
     if (existingToken && existingToken.length > 100) {
       if (existingToken.startsWith("EAA")) {
         accessToken = existingToken
+        shortToken = existingToken
         diagnostics.push("existingToken: VALID (EAA)")
       } else {
         diagnostics.push("existingToken: INVALID prefix=" + existingToken.substring(0, 6))
@@ -59,6 +61,7 @@ export async function POST(
             console.log("[Meta Embedded Signup] Token response:", JSON.stringify(tokenData))
             if (tokenRes.ok && tokenData.access_token && tokenData.access_token.startsWith("EAA")) {
               accessToken = tokenData.access_token
+              shortToken = tokenData.access_token
               console.log("[Meta Embedded Signup] Got VALID short token with URI:", uri, "length:", tokenData.access_token.length)
               break
             }
@@ -102,13 +105,13 @@ export async function POST(
       }
     }
 
-    // Step 2.5: Get user name and picture from /me
+    // Step 2.5: Get user name and picture from /me using SHORT token (before exchange)
     let metaUserName = ""
     let metaUserPicture = ""
-    if (accessToken) {
+    if (shortToken) {
       try {
         const userRes = await fetch(
-          `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${accessToken}`,
+          `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${shortToken}`,
           { method: "GET" }
         )
         const userData = await userRes.json()
