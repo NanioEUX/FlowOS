@@ -216,33 +216,32 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         const wabaId = waba_id || whatsappBusinessAccountId
 
         addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId)
-        addDebug("postMessage code: " + (msgCode ? "SIM (len=" + msgCode.length + ")" : "NAO"))
-        addDebug("pendingCodeRef: " + (pendingCodeRef.current ? "SIM (len=" + pendingCodeRef.current.length + ")" : "VAZIO"))
+        addDebug("postMessage code: " + (msgCode ? "len=" + msgCode.length : "NAO"))
 
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
-        let finalCode = msgCode || pendingCodeRef.current
+        let finalCode = msgCode && msgCode.length < 200 ? msgCode : null
 
-        if (!finalCode) {
-          addDebug("Aguardando 3s pro callback do FB...")
-          for (let attempt = 0; attempt < 6; attempt++) {
-            await new Promise((r) => setTimeout(r, 500))
-            if (pendingCodeRef.current) {
-              finalCode = pendingCodeRef.current
-              addDebug("pegou code do pendingCodeRef: len=" + finalCode.length)
-              break
-            }
+        addDebug("Aguardando 5s pro FB processar...")
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await new Promise((r) => setTimeout(r, 500))
+          if (pendingCodeRef.current && pendingCodeRef.current.length < 200) {
+            finalCode = pendingCodeRef.current
+            addDebug("pegou code valido: len=" + finalCode.length)
+            break
           }
         }
 
         if (!finalCode) {
-          addDebug("Tentando getLoginStatus...")
+          addDebug("Sem code valido. Tentando getLoginStatus...")
           try {
             const statusRes = await new Promise<any>((resolve) => {
               window.FB?.getLoginStatus((r: any) => resolve(r), true)
             })
-            addDebug("getLoginStatus: " + (statusRes?.authResponse?.code ? "tem code" : statusRes?.authResponse?.accessToken ? "tem token (len=" + statusRes.authResponse.accessToken.length + ")" : "VAZIO"))
-            if (statusRes?.authResponse?.code) {
+            addDebug("getLoginStatus status: " + statusRes?.status)
+            addDebug("getLoginStatus code: " + (statusRes?.authResponse?.code ? "len=" + statusRes.authResponse.code.length : "NAO"))
+            addDebug("getLoginStatus token: " + (statusRes?.authResponse?.accessToken ? "len=" + statusRes.authResponse.accessToken.length : "NAO"))
+            if (statusRes?.authResponse?.code && statusRes.authResponse.code.length < 200) {
               finalCode = statusRes.authResponse.code
             } else if (statusRes?.authResponse?.accessToken && statusRes.authResponse.accessToken.length > 100) {
               finalCode = statusRes.authResponse.accessToken
@@ -252,7 +251,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           }
         }
 
-        addDebug("code final: " + (finalCode ? "SIM (len=" + finalCode.length + " starts=" + finalCode.substring(0,5) + ")" : "NAO"))
+        addDebug("code final: " + (finalCode ? "len=" + finalCode.length + " starts=" + finalCode.substring(0, 6) : "NENHUM"))
 
         addDebug("Enviando pro server...")
         pendingCodeRef.current = null
@@ -314,15 +313,19 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
         if (response?.authResponse) {
           const ar = response.authResponse
-          addDebug("code: " + (ar.code ? "SIM (len=" + ar.code.length + ")" : "NAO"))
-          addDebug("accessToken: " + (ar.accessToken ? "SIM (len=" + ar.accessToken.length + ")" : "NAO"))
+          addDebug("code: " + (ar.code ? "len=" + ar.code.length : "NAO"))
+          addDebug("accessToken: " + (ar.accessToken ? "len=" + ar.accessToken.length : "NAO"))
 
-          if (ar.code) {
+          if (ar.code && ar.code.length < 200) {
             pendingCodeRef.current = ar.code
-            addDebug("Salvou CODE no pendingCodeRef")
-          } else if (ar.accessToken) {
-            pendingCodeRef.current = ar.accessToken
-            addDebug("Salvou TOKEN no pendingCodeRef (sem code)")
+            addDebug("Salvou CODE curto (len=" + ar.code.length + ")")
+          } else if (ar.code) {
+            addDebug("CODE ignorado (len=" + ar.code.length + " > 200, invalido)")
+          }
+
+          if (ar.accessToken && ar.accessToken.length > 100) {
+            pendingTokenRef.current = ar.accessToken
+            addDebug("Salvou accessToken (len=" + ar.accessToken.length + ")")
           }
         } else {
           addDebug("SEM authResponse! status=" + response?.status)
