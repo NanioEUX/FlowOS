@@ -100,7 +100,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     if (data.success) {
       setResult({ success: true, phone: data.phoneNumber || phoneNumberId, debug: [] })
-      onComplete?.()
+      setTimeout(() => onComplete?.(), 5000)
     } else {
       setResult({ success: false, error: data.error || "Erro desconhecido", debug: [] })
     }
