@@ -1794,7 +1794,7 @@ if (!data.error) {
                 metaAccessToken={metaAccessToken}
                 whatsappNumber={whatsappNumber}
                 metaProfilePictureUrl={metaProfilePictureUrl}
-                logo={logo}
+                logo={establishmentData.logo}
                 onComplete={reloadData}
               />
             )}
