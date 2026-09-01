@@ -218,6 +218,22 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         addDebug("postMessage: phone=" + phoneNumberId + " waba=" + wabaId)
         addDebug("postMessage code: " + (msgCode ? "len=" + msgCode.length : "NAO"))
 
+        const ar = window.FB?.getAuthResponse?.()
+        addDebug("getAuthResponse: " + JSON.stringify(ar ? { accessToken: !!ar.accessToken, code: !!ar.code, userID: ar.userID } : "null"))
+        if (ar?.accessToken) {
+          addDebug("TOKEN from getAuthResponse: len=" + ar.accessToken.length + " starts=" + ar.accessToken.substring(0, 6))
+          pendingTokenRef.current = ar.accessToken
+        }
+
+        try {
+          const meResp = await new Promise<any>((resolve) => {
+            window.FB?.api?.('/me', (r: any) => resolve(r))
+          })
+          addDebug("FB.api('/me'): " + JSON.stringify(meResp))
+        } catch (e: any) {
+          addDebug("FB.api('/me') error: " + e.message)
+        }
+
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
 
         let finalCode = msgCode && msgCode.length < 200 ? msgCode : null
@@ -235,16 +251,24 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         if (!finalCode) {
           addDebug("Sem code valido. Tentando getLoginStatus...")
           try {
-            const statusRes = await new Promise<any>((resolve) => {
-              window.FB?.getLoginStatus((r: any) => resolve(r), true)
-            })
-            addDebug("getLoginStatus status: " + statusRes?.status)
-            addDebug("getLoginStatus code: " + (statusRes?.authResponse?.code ? "len=" + statusRes.authResponse.code.length : "NAO"))
-            addDebug("getLoginStatus token: " + (statusRes?.authResponse?.accessToken ? "len=" + statusRes.authResponse.accessToken.length : "NAO"))
-            if (statusRes?.authResponse?.code && statusRes.authResponse.code.length < 200) {
-              finalCode = statusRes.authResponse.code
-            } else if (statusRes?.authResponse?.accessToken && statusRes.authResponse.accessToken.length > 100) {
-              finalCode = statusRes.authResponse.accessToken
+            const [cachedRes, forcedRes] = await Promise.all([
+              new Promise<any>((resolve) => {
+                window.FB?.getLoginStatus((r: any) => resolve(r))
+              }),
+              new Promise<any>((resolve) => {
+                window.FB?.getLoginStatus((r: any) => resolve(r), true)
+              })
+            ])
+            addDebug("getLoginStatus(cached) status: " + cachedRes?.status)
+            addDebug("getLoginStatus(forced) status: " + forcedRes?.status)
+            const bestRes = forcedRes?.status === "connected" ? forcedRes : cachedRes
+            addDebug("best status: " + bestRes?.status)
+            addDebug("best code: " + (bestRes?.authResponse?.code ? "len=" + bestRes.authResponse.code.length : "NAO"))
+            addDebug("best token: " + (bestRes?.authResponse?.accessToken ? "len=" + bestRes.authResponse.accessToken.length : "NAO"))
+            if (bestRes?.authResponse?.code && bestRes.authResponse.code.length < 200) {
+              finalCode = bestRes.authResponse.code
+            } else if (bestRes?.authResponse?.accessToken && bestRes.authResponse.accessToken.length > 100) {
+              finalCode = bestRes.authResponse.accessToken
             }
           } catch (e: any) {
             addDebug("getLoginStatus erro: " + e.message)
@@ -340,8 +364,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       {
         config_id: META_CONFIG_ID,
         response_type: "code",
-        override_default_response_type: true,
-        scope: "public_profile,whatsapp_business_management,whatsapp_business_messaging",
         extras: {
           setup: {},
         },
