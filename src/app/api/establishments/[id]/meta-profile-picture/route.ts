@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -14,59 +16,107 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
-    const allowedTypes = ["image/jpeg", "image/png"]
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ success: false, error: "Formato invalido. Use JPG ou PNG." }, { status: 400 })
+    if (file.type !== "image/jpeg" && file.type !== "image/png") {
+      return NextResponse.json({ success: false, error: "Use JPG ou PNG." }, { status: 400 })
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ success: false, error: "Arquivo muito grande. Maximo 5MB." }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Maximo 5MB." }, { status: 400 })
+    }
+
+    if (!META_APP_ID) {
+      return NextResponse.json({ success: false, error: "META_APP_ID nao configurado" }, { status: 500 })
     }
 
     const establishment = await prisma.establishment.findUnique({
       where: { id },
-      select: {
-        metaAccessToken: true,
-        metaPhoneNumberId: true,
-      },
+      select: { metaAccessToken: true, metaPhoneNumberId: true },
     })
 
     if (!establishment?.metaAccessToken || !establishment?.metaPhoneNumberId) {
-      return NextResponse.json({ success: false, error: "WhatsApp Meta nao conectado" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "WhatsApp nao conectado" }, { status: 400 })
     }
 
+    const { metaAccessToken: accessToken, metaPhoneNumberId: phoneNumberId } = establishment
+
     const buffer = Buffer.from(await file.arrayBuffer())
-    const filename = `profile.${file.type === "image/png" ? "png" : "jpg"}`
+    const fileLength = buffer.length
+    const fileName = `profile.${file.type === "image/png" ? "png" : "jpg"}`
 
-    const metaFormData = new FormData()
-    metaFormData.append("messaging_product", "whatsapp")
-    metaFormData.append("file", new Blob([buffer], { type: file.type }), filename)
+    console.log("[Meta Profile] Step 1: Creating upload session...")
 
-    const metaRes = await fetch(
-      `https://graph.facebook.com/v21.0/${establishment.metaPhoneNumberId}/whatsapp_business_profile`,
+    const sessionRes = await fetch(
+      `https://graph.facebook.com/v21.0/${META_APP_ID}/uploads?file_name=${fileName}&file_length=${fileLength}&file_type=${file.type}&access_token=${accessToken}`,
+      { method: "POST" }
+    )
+    const sessionData = await sessionRes.json()
+    console.log("[Meta Profile] Session response:", JSON.stringify(sessionData))
+
+    if (!sessionData.id) {
+      return NextResponse.json({
+        success: false,
+        error: "Erro ao criar sessao de upload: " + (sessionData?.error?.message || JSON.stringify(sessionData)),
+      })
+    }
+
+    const uploadId = sessionData.id
+
+    console.log("[Meta Profile] Step 2: Uploading image binary...")
+
+    const uploadRes = await fetch(
+      `https://graph.facebook.com/v21.0/upload:${uploadId}`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${establishment.metaAccessToken}`,
+          Authorization: `OAuth ${accessToken}`,
+          file_offset: "0",
         },
-        body: metaFormData,
+        body: buffer,
       }
     )
+    const uploadData = await uploadRes.json()
+    console.log("[Meta Profile] Upload response:", JSON.stringify(uploadData))
 
-    const metaData = await metaRes.json()
-    console.log("[Meta Profile Picture] Response:", JSON.stringify(metaData))
+    if (!uploadData.h) {
+      return NextResponse.json({
+        success: false,
+        error: "Erro ao enviar imagem: " + (uploadData?.error?.message || JSON.stringify(uploadData)),
+      })
+    }
 
-    if (metaRes.ok && metaData.success) {
+    const handle = uploadData.h
+    console.log("[Meta Profile] Got handle:", handle)
+
+    console.log("[Meta Profile] Step 3: Updating business profile...")
+
+    const profileRes = await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}/whatsapp_business_profile`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          profile_picture_handle: handle,
+        }),
+      }
+    )
+    const profileData = await profileRes.json()
+    console.log("[Meta Profile] Profile response:", JSON.stringify(profileData))
+
+    if (profileRes.ok && profileData.success) {
       return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({
       success: false,
-      error: metaData?.error?.message || "Erro ao atualizar foto na Meta",
-      details: metaData,
+      error: profileData?.error?.message || "Erro ao atualizar perfil",
+      details: profileData,
     })
   } catch (error: any) {
-    console.error("[Meta Profile Picture] ERROR:", error.message)
+    console.error("[Meta Profile] ERROR:", error.message)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
