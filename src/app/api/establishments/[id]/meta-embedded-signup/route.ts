@@ -117,7 +117,27 @@ export async function POST(
       },
     })
 
-    // Step 4: Register phone (best effort)
+    // Step 4: Subscribe WABA to app (required for webhook events)
+    if (accessToken && wabaId) {
+      try {
+        const subRes = await fetch(
+          `https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        )
+        const subData = await subRes.json()
+        console.log("[Meta Embedded Signup] Subscribe WABA response:", JSON.stringify(subData))
+      } catch (subErr: any) {
+        console.error("[Meta Embedded Signup] Subscribe WABA error:", subErr.message)
+      }
+    }
+
+    // Step 5: Register phone (best effort)
     if (accessToken && phoneNumberId) {
       try {
         const regRes = await fetch(
