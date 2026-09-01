@@ -224,6 +224,7 @@ function MetaConfig({
   metaAccessToken,
   whatsappNumber,
   metaProfilePictureUrl,
+  logo,
   onComplete,
 }: {
   establishmentId: string | null
@@ -231,10 +232,12 @@ function MetaConfig({
   metaAccessToken: string
   whatsappNumber?: string
   metaProfilePictureUrl?: string
+  logo?: string
   onComplete?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
@@ -287,6 +290,28 @@ function MetaConfig({
     }
   }
 
+  const handleSyncLogo = async () => {
+    if (!establishmentId || !logo) return
+    setSyncing(true)
+    try {
+      const token = localStorage.getItem("auth_token")
+      const res = await fetch(`/api/establishments/${establishmentId}/meta-profile-picture-sync`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert("Logo sincronizada com sucesso!")
+      } else {
+        alert("Erro: " + (data.error || "Erro desconhecido"))
+      }
+    } catch (e: any) {
+      alert("Erro ao sincronizar: " + e.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   if (isConnected) {
     return (
       <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
@@ -320,9 +345,18 @@ function MetaConfig({
               </div>
             )}
           </div>
-          <div>
+          <div className="flex flex-wrap gap-2">
+            {logo && (
+              <button
+                onClick={handleSyncLogo}
+                disabled={syncing}
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-300 hover:bg-green-50 disabled:opacity-50"
+              >
+                {syncing ? "Sincronizando..." : "Usar Logo do Cardapio"}
+              </button>
+            )}
             <label className="cursor-pointer rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-300 hover:bg-green-50 disabled:opacity-50">
-              {uploading ? "Enviando..." : "Alterar Foto de Perfil"}
+              {uploading ? "Enviando..." : "Enviar Foto Nova"}
               <input
                 type="file"
                 accept="image/jpeg,image/png"
@@ -331,8 +365,8 @@ function MetaConfig({
                 disabled={uploading}
               />
             </label>
-            <p className="mt-0.5 text-[10px] text-green-600">JPG ou PNG, max 5MB, min 640x640px</p>
           </div>
+          <p className="w-full text-[10px] text-green-600">JPG ou PNG, max 5MB, min 640x640px</p>
         </div>
       </div>
     )
@@ -1760,6 +1794,7 @@ if (!data.error) {
                 metaAccessToken={metaAccessToken}
                 whatsappNumber={whatsappNumber}
                 metaProfilePictureUrl={metaProfilePictureUrl}
+                logo={logo}
                 onComplete={reloadData}
               />
             )}
