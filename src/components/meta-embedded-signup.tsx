@@ -29,6 +29,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
   const pendingCodeRef = useRef<string | null>(null)
   const pendingTokenRef = useRef<string | null>(null)
   const pendingBusinessIdRef = useRef<string | null>(null)
+  const pendingUserInfoRef = useRef<{ name: string; picture: string } | null>(null)
 
   const addDebug = useCallback((msg: string) => {
     console.log("[Meta Embedded Signup]", msg)
@@ -85,22 +86,11 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       payload.accessToken = pendingTokenRef.current
     }
 
-    // Get user name/picture from Graph API using the user's token (not system user)
-    try {
-      const userToken = pendingTokenRef.current || (code.startsWith("EAA") ? code : null)
-      if (userToken) {
-        const userRes = await fetch(`https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${userToken}`)
-        const userData = await userRes.json()
-        if (userData && userData.name && !userData.name.includes("System User")) {
-          payload.userName = userData.name
-          payload.userPicture = userData.picture?.data?.url || ""
-          addDebug("User info: " + userData.name)
-        } else {
-          addDebug("Graph /me returned system user or error")
-        }
-      }
-    } catch (e: any) {
-      addDebug("Graph /me failed: " + e.message)
+    // Use user info captured from FB.login callback if available
+    if (pendingUserInfoRef.current) {
+      payload.userName = pendingUserInfoRef.current.name
+      payload.userPicture = pendingUserInfoRef.current.picture
+      addDebug("User info do callback: " + pendingUserInfoRef.current.name)
     }
 
     console.log("[Meta Embedded Signup] Sending to server - code:", !!payload.code, "accessToken:", !!payload.accessToken, "phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "businessId:", businessId)
@@ -194,6 +184,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       pendingCodeRef.current = null
       pendingTokenRef.current = null
       pendingBusinessIdRef.current = null
+      pendingUserInfoRef.current = null
     }
   }, [establishmentId, onComplete])
 
@@ -338,6 +329,19 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
           if (ar.accessToken) {
             pendingTokenRef.current = ar.accessToken
             addDebug("token recebido: len=" + ar.accessToken.length)
+
+            // Try to get user info immediately with this token
+            fetch(`https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${ar.accessToken}`)
+              .then(r => r.json())
+              .then(userData => {
+                if (userData && userData.name && !userData.name.includes("System User")) {
+                  pendingUserInfoRef.current = { name: userData.name, picture: userData.picture?.data?.url || "" }
+                  addDebug("User info capturado: " + userData.name)
+                } else {
+                  addDebug("Token retornou system user")
+                }
+              })
+              .catch(e => addDebug("Erro ao buscar user info: " + e.message))
           }
         } else {
           addDebug("SEM authResponse")
@@ -353,7 +357,6 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
         config_id: META_CONFIG_ID,
         response_type: "code",
         override_default_response_type: true,
-        scope: "public_profile,whatsapp_business_management,whatsapp_business_messaging",
         extras: {
           setup: {},
         },
