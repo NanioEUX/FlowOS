@@ -232,6 +232,8 @@ function MetaConfig({
   onComplete?: () => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null)
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
 
   const handleDisconnect = async () => {
@@ -247,6 +249,35 @@ function MetaConfig({
       alert("Erro ao desconectar: " + e.message)
     } finally {
       setDisconnecting(false)
+    }
+  }
+
+  const handleProfilePicture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !establishmentId) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => setPreview(reader.result as string)
+    reader.readAsDataURL(file)
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetchAuth(`/api/establishments/${establishmentId}/meta-profile-picture`, {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert("Foto de perfil atualizada com sucesso!")
+      } else {
+        alert("Erro: " + (data.error || "Erro desconhecido"))
+      }
+    } catch (e: any) {
+      alert("Erro ao enviar foto: " + e.message)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -272,6 +303,30 @@ function MetaConfig({
           >
             {disconnecting ? "Desconectando..." : "Desconectar"}
           </button>
+        </div>
+        <div className="flex items-center gap-3 border-t border-green-200 pt-3">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-green-100">
+            {preview ? (
+              <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-green-600 text-lg font-bold">
+                📷
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="cursor-pointer rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-300 hover:bg-green-50 disabled:opacity-50">
+              {uploading ? "Enviando..." : "Alterar Foto de Perfil"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={handleProfilePicture}
+                disabled={uploading}
+              />
+            </label>
+            <p className="mt-0.5 text-[10px] text-green-600">JPG ou PNG, max 5MB, min 640x640px</p>
+          </div>
         </div>
       </div>
     )
