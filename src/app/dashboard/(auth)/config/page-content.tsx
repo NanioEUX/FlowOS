@@ -275,9 +275,11 @@ function MetaConfig({
         alert("Foto de perfil atualizada com sucesso!")
       } else {
         alert("Erro: " + (data.error || "Erro desconhecido"))
+        setPreview(null)
       }
     } catch (e: any) {
       alert("Erro ao enviar foto: " + e.message)
+      setPreview(null)
     } finally {
       setUploading(false)
     }

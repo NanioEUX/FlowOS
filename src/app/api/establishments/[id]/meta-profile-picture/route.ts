@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { compressAndUploadImage } from "@/lib/image-upload"
 
 export async function POST(
   req: NextRequest,
@@ -36,10 +35,12 @@ export async function POST(
       return NextResponse.json({ success: false, error: "WhatsApp Meta nao conectado" }, { status: 400 })
     }
 
-    const { url, error: uploadError } = await compressAndUploadImage(file)
-    if (uploadError || !url) {
-      return NextResponse.json({ success: false, error: uploadError || "Erro ao enviar imagem" }, { status: 500 })
-    }
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const filename = `profile.${file.type === "image/png" ? "png" : "jpg"}`
+
+    const metaFormData = new FormData()
+    metaFormData.append("messaging_product", "whatsapp")
+    metaFormData.append("file", new Blob([buffer], { type: file.type }), filename)
 
     const metaRes = await fetch(
       `https://graph.facebook.com/v21.0/${establishment.metaPhoneNumberId}/whatsapp_business_profile`,
@@ -47,24 +48,16 @@ export async function POST(
         method: "POST",
         headers: {
           Authorization: `Bearer ${establishment.metaAccessToken}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          profile_picture_url: url,
-        }),
+        body: metaFormData,
       }
     )
 
     const metaData = await metaRes.json()
-    console.log("[Meta Profile Picture] Meta response:", JSON.stringify(metaData))
+    console.log("[Meta Profile Picture] Response:", JSON.stringify(metaData))
 
     if (metaRes.ok && metaData.success) {
-      await prisma.establishment.update({
-        where: { id },
-        data: { metaProfilePictureUrl: url },
-      })
-      return NextResponse.json({ success: true, url })
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({
