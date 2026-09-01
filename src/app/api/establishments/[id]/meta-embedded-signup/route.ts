@@ -114,6 +114,7 @@ export async function POST(
         metaPhoneNumberId: phoneNumberId || null,
         metaBusinessAccountId: wabaId || null,
         ...(displayPhone ? { whatsappNumber: displayPhone } : {}),
+        whatsappAutomationEnabled: true,
       },
     })
 
