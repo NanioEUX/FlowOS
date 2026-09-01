@@ -129,5 +129,7 @@ function formatGreeting(config: BotConfig): string {
     .map((opt, idx) => `${idx + 1}. ${opt.label}`)
     .join("\n")
 
-  return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
+  const cardapioLink = config.slug ? `\n\n🍽️ *Nosso Cardápio:*\nhttps://flowoshub.com/${config.slug}` : ""
+
+  return `${greeting}${cardapioLink}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
 }
