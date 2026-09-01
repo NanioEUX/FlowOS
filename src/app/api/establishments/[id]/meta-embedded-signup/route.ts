@@ -52,7 +52,7 @@ export async function POST(
             console.log("[Meta Embedded Signup] Token response:", JSON.stringify(tokenData))
             if (tokenRes.ok && tokenData.access_token && tokenData.access_token.startsWith("EAA")) {
               accessToken = tokenData.access_token
-              console.log("[Meta Embedded Signup] Got VALID short token with URI:", uri, "length:", accessToken.length)
+              console.log("[Meta Embedded Signup] Got VALID short token with URI:", uri, "length:", tokenData.access_token.length)
               break
             }
           } catch (e: any) {
@@ -70,7 +70,7 @@ export async function POST(
             const longData = await longRes.json()
             if (longData.access_token && longData.access_token.startsWith("EAA")) {
               accessToken = longData.access_token
-              console.log("[Meta Embedded Signup] Long token OK, length:", accessToken.length)
+              console.log("[Meta Embedded Signup] Long token OK, length:", longData.access_token.length)
             }
           } catch (e: any) {
             console.log("[Meta Embedded Signup] Long token exchange failed:", e.message)
