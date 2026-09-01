@@ -224,6 +224,7 @@ function MetaConfig({
   metaAccessToken,
   whatsappNumber,
   metaProfilePictureUrl,
+  metaBusinessAccountId,
   metaBusinessName,
   logo,
   onComplete,
@@ -233,6 +234,7 @@ function MetaConfig({
   metaAccessToken: string
   whatsappNumber?: string
   metaProfilePictureUrl?: string
+  metaBusinessAccountId?: string
   metaBusinessName?: string
   logo?: string
   onComplete?: () => void
@@ -331,6 +333,9 @@ function MetaConfig({
                 Empresa: <span className="font-semibold">{metaBusinessName}</span>
               </p>
             )}
+            <p className="text-[10px] text-green-600 font-mono">
+              Phone ID: {metaPhoneNumberId} | WABA: {metaBusinessAccountId}
+            </p>
             {!metaBusinessName && (
               <p className="mt-1 text-xs text-green-700">
                 Meta Cloud API ativa via Embedded Signup.
@@ -471,6 +476,7 @@ export default function ConfigPage() {
   const [metaAccessToken, setMetaAccessToken] = useState("")
   const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState("")
   const [metaProfilePictureUrl, setMetaProfilePictureUrl] = useState("")
+  const [metaBusinessAccountId, setMetaBusinessAccountId] = useState("")
   const [metaBusinessName, setMetaBusinessName] = useState("")
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
@@ -589,6 +595,7 @@ if (!data.error) {
           setMetaAccessToken(data.metaAccessToken || "")
           setMetaWebhookVerifyToken(data.metaWebhookVerifyToken || "")
           setMetaProfilePictureUrl(data.metaProfilePictureUrl || "")
+          setMetaBusinessAccountId(data.metaBusinessAccountId || "")
           setMetaBusinessName(data.metaBusinessName || "")
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
@@ -1806,6 +1813,7 @@ if (!data.error) {
                 metaAccessToken={metaAccessToken}
                 whatsappNumber={whatsappNumber}
                 metaProfilePictureUrl={metaProfilePictureUrl}
+                metaBusinessAccountId={metaBusinessAccountId}
                 metaBusinessName={metaBusinessName}
                 logo={form.logo}
                 onComplete={reloadData}
