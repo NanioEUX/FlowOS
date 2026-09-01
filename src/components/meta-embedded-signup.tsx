@@ -95,6 +95,8 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     const data = await res.json()
     console.log("[Meta Embedded Signup] Server response:", data)
     addDebug("Server response: success=" + data.success + " phone=" + (data.phoneNumber || "null") + " error=" + (data.error || "none"))
+    if (data._diagnostics) addDebug("Server diag: " + data._diagnostics.join(" | "))
+    if (data._tokenValid !== undefined) addDebug("Token valid (EAA): " + data._tokenValid)
 
     if (data.success) {
       setResult({ success: true, phone: data.phoneNumber || phoneNumberId, debug: [] })

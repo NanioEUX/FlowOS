@@ -27,10 +27,17 @@ export async function POST(
 
     // Step 1: Get access token
     let accessToken: string | null = null
+    const diagnostics: string[] = []
 
-    if (existingToken && existingToken.length > 100 && !existingToken.startsWith("AQK_")) {
-      console.log("[Meta Embedded Signup] Using existing token, length:", existingToken.length)
-      accessToken = existingToken
+    diagnostics.push("received: code=" + (code || "null") + " existingToken=" + (existingToken ? "len=" + existingToken.length + " starts=" + existingToken.substring(0, 6) : "null"))
+
+    if (existingToken && existingToken.length > 100) {
+      if (existingToken.startsWith("EAA")) {
+        accessToken = existingToken
+        diagnostics.push("existingToken: VALID (EAA)")
+      } else {
+        diagnostics.push("existingToken: INVALID prefix=" + existingToken.substring(0, 6))
+      }
     }
 
     if (!accessToken && code && code !== "no_code" && code.length > 10) {
@@ -140,6 +147,8 @@ export async function POST(
       success: true,
       phoneNumber: displayPhone,
       wabaId: wabaId,
+      _diagnostics: diagnostics,
+      _tokenValid: accessToken ? accessToken.startsWith("EAA") : false,
     })
   } catch (error: any) {
     console.error("[Meta Embedded Signup] ERROR:", error.message, error.stack)
