@@ -81,7 +81,7 @@ export interface BotResponse {
 export function generateBotResponse(text: string, config: BotConfig): BotResponse {
   const normalized = text.toLowerCase().trim()
 
-  if (["oi", "olá", "ola", "hi", "hello", "menu", "start", "inicio", "início"].includes(normalized)) {
+  if (["oi", "olá", "ola", "hi", "hello", "menu", "start", "inicio", "início", "bom dia", "boa tarde", "boa noite", "opa", "eai", "e ai", "hello"].includes(normalized)) {
     return {
       shouldRespond: true,
       message: formatGreeting(config),
@@ -134,6 +134,12 @@ function formatGreeting(config: BotConfig): string {
   const greeting = (config.greeting || `Olá! Eu sou ${config.agentName}, em que posso ajudar?`)
     .replace(/\{nome\}/g, config.agentName)
     .replace(/\{link\}/g, cardapioUrl)
+
+  const hasOptionsInGreeting = /\n\s*\d+\s*[-.)]/.test(greeting)
+
+  if (hasOptionsInGreeting) {
+    return `${greeting}\n\nDigite o *número* da opção desejada.`
+  }
 
   const menuText = config.menuOptions
     .filter((opt) => opt.label.trim())
