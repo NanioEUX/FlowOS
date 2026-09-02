@@ -102,8 +102,8 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentOnSale: false, currentPromoPrice: null
   })
   const [promoForm, setPromoForm] = useState({ adjustPrice: false, promoPrice: "" })
-  const [featuredModal, setFeaturedModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentFeatured: boolean; currentBadge: string; currentDiscountPrice: number | null }>({
-    open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null
+  const [featuredModal, setFeaturedModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentFeatured: boolean; currentBadge: string; currentDiscountPrice: number | null; currentZoomSpeed: string }>({
+    open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null, currentZoomSpeed: "0.4s"
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
@@ -1110,7 +1110,7 @@ export default function CardapioPage() {
 
   async function confirmFeaturedActivation() {
     const { productId } = featuredModal
-    const data: any = { featured: true, badge: featuredForm.badge || "TOP" }
+    const data: any = { featured: true, badge: featuredForm.badge || "TOP", zoomSpeed: featuredModal.currentZoomSpeed }
     if (featuredForm.adjustPrice && featuredForm.discountPrice) {
       data.featuredDiscountPrice = parseFloat(featuredForm.discountPrice)
     }
@@ -1129,7 +1129,7 @@ export default function CardapioPage() {
         prev.map((cat) => ({
           ...cat,
           products: cat.products.map((p) =>
-            p.id === productId ? { ...p, featured: true, badge: data.badge, featuredDiscountPrice: data.featuredDiscountPrice || null } : p
+            p.id === productId ? { ...p, featured: true, badge: data.badge, featuredDiscountPrice: data.featuredDiscountPrice || null, zoomSpeed: data.zoomSpeed } : p
           ),
         }))
       )
@@ -2971,6 +2971,46 @@ export default function CardapioPage() {
                               <option value="novo">Novo</option>
                             </select>
                           </div>
+                          <div>
+                            <label className="text-sm text-zinc-600">Velocidade do Zoom</label>
+                            <div className="flex gap-2 mt-1">
+                              {[
+                                { val: "0.2s", label: "Rapido" },
+                                { val: "0.4s", label: "Normal" },
+                                { val: "0.6s", label: "Lento" },
+                              ].map((v) => (
+                                <button
+                                  key={v.val}
+                                  type="button"
+                                  onClick={() => setFeaturedModal({ ...featuredModal, currentZoomSpeed: v.val })}
+                                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+                                    featuredModal.currentZoomSpeed === v.val
+                                      ? "bg-amber-500 text-white"
+                                      : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                  }`}
+                                >
+                                  {v.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Preview */}
+                          {editingProduct?.image && (
+                            <div className="mt-2">
+                              <label className="text-sm text-zinc-600">Preview</label>
+                              <div className="mt-1 flex justify-center rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                <img
+                                  src={editingProduct.image}
+                                  alt="Preview"
+                                  className="h-32 w-32 object-cover rounded-lg"
+                                  style={{ transition: `transform ${featuredModal.currentZoomSpeed || "0.4s"} ease` }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                                />
+                              </div>
+                              <p className="text-[10px] text-zinc-400 text-center mt-1">Passe o mouse para testar</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

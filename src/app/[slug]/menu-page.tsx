@@ -6140,7 +6140,10 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { p
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
+            className={`w-full h-32 object-cover transition-transform ${isAdded ? "scale-105" : ""}`}
+            style={{ transitionDuration: (product as any).zoomSpeed || "0.4s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = isAdded ? "scale(1.05)" : "scale(1)")}
           />
         ) : (
           <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
