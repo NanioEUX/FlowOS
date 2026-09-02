@@ -3094,16 +3094,49 @@ export default function CardapioPage() {
                               })}
                             </div>
                           )}
-                          <SearchableSelect
-                            value=""
-                            onChange={(v) => {
-                              if (v && !productLinks.find((l) => l.stockItemId === v)) {
-                                setProductLinks([...productLinks, { stockItemId: v, quantity: "", unit: "" }])
-                              }
-                            }}
-                            options={stockItems.filter((s) => !productLinks.find((l) => l.stockItemId === s.id)).map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}
-                            placeholder="Adicionar insumo..."
-                          />
+                          {(() => {
+                            const usedIds = new Set(productLinks.map((l) => l.stockItemId))
+                            const available = stockItems.filter((s) => !usedIds.has(s.id))
+                            const stockCategories = Array.from(new Map(available.map((s) => [s.categoryId, s.category?.name || "Sem categoria"])).entries())
+                            const filtered = fichaCategoryFilter
+                              ? available.filter((s) => s.categoryId === fichaCategoryFilter)
+                              : available
+                            return (
+                              <div className="space-y-2">
+                                {stockCategories.length > 1 && (
+                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFichaCategoryFilter(null)}
+                                      className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
+                                    >
+                                      Todas
+                                    </button>
+                                    {stockCategories.map(([catId, catName]) => (
+                                      <button
+                                        key={catId}
+                                        type="button"
+                                        onClick={() => setFichaCategoryFilter(fichaCategoryFilter === catId ? null : catId)}
+                                        className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === catId ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
+                                      >
+                                        {catName}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <SearchableSelect
+                                  value=""
+                                  onChange={(v) => {
+                                    if (v && !usedIds.has(v)) {
+                                      setProductLinks([...productLinks, { stockItemId: v, quantity: "", unit: "" }])
+                                    }
+                                  }}
+                                  options={filtered.map((item) => ({ value: item.id, label: item.name, sub: `(${item.quantity} ${item.unit})` }))}
+                                  placeholder="Adicionar insumo..."
+                                />
+                              </div>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>
