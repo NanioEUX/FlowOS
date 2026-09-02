@@ -368,6 +368,7 @@ export async function POST(req: NextRequest) {
         console.log(`[WhatsApp] AI limit reached (${establishment.aiMessagesUsed}/${establishment.aiMessagesLimit})`)
         const botConfig = await loadMenuConfig(establishment)
         if (botConfig) {
+          botConfig.customerName = customer?.name || null
           const resp = generateBotResponse(parsed.text, botConfig)
           responseMessage = resp.message || `Olá! Você atingiu o limite de IA deste mês. Por favor, escolha uma opção do menu:\n\n${formatMenuText(establishment.botMenuOptions)}`
         }
@@ -452,6 +453,7 @@ export async function POST(req: NextRequest) {
     } else {
       const botConfig = await loadMenuConfig(establishment)
       if (botConfig) {
+        botConfig.customerName = customer?.name || null
         const resp = generateBotResponse(parsed.text, botConfig)
         responseMessage = resp.message || null
       }
