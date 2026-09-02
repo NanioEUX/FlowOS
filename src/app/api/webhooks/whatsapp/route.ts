@@ -363,7 +363,7 @@ export async function POST(req: NextRequest) {
         }
         usedAI = false
       } else {
-        const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
+        const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start", "bom dia", "boa tarde", "boa noite", "opa", "eai", "e ai"]
         const isGreetingMatch = greetWords.includes(parsed.text.toLowerCase().trim())
 
         const menuOption = isGreetingMatch
@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
           : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
 
         if (isGreetingMatch && establishment.botGreeting) {
-          responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions)
+          responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug)
           usedAI = false
         } else if (menuOption) {
           const botConfig = await loadMenuConfig(establishment)
@@ -505,7 +505,7 @@ function isMenuOption(text: string, menuJson: string | null | undefined): boolea
 }
 
 function isGreeting(text: string): boolean {
-  const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start"]
+  const greetWords = ["oi", "olá", "ola", "hi", "hello", "menu", "start", "bom dia", "boa tarde", "boa noite", "opa", "eai", "e ai"]
   return greetWords.includes(text.toLowerCase().trim())
 }
 
@@ -519,8 +519,17 @@ async function loadMenuConfig(establishment: any) {
   return getBotConfig(establishment.id)
 }
 
-function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null): string {
+function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null, slug?: string): string {
+  const replaced = greeting
+    .replace(/\{nome\}/g, agentName)
+    .replace(/\{link\}/g, slug ? `https://flowoshub.com/${slug}` : "")
+
+  const hasOptionsInGreeting = /\n\s*\d+\s*[-.)]/.test(replaced)
+  if (hasOptionsInGreeting) {
+    return `${replaced}\n\nDigite o *número* da opção desejada.`
+  }
+
   const menuOptions = parseMenuOptions(menuJson)
   const menuText = menuOptions.map((opt, idx) => `${idx + 1}. ${opt.label}`).join("\n")
-  return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada ou faça sua pergunta livremente.`
+  return `${replaced}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
 }
