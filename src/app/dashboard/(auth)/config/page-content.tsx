@@ -398,6 +398,11 @@ function MetaConfig({
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                 Conectado
               </span>
+              {(whatsappNumber || metaPhoneNumberId) && (
+                <span className="text-sm font-semibold text-zinc-900">
+                  {whatsappNumber || metaPhoneNumberId}
+                </span>
+              )}
             </div>
             <p className="mt-2 text-xs text-zinc-500">
               Sua conta está ativa e funcionando normalmente.
@@ -610,23 +615,90 @@ function MetaConfig({
     )
   }
 
-  return (
-    <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <MessageCircle className="h-5 w-5" />
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold text-zinc-900">Meta Cloud API</h4>
-          <p className="text-xs text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Action Panel */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h3>
+                <p className="text-sm text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
+              <p className="text-sm text-green-800 font-medium mb-1">Gerencie, automatize e potencialize seu atendimento com a API oficial da Meta.</p>
+              <p className="text-xs text-green-600">O processo leva menos de 2 minutos.</p>
+            </div>
+
+            <EmbeddedSignupButton onComplete={onComplete} />
+
+            <p className="text-[10px] text-zinc-400 text-center">
+              Você será redirecionado para o Facebook para autorizar a conexão. Não precisa criar conta na Meta.
+            </p>
+          </div>
+
+          {/* Right: Guide */}
+          <div className="space-y-4">
+            {/* Checklist */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h4 className="text-sm font-semibold text-amber-900 flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-4 w-4" />
+                Antes de conectar, tenha em mãos:
+              </h4>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-700 text-[10px] font-bold">1</span>
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">Número livre para cadastrar</p>
+                    <p className="text-xs text-amber-700">Não pode estar ativado em nenhuma conta do WhatsApp</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-700 text-[10px] font-bold">2</span>
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">Cartão de crédito</p>
+                    <p className="text-xs text-amber-700">Necessário para configurar faturamento na Meta</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            {/* Steps */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-4">
+              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Como vai acontecer:</h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">1</div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900">Faça login com seu Facebook</p>
+                    <p className="text-xs text-zinc-500">A Meta usa para validar que você é uma pessoa real</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">2</div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900">Selecione ou crie sua Empresa</p>
+                    <p className="text-xs text-zinc-500">Coloque o nome do seu estabelecimento</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">3</div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900">Crie seu Perfil de WhatsApp</p>
+                    <p className="text-xs text-zinc-500">Defina o nome que os clientes vão ver e o fuso horário</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <p className="text-xs text-zinc-500">
-        Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
-      </p>
-      <EmbeddedSignupButton onComplete={onComplete} />
-    </div>
-  )
+    )
 }
 
 export default function ConfigPage() {
