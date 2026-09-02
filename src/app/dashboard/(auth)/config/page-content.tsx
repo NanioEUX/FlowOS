@@ -881,56 +881,48 @@ if (!data.error) {
     }
   }
 
-  const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp">("geral")
+  const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99entregas">("geral")
 
   const groups = [
-    { id: "geral" as const, label: "Geral", desc: "Dados, horários e agendamento" },
-    { id: "pedidos" as const, label: "Pedidos", desc: "Tipos, mesas, taxas e bloqueios" },
-    { id: "pagamentos" as const, label: "Pagamentos", desc: "Asaas, formas e limites" },
-    { id: "whatsapp" as const, label: "WhatsApp & Bot", desc: "Conexão e atendimento" },
+    { id: "geral" as const, label: "Geral", desc: "Dados e horários", icon: "📋" },
+    { id: "pedidos" as const, label: "Pedidos", desc: "Tipos, mesas e taxas", icon: "🛒" },
+    { id: "pagamentos" as const, label: "Pagamentos", desc: "Asaas e formas", icon: "💳" },
+    { id: "whatsapp" as const, label: "WhatsApp", desc: "Bot e automação", icon: "💬" },
+    { id: "ifood" as const, label: "iFood", desc: "Integração", icon: "🍔" },
+    { id: "99entregas" as const, label: "99 Entregas", desc: "Integração", icon: "🚀" },
   ]
 
   return (
     <div className="mx-auto max-w-5xl">
       <h2 className="mb-6 text-2xl font-bold text-zinc-900">Configurações</h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
-        <aside className="hidden lg:block">
-          <nav className="sticky top-4 space-y-1">
-            {groups.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => setActiveGroup(g.id)}
-                className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
-                  activeGroup === g.id
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-700 hover:bg-zinc-100"
-                }`}
-              >
+      {/* Tabs horizontais */}
+      <div className="mb-6 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1 min-w-max rounded-xl bg-zinc-100 p-1">
+          {groups.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setActiveGroup(g.id)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all ${
+                activeGroup === g.id
+                  ? "bg-zinc-900 text-white shadow-sm"
+                  : "text-zinc-600 hover:bg-white hover:text-zinc-900"
+              }`}
+            >
+              <span className="text-base">{g.icon}</span>
+              <div>
                 <p className={`text-sm font-medium ${activeGroup === g.id ? "text-white" : "text-zinc-900"}`}>
                   {g.label}
                 </p>
-                <p className={`text-[10px] mt-0.5 ${activeGroup === g.id ? "text-zinc-300" : "text-zinc-500"}`}>
+                <p className={`text-[10px] ${activeGroup === g.id ? "text-zinc-400" : "text-zinc-500"}`}>
                   {g.desc}
                 </p>
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <div>
-          <div className="mb-4 lg:hidden">
-            <select
-              value={activeGroup}
-              onChange={(e) => setActiveGroup(e.target.value as any)}
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-            >
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.label}</option>
-              ))}
-            </select>
-          </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <form onSubmit={handleSave} className="space-y-4">
         {/* Dados do Estabelecimento */}
@@ -1277,7 +1269,7 @@ if (!data.error) {
         </Card>
 
         {/* iFood */}
-        <Card id="section-ifood" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+        <Card id="section-ifood" className={activeGroup !== "ifood" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-zinc-900">iFood</h3>
@@ -2283,6 +2275,21 @@ if (!data.error) {
           </CardContent>
         </Card>
 
+        {/* 99 Entregas */}
+        <Card id="section-99entregas" className={activeGroup !== "99entregas" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-zinc-900">99 Entregas</h3>
+              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">Em breve</span>
+            </div>
+            <p className="text-sm text-zinc-500">Integração com 99 Entregas para entregas próprias.</p>
+            <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+              <p className="text-sm text-zinc-500">Integração em desenvolvimento.</p>
+              <p className="mt-1 text-xs text-zinc-400">Em breve você poderá conectar seu WhatsApp da 99 Entregas aqui.</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Agendamento de Pedidos (Encomendas) */}
         <Card id="section-agendamento" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
@@ -2395,8 +2402,6 @@ if (!data.error) {
           {saved && <span className="flex items-center gap-1 text-sm text-green-600"><Save className="h-4 w-4" />Salvo!</span>}
         </div>
       </form>
-        </div>
-      </div>
 
       <button
         type="button"
