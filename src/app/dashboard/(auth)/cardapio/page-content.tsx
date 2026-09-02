@@ -97,6 +97,7 @@ export default function CardapioPage() {
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
+  const [fichaCategoryFilter, setFichaCategoryFilter] = useState<string | null>(null)
   const [ifoodEnabled, setIfoodEnabled] = useState(false)
   const [ifoodMerchantId, setIfoodMerchantId] = useState<string | null>(null)
   const [promoModal, setPromoModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentOnSale: boolean; currentPromoPrice: number | null }>({

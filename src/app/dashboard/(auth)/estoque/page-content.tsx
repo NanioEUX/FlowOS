@@ -46,6 +46,7 @@ export default function EstoquePage() {
 
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCatName, setNewCatName] = useState("")
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -57,7 +58,7 @@ export default function EstoquePage() {
   const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
 
   const [showMovementForm, setShowMovementForm] = useState(false)
-  const [movementForm, setMovementForm] = useState({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "", costMethod: "average" as "average" | "immediate" })
+  const [movementForm, setMovementForm] = useState({ itemId: "", quantity: "1", reason: "vencimento", notes: "" })
 
   // Purchase entry state
   const [purchaseSupplierName, setPurchaseSupplierName] = useState("")
@@ -202,14 +203,21 @@ export default function EstoquePage() {
     if (!movementForm.itemId || !movementForm.quantity) return
     setMovementError("")
 
-    if (movementForm.movementType === "exit") {
-      const item = items.find((i) => i.id === movementForm.itemId)
-      const qty = parseFloat(movementForm.quantity) || 0
-      if (item && qty > item.quantity) {
-        setMovementError(`Estoque insuficiente. Disponível: ${item.quantity} ${item.unit}`)
-        return
-      }
+    const item = items.find((i) => i.id === movementForm.itemId)
+    const qty = parseFloat(movementForm.quantity) || 0
+    if (item && qty > item.quantity) {
+      setMovementError(`Estoque insuficiente. Disponível: ${item.quantity} ${item.unit}`)
+      return
     }
+
+    const reasonLabels: Record<string, string> = {
+      vencimento: "Produto vencido",
+      quebrado: "Produto quebrado",
+      perda: "Perda",
+      desperdicio: "Desperdício",
+      uso_interno: "Uso interno",
+    }
+    const notes = [reasonLabels[movementForm.reason] || movementForm.reason, movementForm.notes].filter(Boolean).join(" - ")
 
     const res = await fetchAuth("/api/stock", {
       method: "POST",
@@ -217,26 +225,20 @@ export default function EstoquePage() {
       body: JSON.stringify({
         type: "movement",
         itemId: movementForm.itemId,
-        movementType: movementForm.movementType,
-        quantity: parseFloat(movementForm.quantity) || 0,
-        unitCost: parseFloat(movementForm.unitCost) || 0,
-        notes: movementForm.notes,
-        costMethod: movementForm.costMethod,
+        movementType: "exit",
+        quantity: qty,
+        unitCost: 0,
+        notes,
       }),
     })
     if (res.ok) {
-      const data = await res.json()
-      if (data.costAlert) {
-        toast(data.costAlert, "warning")
-      } else {
-        toast("Movimentação registrada", "success")
-      }
+      toast("Saída registrada com sucesso", "success")
       window.dispatchEvent(new Event("stock-updated"))
     } else {
       const data = await res.json()
-      toast(data.error || "Erro ao registrar movimentação", "error")
+      toast(data.error || "Erro ao registrar saída", "error")
     }
-    setMovementForm({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "", costMethod: "average" })
+    setMovementForm({ itemId: "", quantity: "1", reason: "vencimento", notes: "" })
     setShowMovementForm(false)
     loadAll()
   }
@@ -295,7 +297,7 @@ export default function EstoquePage() {
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setShowMovementForm(true)} className="gap-2">
-            <ArrowUpCircle className="h-4 w-4" /> Movimentar
+            <ArrowDownCircle className="h-4 w-4" /> Registrar Saída
           </Button>
           <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Item
@@ -366,18 +368,18 @@ export default function EstoquePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-zinc-200">
-        <button onClick={() => setTab("items")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "items" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
-          Itens
+      <div className="flex gap-2 p-1 bg-zinc-100/80 rounded-xl">
+        <button onClick={() => setTab("items")} className={`flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${tab === "items" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+          <Package className="h-4 w-4" /> Itens
         </button>
-        <button onClick={() => setTab("movements")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "movements" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
-          Movimentações
+        <button onClick={() => setTab("movements")} className={`flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${tab === "movements" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+          <ArrowDownCircle className="h-4 w-4" /> Movimentações
         </button>
-        <button onClick={() => setTab("suppliers")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "suppliers" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
-          Fornecedores
+        <button onClick={() => setTab("suppliers")} className={`flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${tab === "suppliers" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+          <Truck className="h-4 w-4" /> Fornecedores
         </button>
-        <button onClick={() => setTab("compras")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "compras" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
-          Compras
+        <button onClick={() => setTab("compras")} className={`flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${tab === "compras" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+          <ShoppingCart className="h-4 w-4" /> Compras
         </button>
       </div>
 
@@ -390,8 +392,44 @@ export default function EstoquePage() {
               <button onClick={() => setShowCategoryForm(true)} className="ml-2 text-green-600 underline">Criar categoria</button>
             </p>
           )}
-          {categories.map((cat) => {
-            const catItems = items.filter((i) => i.categoryId === cat.id)
+
+          {/* Category chips filter */}
+          {categories.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <button
+                onClick={() => setSelectedCategoryId(null)}
+                className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selectedCategoryId === null
+                    ? "bg-green-600 text-white"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setShowCategoryForm(true)}
+                className="flex-shrink-0 rounded-full border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-green-500 hover:text-green-600 transition-colors"
+              >
+                + Nova
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id)}
+                  className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selectedCategoryId === cat.id
+                      ? "bg-green-600 text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(selectedCategoryId ? categories.filter((c) => c.id === selectedCategoryId) : categories).map((cat) => {
+              const catItems = items.filter((i) => i.categoryId === cat.id)
             return (
               <div key={cat.id} className="rounded-lg border border-zinc-200 bg-white overflow-hidden">
                 {/* Cabeçalho da categoria */}
@@ -967,75 +1005,44 @@ export default function EstoquePage() {
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Movimentar Estoque</h3>
+                <h3 className="font-semibold">Registrar Saída de Estoque</h3>
                 <button onClick={() => setShowMovementForm(false)}><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Item</label>
-                  <SearchableSelect value={movementForm.itemId} onChange={(v) => { const item = items.find((i) => i.id === v); setMovementForm({ ...movementForm, itemId: v, unitCost: item ? String(item.unitCost) : "0" }) }} options={items.map((i) => ({ value: i.id, label: `${i.name} (${i.quantity} ${i.unit})` }))} placeholder="Selecionar item..." />
+                  <SearchableSelect value={movementForm.itemId} onChange={(v) => setMovementForm({ ...movementForm, itemId: v })} options={items.map((i) => ({ value: i.id, label: `${i.name} (${i.quantity} ${i.unit})` }))} placeholder="Selecionar item..." />
                 </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "entry" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "entry" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400"}`}>
-                    <ArrowUpCircle className="h-4 w-4" /> Entrada
-                  </button>
-                  <button type="button" onClick={() => setMovementForm({ ...movementForm, movementType: "exit" })} className={`flex-1 flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${movementForm.movementType === "exit" ? "border-red-500 bg-red-500/10 text-red-400" : "border-zinc-200 text-zinc-400"}`}>
-                    <ArrowDownCircle className="h-4 w-4" /> Saída
-                  </button>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Motivo da saída</label>
+                  <select
+                    value={movementForm.reason}
+                    onChange={(e) => setMovementForm({ ...movementForm, reason: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                  >
+                    <option value="vencimento">Vencido</option>
+                    <option value="quebrado">Quebrado</option>
+                    <option value="perda">Perda</option>
+                    <option value="desperdicio">Desperdício</option>
+                    <option value="uso_interno">Uso interno</option>
+                  </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-zinc-700">Quantidade</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={movementForm.quantity}
-                      onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-zinc-700">Custo unitário (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={movementForm.unitCost}
-                      onChange={(e) => setMovementForm({ ...movementForm, unitCost: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Quantidade</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={movementForm.quantity}
+                    onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  />
                 </div>
-                {movementForm.movementType === "entry" && movementForm.itemId && (() => {
-                  const selectedItem = items.find((i) => i.id === movementForm.itemId)
-                  const newCost = parseFloat(movementForm.unitCost) || 0
-                  if (!selectedItem || newCost === 0) return null
-                  const costChanged = Math.abs(newCost - selectedItem.unitCost) > 0.01
-                  if (!costChanged) return null
-                  const diff = ((newCost - selectedItem.unitCost) / selectedItem.unitCost * 100).toFixed(1)
-                  const isHigher = newCost > selectedItem.unitCost
-                  return (
-                    <div className={`rounded-lg border px-3 py-2 text-xs ${isHigher ? "border-amber-200 bg-amber-50 text-amber-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
-                      <p className="font-medium">{isHigher ? "⚠️ Custo subiu" : "ℹ️ Custo caiu"} {diff}% (R$ {selectedItem.unitCost.toFixed(2)} → R$ {newCost.toFixed(2)})</p>
-                      <div className="mt-2 flex gap-3">
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="radio" name="costMethod" value="average" checked={movementForm.costMethod === "average"} onChange={() => setMovementForm({ ...movementForm, costMethod: "average" })} className="h-3.5 w-3.5 text-green-600" />
-                          <span>Custo Médio</span>
-                        </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="radio" name="costMethod" value="immediate" checked={movementForm.costMethod === "immediate"} onChange={() => setMovementForm({ ...movementForm, costMethod: "immediate" })} className="h-3.5 w-3.5 text-green-600" />
-                          <span>Atualização Imediata</span>
-                        </label>
-                      </div>
-                    </div>
-                  )
-                })()}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Observação</label>
                   <input
                     type="text"
-                    placeholder="Ex: Compra no atacado"
+                    placeholder="Ex: Produto danificado durante transporte"
                     value={movementForm.notes}
                     onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
                     className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
@@ -1044,7 +1051,7 @@ export default function EstoquePage() {
                 {movementError && <p className="text-sm text-red-500">{movementError}</p>}
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowMovementForm(false)}>Cancelar</Button>
-                  <Button className="flex-1" onClick={saveMovement}>Registrar</Button>
+                  <Button className="flex-1" onClick={saveMovement}>Registrar Saída</Button>
                 </div>
               </div>
             </CardContent>
