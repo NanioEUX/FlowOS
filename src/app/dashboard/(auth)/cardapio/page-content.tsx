@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Settings, Check } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
@@ -98,6 +98,14 @@ export default function CardapioPage() {
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
   const [fichaCategoryFilter, setFichaCategoryFilter] = useState<string | null>(null)
+  const [fichaHiddenCategories, setFichaHiddenCategories] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("fichaHiddenCategories")
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    }
+    return new Set()
+  })
+  const [showFichaCatConfig, setShowFichaCatConfig] = useState(false)
   const [ifoodEnabled, setIfoodEnabled] = useState(false)
   const [ifoodMerchantId, setIfoodMerchantId] = useState<string | null>(null)
   const [promoModal, setPromoModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentOnSale: boolean; currentPromoPrice: number | null }>({
@@ -3102,28 +3110,73 @@ export default function CardapioPage() {
                               ? available.filter((s) => s.categoryId === fichaCategoryFilter)
                               : available
                             return (
-                              <div className="space-y-2">
-                                {stockCategories.length > 1 && (
-                                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setFichaCategoryFilter(null)}
-                                      className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
-                                    >
-                                      Todas
-                                    </button>
-                                    {stockCategories.map(([catId, catName]) => (
-                                      <button
-                                        key={catId}
-                                        type="button"
-                                        onClick={() => setFichaCategoryFilter(fichaCategoryFilter === catId ? null : catId)}
-                                        className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === catId ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
-                                      >
-                                        {catName}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                               <div className="space-y-2">
+                                {stockCategories.length > 1 && (() => {
+                                  const visibleCategories = stockCategories.filter(([catId]) => !fichaHiddenCategories.has(catId))
+                                  return (
+                                    <div className="relative">
+                                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => setFichaCategoryFilter(null)}
+                                          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
+                                        >
+                                          Todas
+                                        </button>
+                                        {visibleCategories.map(([catId, catName]) => (
+                                          <button
+                                            key={catId}
+                                            type="button"
+                                            onClick={() => setFichaCategoryFilter(fichaCategoryFilter === catId ? null : catId)}
+                                            className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === catId ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
+                                          >
+                                            {catName}
+                                          </button>
+                                        ))}
+                                        <div className="relative">
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowFichaCatConfig(!showFichaCatConfig)}
+                                            className="flex-shrink-0 rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+                                            title="Configurar categorias visíveis"
+                                          >
+                                            <Settings className="h-3.5 w-3.5" />
+                                          </button>
+                                          {showFichaCatConfig && (
+                                            <>
+                                              <div className="fixed inset-0 z-40" onClick={() => setShowFichaCatConfig(false)} />
+                                              <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-zinc-200 bg-white p-2 shadow-lg">
+                                                <p className="text-[11px] font-medium text-zinc-500 px-2 pb-1">Categorias visíveis:</p>
+                                                {stockCategories.map(([catId, catName]) => {
+                                                  const isHidden = fichaHiddenCategories.has(catId)
+                                                  return (
+                                                    <button
+                                                      key={catId}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        const next = new Set(fichaHiddenCategories)
+                                                        if (isHidden) next.delete(catId); else next.add(catId)
+                                                        setFichaHiddenCategories(next)
+                                                        localStorage.setItem("fichaHiddenCategories", JSON.stringify([...next]))
+                                                        if (fichaCategoryFilter === catId) setFichaCategoryFilter(null)
+                                                      }}
+                                                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-zinc-50 transition-colors"
+                                                    >
+                                                      <div className={`flex h-4 w-4 items-center justify-center rounded border ${isHidden ? "border-zinc-300 bg-white" : "border-green-600 bg-green-600"}`}>
+                                                        {!isHidden && <Check className="h-3 w-3 text-white" />}
+                                                      </div>
+                                                      <span className={isHidden ? "text-zinc-400" : "text-zinc-700"}>{catName}</span>
+                                                    </button>
+                                                  )
+                                                })}
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
                                 <SearchableSelect
                                   value=""
                                   onChange={(v) => {
