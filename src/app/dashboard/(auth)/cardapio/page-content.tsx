@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
@@ -3113,7 +3113,6 @@ export default function CardapioPage() {
                                 <div className="space-y-2">
                                 {stockCategories.length > 1 && (() => {
                                   const visibleCategories = stockCategories.filter(([catId]) => !fichaHiddenCategories.has(catId))
-                                  const hiddenCategories = stockCategories.filter(([catId]) => fichaHiddenCategories.has(catId))
                                   const toggleHidden = (catId: string) => {
                                     const next = new Set(fichaHiddenCategories)
                                     if (next.has(catId)) next.delete(catId); else next.add(catId)
@@ -3131,41 +3130,48 @@ export default function CardapioPage() {
                                         Todas
                                       </button>
                                       {visibleCategories.map(([catId, catName]) => (
-                                        <span key={catId} className={`flex-shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${fichaCategoryFilter === catId ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}>
-                                          <span onClick={() => setFichaCategoryFilter(fichaCategoryFilter === catId ? null : catId)}>{catName}</span>
-                                          <button type="button" onClick={(e) => { e.stopPropagation(); toggleHidden(catId) }} className={`ml-0.5 rounded-full p-0.5 ${fichaCategoryFilter === catId ? "hover:bg-green-700" : "hover:bg-zinc-300"}`}>
-                                            <X className="h-2.5 w-2.5" />
-                                          </button>
-                                        </span>
+                                        <button
+                                          key={catId}
+                                          type="button"
+                                          onClick={() => setFichaCategoryFilter(fichaCategoryFilter === catId ? null : catId)}
+                                          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${fichaCategoryFilter === catId ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"}`}
+                                        >
+                                          {catName}
+                                        </button>
                                       ))}
-                                      {hiddenCategories.length > 0 && (
-                                        <div className="relative">
-                                          <button
-                                            type="button"
-                                            onClick={() => setShowFichaCatConfig(!showFichaCatConfig)}
-                                            className="flex-shrink-0 rounded-full px-2 py-1 text-[11px] font-medium bg-zinc-100 text-zinc-500 hover:bg-zinc-200 transition-colors"
-                                          >
-                                            +
-                                          </button>
-                                          {showFichaCatConfig && (
-                                            <>
-                                              <div className="fixed inset-0 z-40" onClick={() => setShowFichaCatConfig(false)} />
-                                              <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
-                                                {hiddenCategories.map(([catId, catName]) => (
+                                      <div className="relative">
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowFichaCatConfig(!showFichaCatConfig)}
+                                          className="flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium bg-zinc-100 text-zinc-500 hover:bg-zinc-200 transition-colors"
+                                        >
+                                          +/-
+                                        </button>
+                                        {showFichaCatConfig && (
+                                          <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setShowFichaCatConfig(false)} />
+                                            <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-zinc-200 bg-white p-2 shadow-lg">
+                                              <p className="text-[11px] font-medium text-zinc-500 px-2 pb-1">Categorias visíveis:</p>
+                                              {stockCategories.map(([catId, catName]) => {
+                                                const isHidden = fichaHiddenCategories.has(catId)
+                                                return (
                                                   <button
                                                     key={catId}
                                                     type="button"
-                                                    onClick={() => { toggleHidden(catId); setShowFichaCatConfig(false) }}
-                                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+                                                    onClick={() => toggleHidden(catId)}
+                                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-zinc-50 transition-colors"
                                                   >
-                                                    <span className="text-green-600 font-bold">+</span> {catName}
+                                                    <div className={`flex h-4 w-4 items-center justify-center rounded border ${isHidden ? "border-zinc-300 bg-white" : "border-green-600 bg-green-600"}`}>
+                                                      {!isHidden && <Check className="h-3 w-3 text-white" />}
+                                                    </div>
+                                                    <span className={isHidden ? "text-zinc-400" : "text-zinc-700"}>{catName}</span>
                                                   </button>
-                                                ))}
-                                              </div>
-                                            </>
-                                          )}
-                                        </div>
-                                      )}
+                                                )
+                                              })}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
                                   )
                                 })()}
