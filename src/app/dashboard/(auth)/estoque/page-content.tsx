@@ -295,14 +295,9 @@ export default function EstoquePage() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Estoque</h2>
           <p className="text-sm text-zinc-500">Controle de insumos, mercadorias e custos operacionais</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setShowMovementForm(true)} className="gap-2">
-            <ArrowDownCircle className="h-4 w-4" /> Registrar Saída
-          </Button>
-          <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo Item
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: categories[0]?.id || "" }); setShowItemForm(true) }} className="gap-2">
+          <Plus className="h-4 w-4" /> Novo Item
+        </Button>
       </div>
 
       {/* Alertas */}
@@ -381,6 +376,9 @@ export default function EstoquePage() {
         <button onClick={() => setTab("compras")} className={`flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${tab === "compras" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
           <ShoppingCart className="h-4 w-4" /> Compras
         </button>
+        <button onClick={() => setShowMovementForm(true)} className="flex items-center gap-2 flex-1 justify-center px-4 py-2.5 text-sm font-medium rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-all">
+          <ArrowDownCircle className="h-4 w-4" /> Registrar Saída
+        </button>
       </div>
 
       {/* Items Tab */}
@@ -438,9 +436,17 @@ export default function EstoquePage() {
                     <Tag className="h-4 w-4 text-zinc-400" />
                     <h3 className="text-sm font-bold tracking-tight text-zinc-800">{cat.name}</h3>
                   </div>
-                  <span className="text-xs font-semibold text-zinc-400 bg-white border border-zinc-200 px-2 py-0.5 rounded-md">
-                    {catItems.length} {catItems.length === 1 ? "item" : "itens"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-zinc-400 bg-white border border-zinc-200 px-2 py-0.5 rounded-md">
+                      {catItems.length} {catItems.length === 1 ? "item" : "itens"}
+                    </span>
+                    <button
+                      onClick={() => { setEditingItem(null); setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: cat.id }); setShowItemForm(true) }}
+                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-green-700 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> Adicionar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Lista de itens */}
