@@ -207,6 +207,7 @@ model Establishment {
   stockCategories               StockCategory[]
   stockItems                    StockItem[]
   suppliers                     Supplier[]
+  purchases                     Purchase[]
   additionalOptions             AdditionalOption[]
   dailyCombos                   DailyCombo[]
   stories                       Story[]
@@ -219,6 +220,7 @@ model Customer {
   name              String?
   phone             String
   cpf               String?
+  birthDate         DateTime?
   email             String?
   address           String?
   cep               String?
@@ -502,6 +504,7 @@ model StockItem {
   establishment    Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   supplierRef      Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   movements        StockMovement[]
+  purchaseItems    PurchaseItem[]
 }
 
 model Supplier {
@@ -529,6 +532,41 @@ model StockMovement {
   item      StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId, createdAt])
+}
+
+model Purchase {
+  id              String        @id @default(cuid())
+  supplierId      String?
+  supplierName    String?
+  documentNumber  String?
+  purchaseDate    DateTime      @default(now())
+  totalAmount     Float         @default(0)
+  paymentMethod   String        @default("dinheiro")  // dinheiro, cartao, pix, transferencia, boleto
+  paymentCondition String       @default("avista")    // avista, prazo
+  expenseType     String        @default("lancamento") // lancamento, agendada, recorrente
+  dueDate         DateTime?     // para agendadas
+  recurrenceFreq  String?       // mensal, semanal (para recorrentes)
+  notes           String?
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  items           PurchaseItem[]
+  expense         Expense?
+
+  @@index([establishmentId, createdAt])
+}
+
+model PurchaseItem {
+  id          String   @id @default(cuid())
+  purchaseId  String
+  stockItemId String
+  quantity    Float
+  unit        String   @default("un")
+  unitCost    Float
+  totalCost   Float
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
 
 model ProductStockLink {
@@ -659,9 +697,11 @@ model Expense {
   date            DateTime?
   dueDate         DateTime?
   cashRegisterId  String?
+  purchaseId      String?    @unique // vinculado a uma compra
   establishmentId String
   createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  purchase        Purchase?     @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
 
   @@index([establishmentId, createdAt])
   @@index([establishmentId, type])
