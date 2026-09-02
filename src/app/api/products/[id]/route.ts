@@ -41,7 +41,7 @@ export async function PATCH(
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData()
-      const booleanFields = ["sendToPrep", "onSale", "active", "available", "availableOnline", "availablePresencial", "availableWhatsapp", "featured"]
+      const booleanFields = ["sendToPrep", "onSale", "active", "available", "availableOnline", "availablePresencial", "availableWhatsapp", "featured", "zoomEnabled"]
       for (const [key, value] of formData.entries()) {
         if (key === "file") {
           continue

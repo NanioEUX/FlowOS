@@ -93,6 +93,7 @@ export default function CardapioPage() {
     availableOnline: true,
     availablePresencial: true,
     availableWhatsapp: true,
+    zoomEnabled: false,
   })
   const [stockItems, setStockItems] = useState<any[]>([])
   const [productLinks, setProductLinks] = useState<{ stockItemId: string; quantity: string; unit: string }[]>([])
@@ -102,8 +103,8 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentOnSale: false, currentPromoPrice: null
   })
   const [promoForm, setPromoForm] = useState({ adjustPrice: false, promoPrice: "" })
-  const [featuredModal, setFeaturedModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentFeatured: boolean; currentBadge: string; currentDiscountPrice: number | null; currentZoomSpeed: string }>({
-    open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null, currentZoomSpeed: "0.4s"
+  const [featuredModal, setFeaturedModal] = useState<{ open: boolean; productId: string; productName: string; currentPrice: number; currentFeatured: boolean; currentBadge: string; currentDiscountPrice: number | null; currentZoomEnabled: boolean }>({
+    open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null, currentZoomEnabled: false
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
@@ -493,6 +494,7 @@ export default function CardapioPage() {
     formData.append("availableOnline", String(productForm.availableOnline))
     formData.append("availablePresencial", String(productForm.availablePresencial))
     formData.append("availableWhatsapp", String(productForm.availableWhatsapp))
+    formData.append("zoomEnabled", String(productForm.zoomEnabled))
 
     // Handle image
     if (productForm.image && productForm.image.startsWith("data:")) {
@@ -1024,7 +1026,7 @@ export default function CardapioPage() {
             currentFeatured: false,
             currentBadge: "",
             currentDiscountPrice: null,
-            currentZoomSpeed: (product as any).zoomSpeed || "0.4s",
+            currentZoomEnabled: (product as any).zoomEnabled || false,
           })
           setFeaturedForm({ badge: "TOP", adjustPrice: false, discountPrice: "" })
         },
@@ -1040,7 +1042,7 @@ export default function CardapioPage() {
       currentFeatured: isActive,
       currentBadge,
       currentDiscountPrice: currentDiscount,
-      currentZoomSpeed: (product as any).zoomSpeed || "0.4s",
+      currentZoomEnabled: (product as any).zoomEnabled || false,
     })
     setFeaturedForm({
       badge: currentBadge || "TOP",
@@ -1112,7 +1114,7 @@ export default function CardapioPage() {
 
   async function confirmFeaturedActivation() {
     const { productId } = featuredModal
-    const data: any = { featured: true, badge: featuredForm.badge || "TOP", zoomSpeed: featuredModal.currentZoomSpeed }
+    const data: any = { featured: true, badge: featuredForm.badge || "TOP", zoomEnabled: featuredModal.currentZoomEnabled }
     if (featuredForm.adjustPrice && featuredForm.discountPrice) {
       data.featuredDiscountPrice = parseFloat(featuredForm.discountPrice)
     }
@@ -1131,7 +1133,7 @@ export default function CardapioPage() {
         prev.map((cat) => ({
           ...cat,
           products: cat.products.map((p) =>
-            p.id === productId ? { ...p, featured: true, badge: data.badge, featuredDiscountPrice: data.featuredDiscountPrice || null, zoomSpeed: data.zoomSpeed } : p
+            p.id === productId ? { ...p, featured: true, badge: data.badge, featuredDiscountPrice: data.featuredDiscountPrice || null, zoomEnabled: data.zoomEnabled } : p
           ),
         }))
       )
@@ -1191,6 +1193,7 @@ export default function CardapioPage() {
       availableOnline: (product as any).availableOnline ?? true,
       availablePresencial: (product as any).availablePresencial ?? true,
       availableWhatsapp: (product as any).availableWhatsapp ?? true,
+      zoomEnabled: (product as any).zoomEnabled ?? false,
     })
     const links = (product as any).stockLinks || []
     setProductLinks(links.map((l: any) => ({ stockItemId: l.stockItemId, quantity: String(l.quantity), unit: l.unit || "un" })))
@@ -1242,7 +1245,7 @@ export default function CardapioPage() {
 
   function openNewProduct(categoryId: string) {
     setEditingProduct(null)
-    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", featured: false, featuredDiscountPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true })
+    setProductForm({ name: "", description: "", price: "", categoryId, image: "", badge: "", sendToPrep: false, onSale: false, promoPrice: "", featured: false, featuredDiscountPrice: "", availableOnline: true, availablePresencial: true, availableWhatsapp: true, zoomEnabled: false })
     setProductLinks([])
     setProductAdditionalOptions([])
     setProductTab("basico")
@@ -2863,6 +2866,29 @@ export default function CardapioPage() {
                         }`} />
                       </button>
                     </div>
+                    {/* Zoom na Imagem */}
+                    <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                      productForm.zoomEnabled ? "border-amber-300 bg-amber-50" : "border-zinc-200"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">🔍</span>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900">Zoom na imagem</p>
+                          <p className="text-xs text-zinc-500">Efeito de zoom ao passar o mouse</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, zoomEnabled: !productForm.zoomEnabled })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          productForm.zoomEnabled ? "bg-amber-500" : "bg-zinc-300"
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          productForm.zoomEnabled ? "translate-x-6" : "translate-x-1"
+                        }`} />
+                      </button>
+                    </div>
                     {/* Em Promoção */}
                     <div className={`rounded-lg border px-4 py-3 transition-colors ${
                       productForm.onSale ? "border-green-300 bg-green-50" : "border-zinc-200"
@@ -2973,31 +2999,20 @@ export default function CardapioPage() {
                               <option value="novo">Novo</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="text-sm text-zinc-600">Velocidade do Zoom</label>
-                            <div className="flex gap-2 mt-1">
-                              {[
-                                { val: "0.2s", label: "Rapido" },
-                                { val: "0.4s", label: "Normal" },
-                                { val: "0.6s", label: "Lento" },
-                              ].map((v) => (
-                                <button
-                                  key={v.val}
-                                  type="button"
-                                  onClick={() => setFeaturedModal({ ...featuredModal, currentZoomSpeed: v.val })}
-                                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
-                                    featuredModal.currentZoomSpeed === v.val
-                                      ? "bg-amber-500 text-white"
-                                      : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                                  }`}
-                                >
-                                  {v.label}
-                                </button>
-                              ))}
-                            </div>
+                           <div>
+                            <label className="text-sm text-zinc-600">Zoom na Imagem</label>
+                            <button
+                              type="button"
+                              onClick={() => setFeaturedModal({ ...featuredModal, currentZoomEnabled: !featuredModal.currentZoomEnabled })}
+                              className={`mt-1 relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                                featuredModal.currentZoomEnabled ? "bg-amber-500" : "bg-zinc-300"
+                              }`}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${featuredModal.currentZoomEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                            </button>
                           </div>
-                          {/* Preview */}
-                          {editingProduct?.image && (
+                           {/* Preview */}
+                           {editingProduct?.image && (
                             <div className="mt-2">
                               <label className="text-sm text-zinc-600">Preview</label>
                               <div className="mt-1 flex justify-center rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -3005,12 +3020,12 @@ export default function CardapioPage() {
                                   src={editingProduct.image}
                                   alt="Preview"
                                   className="h-32 w-32 object-cover rounded-lg"
-                                  style={{ transition: `transform ${featuredModal.currentZoomSpeed || "0.4s"} ease` }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+                                  style={{ transition: "transform 0.4s ease" }}
+                                  onMouseEnter={(e) => (featuredModal.currentZoomEnabled ? e.currentTarget.style.transform = "scale(1.1)" : null)}
                                   onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                                 />
                               </div>
-                              <p className="text-[10px] text-zinc-400 text-center mt-1">Passe o mouse para testar</p>
+                              <p className="text-[10px] text-zinc-400 text-center mt-1">{featuredModal.currentZoomEnabled ? "Passe o mouse para testar" : "Zoom desativado"}</p>
                             </div>
                           )}
                         </div>

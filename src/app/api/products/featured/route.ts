@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       onSale: true,
       featured: true,
       isNew: true,
-      zoomSpeed: true,
+      zoomEnabled: true,
       createdAt: true,
       additionalOptions: { select: { id: true }, take: 1 },
     }

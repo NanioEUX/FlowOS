@@ -328,7 +328,7 @@ model Product {
   featured              Boolean            @default(false)
   featuredOrder         Int                @default(0)
   featuredDiscountPrice Float?
-  zoomSpeed             String?            @default("0.4s")
+  zoomEnabled           Boolean          @default(false)
   ifoodItemId           String?
   ifoodGroupId          String?
   categoryId            String
