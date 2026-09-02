@@ -1024,6 +1024,7 @@ export default function CardapioPage() {
             currentFeatured: false,
             currentBadge: "",
             currentDiscountPrice: null,
+            currentZoomSpeed: (product as any).zoomSpeed || "0.4s",
           })
           setFeaturedForm({ badge: "TOP", adjustPrice: false, discountPrice: "" })
         },
@@ -1039,6 +1040,7 @@ export default function CardapioPage() {
       currentFeatured: isActive,
       currentBadge,
       currentDiscountPrice: currentDiscount,
+      currentZoomSpeed: (product as any).zoomSpeed || "0.4s",
     })
     setFeaturedForm({
       badge: currentBadge || "TOP",
