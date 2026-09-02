@@ -336,20 +336,28 @@ export async function POST(req: NextRequest) {
     const phoneWithNine = phoneNoCountry.length === 10 && phoneNoCountry[2] !== "9"
       ? phoneNoCountry.slice(0, 2) + "9" + phoneNoCountry.slice(2)
       : null
-    const customer = await prisma.customer.findFirst({
+    const allPhoneVariants = [
+      parsed.phone, phoneDigits, `+${phoneDigits}`,
+      phoneNoCountry, `+${phoneNoCountry}`,
+      ...(phoneWithNine ? [phoneWithNine] : []),
+    ]
+    // First try within this establishment
+    let customer = await prisma.customer.findFirst({
       where: {
         establishmentId: establishment.id,
-        OR: [
-          { phone: parsed.phone },
-          { phone: phoneDigits },
-          { phone: `+${phoneDigits}` },
-          { phone: phoneNoCountry },
-          { phone: `+${phoneNoCountry}` },
-          ...(phoneWithNine ? [{ phone: phoneWithNine }] : []),
-        ],
+        OR: allPhoneVariants.map((p) => ({ phone: p })),
       },
       select: { id: true, name: true, needsHuman: true },
     })
+    // Fallback: search across all establishments by phone
+    if (!customer) {
+      customer = await prisma.customer.findFirst({
+        where: {
+          OR: allPhoneVariants.map((p) => ({ phone: p })),
+        },
+        select: { id: true, name: true, needsHuman: true },
+      })
+    }
     console.log(`[WhatsApp] Customer lookup: phone=${parsed.phone}, noCountry=${phoneNoCountry}, withNine=${phoneWithNine}, found=${!!customer}, name=${customer?.name || "none"}`)
 
     // 3. Inactivity: customer asked for human
