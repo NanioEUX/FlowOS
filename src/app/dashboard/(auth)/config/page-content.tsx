@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle } from "lucide-react"
 import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -232,8 +232,11 @@ function MetaConfig({
   consumoService,
   consumoPeriodo,
   metaBillingConfigured,
+  metaCardBrand,
+  metaCardLast4,
   logo,
   onComplete,
+  onCardChange,
 }: {
   establishmentId: string | null
   metaPhoneNumberId: string
@@ -248,20 +251,39 @@ function MetaConfig({
   consumoService?: number
   consumoPeriodo?: string
   metaBillingConfigured?: boolean
+  metaCardBrand?: string
+  metaCardLast4?: string
   logo?: string
   onComplete?: () => void
+  onCardChange?: (brand: string, last4: string) => void
 }) {
   const [disconnecting, setDisconnecting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [preview, setPreview] = useState<string | null>(metaProfilePictureUrl || logo || null)
+  const [cardBrand, setCardBrand] = useState<string>(metaCardBrand || "")
+  const [cardLast4, setCardLast4] = useState<string>(metaCardLast4 || "")
   const isConnected = !!metaAccessToken && !!metaPhoneNumberId
+
+  const templatesSent = (consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0)
+  const serviceMessages = consumoService || 0
+  const hasCard = !!cardBrand && !!cardLast4
+
+  const handleCardSave = () => {
+    onCardChange?.(cardBrand, cardLast4)
+  }
+
+  const cardBrands = [
+    { id: "visa", label: "Visa", color: "#1A1F71" },
+    { id: "mastercard", label: "Mastercard", color: "#EB001B" },
+    { id: "elo", label: "Elo", color: "#00A4E4" },
+    { id: "amex", label: "Amex", color: "#006FCF" },
+  ]
 
   // Monthly reset check
   const periodoAtual = new Date().toISOString().slice(0, 7)
   const needsReset = consumoPeriodo && consumoPeriodo !== periodoAtual && isConnected
 
-  // Auto-reset consumption on period change
   useEffect(() => {
     if (needsReset && establishmentId) {
       fetchAuth(`/api/establishments/${establishmentId}/meta-consumption-reset`, {
@@ -344,127 +366,261 @@ function MetaConfig({
 
   if (isConnected) {
     return (
-      <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h3>
+              <p className="text-xs text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Status + Company Info Row */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4">
+          {/* Status Card */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <MessageCircle className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Status da conexão</p>
+                <p className="text-xs text-zinc-500">Meta Cloud API</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
-                ✓ CONECTADO
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                Conectado
               </span>
-              <span className="text-sm font-medium text-green-900">{whatsappNumber || metaPhoneNumberId}</span>
             </div>
-            {metaBusinessName && (
-              <p className="mt-1 text-xs text-green-700">
-                Empresa: <span className="font-semibold">{metaBusinessName}</span>
-              </p>
-            )}
-            <p className="text-[10px] text-green-600 font-mono">
-              Phone ID: {metaPhoneNumberId} | WABA: {metaBusinessAccountId}
+            <p className="mt-2 text-xs text-zinc-500">
+              Sua conta está ativa e funcionando normalmente.
             </p>
-            {!metaBusinessName && (
-              <p className="mt-1 text-xs text-green-700">
-                Meta Cloud API ativa via Embedded Signup.
-              </p>
-            )}
           </div>
-          <button
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-            className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50"
-          >
-            {disconnecting ? "Desconectando..." : "Desconectar"}
-          </button>
-        </div>
-        <div className="flex items-center gap-3 border-t border-green-200 pt-3">
-          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-green-100">
-            {preview ? (
-              <img src={preview} alt="Preview" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-green-600 text-lg font-bold">
-                📷
-              </div>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {logo && (
-              <button
-                onClick={handleSyncLogo}
-                disabled={syncing}
-                className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-300 hover:bg-green-50 disabled:opacity-50"
-              >
-                {syncing ? "Sincronizando..." : "Usar Logo do Cardapio"}
-              </button>
-            )}
-            <label className="cursor-pointer rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-300 hover:bg-green-50 disabled:opacity-50">
-              {uploading ? "Enviando..." : "Enviar Foto Nova"}
-              <input
-                type="file"
-                accept="image/jpeg,image/png"
-                className="hidden"
-                onChange={handleProfilePicture}
-                disabled={uploading}
-              />
-            </label>
-          </div>
-          <p className="w-full text-[10px] text-green-600">JPG ou PNG, max 5MB, min 640x640px</p>
-        </div>
 
-        {/* Billing Section */}
-        <div className="border-t border-green-200 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-semibold text-green-900">Consumo Mensal</h4>
-            <span className="text-[10px] text-green-600">{consumoPeriodo || "Sem dados"}</span>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-[10px]">
-              <span className="text-green-700">Templates enviados:</span>
-              <span className="font-semibold text-green-900">
-                {(consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0)}
-              </span>
-            </div>
-            <div className="flex justify-between text-[10px]">
-              <span className="text-green-700">Mensagens de servico:</span>
-              <span className="font-semibold text-green-900">{consumoService || 0}</span>
-            </div>
-            
-            {/* Progress bar */}
-            <div className="mt-2">
-              <div className="h-1.5 bg-green-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-green-500 rounded-full transition-all"
-                  style={{ width: `${Math.min(((consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0)) / 25, 100)}%` }}
-                />
+          {/* Company Info Card */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <div className="space-y-3">
+              {metaBusinessName && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-zinc-400" />
+                  <div>
+                    <p className="text-[10px] text-zinc-500">Empresa</p>
+                    <p className="text-sm font-semibold text-zinc-900">{metaBusinessName}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-zinc-400" />
+                <div>
+                  <p className="text-[10px] text-zinc-500">Phone ID</p>
+                  <p className="text-xs font-mono text-zinc-700">{metaPhoneNumberId}</p>
+                </div>
               </div>
-              <p className="text-[9px] text-green-600 mt-1">
-                {((consumoMarketing || 0) + (consumoUtility || 0) + (consumoAuthentication || 0))} de 2.500 templates
-              </p>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-zinc-400" />
+                <div>
+                  <p className="text-[10px] text-zinc-500">WABA ID</p>
+                  <p className="text-xs font-mono text-zinc-700">{metaBusinessAccountId}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Billing link */}
-          <div className="mt-3 pt-2 border-t border-green-200">
-            <a
-              href="https://business.facebook.com/settings/billing/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[10px] text-green-700 hover:text-green-900 underline"
+          {/* Disconnect Button */}
+          <div className="flex items-start">
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
             >
-              Vincular cartao na Meta
-            </a>
-            <label className="flex items-center gap-1.5 mt-2 cursor-pointer">
-              <input type="checkbox" className="w-3 h-3 rounded border-green-300" />
-              <span className="text-[10px] text-green-700">Ja vinculei o cartao</span>
-            </label>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {disconnecting ? "Desconectando..." : "Desconectar"}
+              </div>
+            </button>
           </div>
+        </div>
+
+        {/* Profile + Consumption Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Profile Card */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h4 className="text-sm font-semibold text-zinc-900 mb-3">Perfil da Conexão</h4>
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-zinc-100 border-2 border-zinc-200">
+                {preview ? (
+                  <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-zinc-400 text-xl">
+                    <Camera className="h-6 w-6" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-xs text-zinc-500">Active Connection Profile</p>
+                <div className="flex flex-wrap gap-2">
+                  {logo && (
+                    <button
+                      onClick={handleSyncLogo}
+                      disabled={syncing}
+                      className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+                    >
+                      {syncing ? "Sincronizando..." : "Usar Menu Logo"}
+                    </button>
+                  )}
+                  <label className="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 transition-colors">
+                    {uploading ? "Enviando..." : "Enviar novo logo"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      className="hidden"
+                      onChange={handleProfilePicture}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+                <p className="text-[10px] text-zinc-400">Formato aceito: JPG ou PNG | Tamanho máximo: 5MB | Dimensões mínimas: 640 x 640 px</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Consumption Card */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h4 className="text-sm font-semibold text-zinc-900 mb-3">Consumo Mensal</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1">
+                  <Mail className="h-3.5 w-3.5" />
+                  Templates enviados
+                </div>
+                <p className="text-2xl font-bold text-zinc-900">{templatesSent.toLocaleString("pt-BR")}</p>
+                <div className="mt-2 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all"
+                    style={{ width: `${Math.min((templatesSent / 2500) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-1">0 de 2.500 templates</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Mensagens de serviço
+                </div>
+                <p className="text-2xl font-bold text-zinc-900">{serviceMessages.toLocaleString("pt-BR")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Credit Card Section */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
+          <h4 className="text-sm font-semibold text-zinc-900 mb-3">Cartão de Pagamento na Meta</h4>
+          
+          {!hasCard ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-2">Selecione a bandeira do cartão</label>
+                <div className="flex gap-2">
+                  {cardBrands.map((brand) => (
+                    <button
+                      key={brand.id}
+                      type="button"
+                      onClick={() => setCardBrand(brand.id)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                        cardBrand === brand.id
+                          ? "border-zinc-900 bg-zinc-900 text-white"
+                          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {brand.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {cardBrand && (
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Últimos 4 dígitos</label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    placeholder="1234"
+                    value={cardLast4}
+                    onChange={(e) => setCardLast4(e.target.value.replace(/\D/g, ""))}
+                    className="w-32 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-mono text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {cardBrand && cardLast4 && cardLast4.length === 4 && (
+                <button
+                  onClick={handleCardSave}
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 transition-colors"
+                >
+                  Salvar cartão
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-20 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50">
+                <CreditCard className="h-6 w-6 text-zinc-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-zinc-900">
+                  **** **** **** {cardLast4}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                    <CheckCircle className="h-3 w-3" />
+                    Vinculado
+                  </span>
+                  <span className="text-xs text-zinc-500 capitalize">{cardBrand}</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setCardBrand(""); setCardLast4(""); onCardChange?.("", "") }}
+                  className="text-xs text-zinc-500 hover:text-zinc-700 underline"
+                >
+                  Alterar
+                </button>
+                <a
+                  href="https://business.facebook.com/settings/billing/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-zinc-500 hover:text-zinc-700 underline"
+                >
+                  Vincular cartão ao Meta ↗
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
-      <h4 className="text-sm font-semibold text-zinc-700">Meta Cloud API</h4>
+    <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <MessageCircle className="h-5 w-5" />
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-zinc-900">Meta Cloud API</h4>
+          <p className="text-xs text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
+        </div>
+      </div>
       <p className="text-xs text-zinc-500">
         Conecte sua conta Meta para usar o WhatsApp Cloud API. Você vai fazer login com sua conta do Facebook e o Meta configura tudo automaticamente.
       </p>
@@ -559,6 +715,8 @@ export default function ConfigPage() {
   const [consumoService, setConsumoService] = useState(0)
   const [consumoPeriodo, setConsumoPeriodo] = useState("")
   const [metaBillingConfigured, setMetaBillingConfigured] = useState(false)
+  const [metaCardBrand, setMetaCardBrand] = useState<"visa" | "mastercard" | "elo" | "amex" | "">("")
+  const [metaCardLast4, setMetaCardLast4] = useState("")
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
   const [botGreeting, setBotGreeting] = useState("")
@@ -684,6 +842,8 @@ if (!data.error) {
           setConsumoService(data.consumoService || 0)
           setConsumoPeriodo(data.consumoPeriodo || "")
           setMetaBillingConfigured(data.metaBillingConfigured || false)
+          setMetaCardBrand(data.metaCardBrand || "")
+          setMetaCardLast4(data.metaCardLast4 || "")
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
           setBotGreeting(data.botGreeting || "")
@@ -825,6 +985,8 @@ if (!data.error) {
           minimumOrderApplyToPickup,
           ifoodEnabled: form.ifoodEnabled || false,
           ifoodMerchantId: form.ifoodMerchantId || "",
+          metaCardBrand: metaCardBrand || null,
+          metaCardLast4: metaCardLast4 || null,
         }),
       })
 
@@ -1900,8 +2062,11 @@ if (!data.error) {
                 consumoService={consumoService}
                 consumoPeriodo={consumoPeriodo}
                 metaBillingConfigured={metaBillingConfigured}
+                metaCardBrand={metaCardBrand}
+                metaCardLast4={metaCardLast4}
                 logo={form.logo}
                 onComplete={reloadData}
+                onCardChange={(brand, last4) => { setMetaCardBrand(brand as any); setMetaCardLast4(last4) }}
               />
             )}
 

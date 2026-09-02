@@ -50,6 +50,8 @@ model Establishment {
   consumoService                Int       @default(0)
   consumoPeriodo                String?   // "2026-09" for monthly reset
   metaBillingConfigured         Boolean   @default(false)
+  metaCardBrand                 String?   // visa, mastercard, elo, amex
+  metaCardLast4                 String?   // last 4 digits of card
   // Bot
   botEnabled                    Boolean   @default(false)
   botAgentName                  String?   @default("Atendente")
