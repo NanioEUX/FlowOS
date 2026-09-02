@@ -2987,18 +2987,6 @@ export default function CardapioPage() {
                               />
                             </div>
                           </div>
-                          <div>
-                            <label className="text-sm text-zinc-600">Badge</label>
-                            <select
-                              value={featuredModal.currentBadge}
-                              onChange={(e) => setFeaturedModal({ ...featuredModal, currentBadge: e.target.value })}
-                              className="h-8 w-full rounded-lg border border-amber-300 bg-white px-2 text-sm text-amber-700 focus:border-amber-500 focus:outline-none"
-                            >
-                              <option value="">Nenhum</option>
-                              <option value="mais_vendido">Mais Vendido</option>
-                              <option value="novo">Novo</option>
-                            </select>
-                          </div>
                            <div>
                             <label className="text-sm text-zinc-600">Zoom na Imagem</label>
                             <button
@@ -3692,6 +3680,18 @@ export default function CardapioPage() {
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
                 />
                 <p className="mt-1 text-xs text-zinc-500">Ex: TOP, NOVO, RECOMENDADO</p>
+              </div>
+              <div className="mb-4">
+                <label className="text-sm text-zinc-600">Zoom na Imagem</label>
+                <button
+                  type="button"
+                  onClick={() => setFeaturedModal({ ...featuredModal, currentZoomEnabled: !featuredModal.currentZoomEnabled })}
+                  className={`mt-1 relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                    featuredModal.currentZoomEnabled ? "bg-amber-500" : "bg-zinc-300"
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${featuredModal.currentZoomEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
               </div>
               <label className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors cursor-pointer ${
                 featuredForm.adjustPrice ? "border-amber-300 bg-amber-50" : "border-zinc-200 hover:bg-zinc-50"
