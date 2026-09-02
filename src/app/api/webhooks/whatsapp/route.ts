@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
               await prisma.$executeRawUnsafe(
                 `UPDATE "Establishment" 
                  SET "${field}" = "${field}" + 1, "consumoPeriodo" = $1
-                 WHERE "metaPhoneNumberId" = $2 AND "consumoPeriodo" = $1`,
+                 WHERE "metaPhoneNumberId" = $2 AND ("consumoPeriodo" = $1 OR "consumoPeriodo" IS NULL OR "consumoPeriodo" = '')`,
                 periodo,
                 phoneNumberId
               )
