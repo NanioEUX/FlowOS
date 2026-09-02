@@ -2189,7 +2189,6 @@ if (!data.error) {
                       </p>
                     </div>
 
-                    <SaasOnly>
                     <div>
                       <label className="block text-sm font-medium text-zinc-700 mb-2">Opções do menu</label>
                       {(() => {
@@ -2262,7 +2261,27 @@ if (!data.error) {
                       })()}
                       <p className="mt-1 text-xs text-zinc-400">Cada opção aparece como item numerado no menu do WhatsApp.</p>
                     </div>
-                    </SaasOnly>
+
+                    {/* Preview da mensagem */}
+                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                      <p className="text-xs font-semibold text-zinc-500 mb-2 flex items-center gap-1.5">
+                        <MessageSquare className="h-3.5 w-3.5" /> Preview da mensagem
+                      </p>
+                      <div className="rounded-xl bg-[#0b141a] p-4 text-sm text-white whitespace-pre-wrap font-sans leading-relaxed">
+                        {(() => {
+                          let options: { id: string; label: string }[] = []
+                          try { options = JSON.parse(botMenuOptions) } catch {}
+                          const greeting = (botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
+                            .replace(/\{nome\}/g, botAgentName || "Atendente")
+                            .replace(/\{link\}/g, "https://flowoshub.com/seu-estabelecimento")
+                          const menuText = options
+                            .filter((opt) => opt.label.trim())
+                            .map((opt, idx) => `${idx + 1} - ${opt.label}`)
+                            .join("\n")
+                          return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
+                        })()}
+                      </div>
+                    </div>
 
                     <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                       <input
