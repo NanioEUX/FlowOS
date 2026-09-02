@@ -5,6 +5,7 @@ export interface BotMenuOption {
   id: string
   label: string
   response: string
+  message?: string
 }
 
 export interface BotConfig {
@@ -111,7 +112,13 @@ export function generateBotResponse(text: string, config: BotConfig): BotRespons
     case "atendente":
       return {
         shouldRespond: true,
-        message: `👤 *Atendimento Humano*\n\nUm atendente entrará em contato em breve.\n\nHorário de atendimento:\n• Segunda a Sexta: 18h às 23h\n• Sábado e Domingo: 18h às 00h\n\nObrigado pela paciência! 🙏`,
+        message: `👤 *Atendimento Humano*\n\nUm atendente entrará em contato em breve.\n\nObrigado pela paciência! 🙏`,
+      }
+
+    case "mensagem":
+      return {
+        shouldRespond: true,
+        message: option.message || "Mensagem não configurada.",
       }
 
     default:
@@ -123,13 +130,15 @@ export function generateBotResponse(text: string, config: BotConfig): BotRespons
 }
 
 function formatGreeting(config: BotConfig): string {
-  const greeting = config.greeting || `Olá! Eu sou ${config.agentName}, atendente virtual.`
+  const cardapioUrl = config.slug ? `https://flowoshub.com/${config.slug}` : ""
+  const greeting = (config.greeting || `Olá! Eu sou ${config.agentName}, em que posso ajudar?`)
+    .replace(/\{nome\}/g, config.agentName)
+    .replace(/\{link\}/g, cardapioUrl)
 
   const menuText = config.menuOptions
-    .map((opt, idx) => `${idx + 1}. ${opt.label}`)
+    .filter((opt) => opt.label.trim())
+    .map((opt, idx) => `${idx + 1} - ${opt.label}`)
     .join("\n")
 
-  const cardapioLink = config.slug ? `\n\n🍽️ *Nosso Cardápio:*\nhttps://flowoshub.com/${config.slug}` : ""
-
-  return `${greeting}${cardapioLink}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
+  return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
 }

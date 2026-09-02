@@ -132,7 +132,7 @@ export async function loadBotContext(
     agentName: establishment.botAgentName || categoryTemplate?.defaultAgentName || "Atendente",
     establishmentName: establishment.name,
     establishmentSlug: establishment.slug,
-    greeting: establishment.botGreeting || "",
+    greeting: (establishment.botGreeting || "").replace(/\{nome\}/g, establishment.botAgentName || "Atendente").replace(/\{link\}/g, `https://flowoshub.com/${establishment.slug}`),
     tone: establishment.botTone || "casual",
     faq: establishment.botFAQ || "",
     customPrompt: establishment.botSystemPrompt || categoryTemplate?.promptBase || "",
