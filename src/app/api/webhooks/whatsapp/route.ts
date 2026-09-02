@@ -382,7 +382,9 @@ export async function POST(req: NextRequest) {
           : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
 
         if (isGreetingMatch && establishment.botGreeting) {
+          console.log(`[WhatsApp] Greeting path: customerName="${customer?.name || "null"}", slug="${establishment.slug}"`)
           responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug, customer?.name)
+          console.log(`[WhatsApp] Greeting result: "${responseMessage.substring(0, 100)}..."`)
           usedAI = false
         } else if (menuOption) {
           const botConfig = await loadMenuConfig(establishment)
