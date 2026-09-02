@@ -14,6 +14,7 @@ export interface BotConfig {
   menuOptions: BotMenuOption[]
   whatsappNumber: string
   slug: string
+  customerName?: string | null
 }
 
 const DEFAULT_MENU_OPTIONS: BotMenuOption[] = [
@@ -134,6 +135,7 @@ function formatGreeting(config: BotConfig): string {
   const greeting = (config.greeting || `Olá! Eu sou ${config.agentName}, em que posso ajudar?`)
     .replace(/\{nome\}/g, config.agentName)
     .replace(/\{link\}/g, cardapioUrl)
+    .replace(/\{cliente\}/g, config.customerName || "")
 
   const hasOptionsInGreeting = /\n\s*\d+\s*[-.)]/.test(greeting)
 

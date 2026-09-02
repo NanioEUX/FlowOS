@@ -2188,7 +2188,7 @@ if (!data.error) {
                           className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                         />
                         <p className="mt-1 text-xs text-zinc-400">
-                          Use <code className="bg-zinc-100 px-1 rounded">{"{nome}"}</code> e <code className="bg-zinc-100 px-1 rounded">{"{link}"}</code>. Opções numeradas (1 -, 2 -) viram menu.
+                          Use <code className="bg-zinc-100 px-1 rounded">{"{nome}"}</code>, <code className="bg-zinc-100 px-1 rounded">{"{link}"}</code> e <code className="bg-zinc-100 px-1 rounded">{"{cliente}"}</code> (nome do cliente). Opções numeradas (1 -, 2 -) viram menu.
                         </p>
                       </div>
                       <div>

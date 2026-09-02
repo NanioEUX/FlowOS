@@ -329,15 +329,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Look up customer by phone (used for inactivity, greeting, etc.)
+    const customer = await prisma.customer.findFirst({
+      where: { phone: parsed.phone, establishmentId: establishment.id },
+      select: { id: true, name: true, needsHuman: true },
+    })
+
     // 3. Inactivity: customer asked for human
-    if (establishment.botInactivityEnabled) {
-      const customer = await prisma.customer.findFirst({
-        where: { phone: parsed.phone, establishmentId: establishment.id },
-        select: { needsHuman: true },
-      })
-      if (customer?.needsHuman) {
-        return NextResponse.json({ success: true, ignored: "needsHuman" })
-      }
+    if (establishment.botInactivityEnabled && customer?.needsHuman) {
+      return NextResponse.json({ success: true, ignored: "needsHuman" })
     }
 
     let responseMessage: string | null = null
@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
           : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
 
         if (isGreetingMatch && establishment.botGreeting) {
-          responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug)
+          responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug, customer?.name)
           usedAI = false
         } else if (menuOption) {
           const botConfig = await loadMenuConfig(establishment)
@@ -519,10 +519,11 @@ async function loadMenuConfig(establishment: any) {
   return getBotConfig(establishment.id)
 }
 
-function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null, slug?: string): string {
+function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null, slug?: string, customerName?: string | null): string {
   const replaced = greeting
     .replace(/\{nome\}/g, agentName)
     .replace(/\{link\}/g, slug ? `https://flowoshub.com/${slug}` : "")
+    .replace(/\{cliente\}/g, customerName || "")
 
   const hasOptionsInGreeting = /\n\s*\d+\s*[-.)]/.test(replaced)
   if (hasOptionsInGreeting) {
