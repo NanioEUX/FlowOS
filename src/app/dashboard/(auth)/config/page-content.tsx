@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle, X, Plus } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle } from "lucide-react"
 import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -791,8 +791,9 @@ export default function ConfigPage() {
   const [metaCardLast4, setMetaCardLast4] = useState("")
   const [botEnabled, setBotEnabled] = useState(false)
   const [botAgentName, setBotAgentName] = useState("Atendente")
-  const [botGreeting, setBotGreeting] = useState("Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
-  const [botMenuOptions, setBotMenuOptions] = useState(`[{"id":"1","label":"Fazer pedido","response":"menu"},{"id":"2","label":"Acompanhar pedido","response":"mensagem","message":"Informe seu número do pedido para acompanhamento."},{"id":"3","label":"Agendar pedido","response":"mensagem","message":"Envie a data, horário e itens desejados."},{"id":"4","label":"Falar com atendente","response":"atendente"}]`)
+  const [botGreeting, setBotGreeting] = useState("")
+  const [botMenuOptions, setBotMenuOptions] = useState(`[{"id":"1","label":"Acompanhar pedido","response":"mensagem","message":"Informe seu número do pedido para acompanhamento."},{"id":"2","label":"Agendar pedido","response":"mensagem","message":"Envie a data, horário e itens desejados."},{"id":"3","label":"Falar com atendente","response":"atendente"}]`)
+  const [establishmentSlug, setEstablishmentSlug] = useState("")
   const [botUseAI, setBotUseAI] = useState(false)
   const [botTone, setBotTone] = useState<"formal" | "casual" | "direct">("casual")
   const [botFAQ, setBotFAQ] = useState("")
@@ -854,6 +855,7 @@ export default function ConfigPage() {
       .then((r) => r.json())
       .then((data) => {
 if (!data.error) {
+            setEstablishmentSlug(data.slug || "")
             setForm({
                 name: data.name || "",
                 phone: data.phone || "",
@@ -918,8 +920,8 @@ if (!data.error) {
           setMetaCardLast4(data.metaCardLast4 || "")
           setBotEnabled(data.botEnabled ?? false)
           setBotAgentName(data.botAgentName || "Atendente")
-          setBotGreeting(data.botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
-          setBotMenuOptions(data.botMenuOptions || `[{"id":"1","label":"Fazer pedido","response":"menu"},{"id":"2","label":"Acompanhar pedido","response":"mensagem","message":"Informe seu número do pedido para acompanhamento."},{"id":"3","label":"Agendar pedido","response":"mensagem","message":"Envie a data, horário e itens desejados."},{"id":"4","label":"Falar com atendente","response":"atendente"}]`)
+          setBotGreeting(data.botGreeting || "")
+          setBotMenuOptions(data.botMenuOptions || `[{"id":"1","label":"Acompanhar pedido","response":"mensagem","message":"Informe seu número do pedido para acompanhamento."},{"id":"2","label":"Agendar pedido","response":"mensagem","message":"Envie a data, horário e itens desejados."},{"id":"3","label":"Falar com atendente","response":"atendente"}]`)
           setBotUseAI(data.botUseAI ?? false)
           setBotTone(data.botTone || "casual")
           setBotFAQ(data.botFAQ || "")
@@ -2175,111 +2177,95 @@ if (!data.error) {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700">Mensagem de saudação</label>
-                      <textarea
-                        placeholder={`Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}`}
-                        value={botGreeting}
-                        onChange={(e) => setBotGreeting(e.target.value)}
-                        rows={4}
-                        className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                      />
-                      <p className="mt-1 text-xs text-zinc-400">
-                        Use <code className="bg-zinc-100 px-1 rounded">{"{nome}"}</code> para o nome do atendente e <code className="bg-zinc-100 px-1 rounded">{"{link}"}</code> para o link do cardápio.
-                      </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700">Mensagem de saudação</label>
+                        <textarea
+                          placeholder={`Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}\n\n1 - Acompanhar pedido\n2 - Falar com atendente`}
+                          value={botGreeting}
+                          onChange={(e) => setBotGreeting(e.target.value)}
+                          rows={6}
+                          className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        />
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Use <code className="bg-zinc-100 px-1 rounded">{"{nome}"}</code> e <code className="bg-zinc-100 px-1 rounded">{"{link}"}</code>. Opções numeradas (1 -, 2 -) viram menu.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700">Nome do atendente</label>
+                        <input
+                          type="text"
+                          value={botAgentName}
+                          onChange={(e) => setBotAgentName(e.target.value)}
+                          placeholder="Ana"
+                          className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 mb-2">Opções do menu</label>
-                      {(() => {
-                        let options: { id: string; label: string; response: string; message?: string }[] = []
-                        try { options = JSON.parse(botMenuOptions) } catch {}
-                        const updateOptions = (next: typeof options) => {
-                          setBotMenuOptions(JSON.stringify(next))
-                        }
-                        return (
-                          <div className="space-y-2">
-                            {options.map((opt, idx) => (
-                              <div key={opt.id} className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                                <span className="mt-2 text-xs font-bold text-zinc-400 w-5 text-center">{idx + 1}</span>
-                                <div className="flex-1 space-y-2">
-                                  <input
-                                    type="text"
-                                    value={opt.label}
-                                    onChange={(e) => {
-                                      const next = [...options]; next[idx] = { ...opt, label: e.target.value }; updateOptions(next)
-                                    }}
-                                    placeholder="Texto da opção"
-                                    className="flex h-8 w-full rounded-md border border-zinc-200 bg-white px-2.5 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                                  />
-                                  <div className="flex items-center gap-2">
-                                    <select
-                                      value={opt.response}
-                                      onChange={(e) => {
-                                        const next = [...options]; next[idx] = { ...opt, response: e.target.value }; updateOptions(next)
-                                      }}
-                                      className="h-8 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
-                                    >
-                                      <option value="menu">Ver cardápio</option>
-                                      <option value="atendente">Falar com atendente</option>
-                                      <option value="mensagem">Enviar mensagem</option>
-                                    </select>
-                                    {opt.response === "mensagem" && (
-                                      <input
-                                        type="text"
-                                        value={opt.message || ""}
-                                        onChange={(e) => {
-                                          const next = [...options]; next[idx] = { ...opt, message: e.target.value }; updateOptions(next)
-                                        }}
-                                        placeholder="Mensagem que o bot envia..."
-                                        className="flex-1 h-8 rounded-md border border-zinc-200 bg-white px-2.5 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                                      />
-                                    )}
-                                  </div>
+                    {(() => {
+                      const lines = botGreeting.split("\n")
+                      const detectedOptions: { num: string; label: string }[] = []
+                      lines.forEach((line) => {
+                        const match = line.match(/^\s*(\d+)\s*[-.)]\s*(.+)/)
+                        if (match) detectedOptions.push({ num: match[1], label: match[2].trim() })
+                      })
+                      if (detectedOptions.length === 0) return null
+                      let options: { id: string; response: string; message?: string }[] = []
+                      try { options = JSON.parse(botMenuOptions) } catch {}
+                      const updateOption = (num: string, response: string, message?: string) => {
+                        const next = options.filter((o) => o.id !== num)
+                        next.push({ id: num, response, message })
+                        next.sort((a, b) => Number(a.id) - Number(b.id))
+                        setBotMenuOptions(JSON.stringify(next))
+                      }
+                      return (
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-700 mb-2">Funções das opções</label>
+                          <div className="space-y-1.5">
+                            {detectedOptions.map((opt) => {
+                              const saved = options.find((o) => o.id === opt.num)
+                              const response = saved?.response || "mensagem"
+                              return (
+                                <div key={opt.num} className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                                  <span className="text-xs font-bold text-zinc-400 w-4">{opt.num}</span>
+                                  <span className="flex-1 text-sm text-zinc-700 truncate">{opt.label}</span>
+                                  <select
+                                    value={response}
+                                    onChange={(e) => updateOption(opt.num, e.target.value, saved?.message)}
+                                    className="h-7 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                  >
+                                    <option value="mensagem">Enviar mensagem</option>
+                                    <option value="atendente">Falar com atendente</option>
+                                    <option value="menu">Ver cardápio</option>
+                                  </select>
+                                  {response === "mensagem" && (
+                                    <input
+                                      type="text"
+                                      value={saved?.message || ""}
+                                      onChange={(e) => updateOption(opt.num, response, e.target.value)}
+                                      placeholder="Mensagem que o bot envia..."
+                                      className="flex-1 h-7 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                                    />
+                                  )}
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => updateOptions(options.filter((_, i) => i !== idx))}
-                                  className="mt-1 p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newId = String(options.length + 1)
-                                updateOptions([...options, { id: newId, label: "", response: "menu" }])
-                              }}
-                              className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-300 py-2 text-xs font-medium text-zinc-500 hover:border-green-400 hover:text-green-600 transition-colors"
-                            >
-                              <Plus className="h-3.5 w-3.5" /> Adicionar opção
-                            </button>
+                              )
+                            })}
                           </div>
-                        )
-                      })()}
-                      <p className="mt-1 text-xs text-zinc-400">Cada opção aparece como item numerado no menu do WhatsApp.</p>
-                    </div>
+                        </div>
+                      )
+                    })()}
 
-                    {/* Preview da mensagem */}
+                    {/* Preview */}
                     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                       <p className="text-xs font-semibold text-zinc-500 mb-2 flex items-center gap-1.5">
-                        <MessageSquare className="h-3.5 w-3.5" /> Preview da mensagem
+                        <MessageSquare className="h-3.5 w-3.5" /> Preview
                       </p>
                       <div className="rounded-xl bg-[#0b141a] p-4 text-sm text-white whitespace-pre-wrap font-sans leading-relaxed">
-                        {(() => {
-                          let options: { id: string; label: string }[] = []
-                          try { options = JSON.parse(botMenuOptions) } catch {}
-                          const greeting = (botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
-                            .replace(/\{nome\}/g, botAgentName || "Atendente")
-                            .replace(/\{link\}/g, "https://flowoshub.com/seu-estabelecimento")
-                          const menuText = options
-                            .filter((opt) => opt.label.trim())
-                            .map((opt, idx) => `${idx + 1} - ${opt.label}`)
-                            .join("\n")
-                          return `${greeting}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
-                        })()}
+                        {(botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
+                          .replace(/\{nome\}/g, botAgentName || "Atendente")
+                          .replace(/\{link\}/g, establishmentSlug ? `https://flowoshub.com/${establishmentSlug}` : "https://flowoshub.com/seu-estabelecimento")
+                          + "\n\nDigite o *número* da opção desejada."}
                       </div>
                     </div>
 
