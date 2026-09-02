@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck, Edit3, DollarSign } from "lucide-react"
+import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck, Edit3, DollarSign, Search, ShoppingCart } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -34,7 +34,7 @@ export default function EstoquePage() {
   const [items, setItems] = useState<any[]>([])
   const [movements, setMovements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<"items" | "movements" | "suppliers">("items")
+  const [tab, setTab] = useState<"items" | "movements" | "suppliers" | "compras">("items")
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
   const [movementError, setMovementError] = useState("")
 
@@ -59,6 +59,22 @@ export default function EstoquePage() {
   const [showMovementForm, setShowMovementForm] = useState(false)
   const [movementForm, setMovementForm] = useState({ itemId: "", movementType: "entry", quantity: "1", unitCost: "0", notes: "", costMethod: "average" as "average" | "immediate" })
 
+  // Purchase entry state
+  const [purchaseSupplierName, setPurchaseSupplierName] = useState("")
+  const [purchaseDocument, setPurchaseDocument] = useState("")
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10))
+  const [purchasePaymentMethod, setPurchasePaymentMethod] = useState("dinheiro")
+  const [purchasePaymentCondition, setPurchasePaymentCondition] = useState("avista")
+  const [purchaseExpenseType, setPurchaseExpenseType] = useState("lancamento")
+  const [purchaseDueDate, setPurchaseDueDate] = useState("")
+  const [purchaseRecurrence, setPurchaseRecurrence] = useState("mensal")
+  const [purchaseNotes, setPurchaseNotes] = useState("")
+  const [purchaseItems, setPurchaseItems] = useState<{ stockItemId: string; name: string; quantity: string; unit: string; unitCost: string; totalCost: number }[]>([])
+  const [purchaseItemSearch, setPurchaseItemSearch] = useState("")
+  const [showPurchaseItemPicker, setShowPurchaseItemPicker] = useState(false)
+  const [savingPurchase, setSavingPurchase] = useState(false)
+  const [recentPurchases, setRecentPurchases] = useState<any[]>([])
+
   async function loadAll() {
     if (!establishmentId) return
     const res = await fetchAuth(`/api/stock?establishmentId=${establishmentId}`)
@@ -71,6 +87,10 @@ export default function EstoquePage() {
     const resSuppliers = await fetchAuth(`/api/suppliers?establishmentId=${establishmentId}`)
     if (resSuppliers.ok) {
       setSuppliers(await resSuppliers.json())
+    }
+    const resPurchases = await fetchAuth(`/api/purchases?establishmentId=${establishmentId}`)
+    if (resPurchases.ok) {
+      setRecentPurchases(await resPurchases.json())
     }
     setLoading(false)
   }
@@ -356,6 +376,9 @@ export default function EstoquePage() {
         <button onClick={() => setTab("suppliers")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "suppliers" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
           Fornecedores
         </button>
+        <button onClick={() => setTab("compras")} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === "compras" ? "border-green-600 text-green-600" : "border-transparent text-zinc-500 hover:text-zinc-500"}`}>
+          Compras
+        </button>
       </div>
 
       {/* Items Tab */}
@@ -535,6 +558,260 @@ export default function EstoquePage() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Compras Tab */}
+      {tab === "compras" && (
+        <div className="space-y-4">
+          {/* Header */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-zinc-900">Nova Entrada de Compra</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Fornecedor</label>
+                  <input type="text" value={purchaseSupplierName} onChange={(e) => setPurchaseSupplierName(e.target.value)} placeholder="Nome do fornecedor" className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Data da Compra</label>
+                  <input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Nº Documento / Cupom</label>
+                  <input type="text" value={purchaseDocument} onChange={(e) => setPurchaseDocument(e.target.value)} placeholder="Número do documento" className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Items Grid */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-900">Insumos</h3>
+                <Button size="sm" onClick={() => setShowPurchaseItemPicker(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                </Button>
+              </div>
+
+              {purchaseItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+                  <p className="text-sm text-zinc-500">Nenhum insumo adicionado</p>
+                  <p className="text-xs text-zinc-400">Clique em "Adicionar" para começar</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-200 text-left text-xs font-medium text-zinc-500">
+                        <th className="pb-2">Insumo</th>
+                        <th className="pb-2 w-20">Qtd</th>
+                        <th className="pb-2 w-16">Un</th>
+                        <th className="pb-2 w-28">Preço Unit.</th>
+                        <th className="pb-2 w-28">Total</th>
+                        <th className="pb-2 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchaseItems.map((item, idx) => (
+                        <tr key={idx} className="border-b border-zinc-100">
+                          <td className="py-2 font-medium text-zinc-900">{item.name}</td>
+                          <td className="py-2">
+                            <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => {
+                              const updated = [...purchaseItems]
+                              updated[idx] = { ...updated[idx], quantity: e.target.value, totalCost: Number(e.target.value) * Number(updated[idx].unitCost) }
+                              setPurchaseItems(updated)
+                            }} className="w-full rounded border border-zinc-200 px-2 py-1 text-sm" />
+                          </td>
+                          <td className="py-2 text-zinc-500">{item.unit}</td>
+                          <td className="py-2">
+                            <input type="number" min="0" step="0.01" value={item.unitCost} onChange={(e) => {
+                              const updated = [...purchaseItems]
+                              updated[idx] = { ...updated[idx], unitCost: e.target.value, totalCost: Number(updated[idx].quantity) * Number(e.target.value) }
+                              setPurchaseItems(updated)
+                            }} className="w-full rounded border border-zinc-200 px-2 py-1 text-sm" />
+                          </td>
+                          <td className="py-2 font-semibold text-zinc-900">{formatCurrency(item.totalCost)}</td>
+                          <td className="py-2">
+                            <button onClick={() => setPurchaseItems(purchaseItems.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-zinc-300">
+                        <td colSpan={4} className="py-2 text-right font-semibold text-zinc-900">Total:</td>
+                        <td className="py-2 text-lg font-bold text-green-600">{formatCurrency(purchaseItems.reduce((s, i) => s + i.totalCost, 0))}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+
+              {/* Item Picker Modal */}
+              {showPurchaseItemPicker && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
+                    <div className="border-b border-zinc-200 px-4 py-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <input type="text" autoFocus value={purchaseItemSearch} onChange={(e) => setPurchaseItemSearch(e.target.value)} placeholder="Buscar insumo..." className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 py-2 text-sm focus:border-green-600 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {items.filter((i) => i.name.toLowerCase().includes(purchaseItemSearch.toLowerCase())).length === 0 ? (
+                        <p className="p-4 text-sm text-zinc-400 text-center">Nenhum insumo encontrado</p>
+                      ) : (
+                        items.filter((i) => i.name.toLowerCase().includes(purchaseItemSearch.toLowerCase())).map((item) => (
+                          <button key={item.id} onClick={() => {
+                            const existing = purchaseItems.find((i) => i.stockItemId === item.id)
+                            if (existing) {
+                              setPurchaseItems(purchaseItems.map((i) => i.stockItemId === item.id ? { ...i, quantity: String(Number(i.quantity) + 1), totalCost: (Number(i.quantity) + 1) * Number(i.unitCost) } : i))
+                            } else {
+                              setPurchaseItems([...purchaseItems, { stockItemId: item.id, name: item.name, quantity: "1", unit: item.unit, unitCost: String(item.unitCost || 0), totalCost: item.unitCost || 0 }])
+                            }
+                            setPurchaseItemSearch(""); setShowPurchaseItemPicker(false)
+                          }} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 border-b border-zinc-100">
+                            <div>
+                              <p className="text-sm font-medium text-zinc-900">{item.name}</p>
+                              <p className="text-xs text-zinc-500">{item.unit} | Estoque: {item.quantity}</p>
+                            </div>
+                            <span className="text-xs text-zinc-400">{formatCurrency(item.unitCost)}/{item.unit}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    <div className="border-t border-zinc-200 px-4 py-2">
+                      <button onClick={() => setShowPurchaseItemPicker(false)} className="w-full text-sm text-zinc-500 hover:text-zinc-700 py-1">Fechar</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Financial Section */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-zinc-900">Pagamento</h3>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-2">Tipo</label>
+                <div className="flex gap-2">
+                  {[{ value: "lancamento", label: "Lançamento" }, { value: "agendada", label: "Agendada" }, { value: "recorrente", label: "Recorrente" }].map((t) => (
+                    <button key={t.value} onClick={() => setPurchaseExpenseType(t.value)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${purchaseExpenseType === t.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-2">Condição</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setPurchasePaymentCondition("avista")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${purchasePaymentCondition === "avista" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>
+                    À vista
+                  </button>
+                  <button onClick={() => setPurchasePaymentCondition("prazo")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${purchasePaymentCondition === "prazo" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>
+                    Prazo
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Forma de Pagamento</label>
+                  <select value={purchasePaymentMethod} onChange={(e) => setPurchasePaymentMethod(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none">
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="cartao">Cartão</option>
+                    <option value="pix">Pix</option>
+                    <option value="transferencia">Transferência</option>
+                    <option value="boleto">Boleto</option>
+                  </select>
+                </div>
+                {purchaseExpenseType === "agendada" && (
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">Data de Vencimento</label>
+                    <input type="date" value={purchaseDueDate} onChange={(e) => setPurchaseDueDate(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none" />
+                  </div>
+                )}
+                {purchaseExpenseType === "recorrente" && (
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">Repetir a cada</label>
+                    <select value={purchaseRecurrence} onChange={(e) => setPurchaseRecurrence(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none">
+                      <option value="semanal">Semanal</option>
+                      <option value="mensal">Mensal</option>
+                      <option value="trimestral">Trimestral</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-1">Observações</label>
+                <textarea value={purchaseNotes} onChange={(e) => setPurchaseNotes(e.target.value)} rows={2} placeholder="Notas sobre a compra..." className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none resize-none" />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
+                <div>
+                  <p className="text-xs text-zinc-500">Total da compra</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(purchaseItems.reduce((s, i) => s + i.totalCost, 0))}</p>
+                </div>
+                <Button onClick={async () => {
+                  if (purchaseItems.length === 0) return alert("Adicione pelo menos um insumo")
+                  setSavingPurchase(true)
+                  try {
+                    const res = await fetchAuth("/api/purchases", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        supplierName: purchaseSupplierName || null,
+                        documentNumber: purchaseDocument || null,
+                        purchaseDate,
+                        items: purchaseItems.map((i) => ({ stockItemId: i.stockItemId, stockItemName: i.name, quantity: Number(i.quantity), unit: i.unit, unitCost: Number(i.unitCost), totalCost: i.totalCost })),
+                        paymentMethod: purchasePaymentMethod,
+                        paymentCondition: purchasePaymentCondition,
+                        expenseType: purchaseExpenseType,
+                        dueDate: purchaseExpenseType === "agendada" && purchaseDueDate ? purchaseDueDate : null,
+                        recurrenceFreq: purchaseExpenseType === "recorrente" ? purchaseRecurrence : null,
+                        notes: purchaseNotes || null,
+                      }),
+                    })
+                    if (!res.ok) { const err = await res.json(); alert(err.error || "Erro ao salvar"); return }
+                    alert("Compra salva com sucesso!")
+                    setPurchaseItems([]); setPurchaseSupplierName(""); setPurchaseDocument(""); setPurchaseNotes("")
+                    loadAll()
+                  } catch { alert("Erro ao salvar compra") } finally { setSavingPurchase(false) }
+                }} disabled={savingPurchase || purchaseItems.length === 0}>
+                  {savingPurchase ? "Salvando..." : "Salvar e atualizar estoque"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Purchases */}
+          {recentPurchases.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-zinc-900 mb-3">Últimas Compras</h3>
+                <div className="space-y-2">
+                  {recentPurchases.slice(0, 5).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-900">{p.supplierName || "Compra"} {p.documentNumber ? `#${p.documentNumber}` : ""}</p>
+                        <p className="text-xs text-zinc-500">{new Date(p.purchaseDate).toLocaleDateString("pt-BR")} | {p.items?.length || 0} itens</p>
+                      </div>
+                      <span className="text-sm font-semibold text-zinc-900">{formatCurrency(p.totalAmount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
