@@ -331,6 +331,11 @@ export async function POST(req: NextRequest) {
 
     // Look up customer by phone (used for inactivity, greeting, etc.)
     const phoneDigits = parsed.phone.replace(/\D/g, "")
+    const phoneNoCountry = phoneDigits.replace(/^55/, "")
+    // Meta sometimes strips the leading 9 from Brazilian mobile numbers
+    const phoneWithNine = phoneNoCountry.length === 10 && phoneNoCountry[2] !== "9"
+      ? phoneNoCountry.slice(0, 2) + "9" + phoneNoCountry.slice(2)
+      : null
     const customer = await prisma.customer.findFirst({
       where: {
         establishmentId: establishment.id,
@@ -338,12 +343,14 @@ export async function POST(req: NextRequest) {
           { phone: parsed.phone },
           { phone: phoneDigits },
           { phone: `+${phoneDigits}` },
-          { phone: phoneDigits.replace(/^55/, "") },
+          { phone: phoneNoCountry },
+          { phone: `+${phoneNoCountry}` },
+          ...(phoneWithNine ? [{ phone: phoneWithNine }] : []),
         ],
       },
       select: { id: true, name: true, needsHuman: true },
     })
-    console.log(`[WhatsApp] Customer lookup: phone=${parsed.phone}, digits=${phoneDigits}, found=${!!customer}, name=${customer?.name || "none"}`)
+    console.log(`[WhatsApp] Customer lookup: phone=${parsed.phone}, noCountry=${phoneNoCountry}, withNine=${phoneWithNine}, found=${!!customer}, name=${customer?.name || "none"}`)
 
     // 3. Inactivity: customer asked for human
     if (establishment.botInactivityEnabled && customer?.needsHuman) {
