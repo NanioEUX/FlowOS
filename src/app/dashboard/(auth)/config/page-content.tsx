@@ -2609,77 +2609,109 @@ if (!data.error) {
         <Card id="section-99entregas" className={activeGroup !== "99entregas" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-zinc-900">99 Entregas</h3>
-              {tipoEntregaAtiva === "99entrega" && (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Ativo</span>
-              )}
+              <h3 className="font-semibold text-zinc-900">Modo de Entregas</h3>
             </div>
-            <p className="text-sm text-zinc-500">Configure a integração com a 99 Entregas para entregas próprias.</p>
+            <p className="text-sm text-zinc-500">Selecione como suas entregas serão realizadas.</p>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700">Modo de Entrega</label>
-                <div className="mt-2 flex gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="tipoEntrega"
-                      value="propria"
-                      checked={tipoEntregaAtiva === "propria"}
-                      onChange={() => setTipoEntregaAtiva("propria")}
-                      className="h-4 w-4 text-green-600"
-                    />
-                    <span className="text-sm text-zinc-700">Entrega Própria</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="tipoEntrega"
-                      value="99entrega"
-                      checked={tipoEntregaAtiva === "99entrega"}
-                      onChange={() => setTipoEntregaAtiva("99entrega")}
-                      className="h-4 w-4 text-green-600"
-                    />
-                    <span className="text-sm text-zinc-700">99 Entregas</span>
-                  </label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Entrega Própria */}
+              <button
+                type="button"
+                onClick={() => setTipoEntregaAtiva("propria")}
+                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-6 text-center transition-all ${
+                  tipoEntregaAtiva === "propria"
+                    ? "border-green-500 bg-green-50 shadow-md"
+                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+                }`}
+              >
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                  tipoEntregaAtiva === "propria" ? "bg-green-100" : "bg-zinc-100"
+                }`}>
+                  <span className="text-2xl">🛵</span>
                 </div>
-              </div>
-
-              {tipoEntregaAtiva === "99entrega" && (
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 space-y-4">
-                  <p className="text-sm text-zinc-600">
-                    Configure suas credenciais da API 99 Empresas para despachar corridas automaticamente.
-                  </p>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700">API Key (x-api-key)</label>
-                    <input
-                      type="password"
-                      value={api99Key}
-                      onChange={(e) => setApi99Key(e.target.value)}
-                      placeholder="Sua API Key da 99"
-                      className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
-                    />
+                <span className={`font-medium ${
+                  tipoEntregaAtiva === "propria" ? "text-green-700" : "text-zinc-700"
+                }`}>
+                  Entrega Própria
+                </span>
+                <span className="text-xs text-zinc-500">Use seus próprios motoboys</span>
+                {tipoEntregaAtiva === "propria" && (
+                  <div className="absolute top-2 right-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">✓</span>
                   </div>
+                )}
+              </button>
 
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700">Employee ID (ID do Gestor)</label>
-                    <input
-                      type="text"
-                      value={api99EmployeeId}
-                      onChange={(e) => setApi99EmployeeId(e.target.value)}
-                      placeholder="ID do gestor na 99"
-                      className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
-                    />
-                  </div>
-
-                  <p className="text-xs text-zinc-400">
-                    As credenciais são validadas ao salvar. O webhook de status será recebido em: 
-                    <code className="rounded bg-zinc-100 px-1 ml-1">/api/webhooks/99</code>
-                  </p>
+              {/* 99 Entregas */}
+              <button
+                type="button"
+                onClick={() => setTipoEntregaAtiva("99entrega")}
+                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-6 text-center transition-all ${
+                  tipoEntregaAtiva === "99entrega"
+                    ? "border-purple-500 bg-purple-50 shadow-md"
+                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+                }`}
+              >
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                  tipoEntregaAtiva === "99entrega" ? "bg-purple-100" : "bg-zinc-100"
+                }`}>
+                  <span className="text-2xl">🚀</span>
                 </div>
-              )}
+                <span className={`font-medium ${
+                  tipoEntregaAtiva === "99entrega" ? "text-purple-700" : "text-zinc-700"
+                }`}>
+                  99 Entregas
+                </span>
+                <span className="text-xs text-zinc-500">Logística externa via 99</span>
+                {tipoEntregaAtiva === "99entrega" && (
+                  <div className="absolute top-2 right-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-500 text-white text-xs">✓</span>
+                  </div>
+                )}
+              </button>
             </div>
+
+            {tipoEntregaAtiva === "99entrega" && (
+              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 space-y-4 mt-4">
+                <p className="text-sm text-purple-700 font-medium">
+                  Configure suas credenciais da API 99 Empresas
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700">API Key (x-api-key)</label>
+                  <input
+                    type="password"
+                    value={api99Key}
+                    onChange={(e) => setApi99Key(e.target.value)}
+                    placeholder="Sua API Key da 99"
+                    className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700">Employee ID (ID do Gestor)</label>
+                  <input
+                    type="text"
+                    value={api99EmployeeId}
+                    onChange={(e) => setApi99EmployeeId(e.target.value)}
+                    placeholder="ID do gestor na 99"
+                    className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
+                  />
+                </div>
+
+                <p className="text-xs text-purple-600">
+                  Webhook de status: <code className="rounded bg-purple-100 px-1">/api/webhooks/99</code>
+                </p>
+              </div>
+            )}
+
+            {tipoEntregaAtiva === "propria" && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 mt-4">
+                <p className="text-sm text-green-700">
+                  🛵 Entregas realizadas pelos seus próprios motoboys. Configure as zonas e taxas na aba de entregas.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
