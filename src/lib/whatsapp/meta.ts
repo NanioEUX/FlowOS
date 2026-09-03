@@ -127,8 +127,11 @@ export class MetaCloudProvider implements WhatsAppProvider {
           type: "cta_url",
           body: { text },
           action: {
-            display_text: buttonText,
-            url,
+            name: "cta_url",
+            parameters: {
+              display_text: buttonText,
+              url,
+            },
           },
         },
       }
