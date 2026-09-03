@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
+import { CommissionEditor } from "./_components/commission-editor"
 
 export const dynamic = "force-dynamic"
 
@@ -20,6 +21,8 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
       botUseAI: true,
       aiMessagesUsed: true,
       aiMessagesLimit: true,
+      pagarmeSplitReceiverId: true,
+      saasCommissionPercentage: true,
       createdAt: true,
     },
   })
@@ -46,6 +49,18 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
           <Info label="IA ativa" value={e.botUseAI ? "Sim" : "Não"} />
           <Info label="Bot ativo" value={e.botEnabled ? "Sim" : "Não"} />
           <Info label="IA (mês)" value={`${e.aiMessagesUsed} / ${e.aiMessagesLimit}`} />
+        </div>
+      </div>
+
+      {/* Pagamentos */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
+        <h2 className="text-lg font-bold text-zinc-900 mb-4">Pagamentos</h2>
+        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+          <Info label="Receiver Stone" value={e.pagarmeSplitReceiverId || "não configurado"} />
+        </div>
+        <div className="flex items-center gap-4 pt-2 border-t border-zinc-100">
+          <span className="text-sm text-zinc-500">Comissão SaaS</span>
+          <CommissionEditor establishmentId={e.id} currentPercentage={e.saasCommissionPercentage || 10} />
         </div>
       </div>
 
