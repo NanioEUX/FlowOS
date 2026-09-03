@@ -401,6 +401,25 @@ export async function POST(req: NextRequest) {
           console.log(`[WhatsApp] Greeting path: customerName="${customer?.name || "null"}", slug="${establishment.slug}"`)
           responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug, customer?.name)
           console.log(`[WhatsApp] Greeting result: "${responseMessage.substring(0, 100)}..."`)
+          // Check if original greeting had {link} to use URL button
+          if (establishment.botGreeting.includes("{link}") && establishment.slug && provider.sendInteractiveUrlButton) {
+            const cardapioUrl = `https://flowoshub.com/${establishment.slug}`
+            // Remove the cardápio link line from the text for the button approach
+            const textCleaned = responseMessage
+              .replace(/.*cardápio.*\n?.*/gi, "")
+              .replace(/\n{3,}/g, "\n\n")
+              .trim()
+            const delay = randomTypingDelay(
+              establishment.botTypingDelayMinMs || 1500,
+              establishment.botTypingDelayMaxMs || 3500
+            )
+            const sendResult = await provider.sendInteractiveUrlButton(parsed.phone, textCleaned, "Ver Cardápio", cardapioUrl, { delay })
+            if (sendResult.success) {
+              console.log(`[WhatsApp] ✓ Greeting with URL button sent to ${parsed.phone}`)
+              return NextResponse.json({ success: true, messageId: sendResult.messageId, usedAI: false })
+            }
+            // Fallback to plain text if button fails
+          }
           usedAI = false
         } else if (menuOption) {
           const botConfig = await loadMenuConfig(establishment)
@@ -550,9 +569,10 @@ async function loadMenuConfig(establishment: any) {
 }
 
 function formatMenuGreeting(agentName: string, greeting: string, menuJson: string | null, slug?: string, customerName?: string | null): string {
+  const cardapioUrl = slug ? `https://flowoshub.com/${slug}` : ""
   const replaced = greeting
     .replace(/\{nome\}/g, agentName)
-    .replace(/\{link\}/g, slug ? `https://flowoshub.com/${slug}` : "")
+    .replace(/\{link\}/g, cardapioUrl)
     .replace(/\{cliente\}/g, customerName || "")
 
   const hasOptionsInGreeting = /\n\s*\d+\s*[-.)]/.test(replaced)
@@ -563,4 +583,5 @@ function formatMenuGreeting(agentName: string, greeting: string, menuJson: strin
   const menuOptions = parseMenuOptions(menuJson)
   const menuText = menuOptions.map((opt, idx) => `${idx + 1}. ${opt.label}`).join("\n")
   return `${replaced}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
+}
 }

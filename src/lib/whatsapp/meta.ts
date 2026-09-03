@@ -114,6 +114,52 @@ export class MetaCloudProvider implements WhatsAppProvider {
     }
   }
 
+  async sendInteractiveUrlButton(phone: string, text: string, buttonText: string, url: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const phoneDigits = this.formatPhone(phone)
+      console.log(`[MetaCloud] Sending URL button to: ${phoneDigits}`)
+
+      const body: any = {
+        messaging_product: "whatsapp",
+        to: phoneDigits,
+        type: "interactive",
+        interactive: {
+          type: "cta_url",
+          body: { text },
+          action: {
+            display_text: buttonText,
+            url,
+          },
+        },
+      }
+
+      if (options?.quotedMessageId) {
+        body.context = { message_id: options.quotedMessageId }
+      }
+
+      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        console.error("[MetaCloud] sendInteractiveUrlButton error:", data)
+        return { success: false, error: data.error?.message || "Failed to send interactive message" }
+      }
+
+      return { success: true, messageId: data.messages?.[0]?.id }
+    } catch (err: any) {
+      console.error("[MetaCloud] sendInteractiveUrlButton exception:", err)
+      return { success: false, error: err.message }
+    }
+  }
+
   async parseWebhook(req: Request): Promise<ParsedWhatsAppMessage | null> {
     try {
       const body = await req.json()
