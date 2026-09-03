@@ -88,7 +88,10 @@ export async function createPagarmeCustomer({
     }
   }
   const rawDoc = (document || "").replace(/\D/g, "")
-  body.documents = [{ type: "cpf", number: rawDoc || "00000000000" }]
+  if (rawDoc) {
+    body.document = rawDoc
+    body.type = rawDoc.length === 11 ? "individual" : "company"
+  }
 
   console.log("[Pagar.me] Criando cliente:", { name, hasEmail: !!email, hasPhone: !!phone })
 
