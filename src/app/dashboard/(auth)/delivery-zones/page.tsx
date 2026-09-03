@@ -135,6 +135,7 @@ export default function DeliveryZonesPage() {
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+      loadData()
     } catch (e: any) {
       setError(e.message)
     } finally {
