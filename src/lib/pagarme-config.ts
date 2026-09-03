@@ -5,7 +5,7 @@ interface PagarmeConfig {
   webhookKey: string
   environment: string
   feePercentage: number
-  saasCommissionDefault: number
+  saasProfitPercentage: number
 }
 
 let cached: PagarmeConfig | null = null
@@ -26,7 +26,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
         webhookKey: parsed.webhookKey || process.env.PAGARME_WEBHOOK_KEY || "",
         environment: parsed.environment || process.env.PAGARME_ENVIRONMENT || "sandbox",
         feePercentage: parsed.feePercentage || 1.09,
-        saasCommissionDefault: parsed.saasCommissionDefault || 1.5,
+        saasProfitPercentage: parsed.saasProfitPercentage || 0.41,
       }
     }
   } catch {}
@@ -37,7 +37,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
       webhookKey: process.env.PAGARME_WEBHOOK_KEY || "",
       environment: process.env.PAGARME_ENVIRONMENT || "sandbox",
       feePercentage: 1.09,
-      saasCommissionDefault: 1.5,
+      saasProfitPercentage: 0.41,
     }
   }
 
