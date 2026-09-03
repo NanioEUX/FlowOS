@@ -7,8 +7,19 @@ export const runtime = "nodejs"
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
+  // Get webhook key from SystemConfig (admin SaaS config)
+  let webhookKey = process.env.PAGARME_WEBHOOK_KEY
+  try {
+    const config = await prisma.$queryRaw<{ value: string }[]>`
+      SELECT "value" FROM "SystemConfig" WHERE "key" = 'pagarme_config' LIMIT 1
+    `
+    if (config.length > 0) {
+      const parsed = JSON.parse(config[0].value)
+      if (parsed.webhookKey) webhookKey = parsed.webhookKey
+    }
+  } catch {}
+
   // Verify webhook signature if secret is configured
-  const webhookKey = process.env.PAGARME_WEBHOOK_KEY
   if (webhookKey) {
     const signature = req.headers.get("x-hub-signature-256") || req.headers.get("x-pagarme-signature") || ""
     if (!verifyPagarmeSignature(rawBody, signature, webhookKey)) {
