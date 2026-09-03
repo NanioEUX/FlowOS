@@ -577,12 +577,17 @@ function MetaConfig({
             </div>
           ) : (
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-20 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50">
-                <CreditCard className="h-6 w-6 text-zinc-600" />
+              <div
+                className="flex h-12 w-20 items-center justify-center rounded-lg border border-zinc-200"
+                style={{ backgroundColor: cardBrands.find((b) => b.id === cardBrand)?.color || "#666" }}
+              >
+                <span className="text-xs font-bold text-white tracking-wider uppercase">
+                  {cardBrand || "••••"}
+                </span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-zinc-900">
-                  **** **** **** {cardLast4}
+                <p className="text-sm font-mono font-semibold text-zinc-900 tracking-widest">
+                  •••• •••• •••• {cardLast4}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
