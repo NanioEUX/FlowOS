@@ -2262,11 +2262,19 @@ if (!data.error) {
                         <MessageSquare className="h-3.5 w-3.5" /> Preview
                       </p>
                       <div className="rounded-xl bg-[#0b141a] p-4 text-sm text-white whitespace-pre-wrap font-sans leading-relaxed">
-                        {(botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\nAcesse nosso cardápio: {link}")
+                        {(botGreeting || "Olá! Sou {nome}, em que posso ajudar?\n\n1 - Acompanhar pedido\n2 - Falar com atendente")
                           .replace(/\{nome\}/g, botAgentName || "Atendente")
-                          .replace(/\{link\}/g, establishmentSlug ? `https://flowoshub.com/${establishmentSlug}` : "https://flowoshub.com/seu-estabelecimento")
+                          .replace(/\{link\}/g, "")
+                          .replace(/\{cliente\}/g, "João")
                           + "\n\nDigite o *número* da opção desejada."}
                       </div>
+                      {botGreeting.includes("{link}") && establishmentSlug && (
+                        <div className="mt-2 flex justify-center">
+                          <div className="rounded-full border border-[#00a884] bg-[#0b141a] px-4 py-1.5 text-xs text-[#00a884] font-medium">
+                            Ver Cardápio ↗
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">

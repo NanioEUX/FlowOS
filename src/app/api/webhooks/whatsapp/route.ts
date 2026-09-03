@@ -404,9 +404,11 @@ export async function POST(req: NextRequest) {
           // Check if original greeting had {link} to use URL button
           if (establishment.botGreeting.includes("{link}") && establishment.slug && provider.sendInteractiveUrlButton) {
             const cardapioUrl = `https://flowoshub.com/${establishment.slug}`
-            // Remove the cardápio link line from the text for the button approach
+            // Remove lines containing the cardápio URL from text for button approach
             const textCleaned = responseMessage
-              .replace(/.*cardápio.*\n?.*/gi, "")
+              .split("\n")
+              .filter((line) => !line.includes("flowoshub.com") && !line.includes("cardápio"))
+              .join("\n")
               .replace(/\n{3,}/g, "\n\n")
               .trim()
             const delay = randomTypingDelay(
