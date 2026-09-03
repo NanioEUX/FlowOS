@@ -584,4 +584,3 @@ function formatMenuGreeting(agentName: string, greeting: string, menuJson: strin
   const menuText = menuOptions.map((opt, idx) => `${idx + 1}. ${opt.label}`).join("\n")
   return `${replaced}\n\n${menuText}\n\nDigite o *número* da opção desejada.`
 }
-}
