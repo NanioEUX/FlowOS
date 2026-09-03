@@ -403,7 +403,11 @@ export async function POST(req: NextRequest) {
           responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug, customer?.name)
           console.log(`[WhatsApp] Greeting result: "${responseMessage.substring(0, 100)}..."`)
           // Check if original greeting had {link} to use URL button
-          if (establishment.botGreeting.includes("{link}") && establishment.slug && provider.sendInteractiveUrlButton) {
+          const hasLink = establishment.botGreeting.includes("{link}")
+          const hasSlug = !!establishment.slug
+          const hasButton = typeof provider.sendInteractiveUrlButton === "function"
+          console.log(`[WhatsApp] URL button check: hasLink=${hasLink}, hasSlug=${hasSlug}, hasButton=${hasButton}`)
+          if (hasLink && hasSlug && hasButton) {
             const cardapioUrl = `https://flowoshub.com/${establishment.slug}`
             // Remove lines containing the cardápio URL from text for button approach
             const textCleaned = responseMessage
