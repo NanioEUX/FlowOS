@@ -5,15 +5,13 @@ export async function POST(req: NextRequest) {
   try {
     const { orderId, establishmentId } = await req.json()
 
-    console.log("[Pagar.me QR Code] Request received:", { orderId, environment: process.env.PAGARME_ENVIRONMENT })
-
     if (!orderId || !establishmentId) {
       return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } } },
+      include: { establishment: { select: { id: true, name: true } } },
     })
 
     if (!order) {
@@ -28,7 +26,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não possui transação Pagar.me" }, { status: 400 })
     }
 
-    // API Key comes from global config (admin SaaS)
     const { getPagarmeConfig } = await import("@/lib/pagarme-config")
     const { apiKey } = await getPagarmeConfig()
     if (!apiKey) {
@@ -38,39 +35,57 @@ export async function POST(req: NextRequest) {
     const apiUrl = "https://api.pagar.me/core/v5"
     const authHeader = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`
 
-    // Busca a transação para obter os dados do PIX
     const res = await fetch(`${apiUrl}/orders/${order.paymentId}`, {
       headers: { "Authorization": authHeader },
     })
 
-    console.log("[Pagar.me QR Code] Response status:", res.status)
+    if (!res.ok) {
+      return NextResponse.json({ error: "Erro ao buscar pedido no Pagar.me" }, { status: 502 })
+    }
 
-    if (res.ok) {
-      const data = await res.json()
-      const charges = data.charges || []
-      const pixCharge = charges.find((c: any) => c.payment_method === "pix")
+    const data = await res.json()
+    const charges = data.charges || []
+    const pixCharge = charges.find((c: any) => c.payment_method === "pix")
 
-      if (pixCharge?.last_transaction_status === "paid") {
-        return NextResponse.json({ paid: true })
-      }
+    if (!pixCharge) {
+      return NextResponse.json({ error: "Cobrança PIX não encontrada" }, { status: 404 })
+    }
 
-      if (pixCharge?.pix_qr_code) {
-        return NextResponse.json({
-          encodedImage: pixCharge.pix_qr_code,
-          payload: pixCharge.pix_payload,
-          expiration: pixCharge.gateway_response?.qr_code_expiration_at,
-        })
+    // Check if already paid
+    if (pixCharge.status === "paid" || pixCharge.last_transaction_status === "paid") {
+      return NextResponse.json({ paid: true })
+    }
+
+    // Try to get QR code URL from multiple possible locations
+    const qrCodeUrl = pixCharge.last_transaction?.qr_code_url || pixCharge.qr_code_url || ""
+
+    if (qrCodeUrl) {
+      // Fetch the QR code image and convert to base64
+      try {
+        const qrRes = await fetch(qrCodeUrl)
+        if (qrRes.ok) {
+          const qrBuffer = await qrRes.arrayBuffer()
+          const qrBase64 = Buffer.from(qrBuffer).toString("base64")
+          return NextResponse.json({
+            encodedImage: qrBase64,
+            payload: pixCharge.last_transaction?.pix_payload || pixCharge.pix_payload || "",
+          })
+        }
+      } catch (e) {
+        console.error("[Pagar.me QR] Erro ao baixar imagem:", e)
       }
     }
 
-    // Fallback: retorna paymentLink se existir
-    if (order.paymentLink) {
-      return NextResponse.json({ paymentLink: order.paymentLink })
+    // Fallback: check if paymentLink has base64 QR code
+    if (order.paymentLink?.startsWith("data:image")) {
+      const base64 = order.paymentLink.replace("data:image/png;base64,", "")
+      return NextResponse.json({
+        encodedImage: base64,
+        payload: pixCharge.last_transaction?.pix_payload || "",
+      })
     }
 
-    const err = await res.json().catch(() => ({}))
-    console.error("[Pagar.me QR Code] Error:", JSON.stringify(err))
-    return NextResponse.json({ error: "Erro ao buscar QR Code", details: err }, { status: 502 })
+    return NextResponse.json({ error: "QR Code não disponível ainda. Aguarde alguns segundos." }, { status: 404 })
   } catch (error: any) {
     console.error("[Pagar.me QR Code] Error:", error.message)
     return NextResponse.json({ error: "Erro ao buscar QR Code", details: error.message }, { status: 500 })
