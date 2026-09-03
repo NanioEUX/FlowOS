@@ -8,6 +8,7 @@ const MENU = [
   { href: "/admin-saas/respostas-rapidas", icon: "⚡", label: "Respostas Rápidas" },
   { href: "/admin-saas/templates", icon: "🎨", label: "Templates Categoria" },
   { href: "/admin-saas/instancias", icon: "📱", label: "Instâncias WhatsApp" },
+  { href: "/admin-saas/pagamentos", icon: "💰", label: "Gateway Pagamento" },
   { href: "/admin-saas/ia-custos", icon: "🤖", label: "IA & Custos" },
   { href: "/admin-saas/planos", icon: "💳", label: "Planos & Billing" },
   { href: "/admin-saas/logs", icon: "📋", label: "Logs & Auditoria" },
