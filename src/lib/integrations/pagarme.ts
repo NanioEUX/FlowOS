@@ -81,10 +81,8 @@ export async function createPagarmeCustomer({
       },
     }
   }
-  if (document) {
-    const rawDoc = document.replace(/\D/g, "")
-    body.documents = [{ type: "cpf", number: rawDoc }]
-  }
+  const rawDoc = (document || "").replace(/\D/g, "")
+  body.documents = [{ type: "cpf", number: rawDoc || "00000000000" }]
 
   console.log("[Pagar.me] Criando cliente:", { name, hasEmail: !!email, hasPhone: !!phone })
 
@@ -131,19 +129,20 @@ export async function createPixTransaction({
         quantity: 1,
       },
     ],
-    payment: {
-      payment_method: "pix",
-      pix: {
-        expires_in: expiresIn || 3600,
+    payments: [
+      {
+        payment_method: "pix",
+        pix: {
+          expires_in: expiresIn || 3600,
+        },
       },
-    },
+    ],
     customer_id: customerId,
-    close_at: expiresIn || 3600,
   }
 
   // Add split rules if provided (V5 format)
   if (splitRules && splitRules.length > 0) {
-    body.payment.split = splitRules.map((rule: any) => ({
+    body.payments[0].split = splitRules.map((rule: any) => ({
       recipient_id: rule.recipientId,
       type: rule.type || "percentage",
       amount: rule.amount,
@@ -156,6 +155,7 @@ export async function createPixTransaction({
   }
 
   console.log("[Pagar.me] Criando transação PIX:", { customerId, amount, orderId })
+  console.log("[Pagar.me] Request body:", JSON.stringify(body))
 
   const res = await fetch(`${PAGARME_API_URL}/orders`, {
     method: "POST",
@@ -202,20 +202,22 @@ export async function createCardTransaction({
         quantity: 1,
       },
     ],
-    payment: {
-      payment_method: "credit_card",
-      credit_card: {
-        card_id: cardToken,
-        installments: installments || 1,
-        statement_descriptor: "FLOWOS",
+    payments: [
+      {
+        payment_method: "credit_card",
+        credit_card: {
+          card_id: cardToken,
+          installments: installments || 1,
+          statement_descriptor: "FLOWOS",
+        },
       },
-    },
+    ],
     customer_id: customerId,
   }
 
   // Add split rules if provided (V5 format)
   if (splitRules && splitRules.length > 0) {
-    body.payment.split = splitRules.map((rule: any) => ({
+    body.payments[0].split = splitRules.map((rule: any) => ({
       recipient_id: rule.recipientId,
       type: rule.type || "percentage",
       amount: rule.amount,
