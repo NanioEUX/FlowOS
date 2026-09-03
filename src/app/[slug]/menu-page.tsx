@@ -317,7 +317,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cancelModalTotal, setCancelModalTotal] = useState<number>(0)
   const [cancelReason, setCancelReason] = useState<string>("")
   const [cancelling, setCancelling] = useState(false)
-  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string; birthDate?: string }>({ name: "", phone: "", address: "", notes: "" })
+  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string; birthDate?: string; email?: string }>({ name: "", phone: "", address: "", notes: "" })
   const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
@@ -1690,6 +1690,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           establishmentId: establishment.id,
           customerName: customer.name,
           customerPhone: customer.phone,
+          customerEmail: customer.email || "",
           customerAddress: orderType === "delivery" ? fullAddress : "",
           customerComplement: customer.address,
           customerCep: cep || "",
@@ -3534,6 +3535,17 @@ onPaymentConfirmed={handlePaymentSuccess}
                               setCustomer({ ...customer, cpf: formatted })
                             }}
                             placeholder="000.000.000-00"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>E-mail (para pagamento online)</label>
+                          <input
+                            type="email"
+                            value={customer.email || ""}
+                            onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                            placeholder="seu@email.com"
                             className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
                             style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                           />

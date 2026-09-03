@@ -62,15 +62,15 @@ export async function createPagarmeCustomer({
 }: {
   apiKey: string
   name: string
-  email?: string
+  email: string
   phone?: string
   document?: string
 }): Promise<PagarmeCustomer> {
   const body: any = {
     name,
+    email,
     type: "individual",
   }
-  if (email) body.email = email
   if (phone) {
     const raw = phone.replace(/\D/g, "")
     body.phones = {

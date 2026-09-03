@@ -55,7 +55,7 @@ export const revalidate = 5
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, firstPurchaseDiscount, couponDiscount, tableNumber, waiterName, changeFor, isScheduled, deliveryDate, customerLat, customerLng } = body
+    const { establishmentId, customerName, customerPhone, customerEmail, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, firstPurchaseDiscount, couponDiscount, tableNumber, waiterName, changeFor, isScheduled, deliveryDate, customerLat, customerLng } = body
 
     console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method)
 
@@ -495,6 +495,7 @@ export async function POST(req: NextRequest) {
         const { getPagarmeConfig } = await import("@/lib/pagarme-config")
         const pagarmeConfig = await getPagarmeConfig()
         const pagarmeApiKey = pagarmeConfig.apiKey
+        console.log("[Pagar.me] API Key loaded:", pagarmeApiKey ? pagarmeApiKey.substring(0, 10) + "..." : "NOT FOUND")
         if (!pagarmeApiKey) {
           return NextResponse.json({ error: "Pagamento Pagar.me não configurado no servidor. Contate o administrador." }, { status: 400 })
         }
@@ -507,6 +508,7 @@ export async function POST(req: NextRequest) {
           const customer = await createPagarmeCustomer({
             apiKey: pagarmeApiKey,
             name: customerName,
+            email: customerEmail || `${customerPhone.replace(/\D/g, "")}@pedidoflow.com`,
             phone: customerPhone || "",
             document: customerCpf || "",
           })
