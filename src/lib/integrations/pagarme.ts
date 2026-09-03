@@ -35,8 +35,14 @@ interface PagarmeTransactionResponse {
     status: string
     payment_method: string
     pix_qr_code?: string
+    qr_code_url?: string
     pix_payload?: string
     last_transaction_status?: string
+    last_transaction?: {
+      qr_code_url?: string
+      pix_qr_code?: string
+      pix_payload?: string
+    }
     boleto?: { url?: string }
     card?: { transaction_id?: string }
   }>

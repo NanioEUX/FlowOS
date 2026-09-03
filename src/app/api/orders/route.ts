@@ -529,10 +529,27 @@ export async function POST(req: NextRequest) {
               ),
             })
             
-            const qrCodeBase64 = pixPayment.charges?.[0]?.pix_qr_code || ""
-            const qrCodeUrl = pixPayment.charges?.[0]?.pix_qr_code ? `data:image/png;base64,${pixPayment.charges[0].pix_qr_code}` : ""
+            const charge = pixPayment.charges?.[0]
+            const tx = charge?.last_transaction
+            const qrCodeUrl = tx?.qr_code_url || charge?.qr_code_url || ""
             
-            paymentLink = qrCodeUrl || ""
+            // Fetch QR code image if URL available
+            let paymentLink = ""
+            if (qrCodeUrl) {
+              try {
+                const qrRes = await fetch(qrCodeUrl)
+                if (qrRes.ok) {
+                  const qrBuffer = await qrRes.arrayBuffer()
+                  const qrBase64 = Buffer.from(qrBuffer).toString("base64")
+                  paymentLink = `data:image/png;base64,${qrBase64}`
+                }
+              } catch (e) {
+                console.error("[Pagar.me] Erro ao baixar QR code:", e)
+                paymentLink = qrCodeUrl
+              }
+            }
+            
+            console.log("[Pagar.me] QR Code URL:", qrCodeUrl ? "OK" : "VAZIO")
             
             await prisma.order.update({
               where: { id: order.id },
