@@ -18,6 +18,7 @@ const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || "flow
 
 const ESTABLISHMENT_SELECT = {
   id: true,
+  slug: true,
   whatsappProvider: true,
   evolutionBaseUrl: true,
   evolutionApiKey: true,
