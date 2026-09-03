@@ -215,6 +215,7 @@ model Establishment {
   stories                       Story[]
   banners                       Banner[]
   users                         User[]
+  financialTransactions         FinancialTransaction[]
 }
 
 model Customer {
@@ -973,4 +974,27 @@ model CustomerNotification {
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
+}
+
+model FinancialTransaction {
+  id              String   @id @default(cuid())
+  establishmentId String
+  orderId         String?
+  paymentId       String   // Pagar.me order ID
+  provider        String   @default("pagarme") // pagarme | asaas | manual
+  type            String   @default("payment") // payment | refund | chargeback
+  status          String   @default("pending") // pending | paid | canceled | refunded
+  grossAmount     Int      // Valor bruto em centavos
+  fee             Int      @default(0) // Taxa cobrada em centavos
+  netAmount       Int      @default(0) // Valor líquido em centavos
+  splitSaas       Int      @default(0) // Valor recebido pelo SaaS em centavos
+  splitEstablishment Int   @default(0) // Valor recebido pelo estabelecimento em centavos
+  metadata        Json?    // Dados extras do webhook
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, createdAt])
+  @@index([paymentId])
 }

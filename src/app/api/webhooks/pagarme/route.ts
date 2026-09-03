@@ -126,6 +126,22 @@ async function processWebhook(eventType: string, orderData: any) {
       establishmentAmount: establishmentAmount / 100,
     })
     
-    // TODO: Save to financial_transactions table when created
+    // Save to financial_transactions table
+    await prisma.financialTransaction.create({
+      data: {
+        establishmentId: order.establishmentId,
+        orderId: order.id,
+        paymentId: String(orderId),
+        provider: "pagarme",
+        type: "payment",
+        status: "paid",
+        grossAmount: order.total,
+        fee: totalFee,
+        netAmount: order.total - totalFee,
+        splitSaas: saasAmount,
+        splitEstablishment: establishmentAmount,
+        metadata: charges[0] || null,
+      },
+    })
   }
 }
