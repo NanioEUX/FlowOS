@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
-    // API Key comes from global env (admin SaaS config)
-    const apiKey = process.env.PAGARME_API_KEY
+    // API Key comes from global config (admin SaaS)
+    const { getPagarmeConfig } = await import("@/lib/pagarme-config")
+    const { apiKey } = await getPagarmeConfig()
     if (!apiKey) {
       return NextResponse.json({ error: "Pagar.me não configurado no servidor" }, { status: 500 })
     }

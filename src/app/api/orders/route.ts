@@ -491,8 +491,10 @@ export async function POST(req: NextRequest) {
 
       if (usePagarme) {
         // Pagar.me payment - PIX or Card
-        // API Key comes from global env (admin SaaS config), not from establishment
-        const pagarmeApiKey = process.env.PAGARME_API_KEY
+        // API Key comes from global config (admin SaaS), not from establishment
+        const { getPagarmeConfig } = await import("@/lib/pagarme-config")
+        const pagarmeConfig = await getPagarmeConfig()
+        const pagarmeApiKey = pagarmeConfig.apiKey
         if (!pagarmeApiKey) {
           return NextResponse.json({ error: "Pagamento Pagar.me não configurado no servidor. Contate o administrador." }, { status: 400 })
         }

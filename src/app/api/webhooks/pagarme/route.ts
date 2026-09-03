@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { mapPagarmeStatus, verifyPagarmeSignature } from "@/lib/integrations/pagarme"
+import { getPagarmeConfig } from "@/lib/pagarme-config"
 
 export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  // Get webhook key from SystemConfig (admin SaaS config)
-  let webhookKey = process.env.PAGARME_WEBHOOK_KEY
-  try {
-    const config = await prisma.$queryRaw<{ value: string }[]>`
-      SELECT "value" FROM "SystemConfig" WHERE "key" = 'pagarme_config' LIMIT 1
-    `
-    if (config.length > 0) {
-      const parsed = JSON.parse(config[0].value)
-      if (parsed.webhookKey) webhookKey = parsed.webhookKey
-    }
-  } catch {}
+  // Get webhook key from config (database or env fallback)
+  const config = await getPagarmeConfig()
+  const webhookKey = config.webhookKey
 
   // Verify webhook signature if secret is configured
   if (webhookKey) {

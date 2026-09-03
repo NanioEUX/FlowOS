@@ -5,8 +5,8 @@ import { useState, useEffect } from "react"
 export default function PagamentosPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   const [pagarmeApiKey, setPagarmeApiKey] = useState("")
   const [pagarmeWebhookKey, setPagarmeWebhookKey] = useState("")
@@ -37,6 +37,7 @@ export default function PagamentosPage() {
     setSaving(true)
     setError("")
     setSaved(false)
+    setTestResult(null)
 
     try {
       const res = await fetch("/api/saas-admin/pagamentos", {
@@ -53,8 +54,11 @@ export default function PagamentosPage() {
         setError(data.error || "Erro ao salvar")
         return
       }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+
+      // Auto-test after save
+      const testRes = await fetch("/api/saas-admin/pagamentos/test")
+      const testData = await testRes.json()
+      setTestResult(testData)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -156,22 +160,15 @@ export default function PagamentosPage() {
             disabled={saving || !pagarmeApiKey}
             className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-lg px-6 py-2.5 text-sm transition-all"
           >
-            {saving ? "Salvando..." : "Salvar configuração"}
+            {saving ? "Salvando e testando..." : "Salvar e conectar"}
           </button>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-amber-700 space-y-2">
-          <p className="font-medium">⚠️ Importante:</p>
-          <p>
-            Após salvar, adicione as variáveis no arquivo <code className="bg-amber-100 px-1 rounded">.env</code> do servidor:
-          </p>
-          <pre className="bg-amber-100 rounded p-2 text-xs overflow-x-auto">
-{`PAGARME_API_KEY=${pagarmeApiKey || "sua_chave_aqui"}
-PAGARME_WEBHOOK_KEY=${pagarmeWebhookKey || "sua_chave_webhook"}
-PAGARME_ENVIRONMENT=${pagarmeEnvironment}`}
-          </pre>
-          <p>Reinicie o servidor após adicionar as variáveis.</p>
-        </div>
+        {testResult && (
+          <div className={`border rounded-lg px-4 py-3 text-sm ${testResult.ok ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+            {testResult.ok ? "✅ " : "❌ "}{testResult.message}
+          </div>
+        )}
 
         <div className="bg-zinc-50 rounded-lg p-4 text-xs text-zinc-500 space-y-2">
           <p className="font-medium text-zinc-700">Como funciona:</p>

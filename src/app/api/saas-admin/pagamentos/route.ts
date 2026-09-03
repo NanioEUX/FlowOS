@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSaasAdmin } from "@/lib/saas-admin-auth"
 import { prisma } from "@/lib/prisma"
+import { getPagarmeConfig } from "@/lib/pagarme-config"
 
 export async function GET() {
   const admin = await getSaasAdmin()
@@ -8,11 +9,13 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const config = await getPagarmeConfig()
+
   return NextResponse.json({
     ok: true,
-    pagarmeApiKey: process.env.PAGARME_API_KEY || "",
-    pagarmeWebhookKey: process.env.PAGARME_WEBHOOK_KEY || "",
-    pagarmeEnvironment: process.env.PAGARME_ENVIRONMENT || "sandbox",
+    pagarmeApiKey: config.apiKey,
+    pagarmeWebhookKey: config.webhookKey,
+    pagarmeEnvironment: config.environment,
   })
 }
 
