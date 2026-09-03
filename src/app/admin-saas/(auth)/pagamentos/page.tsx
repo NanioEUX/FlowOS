@@ -36,7 +36,6 @@ export default function PagamentosPage() {
   async function handleSave() {
     setSaving(true)
     setError("")
-    setSaved(false)
     setTestResult(null)
 
     try {
@@ -145,12 +144,6 @@ export default function PagamentosPage() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
             {error}
-          </div>
-        )}
-
-        {saved && (
-          <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3">
-            Configuração salva com sucesso!
           </div>
         )}
 
