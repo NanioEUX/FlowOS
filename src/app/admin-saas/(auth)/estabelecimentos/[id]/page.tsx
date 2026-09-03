@@ -29,6 +29,18 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
 
   if (!e) notFound()
 
+  // Get Pagar.me fee from SystemConfig
+  let pagarmeFee = 1.09
+  try {
+    const config = await prisma.$queryRaw<{ value: string }[]>`
+      SELECT "value" FROM "SystemConfig" WHERE "key" = 'pagarme_config' LIMIT 1
+    `
+    if (config.length > 0) {
+      const parsed = JSON.parse(config[0].value)
+      if (parsed.feePercentage) pagarmeFee = parsed.feePercentage
+    }
+  } catch {}
+
   return (
     <div className="p-8 max-w-4xl">
       <div className="mb-6">
@@ -60,7 +72,7 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
         </div>
         <div className="flex items-center gap-4 pt-2 border-t border-zinc-100">
           <span className="text-sm text-zinc-500">Comissão SaaS</span>
-          <CommissionEditor establishmentId={e.id} currentPercentage={e.saasCommissionPercentage || 10} />
+          <CommissionEditor establishmentId={e.id} currentPercentage={e.saasCommissionPercentage || 10} pagarmeFee={pagarmeFee} />
         </div>
       </div>
 

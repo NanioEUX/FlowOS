@@ -4,6 +4,7 @@ interface PagarmeConfig {
   apiKey: string
   webhookKey: string
   environment: string
+  feePercentage: number
 }
 
 let cached: PagarmeConfig | null = null
@@ -23,6 +24,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
         apiKey: parsed.apiKey || process.env.PAGARME_API_KEY || "",
         webhookKey: parsed.webhookKey || process.env.PAGARME_WEBHOOK_KEY || "",
         environment: parsed.environment || process.env.PAGARME_ENVIRONMENT || "sandbox",
+        feePercentage: parsed.feePercentage || 1.09,
       }
     }
   } catch {}
@@ -32,6 +34,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
       apiKey: process.env.PAGARME_API_KEY || "",
       webhookKey: process.env.PAGARME_WEBHOOK_KEY || "",
       environment: process.env.PAGARME_ENVIRONMENT || "sandbox",
+      feePercentage: 1.09,
     }
   }
 

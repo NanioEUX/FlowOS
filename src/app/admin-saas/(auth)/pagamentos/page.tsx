@@ -11,6 +11,7 @@ export default function PagamentosPage() {
   const [pagarmeApiKey, setPagarmeApiKey] = useState("")
   const [pagarmeWebhookKey, setPagarmeWebhookKey] = useState("")
   const [pagarmeEnvironment, setPagarmeEnvironment] = useState("sandbox")
+  const [pagarmeFeePercentage, setPagarmeFeePercentage] = useState(1.09)
   const [showApiKey, setShowApiKey] = useState(false)
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function PagamentosPage() {
         setPagarmeApiKey(data.pagarmeApiKey || "")
         setPagarmeWebhookKey(data.pagarmeWebhookKey || "")
         setPagarmeEnvironment(data.pagarmeEnvironment || "sandbox")
+        if (data.pagarmeFeePercentage) setPagarmeFeePercentage(data.pagarmeFeePercentage)
       }
     } catch (e) {
       console.error("Erro ao carregar config:", e)
@@ -46,6 +48,7 @@ export default function PagamentosPage() {
           pagarmeApiKey,
           pagarmeWebhookKey,
           pagarmeEnvironment,
+          pagarmeFeePercentage,
         }),
       })
       const data = await res.json()
@@ -139,6 +142,22 @@ export default function PagamentosPage() {
               Usada para validar assinatura dos webhooks recebidos.
             </p>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">Taxa Pagar.me (%)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={pagarmeFeePercentage}
+              onChange={(e) => setPagarmeFeePercentage(Number(e.target.value))}
+              className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+            />
+            <p className="text-xs text-zinc-400 mt-1">
+              Taxa real cobrada pelo Pagar.me (ex: 1,09%). Usada para calcular o líquido do SaaS.
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -174,25 +193,32 @@ export default function PagamentosPage() {
 
         {/* Taxas e comissão */}
         <div className="bg-white rounded-xl border border-zinc-200 p-6">
-          <h2 className="text-lg font-bold text-zinc-900 mb-4">Taxas e Comissões</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Pagar.me - Cartão de crédito</span>
-              <span className="text-zinc-900 font-medium">~3,99% + R$ 0,39</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Pagar.me - PIX</span>
-              <span className="text-zinc-900 font-medium">Grátis</span>
-            </div>
-            <div className="border-t border-zinc-100 pt-3 flex justify-between">
-              <span className="text-zinc-500">Comissão SaaS padrão</span>
-              <span className="text-green-600 font-medium">10%</span>
+          <h2 className="text-lg font-bold text-zinc-900 mb-4">Modelo de Taxas</h2>
+          <div className="bg-zinc-50 rounded-lg p-4 text-sm space-y-2">
+            <p className="font-medium text-zinc-700">Exemplo: Pedido de R$ 100,00</p>
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Estabelecimento recebe</span>
+                <span className="text-green-600 font-medium">98,50%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">SaaS recebe (bruto)</span>
+                <span className="text-green-600 font-medium">1,50%</span>
+              </div>
+              <div className="flex justify-between text-xs text-zinc-400">
+                <span className="pl-4">↳ Pagar.me cobra (do estabelecimento)</span>
+                <span>-1,09%</span>
+              </div>
+              <div className="flex justify-between text-xs text-zinc-400">
+                <span className="pl-4">↳ Líquido SaaS</span>
+                <span className="text-green-600">0,41%</span>
+              </div>
             </div>
           </div>
           <p className="text-xs text-zinc-400 mt-3">
-            A comissão % pode ser configurada por estabelecimento em{" "}
+            Configure a comissão de cada estabelecimento em{" "}
             <a href="/admin-saas/estabelecimentos" className="text-green-600 hover:underline">
-              Estabelecimentos
+              Estabelecimentos → [nome] → Pagamentos
             </a>
           </p>
         </div>
