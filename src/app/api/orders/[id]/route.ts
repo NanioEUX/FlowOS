@@ -227,6 +227,62 @@ export async function PATCH(
       }
     }
 
+    // Despachar corrida 99 quando pedido fica "Em Entrega"
+    if (status === "out_for_delivery" && order.orderType === "delivery") {
+      try {
+        const est = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+          select: {
+            tipoEntregaAtiva: true,
+            api99Key: true,
+            api99EmployeeId: true,
+            addressLat: true,
+            addressLng: true,
+          },
+        })
+
+        if (
+          est?.tipoEntregaAtiva === "99entrega" &&
+          est.api99Key &&
+          est.api99EmployeeId &&
+          est.addressLat &&
+          est.addressLng &&
+          order.customerLat &&
+          order.customerLng &&
+          !order.entrega99RideId
+        ) {
+          const entregaPinCode = String(Math.floor(1000 + Math.random() * 9000))
+          const { despacharCorrida99 } = await import("@/lib/integrations/nine-nine")
+          const result = await despacharCorrida99(
+            est.api99Key,
+            est.api99EmployeeId,
+            est.addressLat,
+            est.addressLng,
+            order.customerLat,
+            order.customerLng,
+            order.id,
+            entregaPinCode
+          )
+
+          if (result.success && result.rideId) {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                entrega99RideId: result.rideId,
+                entregaPinCode,
+                entregaStatusProvedor: "pending",
+              },
+            })
+            console.log("[99 dispatch] corrida despachada:", { orderId: order.id, rideId: result.rideId })
+          } else {
+            console.error("[99 dispatch] falha ao despachar:", result.error)
+          }
+        }
+      } catch (err) {
+        console.error("[99 dispatch] error:", err)
+      }
+    }
+
     // When the order becomes ready, auto-assign an available delivery person.
     if (status === "ready" && order.orderType === "delivery") {
       try {

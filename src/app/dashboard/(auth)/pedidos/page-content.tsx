@@ -97,6 +97,11 @@ export default function PedidosPage() {
       await fetchAuth(`/api/orders/ifood-poll`, { method: "POST" })
     } catch (e) {}
 
+    // Poll 99 rides status
+    try {
+      await fetchAuth(`/api/delivery/poll-99`, { method: "GET" })
+    } catch (e) {}
+
     const res = await fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
     const data = await res.json()
     setOrders(data)
@@ -777,6 +782,11 @@ win.close()
                   🔑 {order.deliveryCode}
                 </span>
               )}
+              {order.entregaPinCode && order.entrega99RideId && ["ready", "out_for_delivery"].includes(order.status) && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-300" title="PIN 99Entrega (motoboy)">
+                  🏍️ PIN: {order.entregaPinCode}
+                </span>
+              )}
               <p className="font-semibold text-zinc-900">{order.customerName}</p>
               {order.isScheduled && order.deliveryDate && (
                 <span
@@ -997,6 +1007,23 @@ win.close()
               <p className="text-2xl font-black tracking-[0.4em] text-amber-700">
                 {order.deliveryCode}
               </p>
+            </div>
+          )}
+
+          {/* 99Entrega PIN - displayed for the admin (when ride is dispatched) */}
+          {order.entregaPinCode && order.entrega99RideId && ["ready", "out_for_delivery"].includes(order.status) && (
+            <div className="mt-3 rounded-lg border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 p-3 text-center">
+              <p className="text-[10px] font-medium text-purple-600 uppercase tracking-wider mb-1">
+                🏍️ PIN 99Entrega (motoboy)
+              </p>
+              <p className="text-2xl font-black tracking-[0.4em] text-purple-700">
+                {order.entregaPinCode}
+              </p>
+              {order.entregaStatusProvedor && (
+                <p className="text-[10px] text-purple-500 mt-1">
+                  Status: {order.entregaStatusProvedor}
+                </p>
+              )}
             </div>
           )}
 

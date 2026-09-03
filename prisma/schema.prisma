@@ -409,6 +409,8 @@ model Order {
   customerName       String
   customerPhone      String?
   customerAddress    String?
+  customerLat        Float?
+  customerLng        Float?
   orderType          String          @default("delivery")
   paymentMethod      String          @default("online")
   items              String

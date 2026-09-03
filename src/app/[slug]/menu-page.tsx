@@ -1694,6 +1694,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           customerComplement: customer.address,
           customerCep: cep || "",
           customerCpf: customer.cpf || "",
+          customerLat: geoDeliveryInfo?.lat || null,
+          customerLng: geoDeliveryInfo?.lng || null,
           orderType,
           paymentMethod: resolvedMethod,
           changeFor: changeForValue,

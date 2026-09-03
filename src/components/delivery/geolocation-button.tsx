@@ -10,6 +10,8 @@ export interface DeliveryInfo {
   zoneName?: string
   freeAbove?: number | null
   reason?: string
+  lat?: number
+  lng?: number
 }
 
 interface Props {
@@ -44,8 +46,8 @@ export function GeolocationButton({ establishmentId, orderTotal, onResult }: Pro
             `/api/delivery/calculate?est=${establishmentId}&lat=${lat}&lng=${lng}`
           )
           const data = await res.json()
-          setInfo(data)
-          onResult(data)
+          setInfo({ ...data, lat, lng })
+          onResult({ ...data, lat, lng })
         } catch (e: any) {
           setError("Erro ao calcular entrega")
         } finally {
