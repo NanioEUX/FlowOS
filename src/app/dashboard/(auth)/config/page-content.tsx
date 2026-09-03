@@ -1330,52 +1330,27 @@ if (!data.error) {
             </div>
             )}
 
-              {/* Pagar.me (Stone) */}
+              {/* Pagar.me (Stone) - Conta do estabelecimento */}
               <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-zinc-900">Stone (Pagar.me)</h4>
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX + Cartão via Pagar.me</span>
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX + Cartão</span>
                 </div>
+                <p className="text-xs text-zinc-500">
+                  Configure abaixo o ID da sua conta Stone para receber sua parte nas vendas.
+                </p>
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">API Key</label>
-                  <input
-                    type={showKey ? "text" : "password"}
-                    placeholder="pagarme_key_production_..."
-                    value={form.pagarmeApiKey}
-                    onChange={(e) => { setForm({ ...form, pagarmeApiKey: e.target.value }); setAsaasTestResult(null) }}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-400">
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Environment</label>
-                  <select
-                    value={form.pagarmeEnvironment}
-                    onChange={(e) => setForm({ ...form, pagarmeEnvironment: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  >
-                    <option value="sandbox">Sandbox</option>
-                    <option value="production">Produção</option>
-                  </select>
-                  <label className="block text-sm font-medium text-zinc-700">Webhook Key</label>
+                  <label className="block text-sm font-medium text-zinc-700">ID da Conta Stone (Receiver ID)</label>
                   <input
                     type="text"
-                    placeholder="Chave do webhook Pagar.me"
-                    value={form.pagarmeWebhookKey}
-                    onChange={(e) => setForm({ ...form, pagarmeWebhookKey: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                  />
-                  <label className="block text-sm font-medium text-zinc-700">Receiver ID (Split)</label>
-                  <input
-                    type="text"
-                    placeholder="ID do receiver Stone para split (opcional)"
+                    placeholder="Seu ID de receiver na Stone/Pagar.me"
                     value={form.pagarmeSplitReceiverId}
                     onChange={(e) => setForm({ ...form, pagarmeSplitReceiverId: e.target.value })}
                     className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
-                  <p className="text-xs text-zinc-500 mt-1">Deixe em branco se não usar split. O receiver ficará com 100% do valor.</p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    ID da sua conta no painel da Stone. Se não preencher, 100% vai para a conta principal do SaaS.
+                  </p>
                 </div>
               </div>
 

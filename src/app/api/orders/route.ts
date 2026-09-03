@@ -449,8 +449,10 @@ export async function POST(req: NextRequest) {
 
       if (usePagarme) {
         // Pagar.me payment - PIX or Card
-        if (!establishment.pagarmeApiKey) {
-          return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Pagar.me não está configurada. Configure em Configurações." }, { status: 400 })
+        // API Key comes from global env (admin SaaS config), not from establishment
+        const pagarmeApiKey = process.env.PAGARME_API_KEY
+        if (!pagarmeApiKey) {
+          return NextResponse.json({ error: "Pagamento Pagar.me não configurado no servidor. Contate o administrador." }, { status: 400 })
         }
         try {
           console.log("[Pagar.me] Criando pagamento:", { customerName, customerPhone, value: order.total })
@@ -459,7 +461,7 @@ export async function POST(req: NextRequest) {
           
           // Create customer first
           const customer = await createPagarmeCustomer({
-            apiKey: establishment.pagarmeApiKey,
+            apiKey: pagarmeApiKey,
             name: customerName,
             phone: customerPhone || "",
             document: customerCpf || "",
@@ -469,7 +471,7 @@ export async function POST(req: NextRequest) {
           
           if (billingType === "pix") {
             const pixPayment = await createPixTransaction({
-              apiKey: establishment.pagarmeApiKey,
+              apiKey: pagarmeApiKey,
               customerId: customer.id,
               amount: order.total,
               description: `Pedido #${order.orderNumber} - ${establishment.name}`,

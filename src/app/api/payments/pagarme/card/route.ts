@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { id: true, pagarmeApiKey: true, name: true, pagarmeEnvironment: true, pagarmeSplitReceiverId: true } } },
+      include: { establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } } },
     })
 
     if (!order) {
@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
-    if (!order.establishment.pagarmeApiKey) {
-      return NextResponse.json({ error: "API Key do Pagar.me não configurada" }, { status: 400 })
+    // API Key comes from global env (admin SaaS config)
+    const apiKey = process.env.PAGARME_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: "Pagar.me não configurado no servidor" }, { status: 500 })
     }
 
     if (!order.paymentId) {
@@ -32,7 +34,6 @@ export async function POST(req: NextRequest) {
     }
 
     // First, try to get or create the customer
-    const apiKey = order.establishment.pagarmeApiKey
     const apiUrl = "https://api.pagar.me/core/v5"
     const authHeader = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     const splitRules = order.establishment.pagarmeSplitReceiverId
       ? [{
           walletId: order.establishment.pagarmeSplitReceiverId,
-          percentual: 100, // O receiver fica com 100% quando configurado (ou poderia ser uma porcentagem)
+          percentual: 100,
           description: "Recebedor Stone configurado pelo estabelecimento"
         }]
       : []
