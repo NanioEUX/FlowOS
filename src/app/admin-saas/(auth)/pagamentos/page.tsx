@@ -171,6 +171,31 @@ export default function PagamentosPage() {
             <li>O webhook recebe em: <code className="bg-zinc-100 px-1 rounded">/api/webhooks/pagarme</code></li>
           </ul>
         </div>
+
+        {/* Taxas e comissão */}
+        <div className="bg-white rounded-xl border border-zinc-200 p-6">
+          <h2 className="text-lg font-bold text-zinc-900 mb-4">Taxas e Comissões</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Pagar.me - Cartão de crédito</span>
+              <span className="text-zinc-900 font-medium">~3,99% + R$ 0,39</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Pagar.me - PIX</span>
+              <span className="text-zinc-900 font-medium">Grátis</span>
+            </div>
+            <div className="border-t border-zinc-100 pt-3 flex justify-between">
+              <span className="text-zinc-500">Comissão SaaS padrão</span>
+              <span className="text-green-600 font-medium">10%</span>
+            </div>
+          </div>
+          <p className="text-xs text-zinc-400 mt-3">
+            A comissão % pode ser configurada por estabelecimento em{" "}
+            <a href="/admin-saas/estabelecimentos" className="text-green-600 hover:underline">
+              Estabelecimentos
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   )
