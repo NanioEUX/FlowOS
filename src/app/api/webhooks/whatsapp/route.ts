@@ -420,7 +420,7 @@ export async function POST(req: NextRequest) {
               establishment.botTypingDelayMinMs || 1500,
               establishment.botTypingDelayMaxMs || 3500
             )
-            const sendResult = await provider.sendInteractiveUrlButton(parsed.phone, textCleaned, "Ver Cardápio", cardapioUrl, { delay })
+            const sendResult = await provider!.sendInteractiveUrlButton!(parsed.phone, textCleaned, "Ver Cardápio", cardapioUrl, { delay })
             if (sendResult.success) {
               console.log(`[WhatsApp] ✓ Greeting with URL button sent to ${parsed.phone}`)
               return NextResponse.json({ success: true, messageId: sendResult.messageId, usedAI: false })
