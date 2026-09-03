@@ -12,6 +12,7 @@ export default function PagamentosPage() {
   const [pagarmeWebhookKey, setPagarmeWebhookKey] = useState("")
   const [pagarmeEnvironment, setPagarmeEnvironment] = useState("sandbox")
   const [pagarmeFeePercentage, setPagarmeFeePercentage] = useState(1.09)
+  const [saasCommissionDefault, setSaasCommissionDefault] = useState(1.5)
   const [showApiKey, setShowApiKey] = useState(false)
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function PagamentosPage() {
         setPagarmeWebhookKey(data.pagarmeWebhookKey || "")
         setPagarmeEnvironment(data.pagarmeEnvironment || "sandbox")
         if (data.pagarmeFeePercentage) setPagarmeFeePercentage(data.pagarmeFeePercentage)
+        if (data.saasCommissionDefault) setSaasCommissionDefault(data.saasCommissionDefault)
       }
     } catch (e) {
       console.error("Erro ao carregar config:", e)
@@ -49,6 +51,7 @@ export default function PagamentosPage() {
           pagarmeWebhookKey,
           pagarmeEnvironment,
           pagarmeFeePercentage,
+          saasCommissionDefault,
         }),
       })
       const data = await res.json()
@@ -158,6 +161,22 @@ export default function PagamentosPage() {
               Taxa real cobrada pelo Pagar.me (ex: 1,09%). Usada para calcular o líquido do SaaS.
             </p>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">Comissão SaaS padrão (%)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={saasCommissionDefault}
+              onChange={(e) => setSaasCommissionDefault(Number(e.target.value))}
+              className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+            />
+            <p className="text-xs text-zinc-400 mt-1">
+              Percentual que o SaaS cobra (ex: 1,5%). Líquido = Comissão - Taxa Pagar.me
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -199,19 +218,19 @@ export default function PagamentosPage() {
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-zinc-500">Estabelecimento recebe</span>
-                <span className="text-green-600 font-medium">98,50%</span>
+                <span className="text-green-600 font-medium">{(100 - saasCommissionDefault).toFixed(2)}%</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">SaaS recebe (bruto)</span>
-                <span className="text-green-600 font-medium">1,50%</span>
+                <span className="text-green-600 font-medium">{saasCommissionDefault.toFixed(2)}%</span>
               </div>
               <div className="flex justify-between text-xs text-zinc-400">
                 <span className="pl-4">↳ Pagar.me cobra (do estabelecimento)</span>
-                <span>-1,09%</span>
+                <span>-{pagarmeFeePercentage.toFixed(2)}%</span>
               </div>
               <div className="flex justify-between text-xs text-zinc-400">
                 <span className="pl-4">↳ Líquido SaaS</span>
-                <span className="text-green-600">0,41%</span>
+                <span className="text-green-600">{Math.max(0, saasCommissionDefault - pagarmeFeePercentage).toFixed(2)}%</span>
               </div>
             </div>
           </div>

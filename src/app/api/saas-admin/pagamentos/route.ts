@@ -17,6 +17,7 @@ export async function GET() {
     pagarmeWebhookKey: config.webhookKey,
     pagarmeEnvironment: config.environment,
     pagarmeFeePercentage: config.feePercentage || 1.09,
+    saasCommissionDefault: config.saasCommissionDefault || 1.5,
   })
 }
 
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { pagarmeApiKey, pagarmeWebhookKey, pagarmeEnvironment, pagarmeFeePercentage } = await req.json()
+    const { pagarmeApiKey, pagarmeWebhookKey, pagarmeEnvironment, pagarmeFeePercentage, saasCommissionDefault } = await req.json()
 
     if (!pagarmeApiKey) {
       return NextResponse.json({ error: "API Key é obrigatória" }, { status: 400 })
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       webhookKey: pagarmeWebhookKey,
       environment: pagarmeEnvironment,
       feePercentage: pagarmeFeePercentage || 1.09,
+      saasCommissionDefault: saasCommissionDefault || 1.5,
     })
 
     await prisma.$executeRaw`
