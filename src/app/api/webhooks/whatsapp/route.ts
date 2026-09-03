@@ -333,7 +333,8 @@ export async function POST(req: NextRequest) {
     const phoneDigits = parsed.phone.replace(/\D/g, "")
     const phoneNoCountry = phoneDigits.replace(/^55/, "")
     // Meta sometimes strips the leading 9 from Brazilian mobile numbers
-    const phoneWithNine = phoneNoCountry.length === 10 && phoneNoCountry[2] !== "9"
+    // e.g. Meta sends 554791438729 (noCountry=4791438729) but DB has 47991438729
+    const phoneWithNine = phoneNoCountry.length === 10
       ? phoneNoCountry.slice(0, 2) + "9" + phoneNoCountry.slice(2)
       : null
     const allPhoneVariants = [
