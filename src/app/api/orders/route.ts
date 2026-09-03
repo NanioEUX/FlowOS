@@ -367,7 +367,8 @@ export async function POST(req: NextRequest) {
 
     if (isOnlinePayment) {
       const useInter = establishment.paymentProvider === "inter" && paymentMethod === "pix"
-      const useAsaas = !useInter
+      const usePagarme = establishment.paymentProvider === "pagarme"
+      const useAsaas = !useInter && !usePagarme
 
       if (useInter) {
         // Inter PIX payment (0% fee)
@@ -441,6 +442,70 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Asaas] ERRO ao gerar pagamento:", err.message)
+          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
+        }
+      }
+
+      if (usePagarme) {
+        // Pagar.me payment - PIX or Card
+        if (!establishment.pagarmeApiKey) {
+          return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Pagar.me não está configurada. Configure em Configurações." }, { status: 400 })
+        }
+        try {
+          console.log("[Pagar.me] Criando pagamento:", { customerName, customerPhone, value: order.total })
+
+          const { createPagarmeCustomer, createPixTransaction } = await import("@/lib/integrations/pagarme")
+          
+          // Create customer first
+          const customer = await createPagarmeCustomer({
+            apiKey: establishment.pagarmeApiKey,
+            name: customerName,
+            phone: customerPhone || "",
+            document: customerCpf || "",
+          })
+          
+          const billingType = paymentMethod === "card" ? "card" : "pix"
+          
+          if (billingType === "pix") {
+            const pixPayment = await createPixTransaction({
+              apiKey: establishment.pagarmeApiKey,
+              customerId: customer.id,
+              amount: order.total,
+              description: `Pedido #${order.orderNumber} - ${establishment.name}`,
+              orderId: order.id,
+              splitRules: establishment.pagarmeSplitReceiverId ? [{ 
+                walletId: establishment.pagarmeSplitReceiverId, 
+                percentual: 100 
+              }] : undefined,
+            })
+            
+            const qrCodeBase64 = pixPayment.charges?.[0]?.pix_qr_code || ""
+            const qrCodeUrl = pixPayment.charges?.[0]?.pix_qr_code ? `data:image/png;base64,${pixPayment.charges[0].pix_qr_code}` : ""
+            
+            paymentLink = qrCodeUrl || ""
+            
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                paymentId: pixPayment.id,
+                paymentLink: paymentLink,
+                paymentStatus: "pending",
+                status: "payment_pending",
+              },
+            })
+          } else {
+            // Card payment - will be processed in the card endpoint
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                paymentStatus: "pending",
+                status: "payment_pending",
+              },
+            })
+          }
+        } catch (err: any) {
+          console.error("[Pagar.me] ERRO ao gerar pagamento:", err.message)
           await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
           return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }

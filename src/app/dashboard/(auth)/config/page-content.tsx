@@ -1240,7 +1240,8 @@ if (!data.error) {
               </p>
             </div>
 
-            {/* Asaas - Provider obrigatório */}
+            {/* Asaas - OCULTO (configuração fica no admin SaaS) */}
+            {false && (
             <div className="rounded-xl border border-zinc-200 p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <h4 className="font-medium text-zinc-900">Asaas</h4>
@@ -1320,13 +1321,14 @@ if (!data.error) {
                   Testar conexão
                 </Button>
                 {asaasTestResult && (
-                  <span className={`flex items-center gap-1.5 text-sm font-medium ${asaasTestResult.ok ? "text-green-600" : "text-red-500"}`}>
-                    {asaasTestResult.ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    {asaasTestResult.message}
+                  <span className={`flex items-center gap-1.5 text-sm font-medium ${asaasTestResult?.ok ? "text-green-600" : "text-red-500"}`}>
+                    {asaasTestResult?.ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    {asaasTestResult?.message}
                   </span>
                 )}
               </div>
             </div>
+            )}
 
               {/* Pagar.me (Stone) */}
               <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
