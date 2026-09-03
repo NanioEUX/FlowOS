@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
-    const { id, phone, name, cpf, establishmentId } = body
+    const { id, phone, name, cpf, birthDate, establishmentId } = body
 
     if (!id || !establishmentId) {
       return NextResponse.json({ error: "id e establishmentId são obrigatórios" }, { status: 400 })
@@ -132,6 +132,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const cpfDigits = cpf?.replace(/\D/g, "")
+    const birthDateParsed = birthDate ? new Date(birthDate) : null
 
     const customer = await prisma.customer.update({
       where: { id },
@@ -139,6 +140,7 @@ export async function PUT(req: NextRequest) {
         ...(name && { name }),
         ...(phone && { phone }),
         ...(cpfDigits?.length === 11 && { cpf: cpfDigits }),
+        ...(birthDateParsed && !isNaN(birthDateParsed.getTime()) && { birthDate: birthDateParsed }),
       },
     })
 

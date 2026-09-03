@@ -84,6 +84,8 @@ interface CustomerData {
   verifiedAt?: string | null
   realTotalSpent?: number
   realTotalOrders?: number
+  cpf?: string | null
+  birthDate?: string | null
 }
 
 interface Props {
@@ -315,7 +317,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cancelModalTotal, setCancelModalTotal] = useState<number>(0)
   const [cancelReason, setCancelReason] = useState<string>("")
   const [cancelling, setCancelling] = useState(false)
-  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string }>({ name: "", phone: "", address: "", notes: "" })
+  const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string; birthDate?: string }>({ name: "", phone: "", address: "", notes: "" })
   const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
@@ -1198,7 +1200,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         const data = await res.json()
         if (data && !data.notFound) {
           setCustomerData(data)
-          setCustomer((prev) => ({ ...prev, name: data.name || prev.name, address: data.address || prev.address, cpf: data.cpf || prev.cpf }))
+          setCustomer((prev) => ({ ...prev, name: data.name || prev.name, address: data.address || prev.address, cpf: data.cpf || prev.cpf, birthDate: data.birthDate || prev.birthDate }))
           setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
           setCustomerTier(data.tier || "bronze")
           if (data.cep && data.address) {
@@ -3517,6 +3519,33 @@ onPaymentConfirmed={handlePaymentSuccess}
                             style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                           />
                         </div>
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                          <input
+                            value={customer.cpf || ""}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
+                              let formatted = raw
+                              if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`
+                              if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`
+                              if (raw.length > 9) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`
+                              setCustomer({ ...customer, cpf: formatted })
+                            }}
+                            placeholder="000.000.000-00"
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>Data de nascimento</label>
+                          <input
+                            type="date"
+                            value={customer.birthDate || ""}
+                            onChange={(e) => setCustomer({ ...customer, birthDate: e.target.value })}
+                            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                          />
+                        </div>
                         <button
                           onClick={async () => {
                             const phoneRaw = phoneInput.replace(/\D/g, "")
@@ -3539,6 +3568,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                     name: customer.name,
                                     phone: phoneRaw,
                                     cpf: customer.cpf,
+                                    birthDate: customer.birthDate,
                                     establishmentId: establishment.id,
                                   }),
                                 })
