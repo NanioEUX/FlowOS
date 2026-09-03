@@ -998,3 +998,10 @@ model FinancialTransaction {
   @@index([establishmentId, createdAt])
   @@index([paymentId])
 }
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
