@@ -187,13 +187,14 @@ export async function POST(req: NextRequest) {
           where: { phone: customerPhone, establishmentId },
         })
         if (customer) {
-          // Update CPF/name if provided
+          // Update CPF/name/email if provided
           const cpfDigits = customerCpf?.replace(/\D/g, "")
           await prisma.customer.update({
             where: { id: customer.id },
             data: {
               ...(cpfDigits?.length === 11 && { cpf: cpfDigits }),
               ...(customerName && { name: customerName }),
+              ...(customerEmail && { email: customerEmail }),
             },
           })
         }
@@ -503,6 +504,8 @@ export async function POST(req: NextRequest) {
           console.log("[Pagar.me] Criando pagamento:", { customerName, customerPhone, value: order.total })
 
           const { createPagarmeCustomer, createPixTransaction } = await import("@/lib/integrations/pagarme")
+          
+          console.log("[Pagar.me] Dados cliente:", { customerName, customerPhone, customerEmail, customerCpf })
           
           // Create customer first
           const customer = await createPagarmeCustomer({
