@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } } },
+      include: { establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true, saasCommissionPercentage: true } } },
     })
 
     if (!order) {
@@ -47,12 +47,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cliente não associado à transação" }, { status: 400 })
     }
 
-    const splitRules = order.establishment.pagarmeSplitReceiverId
-      ? [{
-          walletId: order.establishment.pagarmeSplitReceiverId,
-          percentual: 100,
-          description: "Recebedor Stone configurado pelo estabelecimento"
-        }]
+    // Build split rules for Pagar.me V5
+    const saasRecipientId = process.env.PAGARME_SAAS_RECIPIENT_ID
+    const commissionPercentage = order.establishment.saasCommissionPercentage || 10
+    
+    const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId)
+      ? [
+          {
+            recipientId: saasRecipientId,
+            type: "percentage" as const,
+            amount: commissionPercentage,
+            options: {
+              chargeProcessingFee: false,
+              chargeRemainderFee: false,
+              liable: true,
+            },
+          },
+          {
+            recipientId: order.establishment.pagarmeSplitReceiverId,
+            type: "percentage" as const,
+            amount: 100 - commissionPercentage,
+            options: {
+              chargeProcessingFee: true,
+              chargeRemainderFee: true,
+              liable: false,
+            },
+          },
+        ]
       : []
 
     const transaction = await createCardTransaction({

@@ -43,9 +43,14 @@ interface PagarmeTransactionResponse {
 }
 
 interface SplitRule {
-  walletId: string
-  percentual: number
-  description?: string
+  recipientId: string
+  type: "percentage" | "amount"
+  amount: number
+  options?: {
+    chargeProcessingFee?: boolean
+    chargeRemainderFee?: boolean
+    liable?: boolean
+  }
 }
 
 export async function createPagarmeCustomer({
@@ -136,12 +141,17 @@ export async function createPixTransaction({
     close_at: expiresIn || 3600,
   }
 
-  // Add split rules if provided
+  // Add split rules if provided (V5 format)
   if (splitRules && splitRules.length > 0) {
-    body.payment.split_rules = splitRules.map((rule: any) => ({
-      wallet_id: rule.walletId,
-      percentual: rule.percentual,
-      ...(rule.description && { description: rule.description }),
+    body.payment.split = splitRules.map((rule: any) => ({
+      recipient_id: rule.recipientId,
+      type: rule.type || "percentage",
+      amount: rule.amount,
+      options: {
+        charge_processing_fee: rule.options?.chargeProcessingFee ?? false,
+        charge_remainder_fee: rule.options?.chargeRemainderFee ?? false,
+        liable: rule.options?.liable ?? false,
+      },
     }))
   }
 
@@ -203,12 +213,17 @@ export async function createCardTransaction({
     customer_id: customerId,
   }
 
-  // Add split rules if provided
+  // Add split rules if provided (V5 format)
   if (splitRules && splitRules.length > 0) {
-    body.payment.split_rules = splitRules.map((rule: any) => ({
-      wallet_id: rule.walletId,
-      percentual: rule.percentual,
-      ...(rule.description && { description: rule.description }),
+    body.payment.split = splitRules.map((rule: any) => ({
+      recipient_id: rule.recipientId,
+      type: rule.type || "percentage",
+      amount: rule.amount,
+      options: {
+        charge_processing_fee: rule.options?.chargeProcessingFee ?? false,
+        charge_remainder_fee: rule.options?.chargeRemainderFee ?? false,
+        liable: rule.options?.liable ?? false,
+      },
     }))
   }
 

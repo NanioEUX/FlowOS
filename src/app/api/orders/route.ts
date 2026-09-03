@@ -7,6 +7,48 @@ import { convertQuantity } from "@/lib/units"
 
 import crypto from "crypto"
 
+/**
+ * Build split rules for Pagar.me V5
+ * SaaS takes commission %, establishment gets the rest
+ * Establishment absorbs processing fees (charge_processing_fee: true)
+ */
+function buildSplitRules(
+  totalAmount: number,
+  establishmentRecipientId: string | null | undefined,
+  saasCommissionPercentage: number
+) {
+  if (!establishmentRecipientId) return undefined
+
+  const saasRecipientId = process.env.PAGARME_SAAS_RECIPIENT_ID
+  if (!saasRecipientId) {
+    console.warn("[Orders] PAGARME_SAAS_RECIPIENT_ID not configured, skipping split")
+    return undefined
+  }
+
+  return [
+    {
+      recipientId: saasRecipientId,
+      type: "percentage" as const,
+      amount: saasCommissionPercentage,
+      options: {
+        chargeProcessingFee: false,
+        chargeRemainderFee: false,
+        liable: true,
+      },
+    },
+    {
+      recipientId: establishmentRecipientId,
+      type: "percentage" as const,
+      amount: 100 - saasCommissionPercentage,
+      options: {
+        chargeProcessingFee: true,
+        chargeRemainderFee: true,
+        liable: false,
+      },
+    },
+  ]
+}
+
 // Orders GET: 5s cache (frequent updates but reduces DB load)
 export const revalidate = 5
 
@@ -476,10 +518,11 @@ export async function POST(req: NextRequest) {
               amount: order.total,
               description: `Pedido #${order.orderNumber} - ${establishment.name}`,
               orderId: order.id,
-              splitRules: establishment.pagarmeSplitReceiverId ? [{ 
-                walletId: establishment.pagarmeSplitReceiverId, 
-                percentual: 100 
-              }] : undefined,
+              splitRules: buildSplitRules(
+                order.total,
+                establishment.pagarmeSplitReceiverId,
+                establishment.saasCommissionPercentage || 10
+              ),
             })
             
             const qrCodeBase64 = pixPayment.charges?.[0]?.pix_qr_code || ""

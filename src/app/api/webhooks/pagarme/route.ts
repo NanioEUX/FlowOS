@@ -75,12 +75,29 @@ async function processWebhook(eventType: string, orderData: any) {
 
   // Also check charge status if available
   const charges = orderData?.charges || []
+  let totalFee = 0
+  let saasAmount = 0
+  let establishmentAmount = 0
+
   if (charges.length > 0) {
     const charge = charges[0]
     if (charge.status === "paid" || charge.last_transaction_status === "paid") {
       eventStatus = "paid"
     } else if (charge.status === "canceled") {
       eventStatus = "canceled"
+    }
+
+    // Capture fees from charge
+    totalFee = charge.fee || 0
+    
+    // Capture split amounts
+    const split = charge.split || []
+    for (const s of split) {
+      if (s.recipient_id === process.env.PAGARME_SAAS_RECIPIENT_ID) {
+        saasAmount = s.amount || 0
+      } else {
+        establishmentAmount = s.amount || 0
+      }
     }
   }
 
@@ -96,5 +113,19 @@ async function processWebhook(eventType: string, orderData: any) {
       data: updateData,
     })
     console.log("[Pagar.me Webhook] Order #", order.orderNumber, "updated:", updateData)
+  }
+
+  // Log financial data for paid transactions
+  if (eventStatus === "paid" && totalFee > 0) {
+    console.log("[Pagar.me Webhook] Financial log:", {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount: order.total,
+      totalFee: totalFee / 100,
+      saasAmount: saasAmount / 100,
+      establishmentAmount: establishmentAmount / 100,
+    })
+    
+    // TODO: Save to financial_transactions table when created
   }
 }

@@ -170,6 +170,8 @@ model Establishment {
   tipoEntregaAtiva              String             @default("propria") // "propria" | "99entrega"
   api99Key                      String?                                // x-api-key da 99 Empresas
   api99EmployeeId               String?                                // ID do gestor para API
+  // Pagar.me - Split de pagamentos
+  saasCommissionPercentage      Float              @default(10)        // Percentual de comissão do SaaS (ex: 10 = 10%)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
   pickupMessage                 String?
