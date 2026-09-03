@@ -836,6 +836,11 @@ export default function ConfigPage() {
   const [whatsappAutomationEnabled, setWhatsappAutomationEnabled] = useState(false)
   const [aiMessagesUsed, setAiMessagesUsed] = useState(0)
   const [aiMessagesLimit, setAiMessagesLimit] = useState(1000)
+  const [tipoEntregaAtiva, setTipoEntregaAtiva] = useState<"propria" | "99entrega">("propria")
+  const [api99Key, setApi99Key] = useState("")
+  const [api99EmployeeId, setApi99EmployeeId] = useState("")
+  const [saving99, setSaving99] = useState(false)
+  const [saved99, setSaved99] = useState(false)
   const [orderConfig, setOrderConfig] = useState({ 
     delivery: true, 
     pickup: true,
@@ -961,6 +966,9 @@ if (!data.error) {
           setWhatsappAutomationEnabled(data.whatsappAutomationEnabled ?? false)
           setAiMessagesUsed(data.aiMessagesUsed || 0)
           setAiMessagesLimit(data.aiMessagesLimit || 1000)
+          setTipoEntregaAtiva(data.tipoEntregaAtiva || "propria")
+          setApi99Key(data.api99Key || "")
+          setApi99EmployeeId(data.api99EmployeeId || "")
           setAsaasMode(data.interClientId ? "card_only" : "both")
           if (data.paymentConfig) {
             try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
@@ -1066,6 +1074,9 @@ if (!data.error) {
           ifoodMerchantId: form.ifoodMerchantId || "",
           metaCardBrand: metaCardBrand || null,
           metaCardLast4: metaCardLast4 || null,
+          tipoEntregaAtiva,
+          api99Key: tipoEntregaAtiva === "99entrega" ? api99Key : null,
+          api99EmployeeId: tipoEntregaAtiva === "99entrega" ? api99EmployeeId : null,
         }),
       })
 
@@ -2599,12 +2610,75 @@ if (!data.error) {
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-zinc-900">99 Entregas</h3>
-              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">Em breve</span>
+              {tipoEntregaAtiva === "99entrega" && (
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Ativo</span>
+              )}
             </div>
-            <p className="text-sm text-zinc-500">Integração com 99 Entregas para entregas próprias.</p>
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
-              <p className="text-sm text-zinc-500">Integração em desenvolvimento.</p>
-              <p className="mt-1 text-xs text-zinc-400">Em breve você poderá conectar seu WhatsApp da 99 Entregas aqui.</p>
+            <p className="text-sm text-zinc-500">Configure a integração com a 99 Entregas para entregas próprias.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700">Modo de Entrega</label>
+                <div className="mt-2 flex gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="tipoEntrega"
+                      value="propria"
+                      checked={tipoEntregaAtiva === "propria"}
+                      onChange={() => setTipoEntregaAtiva("propria")}
+                      className="h-4 w-4 text-green-600"
+                    />
+                    <span className="text-sm text-zinc-700">Entrega Própria</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="tipoEntrega"
+                      value="99entrega"
+                      checked={tipoEntregaAtiva === "99entrega"}
+                      onChange={() => setTipoEntregaAtiva("99entrega")}
+                      className="h-4 w-4 text-green-600"
+                    />
+                    <span className="text-sm text-zinc-700">99 Entregas</span>
+                  </label>
+                </div>
+              </div>
+
+              {tipoEntregaAtiva === "99entrega" && (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 space-y-4">
+                  <p className="text-sm text-zinc-600">
+                    Configure suas credenciais da API 99 Empresas para despachar corridas automaticamente.
+                  </p>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700">API Key (x-api-key)</label>
+                    <input
+                      type="password"
+                      value={api99Key}
+                      onChange={(e) => setApi99Key(e.target.value)}
+                      placeholder="Sua API Key da 99"
+                      className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700">Employee ID (ID do Gestor)</label>
+                    <input
+                      type="text"
+                      value={api99EmployeeId}
+                      onChange={(e) => setApi99EmployeeId(e.target.value)}
+                      placeholder="ID do gestor na 99"
+                      className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm"
+                    />
+                  </div>
+
+                  <p className="text-xs text-zinc-400">
+                    As credenciais são validadas ao salvar. O webhook de status será recebido em: 
+                    <code className="rounded bg-zinc-100 px-1 ml-1">/api/webhooks/99</code>
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
