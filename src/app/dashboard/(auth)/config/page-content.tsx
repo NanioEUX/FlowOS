@@ -1370,32 +1370,9 @@ export default function ConfigPage() {
                       className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-sm font-medium text-zinc-700">Banco</label>
-                    <select id="recipientBank"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
-                      <option value="">Selecione o banco</option>
-                      <option value="001">001 - Banco do Brasil</option>
-                      <option value="033">033 - Santander</option>
-                      <option value="041">041 - Banrisul</option>
-                      <option value="070">070 - BRB</option>
-                      <option value="077">077 - Banco Inter</option>
-                      <option value="104">104 - Caixa Econômica</option>
-                      <option value="197">197 - Stone</option>
-                      <option value="208">208 - BTG Pactual</option>
-                      <option value="212">212 - Banco Original</option>
-                      <option value="237">237 - Bradesco</option>
-                      <option value="260">260 - Nu Pagamentos (Nubank)</option>
-                      <option value="290">290 - PagSeguro</option>
-                      <option value="318">318 - BMG</option>
-                      <option value="336">336 - C6 Bank</option>
-                      <option value="341">341 - Itaú</option>
-                      <option value="389">389 - Banco Mercantil</option>
-                      <option value="623">623 - Pan</option>
-                      <option value="633">633 - Rendimento</option>
-                      <option value="655">655 - Votorantim</option>
-                      <option value="707">707 - Daycoval</option>
-                      <option value="741">741 - Ribeirão Preto</option>
-                    </select>
+                    <label className="block text-sm font-medium text-zinc-700">Banco (código)</label>
+                    <input type="text" placeholder="Ex: 341 (Itaú), 001 (BB), 237 (Bradesco)..." id="recipientBank"
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
