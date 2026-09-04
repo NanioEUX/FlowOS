@@ -35,12 +35,18 @@ export async function POST(req: Request) {
     }
 
     const configKey = "pagarme_config"
+
+    // Preserve existing fields (saasRecipientId, webhookUrl) that aren't editable here
+    const existing = await prisma.systemConfig.findUnique({ where: { key: configKey } })
+    const existingValue = existing ? JSON.parse(existing.value || "{}") : {}
+
     const configValue = JSON.stringify({
+      ...existingValue,
       apiKey: pagarmeApiKey,
       webhookKey: pagarmeWebhookKey,
       environment: pagarmeEnvironment,
       feePercentage: pagarmeFeePercentage || 1.09,
-      saasProfitPercentage: saasProfitPercentage || 0.41,
+      saasProfitPercentage: saasProfitPercentage || 0,
     })
 
     await prisma.$executeRaw`
