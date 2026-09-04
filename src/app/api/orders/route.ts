@@ -27,7 +27,8 @@ function buildSplitRules(
   }
 
   // SaaS commission = Pagar.me fee + SaaS profit (configured in admin panel)
-  const totalCommission = (pagarmeConfig?.feePercentage || 1.09) + (pagarmeConfig?.saasProfitPercentage || 0.41)
+  // Pagar.me V5 requires integer percentages (no decimals)
+  const totalCommission = Math.round((pagarmeConfig?.feePercentage || 1.09) + (pagarmeConfig?.saasProfitPercentage || 0.41))
   const establishmentPercentage = 100 - totalCommission
 
   console.log("[Orders] Split rules:", { totalCommission, establishmentPercentage, saasRecipientId, establishmentRecipientId })

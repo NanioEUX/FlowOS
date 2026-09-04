@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
     // Build split rules for Pagar.me V5
     const configData = await getPagarmeConfig()
     const saasRecipientId = configData.saasRecipientId
-    const totalCommission = (configData.feePercentage || 1.09) + (configData.saasProfitPercentage || 0.41)
+    // Pagar.me V5 requires integer percentages (no decimals)
+    const totalCommission = Math.round((configData.feePercentage || 1.09) + (configData.saasProfitPercentage || 0.41))
     const establishmentPercentage = 100 - totalCommission
     
     const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId)
