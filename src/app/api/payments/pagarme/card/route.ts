@@ -79,13 +79,13 @@ export async function POST(req: NextRequest) {
             recipientId: saasRecipientId,
             type: "percentage" as const,
             amount: Math.max(1, Math.round(saasProfit)),
-            options: { chargeProcessingFee: false, chargeRemainderFee: false, liable: true },
+            options: { chargeProcessingFee: true, chargeRemainderFee: true, liable: true },
           },
           {
             recipientId: order.establishment.pagarmeSplitReceiverId,
             type: "percentage" as const,
             amount: 100 - Math.max(1, Math.round(saasProfit)),
-            options: { chargeProcessingFee: true, chargeRemainderFee: true, liable: false },
+            options: { chargeProcessingFee: false, chargeRemainderFee: false, liable: false },
           },
         ]
       : []

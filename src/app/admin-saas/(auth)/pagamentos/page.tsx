@@ -82,7 +82,8 @@ export default function PagamentosPage() {
   }
 
   const saasPercentage = feeMode === "pagarme_only" ? 0 : saasProfitPercentage
-  const establishmentPercentage = 100 - saasPercentage - pagarmeFeePercentage
+  const establishmentPercentage = feeMode === "pagarme_only" ? 100 - pagarmeFeePercentage : 100 - saasPercentage
+  const saasNet = feeMode === "pagarme_only" ? 0 : saasPercentage - pagarmeFeePercentage
 
   return (
     <div className="p-8 max-w-2xl">
@@ -252,15 +253,10 @@ export default function PagamentosPage() {
               {saasPercentage > 0 && (
                 <div className="flex justify-between">
                   <span className="text-zinc-600">SaaS recebe</span>
-                  <span className="font-medium text-green-700">{saasPercentage.toFixed(2)}% = R$ {(100 * saasPercentage / 100).toFixed(2)}</span>
+                  <span className="font-medium text-green-700">{saasNet.toFixed(2)}% ({saasPercentage.toFixed(2)}% - {pagarmeFeePercentage.toFixed(2)}% pagarme) = R$ {(100 * saasNet / 100).toFixed(2)}</span>
                 </div>
               )}
             </div>
-            {feeMode === "pagarme_plus_saas" && (
-              <p className="text-[11px] text-zinc-400 mt-2 border-t border-green-200 pt-2">
-                A taxa do Pagar.me ({pagarmeFeePercentage.toFixed(2)}%) é descontada do valor do SaaS.
-              </p>
-            )}
           </div>
         </div>
 

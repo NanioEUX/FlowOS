@@ -47,8 +47,8 @@ function buildSplitRules(
       type: "percentage" as const,
       amount: saasPercentage,
       options: {
-        chargeProcessingFee: false,
-        chargeRemainderFee: false,
+        chargeProcessingFee: true,
+        chargeRemainderFee: true,
         liable: true,
       },
     },
@@ -57,8 +57,8 @@ function buildSplitRules(
       type: "percentage" as const,
       amount: establishmentPercentage,
       options: {
-        chargeProcessingFee: true,
-        chargeRemainderFee: true,
+        chargeProcessingFee: false,
+        chargeRemainderFee: false,
         liable: false,
       },
     },
