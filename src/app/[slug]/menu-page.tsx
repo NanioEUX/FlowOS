@@ -5653,6 +5653,16 @@ function PaymentModal({
   // Fetch QR Code on mount with retry (runs for PIX tab and card mode to get invoiceUrl)
   useEffect(() => {
     if ((tab !== "pix" && !mode) || !orderId) return
+
+    // If paymentLink already has base64 QR code (from order creation), use it directly
+    if (paymentLink?.startsWith("data:image")) {
+      const base64 = paymentLink.replace("data:image/png;base64,", "")
+      setQrCode({ image: base64, payload: "" })
+      setCountdown(prev => prev > 0 ? prev : 300)
+      setQrLoading(false)
+      return
+    }
+
     setQrLoading(true)
     setQrError("")
     const controller = new AbortController()
@@ -5707,7 +5717,7 @@ function PaymentModal({
 
     fetchQrCode()
     return () => controller.abort()
-  }, [tab, orderId, paymentProvider])
+  }, [tab, orderId, paymentProvider, paymentLink])
 
   // Countdown timer
   useEffect(() => {
