@@ -197,6 +197,8 @@ export async function createCardTransaction({
   description,
   orderId,
   cardToken,
+  creditCard,
+  creditCardHolderInfo,
   installments,
   splitRules,
 }: {
@@ -205,10 +207,31 @@ export async function createCardTransaction({
   amount: number
   description: string
   orderId: string
-  cardToken: string
+  cardToken?: string
+  creditCard?: { number: string; expiry: string; cvv: string }
+  creditCardHolderInfo?: { name: string; cpf: string; email: string; phone?: string; cep?: string; number?: string }
   installments?: number
   splitRules?: SplitRule[]
 }): Promise<PagarmeTransactionResponse> {
+  // Build credit card object - support both token and raw card data
+  const creditCardObj: any = {
+    installments: installments || 1,
+    statement_descriptor: "FLOWOS",
+  }
+
+  if (cardToken) {
+    creditCardObj.card_id = cardToken
+  } else if (creditCard) {
+    const [expMonth, expYear] = creditCard.expiry.split("/")
+    creditCardObj.card = {
+      number: creditCard.number.replace(/\s/g, ""),
+      holder_name: creditCardHolderInfo?.name || "",
+      exp_month: expMonth,
+      exp_year: expYear.length === 2 ? `20${expYear}` : expYear,
+      cvv: creditCard.cvv,
+    }
+  }
+
   const body: any = {
     items: [
       {
@@ -221,11 +244,7 @@ export async function createCardTransaction({
     payments: [
       {
         payment_method: "credit_card",
-        credit_card: {
-          card_id: cardToken,
-          installments: installments || 1,
-          statement_descriptor: "FLOWOS",
-        },
+        credit_card: creditCardObj,
       },
     ],
     customer_id: customerId,

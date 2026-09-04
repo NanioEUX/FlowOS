@@ -4,10 +4,18 @@ import { createCardTransaction } from "@/lib/integrations/pagarme"
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, cardToken, installments, establishmentId } = await req.json()
+    const body = await req.json()
+    const { orderId, cardToken, installments, establishmentId, creditCard, creditCardHolderInfo } = body
 
-    if (!orderId || !cardToken || !establishmentId) {
-      return NextResponse.json({ error: "orderId, cardToken e establishmentId obrigatórios" }, { status: 400 })
+    if (!orderId || !establishmentId) {
+      return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
+    }
+
+    // Accept either cardToken (pre-tokenized) or raw card data
+    const hasCardToken = !!cardToken
+    const hasRawCard = !!(creditCard?.number && creditCard?.expiry && creditCard?.cvv)
+    if (!hasCardToken && !hasRawCard) {
+      return NextResponse.json({ error: "Dados do cartão obrigatórios (cardToken ou creditCard)" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
@@ -86,7 +94,9 @@ export async function POST(req: NextRequest) {
       amount: order.total,
       description: `Pedido #${order.orderNumber} - ${order.establishment.name}`,
       orderId: order.id,
-      cardToken,
+      cardToken: hasCardToken ? cardToken : undefined,
+      creditCard: hasRawCard ? creditCard : undefined,
+      creditCardHolderInfo: hasRawCard ? creditCardHolderInfo : undefined,
       installments,
       splitRules,
     })

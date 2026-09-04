@@ -1749,9 +1749,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         applyLocalVerified(phoneDigits)
       }
 
-      // If payment link exists, close cart (payment modal will take over).
+      // If payment link exists or card payment, close cart (payment modal will take over).
       // Otherwise, stay in cart and show confirmation step.
-      if (data.paymentLink) {
+      if (data.paymentLink || paymentMethod === "card") {
         setShowCart(false)
         setCartStep("confirmation")
       } else {
@@ -1793,6 +1793,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
       if (data.paymentLink) {
         console.log("[submitOrder]Abrindo PaymentModal em 300ms...")
+        setTimeout(() => setShowPaymentModal(true), 300)
+      } else if (paymentMethod === "card") {
+        console.log("[submitOrder] Pagamento cartão - abrindo PaymentModal...")
+        setShowCart(false)
+        setCartStep("confirmation")
         setTimeout(() => setShowPaymentModal(true), 300)
       } else {
         console.log("[submitOrder] SEM paymentLink - tela de sucesso vai aparecer (sem pagamento)")
@@ -2427,8 +2432,9 @@ const handlePaymentSuccess = useCallback(() => {
     return () => { mounted = false; controller.abort() }
   }, [orderResult?.paymentLink, orderResult?.paymentDone, orderResult?.orderId, establishment.slug, handlePaymentSuccess])
 
-  // If success but has payment link, show only the payment modal (no success screen)
-  if (orderResult?.success && orderResult?.paymentLink && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "") && showPaymentModal) {
+  // If success but has payment link (PIX) or card payment, show the payment modal
+  const needsPaymentModal = (orderResult?.paymentLink || orderResult?.paymentMethod === "card") && orderResult?.success && !orderResult?.paymentDone && !paidOrderIdsRef.current.has(orderResult.orderId || "")
+  if (needsPaymentModal && showPaymentModal) {
     console.log("[render] paymentLink existe, showPaymentModal:", showPaymentModal, "orderId:", orderResult.orderId)
     // If user closed modal, don't reopen - render normal UI
     if (!showPaymentModal && userClosedPaymentModalRef.current) {
@@ -5646,9 +5652,9 @@ function PaymentModal({
   // Success state
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
-  // Fetch QR Code on mount with retry (runs for PIX tab and card mode to get invoiceUrl)
+  // Fetch QR Code on mount with retry (runs for PIX tab only, not card mode)
   useEffect(() => {
-    if ((tab !== "pix" && !mode) || !orderId) return
+    if (mode === "card" || (tab !== "pix" && !mode) || !orderId) return
 
     // If paymentLink already has base64 QR code (from order creation), use it directly
     if (paymentLink?.startsWith("data:image")) {
