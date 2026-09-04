@@ -251,8 +251,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
-  const [bottomSheetSelections, setBottomSheetSelections] = useState<Record<string, { name: string; price: number; quantity: number }[]>>({})
-  const [bottomSheetError, setBottomSheetError] = useState<string | null>(null)
+  const [bottomSheetSelections, setBottomSheetSelections] = useState<Record<string, any[]>>({})
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedProductQty, setSelectedProductQty] = useState(1)
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
@@ -1186,22 +1185,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
 
-  const cartItemsMissingRequired = cart.some(cartItem => {
-    const product = establishment.categories.flatMap(c => c.products).find(p => p.id === cartItem.id)
-    if (!product) return false
-    const opts = (product as any).additionalOptions || []
-    const groups: Record<string, any[]> = {}
-    opts.forEach((opt: any) => {
-      const g = opt.groupName || "default"
-      if (!groups[g]) groups[g] = []
-      groups[g].push(opt)
-    })
-    return Object.entries(groups).some(([groupName, groupOpts]) => {
-      if (groupOpts[0]?.selectionType !== "required") return false
-      const selected = cartItem.additionalOptions || []
-      return !selected.some((s: any) => s.name && groupOpts.some((g: any) => g.name === s.name))
-    })
-  })
+
 
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
@@ -1421,11 +1405,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       }
     }
 
-    // If product has additional options, open bottom sheet
-    if ((product as any).additionalOptions?.length > 0) {
+    // If product has required options, open bottom sheet (must select before adding)
+    const productOpts = (product as any).additionalOptions || []
+    const hasRequired = productOpts.some((o: any) => o.selectionType === "required")
+    if (hasRequired) {
       setBottomSheetProduct(product)
       setBottomSheetSelections({})
-      setBottomSheetError(null)
       return
     }
 
@@ -4689,11 +4674,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0) || cartItemsMissingRequired}
+                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : cartItemsMissingRequired ? "Marque os itens obrigatórios" : "Finalizar pedido"}
+                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
@@ -5453,34 +5438,54 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             {/* Fixed bottom button */}
             <div className="px-5 pb-6 pt-3 border-t flex-shrink-0" style={{ borderColor: theme.borderInputColor }}>
-              <button
-                onClick={() => {
-                  const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
-                  const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
-                  const unitPrice = basePrice + optionsPrice
-                  setCart((prev) => {
-                    if (editingCartItemId) {
-                      return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice } : item)
-                    }
-                    const existing = prev.find((item) => item.id === selectedProduct.id)
-                    if (existing) {
-                      return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
-                    }
-                    return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
-                  })
-                  setEditingCartItemId(null)
-                  setSelectedProduct(null)
-                  setAddedItemId(selectedProduct.id)
-                  setTimeout(() => setAddedItemId(null), 800)
-                  setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
-                  setTimeout(() => setCartToast(null), 3000)
-                }}
-                className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                style={{ backgroundColor: theme.primary }}
-              >
-                <Plus className="w-5 h-5" />
-                {editingCartItemId ? "Salvar" : "Adicionar"} · {formatCurrency((((selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price) + selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)) * selectedProductQty)}
-              </button>
+              {(() => {
+                const options = (selectedProduct as any).additionalOptions || []
+                const groups: Record<string, any[]> = {}
+                options.forEach((opt: any) => {
+                  const group = opt.groupName || "default"
+                  if (!groups[group]) groups[group] = []
+                  groups[group].push(opt)
+                })
+                const selectedProductMissingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
+                  const firstOpt = groupOptions[0]
+                  if (firstOpt?.selectionType === "required") {
+                    return !selectedProductOptions.some((s) => s.name && groupOptions.some((g) => g.name === s.name))
+                  }
+                  return false
+                })
+                const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
+                const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
+                const unitPrice = basePrice + optionsPrice
+                return (
+                  <button
+                    onClick={() => {
+                      if (selectedProductMissingRequired) return
+                      setCart((prev) => {
+                        if (editingCartItemId) {
+                          return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice } : item)
+                        }
+                        const existing = prev.find((item) => item.id === selectedProduct.id)
+                        if (existing) {
+                          return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
+                        }
+                        return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
+                      })
+                      setEditingCartItemId(null)
+                      setSelectedProduct(null)
+                      setAddedItemId(selectedProduct.id)
+                      setTimeout(() => setAddedItemId(null), 800)
+                      setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
+                      setTimeout(() => setCartToast(null), 3000)
+                    }}
+                    disabled={selectedProductMissingRequired}
+                    className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    <Plus className="w-5 h-5" />
+                    {selectedProductMissingRequired ? "Selecione os itens obrigatórios" : `${editingCartItemId ? "Salvar" : "Adicionar"} · ${formatCurrency(unitPrice * selectedProductQty)}`}
+                  </button>
+                )
+              })()}
             </div>
           </div>
           </div>
@@ -5532,7 +5537,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   const isRequired = firstOpt?.selectionType === "required"
                   const selected = bottomSheetSelections[groupName] || []
                   const hasSelection = selected.length > 0
-                  const showError = isRequired && !hasSelection && bottomSheetError
+                  const showError = isRequired && !hasSelection
                   return (
                     <div key={groupIdx} className="mb-5">
                       <div className="flex items-center justify-between mb-2">
@@ -5542,7 +5547,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </div>
                         {isRequired && <span className="text-white text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
                       </div>
-                      {showError && <p className="text-[11px] text-red-500 mb-1">Selecione pelo menos uma opção</p>}
                       <div className="border rounded-xl overflow-hidden" style={{ borderColor: showError ? "#ef4444" : theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
                           if (opt.inputType === "quantity") {
@@ -5607,45 +5611,47 @@ onPaymentConfirmed={handlePaymentSuccess}
               })()}
             </div>
             <div className="px-5 pb-6 pt-2 border-t" style={{ borderColor: theme.borderInputColor }}>
-              <button
-                onClick={() => {
-                  const options = bottomSheetProduct.additionalOptions || []
-                  const groups: Record<string, any[]> = {}
-                  options.forEach((opt: any) => {
-                    const group = opt.groupName || "default"
-                    if (!groups[group]) groups[group] = []
-                    groups[group].push(opt)
-                  })
-                  const missingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
-                    const firstOpt = groupOptions[0]
-                    if (firstOpt?.selectionType === "required") {
-                      return !(bottomSheetSelections[groupName]?.length > 0)
-                    }
-                    return false
-                  })
-                  if (missingRequired) {
-                    setBottomSheetError("Selecione os itens obrigatórios")
-                    return
+              {(() => {
+                const options = bottomSheetProduct.additionalOptions || []
+                const groups: Record<string, any[]> = {}
+                options.forEach((opt: any) => {
+                  const group = opt.groupName || "default"
+                  if (!groups[group]) groups[group] = []
+                  groups[group].push(opt)
+                })
+                const missingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
+                  const firstOpt = groupOptions[0]
+                  if (firstOpt?.selectionType === "required") {
+                    return !(bottomSheetSelections[groupName]?.length > 0)
                   }
-                  setBottomSheetError(null)
-                  const allSelections = Object.values(bottomSheetSelections).flat()
-                  setCart((prev) => {
-                    const existing = prev.find((item) => item.id === bottomSheetProduct.id)
-                    if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
-                  })
-                  setBottomSheetProduct(null)
-                  setAddedItemId(bottomSheetProduct.id)
-                  setTimeout(() => setAddedItemId(null), 800)
-                  setCartToast({ name: bottomSheetProduct.name, image: bottomSheetProduct.image || undefined })
-                  setTimeout(() => setCartToast(null), 3000)
-                }}
-                className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                style={{ backgroundColor: theme.primary }}
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar ao pedido — {formatCurrency((bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price)}
-              </button>
+                  return false
+                })
+                const basePrice = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price
+                return (
+                  <button
+                    onClick={() => {
+                      if (missingRequired) return
+                      const allSelections = Object.values(bottomSheetSelections).flat()
+                      setCart((prev) => {
+                        const existing = prev.find((item) => item.id === bottomSheetProduct.id)
+                        if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
+                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
+                      })
+                      setBottomSheetProduct(null)
+                      setAddedItemId(bottomSheetProduct.id)
+                      setTimeout(() => setAddedItemId(null), 800)
+                      setCartToast({ name: bottomSheetProduct.name, image: bottomSheetProduct.image || undefined })
+                      setTimeout(() => setCartToast(null), 3000)
+                    }}
+                    disabled={missingRequired}
+                    className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    <Plus className="w-5 h-5" />
+                    {missingRequired ? "Selecione os itens obrigatórios" : `Adicionar ao pedido — ${formatCurrency(basePrice)}`}
+                  </button>
+                )
+              })()}
             </div>
           </div>
         </div>
