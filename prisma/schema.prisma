@@ -129,7 +129,7 @@ model Establishment {
   efiCertificate                String?
   efiEnvironment                String             @default("sandbox")
   efiWebhookToken               String?
-  paymentProvider               String             @default("asaas")
+  paymentProvider               String             @default("pagarme")
   interClientId                 String?
   interClientSecret             String?
   interCertificate              String?
