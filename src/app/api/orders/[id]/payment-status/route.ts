@@ -28,6 +28,7 @@ export async function GET(
       paymentStatus: true,
       status: true,
       paymentId: true,
+      establishmentId: true,
       establishment: {
         select: {
           asaasApiKey: true,
