@@ -980,7 +980,10 @@ export default function ConfigPage() {
             }, [establishmentId])
 
     useEffect(() => {
-        if (!establishmentId || !form.pagarmeSplitReceiverId) return
+        if (!establishmentId || !form.pagarmeSplitReceiverId) {
+            setRecipientData(null)
+            return
+        }
         setLoadingRecipient(true)
         fetchAuth(`/api/establishments/${establishmentId}/recipient`)
             .then(r => r.json())
@@ -989,7 +992,7 @@ export default function ConfigPage() {
                 setLoadingRecipient(false)
             })
             .catch(() => setLoadingRecipient(false))
-    }, [establishmentId, form.pagarmeSplitReceiverId])
+    }, [form.pagarmeSplitReceiverId])
     
     async function handleSave(e: React.FormEvent) {
         e.preventDefault()
