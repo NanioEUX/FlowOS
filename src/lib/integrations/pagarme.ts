@@ -130,6 +130,7 @@ export async function createPixTransaction({
   splitRules?: SplitRule[]
 }): Promise<PagarmeTransactionResponse> {
   const body: any = {
+    antifraud_enabled: false,
     items: [
       {
         id: orderId,
@@ -242,6 +243,7 @@ export async function createCardTransaction({
   }
 
   const body: any = {
+    antifraud_enabled: false,
     items: [
       {
         id: orderId,
@@ -293,10 +295,25 @@ export async function createCardTransaction({
   // Check charge status for card failures
   const charge = data.charges?.[0]
   if (charge && (charge.status === "failed" || charge.status === "declined")) {
-    const acquirerMsg = charge.last_transaction?.acquirer_message
-    const gatewayErrors = charge.last_transaction?.gateway_response?.errors?.map((e: any) => e.message).join(", ")
-    const reason = acquirerMsg || gatewayErrors || charge.last_transaction_status || charge.status
-    throw new Error(`Cartao nao autorizado: ${reason}`)
+    const acquirerMsg = charge.last_transaction?.acquirer_message || ""
+    const lastTxStatus = charge.last_transaction_status || ""
+    const gatewayCode = charge.last_transaction?.gateway_response?.code || ""
+
+    // If acquirer approved or transaction was authorized/captured, treat as success
+    const isApproved = acquirerMsg.toLowerCase().includes("aprovad") ||
+      acquirerMsg.toLowerCase().includes("sucesso") ||
+      lastTxStatus === "authorized" ||
+      lastTxStatus === "captured" ||
+      lastTxStatus === "waiting_capture" ||
+      gatewayCode === "200"
+
+    if (!isApproved) {
+      const gatewayErrors = charge.last_transaction?.gateway_response?.errors?.map((e: any) => e.message).join(", ")
+      const reason = acquirerMsg || gatewayErrors || lastTxStatus || charge.status
+      throw new Error(`Cartao nao autorizado: ${reason}`)
+    }
+    // If approved but charge status is "failed", continue - webhook will update
+    console.log("[Pagar.me] Charge status 'failed' but acquirer approved:", acquirerMsg)
   }
 
   return data as PagarmeTransactionResponse
