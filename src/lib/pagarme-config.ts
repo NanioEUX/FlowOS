@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 interface PagarmeConfig {
   apiKey: string
   webhookKey: string
+  webhookUrl: string
   environment: string
   feePercentage: number
   saasProfitPercentage: number
@@ -24,6 +25,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
       cached = {
         apiKey: parsed.apiKey || process.env.PAGARME_API_KEY || "",
         webhookKey: parsed.webhookKey || process.env.PAGARME_WEBHOOK_KEY || "",
+        webhookUrl: parsed.webhookUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/pagarme` : ""),
         environment: parsed.environment || process.env.PAGARME_ENVIRONMENT || "sandbox",
         feePercentage: parsed.feePercentage || 1.09,
         saasProfitPercentage: parsed.saasProfitPercentage || 0.41,
@@ -35,6 +37,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
     cached = {
       apiKey: process.env.PAGARME_API_KEY || "",
       webhookKey: process.env.PAGARME_WEBHOOK_KEY || "",
+      webhookUrl: process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/pagarme` : "",
       environment: process.env.PAGARME_ENVIRONMENT || "sandbox",
       feePercentage: 1.09,
       saasProfitPercentage: 0.41,

@@ -3129,6 +3129,7 @@ export default function CardapioPage() {
                                       >
                                         Todas
                                       </button>
+                                          
                                       {visibleCategories.map(([catId, catName]) => (
                                         <button
                                           key={catId}
