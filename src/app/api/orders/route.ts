@@ -27,7 +27,7 @@ function buildSplitRules(
   }
 
   // SaaS commission = Pagar.me fee + SaaS profit (configured in admin panel)
-  // Pagar.me V5 requires integer percentages (no decimals)
+  // Pagar.me V5 requires integer percentages (no decimals) - rounds to nearest int
   const totalCommission = Math.round((pagarmeConfig?.feePercentage || 1.09) + (pagarmeConfig?.saasProfitPercentage || 0.41))
   const establishmentPercentage = 100 - totalCommission
 
