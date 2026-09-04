@@ -18,9 +18,16 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        total: true,
+        customerName: true,
+        customerPhone: true,
+        customerAddress: true,
+        establishmentId: true,
         establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } },
-        customer: { select: { id: true, name: true, phone: true, cpf: true, email: true } },
+        customer: { select: { id: true, name: true, phone: true, cpf: true, email: true, cep: true } },
       },
     })
 
@@ -43,11 +50,11 @@ export async function POST(req: NextRequest) {
       select: { address: true },
     })
 
-    // Merge billing info: prefer creditCardHolderInfo, fallback to establishment
+    // Merge billing info: prefer order customer address, fallback to establishment
     const billingInfo = {
       ...creditCardHolderInfo,
-      cep: creditCardHolderInfo?.cep || "",
-      address: creditCardHolderInfo?.address || estab?.address || "",
+      cep: creditCardHolderInfo?.cep || order.customer?.cep || "",
+      address: creditCardHolderInfo?.address || order.customerAddress || estab?.address || "",
       city: creditCardHolderInfo?.city || "",
       state: creditCardHolderInfo?.state || "",
     }
