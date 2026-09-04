@@ -141,6 +141,9 @@ export function OrdersScreen({
   const [chatSending, setChatSending] = useState(false)
   const [messages, setMessages] = useState<Record<string, OrderMessage[]>>({})
   const [copiedPixOrderId, setCopiedPixOrderId] = useState<string | null>(null)
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
+  const [cancelling, setCancelling] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const calcPoints = (total: number) => {
@@ -496,17 +499,11 @@ export function OrdersScreen({
                         </div>
 
                         {/* Cancelar */}
-                        {["pending", "confirmed", "preparing"].includes(order.status) && (
+                        {["pending", "payment_pending", "confirmed"].includes(order.status) && (
                           <button
                             onClick={() => {
-                              const msg = order.status === "pending" ? "Deseja cancelar este pedido?" : "Tem certeza? O pedido já foi confirmado."
-                              if (window.confirm(msg)) {
-                                fetch(`/api/orders/${order.id}`, {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ status: "cancelled", cancelledBy: "customer" }),
-                                }).then(() => window.location.reload())
-                              }
+                              setCancelModalOrderId(order.id)
+                              setCancelReason("")
                             }}
                             className="w-full mt-2 py-2 text-xs font-medium text-center"
                             style={{ color: theme.textMutedMore }}
@@ -666,6 +663,70 @@ export function OrdersScreen({
           )}
         </div>
       </div>
+
+      {/* Cancel modal */}
+      {cancelModalOrderId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
+            <h3 className="text-base font-bold text-zinc-900">Cancelar pedido?</h3>
+            <p className="text-sm text-zinc-500">
+              {orders.find(o => o.id === cancelModalOrderId)?.status === "confirmed"
+                ? "Este pedido já foi confirmado. Tem certeza que deseja cancelar?"
+                : "Deseja cancelar este pedido?"}
+            </p>
+            <div>
+              <label className="text-xs text-zinc-500 mb-1 block">Motivo (opcional)</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ex: Errei o pedido..."
+                maxLength={500}
+                rows={3}
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm resize-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setCancelModalOrderId(null); setCancelReason("") }}
+                disabled={cancelling}
+                className="flex-1 py-2.5 text-sm font-medium rounded-lg border border-zinc-200 text-zinc-700"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!cancelModalOrderId) return
+                  setCancelling(true)
+                  try {
+                    const order = orders.find(o => o.id === cancelModalOrderId)
+                    await fetch(`/api/orders/${cancelModalOrderId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        status: "cancelled",
+                        cancelledBy: "customer",
+                        cancellationReason: cancelReason || undefined,
+                        trackingToken: order?.trackingToken,
+                      }),
+                    })
+                    setCancelModalOrderId(null)
+                    setCancelReason("")
+                    onRefresh?.()
+                  } catch (e) {
+                    console.error("Erro ao cancelar:", e)
+                  } finally {
+                    setCancelling(false)
+                  }
+                }}
+                disabled={cancelling}
+                className="flex-1 py-2.5 text-sm font-medium rounded-lg text-white bg-red-500 hover:bg-red-600 disabled:opacity-50"
+              >
+                {cancelling ? "Cancelando..." : "Sim, cancelar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

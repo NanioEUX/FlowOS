@@ -251,6 +251,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null)
   const [showCart, setShowCart] = useState(false)
   const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
+  const [bottomSheetSelections, setBottomSheetSelections] = useState<Record<string, { name: string; price: number; quantity: number }[]>>({})
+  const [bottomSheetError, setBottomSheetError] = useState<string | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedProductQty, setSelectedProductQty] = useState(1)
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
@@ -1184,6 +1186,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
 
+  const cartItemsMissingRequired = cart.some(cartItem => {
+    const product = establishment.categories.flatMap(c => c.products).find(p => p.id === cartItem.id)
+    if (!product) return false
+    const opts = (product as any).additionalOptions || []
+    const groups: Record<string, any[]> = {}
+    opts.forEach((opt: any) => {
+      const g = opt.groupName || "default"
+      if (!groups[g]) groups[g] = []
+      groups[g].push(opt)
+    })
+    return Object.entries(groups).some(([groupName, groupOpts]) => {
+      if (groupOpts[0]?.selectionType !== "required") return false
+      const selected = cartItem.additionalOptions || []
+      return !selected.some((s: any) => s.name && groupOpts.some((g: any) => g.name === s.name))
+    })
+  })
+
   useEffect(() => {
     const raw = phoneInput.replace(/\D/g, "")
     if (raw.length < 11) {
@@ -1405,6 +1424,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     // If product has additional options, open bottom sheet
     if ((product as any).additionalOptions?.length > 0) {
       setBottomSheetProduct(product)
+      setBottomSheetSelections({})
+      setBottomSheetError(null)
       return
     }
 
@@ -4668,11 +4689,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
+                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0) || cartItemsMissingRequired}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
+                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : cartItemsMissingRequired ? "Marque os itens obrigatórios" : "Finalizar pedido"}
                 </button>
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
@@ -4729,7 +4750,19 @@ onPaymentConfirmed={handlePaymentSuccess}
           onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
           onReorder={(order) => {
             const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            setCart(items.map((i: any) => ({ id: i.id || i.productId || i.name, name: i.name, price: i.price, image: i.image, quantity: i.quantity })))
+            setCart(items.map((i: any) => ({
+              id: i.id || i.productId || i.name,
+              name: i.name,
+              price: i.price,
+              image: i.image,
+              quantity: i.quantity,
+              additionalOptions: i.additionalOptions || [],
+            })))
+            setOrderResult(null)
+            setLastOrder(null)
+            setPendingOrderItems([])
+            setPendingOrderNumber(null)
+            setCartStep("cart")
             setShowOrdersList(false)
             openCart()
           }}
@@ -5497,6 +5530,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 return Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
                   const firstOpt = groupOptions[0]
                   const isRequired = firstOpt?.selectionType === "required"
+                  const selected = bottomSheetSelections[groupName] || []
+                  const hasSelection = selected.length > 0
+                  const showError = isRequired && !hasSelection && bottomSheetError
                   return (
                     <div key={groupIdx} className="mb-5">
                       <div className="flex items-center justify-between mb-2">
@@ -5506,9 +5542,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </div>
                         {isRequired && <span className="text-white text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
                       </div>
-                      <div className="border rounded-xl overflow-hidden" style={{ borderColor: theme.borderInputColor }}>
+                      {showError && <p className="text-[11px] text-red-500 mb-1">Selecione pelo menos uma opção</p>}
+                      <div className="border rounded-xl overflow-hidden" style={{ borderColor: showError ? "#ef4444" : theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
                           if (opt.inputType === "quantity") {
+                            const qty = selected.find((s: any) => s.name === opt.name)?.quantity || 0
                             return (
                               <div key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0" style={{ borderColor: theme.borderInputColor }}>
                                 <div className="flex-1">
@@ -5516,17 +5554,46 @@ onPaymentConfirmed={handlePaymentSuccess}
                                   {opt.price > 0 && <span className="text-[10px] ml-1" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <button className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor, color: theme.textMuted }}><Minus className="w-3 h-3" /></button>
-                                  <span className="w-5 text-center text-sm font-medium" style={{ color: theme.text }}>0</span>
-                                  <button className="w-7 h-7 rounded-full border text-white flex items-center justify-center" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}><Plus className="w-3 h-3" /></button>
+                                  <button onClick={() => {
+                                    setBottomSheetSelections(prev => {
+                                      const group = prev[groupName] || []
+                                      const existing = group.find((s: any) => s.name === opt.name)
+                                      if (existing && existing.quantity > 1) {
+                                        return { ...prev, [groupName]: group.map((s: any) => s.name === opt.name ? { ...s, quantity: s.quantity - 1 } : s) }
+                                      }
+                                      return { ...prev, [groupName]: group.filter((s: any) => s.name !== opt.name) }
+                                    })
+                                  }} className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor, color: theme.textMuted }}><Minus className="w-3 h-3" /></button>
+                                  <span className="w-5 text-center text-sm font-medium" style={{ color: theme.text }}>{qty}</span>
+                                  <button onClick={() => {
+                                    setBottomSheetSelections(prev => {
+                                      const group = prev[groupName] || []
+                                      const existing = group.find((s: any) => s.name === opt.name)
+                                      if (existing) {
+                                        return { ...prev, [groupName]: group.map((s: any) => s.name === opt.name ? { ...s, quantity: s.quantity + 1 } : s) }
+                                      }
+                                      return { ...prev, [groupName]: [...group, { name: opt.name, price: opt.price, quantity: 1 }] }
+                                    })
+                                  }} className="w-7 h-7 rounded-full border text-white flex items-center justify-center" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}><Plus className="w-3 h-3" /></button>
                                 </div>
                               </div>
                             )
                           }
+                          const isSelected = selected.some((s: any) => s.name === opt.name)
                           return (
-                            <label key={optIdx} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer" style={{ borderColor: theme.borderInputColor }}>
+                            <label key={optIdx} onClick={() => {
+                              setBottomSheetSelections(prev => {
+                                const group = prev[groupName] || []
+                                if (isSelected) {
+                                  return { ...prev, [groupName]: group.filter((s: any) => s.name !== opt.name) }
+                                }
+                                return { ...prev, [groupName]: [...group, { name: opt.name, price: opt.price, quantity: 1 }] }
+                              })
+                            }} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer" style={{ borderColor: theme.borderInputColor }}>
                               <div className="flex items-center gap-3">
-                                <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: theme.borderInputColor }}></div>
+                                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: isSelected ? theme.primary : theme.borderInputColor }}>
+                                  {isSelected && <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: theme.primary }}></div>}
+                                </div>
                                 <span className="text-sm" style={{ color: theme.text }}>{opt.name}</span>
                               </div>
                               {opt.price > 0 && <span className="text-xs font-medium" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</span>}
@@ -5542,10 +5609,30 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="px-5 pb-6 pt-2 border-t" style={{ borderColor: theme.borderInputColor }}>
               <button
                 onClick={() => {
+                  const options = bottomSheetProduct.additionalOptions || []
+                  const groups: Record<string, any[]> = {}
+                  options.forEach((opt: any) => {
+                    const group = opt.groupName || "default"
+                    if (!groups[group]) groups[group] = []
+                    groups[group].push(opt)
+                  })
+                  const missingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
+                    const firstOpt = groupOptions[0]
+                    if (firstOpt?.selectionType === "required") {
+                      return !(bottomSheetSelections[groupName]?.length > 0)
+                    }
+                    return false
+                  })
+                  if (missingRequired) {
+                    setBottomSheetError("Selecione os itens obrigatórios")
+                    return
+                  }
+                  setBottomSheetError(null)
+                  const allSelections = Object.values(bottomSheetSelections).flat()
                   setCart((prev) => {
                     const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                     if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: [] } as CartItem]
+                    return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
                   })
                   setBottomSheetProduct(null)
                   setAddedItemId(bottomSheetProduct.id)
