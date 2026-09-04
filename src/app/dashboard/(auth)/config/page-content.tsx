@@ -1371,8 +1371,9 @@ export default function ConfigPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Banco (código)</label>
-                    <input type="text" placeholder="Ex: 341 (Itaú), 001 (BB), 237 (Bradesco)..." id="recipientBank"
+                    <input type="text" placeholder="Ex: 341 = Itaú, 001 = BB, 104 = Caixa, 237 = Bradesco" id="recipientBank"
                       className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                    <p className="text-xs text-zinc-400 mt-1">Digite apenas o código numérico do banco</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
