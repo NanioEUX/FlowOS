@@ -1,26 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { createCardTransaction } from "@/lib/integrations/pagarme"
+import { createPagarmeCustomer, createCardTransaction } from "@/lib/integrations/pagarme"
+import { getPagarmeConfig } from "@/lib/pagarme-config"
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { orderId, cardToken, installments, establishmentId, creditCard, creditCardHolderInfo } = body
+    const { orderId, installments, establishmentId, creditCard, creditCardHolderInfo } = body
 
     if (!orderId || !establishmentId) {
       return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
-    // Accept either cardToken (pre-tokenized) or raw card data
-    const hasCardToken = !!cardToken
-    const hasRawCard = !!(creditCard?.number && creditCard?.expiry && creditCard?.cvv)
-    if (!hasCardToken && !hasRawCard) {
-      return NextResponse.json({ error: "Dados do cartão obrigatórios (cardToken ou creditCard)" }, { status: 400 })
+    if (!creditCard?.number || !creditCard?.expiry || !creditCard?.cvv) {
+      return NextResponse.json({ error: "Dados do cartão obrigatórios" }, { status: 400 })
     }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true, saasCommissionPercentage: true } } },
+      include: {
+        establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } },
+        customer: { select: { id: true, name: true, phone: true, cpf: true, email: true } },
+      },
     })
 
     if (!order) {
@@ -31,72 +32,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
     }
 
-    // API Key comes from global config (admin SaaS)
-    const { getPagarmeConfig } = await import("@/lib/pagarme-config")
     const { apiKey } = await getPagarmeConfig()
     if (!apiKey) {
       return NextResponse.json({ error: "Pagar.me não configurado no servidor" }, { status: 500 })
     }
 
-    if (!order.paymentId) {
-      return NextResponse.json({ error: "Pedido não possui transação Pagar.me" }, { status: 400 })
-    }
-
-    // First, try to get or create the customer
-    const apiUrl = "https://api.pagar.me/core/v5"
-    const authHeader = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`
-
-    // Get the existing order to find customer_id
-    const existingOrder = await fetch(`${apiUrl}/orders/${order.paymentId}`, {
-      headers: { "Authorization": authHeader },
+    // Create Pagar.me customer
+    const customer = await createPagarmeCustomer({
+      apiKey,
+      name: creditCardHolderInfo?.name || order.customerName || order.customer?.name || "",
+      email: creditCardHolderInfo?.email || order.customer?.email || `${(order.customerPhone || "").replace(/\D/g, "")}@pedidoflow.com`,
+      phone: creditCardHolderInfo?.phone || order.customerPhone || order.customer?.phone || "",
+      document: creditCardHolderInfo?.cpf || order.customer?.cpf || "",
     })
-    const orderDetails = await existingOrder.json()
 
-    if (!orderDetails.customer_id) {
-      return NextResponse.json({ error: "Cliente não associado à transação" }, { status: 400 })
-    }
-
-    // Build split rules for Pagar.me V5
+    // Build split rules
     const configData = await getPagarmeConfig()
     const saasRecipientId = configData.saasRecipientId
-    // Pagar.me V5 requires integer percentages (no decimals)
     const totalCommission = Math.round((configData.feePercentage || 1.09) + (configData.saasProfitPercentage || 0.41))
     const establishmentPercentage = 100 - totalCommission
-    
+
     const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId)
       ? [
           {
             recipientId: saasRecipientId,
             type: "percentage" as const,
             amount: totalCommission,
-            options: {
-              chargeProcessingFee: false,
-              chargeRemainderFee: false,
-              liable: true,
-            },
+            options: { chargeProcessingFee: false, chargeRemainderFee: false, liable: true },
           },
           {
             recipientId: order.establishment.pagarmeSplitReceiverId,
             type: "percentage" as const,
             amount: establishmentPercentage,
-            options: {
-              chargeProcessingFee: true,
-              chargeRemainderFee: true,
-              liable: false,
-            },
+            options: { chargeProcessingFee: true, chargeRemainderFee: true, liable: false },
           },
         ]
       : []
 
     const transaction = await createCardTransaction({
       apiKey,
-      customerId: orderDetails.customer_id,
+      customerId: customer.id,
       amount: order.total,
       description: `Pedido #${order.orderNumber} - ${order.establishment.name}`,
       orderId: order.id,
-      cardToken: hasCardToken ? cardToken : undefined,
-      creditCard: hasRawCard ? creditCard : undefined,
-      creditCardHolderInfo: hasRawCard ? creditCardHolderInfo : undefined,
+      creditCard,
+      creditCardHolderInfo,
       installments,
       splitRules,
     })
