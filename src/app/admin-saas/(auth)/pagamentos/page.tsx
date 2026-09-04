@@ -81,8 +81,8 @@ export default function PagamentosPage() {
     )
   }
 
-  const saasPercentage = feeMode === "pagarme_only" ? 0 : Math.max(1, Math.round(saasProfitPercentage))
-  const establishmentPercentage = 100 - saasPercentage
+  const saasPercentage = feeMode === "pagarme_only" ? 0 : saasProfitPercentage
+  const establishmentPercentage = 100 - saasPercentage - pagarmeFeePercentage
 
   return (
     <div className="p-8 max-w-2xl">
@@ -230,7 +230,7 @@ export default function PagamentosPage() {
                     </div>
                   </div>
                   <p className="text-[11px] text-zinc-400">
-                    Pagar.me arredonda para inteiro: {saasPercentage}% SaaS / {establishmentPercentage}% estabelecimento
+                    SaaS recebe {saasPercentage.toFixed(2)}% (taxa Pagar.me sai desse valor)
                   </p>
                 </div>
               )}
@@ -243,7 +243,7 @@ export default function PagamentosPage() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-zinc-600">Estabelecimento recebe</span>
-                <span className="font-medium text-green-700">{establishmentPercentage}% = R$ {establishmentPercentage.toFixed(2)}</span>
+                <span className="font-medium text-green-700">{establishmentPercentage.toFixed(2)}% = R$ {(100 * establishmentPercentage / 100).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-600">Pagar.me cobra</span>
@@ -252,10 +252,15 @@ export default function PagamentosPage() {
               {saasPercentage > 0 && (
                 <div className="flex justify-between">
                   <span className="text-zinc-600">SaaS recebe</span>
-                  <span className="font-medium text-green-700">{saasPercentage}% = R$ {(100 * saasPercentage / 100).toFixed(2)}</span>
+                  <span className="font-medium text-green-700">{saasPercentage.toFixed(2)}% = R$ {(100 * saasPercentage / 100).toFixed(2)}</span>
                 </div>
               )}
             </div>
+            {feeMode === "pagarme_plus_saas" && (
+              <p className="text-[11px] text-zinc-400 mt-2 border-t border-green-200 pt-2">
+                A taxa do Pagar.me ({pagarmeFeePercentage.toFixed(2)}%) é descontada do valor do SaaS.
+              </p>
+            )}
           </div>
         </div>
 
