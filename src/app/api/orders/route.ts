@@ -397,6 +397,7 @@ export async function POST(req: NextRequest) {
     }
 
     let paymentLink = ""
+    let pixPayload = ""
     const isOnlinePayment =
       paymentMethod === "asaas" ||
       paymentMethod === "online" ||
@@ -537,7 +538,6 @@ export async function POST(req: NextRequest) {
             const qrCodeUrl = tx?.qr_code_url || charge?.qr_code_url || ""
             
             // Fetch QR code image if URL available
-            let paymentLink = ""
             if (qrCodeUrl) {
               try {
                 const qrRes = await fetch(qrCodeUrl)
@@ -553,6 +553,8 @@ export async function POST(req: NextRequest) {
             }
             
             console.log("[Pagar.me] QR Code URL:", qrCodeUrl ? "OK" : "VAZIO")
+            
+            pixPayload = (tx as any)?.qr_code || ""
             
             await prisma.order.update({
               where: { id: order.id },
@@ -651,7 +653,7 @@ export async function POST(req: NextRequest) {
       console.error("Error decrementing stock:", e)
     }
 
-    return NextResponse.json({ order: fullOrder, paymentLink, trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
+    return NextResponse.json({ order: fullOrder, paymentLink, pixPayload: pixPayload || "", trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 })

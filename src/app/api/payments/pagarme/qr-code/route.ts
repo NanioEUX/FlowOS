@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
           const qrBase64 = Buffer.from(qrBuffer).toString("base64")
           return NextResponse.json({
             encodedImage: qrBase64,
-            payload: pixCharge.last_transaction?.pix_payload || pixCharge.pix_payload || "",
+            payload: pixCharge.last_transaction?.qr_code || pixCharge.qr_code || "",
           })
         }
       } catch (e) {
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       const base64 = order.paymentLink.replace("data:image/png;base64,", "")
       return NextResponse.json({
         encodedImage: base64,
-        payload: pixCharge.last_transaction?.pix_payload || "",
+        payload: pixCharge.last_transaction?.qr_code || "",
       })
     }
 

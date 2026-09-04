@@ -279,7 +279,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
   const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; pixPayload?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const userClosedPaymentModalRef = useRef(false)
@@ -1762,6 +1762,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         success: true,
         trackingUrl: data.trackingUrl,
         paymentLink: data.paymentLink,
+        pixPayload: data.pixPayload,
         paymentError: data.paymentError,
         orderId: data.order?.id,
         orderNumber: data.order?.orderNumber,
@@ -2446,6 +2447,7 @@ const handlePaymentSuccess = useCallback(() => {
         orderId={orderResult.orderId!}
         trackingToken={extractTrackingToken(orderResult.trackingUrl)}
         paymentLink={orderResult.paymentLink}
+        pixPayload={orderResult.pixPayload}
         total={orderResult.orderTotal ?? total}
         theme={theme}
         onClose={() => {
@@ -5571,6 +5573,7 @@ function PaymentModal({
   orderId,
   trackingToken,
   paymentLink,
+  pixPayload: pixPayloadProp,
   total,
   theme,
   onClose,
@@ -5586,6 +5589,7 @@ function PaymentModal({
   orderId: string
   trackingToken: string
   paymentLink: string
+  pixPayload?: string
   total: number
   theme: any
   onClose: () => void
@@ -5657,7 +5661,7 @@ function PaymentModal({
     // If paymentLink already has base64 QR code (from order creation), use it directly
     if (paymentLink?.startsWith("data:image")) {
       const base64 = paymentLink.replace("data:image/png;base64,", "")
-      setQrCode({ image: base64, payload: "" })
+      setQrCode({ image: base64, payload: pixPayloadProp || "" })
       setCountdown(prev => prev > 0 ? prev : 300)
       setQrLoading(false)
       return
