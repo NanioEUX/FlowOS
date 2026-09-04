@@ -718,6 +718,8 @@ export default function ConfigPage() {
     const [showKey, setShowKey] = useState(false)
     const [testingAsaas, setTestingAsaas] = useState(false)
     const [asaasTestResult, setAsaasTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+    const [recipientData, setRecipientData] = useState<any>(null)
+    const [loadingRecipient, setLoadingRecipient] = useState(false)
     const [form, setForm] = useState({
         name: "",
         phone: "",
@@ -976,6 +978,18 @@ export default function ConfigPage() {
         if (!establishmentId) return
             reloadData()
             }, [establishmentId])
+
+    useEffect(() => {
+        if (!establishmentId || !form.pagarmeSplitReceiverId) return
+        setLoadingRecipient(true)
+        fetchAuth(`/api/establishments/${establishmentId}/recipient`)
+            .then(r => r.json())
+            .then(data => {
+                setRecipientData(data)
+                setLoadingRecipient(false)
+            })
+            .catch(() => setLoadingRecipient(false))
+    }, [establishmentId, form.pagarmeSplitReceiverId])
     
     async function handleSave(e: React.FormEvent) {
         e.preventDefault()
@@ -1331,11 +1345,32 @@ export default function ConfigPage() {
                 <div className="rounded-lg bg-green-100/70 px-3 py-2 text-xs text-green-800">
                   <span className="font-medium">Conta configurada!</span> Receiver ID: {form.pagarmeSplitReceiverId}
                 </div>
+                {recipientData && recipientData.configured && (
+                  <div className="rounded-lg bg-white border border-green-200 p-3 text-sm space-y-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><span className="text-zinc-500">Nome:</span> <span className="font-medium">{recipientData.name}</span></div>
+                      <div><span className="text-zinc-500">E-mail:</span> <span className="font-medium">{recipientData.email}</span></div>
+                      <div><span className="text-zinc-500">CPF/CNPJ:</span> <span className="font-medium">{recipientData.document}</span></div>
+                      <div><span className="text-zinc-500">Status:</span> <span className="font-medium text-green-600">{recipientData.status}</span></div>
+                    </div>
+                    {recipientData.bank && (
+                      <div className="border-t border-green-100 pt-2 mt-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div><span className="text-zinc-500">Banco:</span> <span className="font-medium">{recipientData.bank}</span></div>
+                          <div><span className="text-zinc-500">Agência:</span> <span className="font-medium">{recipientData.branchNumber}</span></div>
+                          <div><span className="text-zinc-500">Conta:</span> <span className="font-medium">{recipientData.accountNumber}-{recipientData.accountCheckDigit}</span></div>
+                        </div>
+                        <div className="mt-1"><span className="text-zinc-500">Tipo:</span> <span className="font-medium">{recipientData.accountType === 'checking' ? 'Corrente' : 'Poupança'}</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => {
                     if (confirm('Isso irá limpar a conta atual. Deseja reconfigurar?')) {
                       setForm({ ...form, pagarmeSplitReceiverId: '' })
+                      setRecipientData(null)
                     }
                   }}
                   className="text-xs text-zinc-500 underline hover:text-zinc-700"
@@ -1370,10 +1405,35 @@ export default function ConfigPage() {
                       className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-sm font-medium text-zinc-700">Banco (código)</label>
-                    <input type="text" placeholder="Ex: 341 = Itaú, 001 = BB, 104 = Caixa, 237 = Bradesco" id="recipientBank"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
-                    <p className="text-xs text-zinc-400 mt-1">Digite apenas o código numérico do banco</p>
+                    <label className="block text-sm font-medium text-zinc-700">Banco</label>
+                    <select id="recipientBank"
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
+                      <option value="">Selecione o banco</option>
+                      <option value="001">001 - Banco do Brasil</option>
+                      <option value="033">033 - Santander</option>
+                      <option value="041">041 - Banrisul</option>
+                      <option value="070">070 - BRB</option>
+                      <option value="077">077 - Banco Inter</option>
+                      <option value="104">104 - Caixa Econômica</option>
+                      <option value="197">197 - Stone</option>
+                      <option value="208">208 - BTG Pactual</option>
+                      <option value="212">212 - Banco Original</option>
+                      <option value="237">237 - Bradesco</option>
+                      <option value="260">260 - Nu Pagamentos (Nubank)</option>
+                      <option value="290">290 - PagSeguro</option>
+                      <option value="318">318 - BMG</option>
+                      <option value="336">336 - C6 Bank</option>
+                      <option value="341">341 - Itaú</option>
+                      <option value="389">389 - Banco Mercantil</option>
+                      <option value="623">623 - Pan</option>
+                      <option value="633">633 - Rendimento</option>
+                      <option value="655">655 - Votorantim</option>
+                      <option value="707">707 - Daycoval</option>
+                      <option value="741">741 - Ribeirão Preto</option>
+                      <option value="745">745 - Citibank</option>
+                      <option value="748">748 - Sicredi</option>
+                      <option value="756">756 - Sicoob</option>
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">

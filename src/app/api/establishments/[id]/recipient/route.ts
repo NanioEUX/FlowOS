@@ -3,6 +3,66 @@ import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authUser = await verifyAuth(req)
+    if (!authUser) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+    if (authUser.establishmentId !== params.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+    }
+
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: params.id },
+      select: { pagarmeSplitReceiverId: true },
+    })
+
+    if (!establishment?.pagarmeSplitReceiverId) {
+      return NextResponse.json({ configured: false })
+    }
+
+    const config = await getPagarmeConfig()
+    if (!config.apiKey) {
+      return NextResponse.json({ error: "Pagar.me não configurado" }, { status: 500 })
+    }
+
+    const authHeader = `Basic ${Buffer.from(config.apiKey + ":").toString("base64")}`
+
+    const res = await fetch(`https://api.pagar.me/core/v5/recipients/${establishment.pagarmeSplitReceiverId}`, {
+      headers: { "Authorization": authHeader },
+    })
+
+    if (!res.ok) {
+      return NextResponse.json({ configured: true, recipientId: establishment.pagarmeSplitReceiverId })
+    }
+
+    const data = await res.json()
+    const bankAccount = data.default_bank_account || {}
+
+    return NextResponse.json({
+      configured: true,
+      recipientId: data.id,
+      name: data.name,
+      email: data.email,
+      document: data.document,
+      bank: bankAccount.bank,
+      branchNumber: bankAccount.branch_number,
+      accountNumber: bankAccount.account_number,
+      accountCheckDigit: bankAccount.account_check_digit,
+      accountType: bankAccount.type,
+      holderName: bankAccount.holder_name,
+      status: data.status,
+    })
+  } catch (error: any) {
+    console.error("[Recipient GET] Error:", error.message)
+    return NextResponse.json({ error: "Erro ao buscar dados" }, { status: 500 })
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
