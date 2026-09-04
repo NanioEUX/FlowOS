@@ -2452,7 +2452,7 @@ const handlePaymentSuccess = useCallback(() => {
       <PaymentModal
         orderId={orderResult.orderId!}
         trackingToken={extractTrackingToken(orderResult.trackingUrl)}
-        paymentLink={orderResult.paymentLink}
+        paymentLink={orderResult.paymentLink || ""}
         pixPayload={orderResult.pixPayload}
         total={orderResult.orderTotal ?? total}
         theme={theme}
