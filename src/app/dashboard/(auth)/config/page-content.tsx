@@ -1422,7 +1422,7 @@ export default function ConfigPage() {
                   }
 
                   try {
-                    const res = await fetch(`/api/establishments/${establishmentId}/recipient`, {
+                    const res = await fetchAuth(`/api/establishments/${establishmentId}/recipient`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
