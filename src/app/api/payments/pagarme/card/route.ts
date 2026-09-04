@@ -68,24 +68,23 @@ export async function POST(req: NextRequest) {
       document: creditCardHolderInfo?.cpf || order.customer?.cpf || "",
     })
 
-    // Build split rules
+    // Build split rules (SaaS profit only - Pagar.me fee is automatic)
     const configData = await getPagarmeConfig()
     const saasRecipientId = configData.saasRecipientId
-    const totalCommission = Math.round((configData.feePercentage || 1.09) + (configData.saasProfitPercentage || 0.41))
-    const establishmentPercentage = 100 - totalCommission
+    const saasProfit = configData.saasProfitPercentage || 0
 
-    const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId)
+    const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId && saasProfit > 0)
       ? [
           {
             recipientId: saasRecipientId,
             type: "percentage" as const,
-            amount: totalCommission,
+            amount: Math.max(1, Math.round(saasProfit)),
             options: { chargeProcessingFee: false, chargeRemainderFee: false, liable: true },
           },
           {
             recipientId: order.establishment.pagarmeSplitReceiverId,
             type: "percentage" as const,
-            amount: establishmentPercentage,
+            amount: 100 - Math.max(1, Math.round(saasProfit)),
             options: { chargeProcessingFee: true, chargeRemainderFee: true, liable: false },
           },
         ]

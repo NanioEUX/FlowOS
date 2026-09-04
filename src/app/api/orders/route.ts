@@ -26,18 +26,26 @@ function buildSplitRules(
     return undefined
   }
 
-  // SaaS commission = Pagar.me fee + SaaS profit (configured in admin panel)
-  // Pagar.me V5 requires integer percentages (no decimals) - rounds to nearest int
-  const totalCommission = Math.round((pagarmeConfig?.feePercentage || 1.09) + (pagarmeConfig?.saasProfitPercentage || 0.41))
-  const establishmentPercentage = 100 - totalCommission
+  // SaaS profit only (Pagar.me fee is charged automatically by Pagar.me)
+  const saasProfit = pagarmeConfig?.saasProfitPercentage || 0
 
-  console.log("[Orders] Split rules:", { totalCommission, establishmentPercentage, saasRecipientId, establishmentRecipientId })
+  // If SaaS profit is 0, no split needed - establishment gets 100% (Pagar.me deducts its fee automatically)
+  if (saasProfit <= 0) {
+    console.log("[Orders] SaaS profit is 0, no split configured")
+    return undefined
+  }
+
+  // Pagar.me V5 requires integer percentages (no decimals)
+  const saasPercentage = Math.max(1, Math.round(saasProfit))
+  const establishmentPercentage = 100 - saasPercentage
+
+  console.log("[Orders] Split rules:", { saasPercentage, establishmentPercentage, saasRecipientId, establishmentRecipientId })
 
   return [
     {
       recipientId: saasRecipientId,
       type: "percentage" as const,
-      amount: totalCommission,
+      amount: saasPercentage,
       options: {
         chargeProcessingFee: false,
         chargeRemainderFee: false,
