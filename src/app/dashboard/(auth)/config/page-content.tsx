@@ -751,6 +751,7 @@ export default function ConfigPage() {
         tableCount: "10",
         maxPayOnDeliveryAmount: "150",
         blockConcurrentPayOnDelivery: true,
+        autoAcceptOrders: false,
         pagarmeSplitReceiverId: "",
     })
     
@@ -888,6 +889,7 @@ export default function ConfigPage() {
                         tableCount: String(data.tableCount || 10),
                         maxPayOnDeliveryAmount: String(data.maxPayOnDeliveryAmount ?? 150),
                         blockConcurrentPayOnDelivery: data.blockConcurrentPayOnDelivery ?? true,
+                        autoAcceptOrders: data.autoAcceptOrders ?? false,
                         pagarmeSplitReceiverId: data.pagarmeSplitReceiverId || "",
                     })
                     setDeliveryLimit(String(data.maxPayOnDeliveryAmount ?? 150))
@@ -1017,6 +1019,7 @@ export default function ConfigPage() {
                     tableCount: Number(form.tableCount) || 10,
                     maxPayOnDeliveryAmount: Number(deliveryLimit) || 150,
                     blockConcurrentPayOnDelivery: blockConcurrent,
+                    autoAcceptOrders: form.autoAcceptOrders ?? false,
                     cancellationBlockEnabled,
                     cancellationBlockThreshold: Number(cancellationBlockThreshold) || 3,
                     cancellationBlockWindowDays: Number(cancellationBlockWindowDays) || 7,
@@ -1628,6 +1631,26 @@ export default function ConfigPage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Aceitar Pedidos Automaticamente */}
+        <Card id="section-auto-accept" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Aceite Automático</h3>
+            <p className="text-sm text-zinc-500">Quando ativado, todo pedido que chegar vai direto para produção (em preparo), sem precisar confirmar manualmente.</p>
+            <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+              <input
+                type="checkbox"
+                checked={form.autoAcceptOrders || false}
+                onChange={(e) => setForm({ ...form, autoAcceptOrders: e.target.checked })}
+                className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+              />
+              <div>
+                <span className="font-medium text-zinc-900">Aceitar pedidos automaticamente</span>
+                <p className="text-xs text-zinc-500">Pedidos vão direto para "Em Preparo" sem confirmação manual</p>
+              </div>
+            </label>
           </CardContent>
         </Card>
 

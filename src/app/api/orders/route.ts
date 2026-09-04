@@ -162,7 +162,9 @@ export async function POST(req: NextRequest) {
 
     // For presencial mesa orders: status=new, no payment at creation
     const isMesa = orderType === "presencial" && tableNumber
-    const initialStatus = body.status || (isMesa ? "new" : "pending")
+    const isPayOnDeliveryOrder = isPayOnDelivery || (!paymentMethod || paymentMethod === "cash")
+    const autoAccept = establishment.autoAcceptOrders && isPayOnDeliveryOrder && !isMesa
+    const initialStatus = body.status || (isMesa ? "new" : autoAccept ? "preparing" : "pending")
 
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined

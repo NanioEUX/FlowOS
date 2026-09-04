@@ -100,11 +100,17 @@ export async function GET(
         if (res.ok) {
           const charge = await res.json()
           if (charge.status === "paid" || charge.last_transaction_status === "paid") {
+            // Check autoAcceptOrders to decide between confirmed or preparing
+            const est = await prisma.establishment.findUnique({
+              where: { id: order.establishmentId },
+              select: { autoAcceptOrders: true },
+            })
+            const newStatus = est?.autoAcceptOrders ? "preparing" : "confirmed"
             await prisma.order.update({
               where: { id: params.id },
-              data: { paymentStatus: "paid", status: "confirmed" },
+              data: { paymentStatus: "paid", status: newStatus },
             })
-            return NextResponse.json({ paymentStatus: "paid", status: "confirmed" })
+            return NextResponse.json({ paymentStatus: "paid", status: newStatus })
           }
         }
       }

@@ -107,9 +107,21 @@ async function processWebhook(eventType: string, orderData: any) {
 
   const { paymentStatus, orderStatus } = mapPagarmeStatus(eventStatus || eventType)
 
+  // Check if autoAcceptOrders is enabled for this establishment
+  let finalOrderStatus = orderStatus
+  if (eventStatus === "paid" && orderStatus === "confirmed") {
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: order.establishmentId },
+      select: { autoAcceptOrders: true },
+    })
+    if (establishment?.autoAcceptOrders) {
+      finalOrderStatus = "preparing"
+    }
+  }
+
   const updateData: Record<string, unknown> = {}
   if (order.paymentStatus !== paymentStatus) updateData.paymentStatus = paymentStatus
-  if (orderStatus && order.status !== orderStatus) updateData.status = orderStatus
+  if (finalOrderStatus && order.status !== finalOrderStatus) updateData.status = finalOrderStatus
 
   if (Object.keys(updateData).length > 0) {
     await prisma.order.update({

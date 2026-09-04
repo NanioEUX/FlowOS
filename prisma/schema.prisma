@@ -162,6 +162,7 @@ model Establishment {
   cancellationBlockThreshold    Int                @default(3)
   cancellationBlockWindowDays   Int                @default(7)
   cancellationBlockDurationDays Int                @default(7)
+  autoAcceptOrders              Boolean            @default(false)
   ifoodMerchantId               String?
   ifoodAccessToken              String?
   ifoodRefreshToken             String?
