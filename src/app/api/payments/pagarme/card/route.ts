@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Dados do cartão obrigatórios" }, { status: 400 })
     }
 
+    // Captura IP real do cliente (Vercel/Cloudflare passam via X-Forwarded-For).
+    // Sem isso o antifraude vê o IP do seu servidor e barra tudo.
+    const forwarded = req.headers.get("x-forwarded-for") || ""
+    const realIp = req.headers.get("x-real-ip") || ""
+    const cfIp = req.headers.get("cf-connecting-ip") || ""
+    const clientIp = (forwarded.split(",")[0] || "").trim() || realIp.trim() || cfIp.trim() || ""
+
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: {
@@ -50,13 +57,30 @@ export async function POST(req: NextRequest) {
       select: { address: true },
     })
 
-    // Merge billing info: prefer order customer address, fallback to establishment
+    // Enriquecer billing/shipping com dados do pedido (salvos quando o
+    // cliente fez checkout). Sem esses dados o antifraude reprova a transação
+    // por falta de contexto (Gemini análise 2026-09-04).
+    const fullAddressString = creditCardHolderInfo?.address || order.customerAddress || estab?.address || "Não informado"
+    const billingCep = (creditCardHolderInfo?.cep || order.customer?.cep || "").replace(/\D/g, "")
+
     const billingInfo = {
       ...creditCardHolderInfo,
-      cep: creditCardHolderInfo?.cep || order.customer?.cep || "",
-      address: creditCardHolderInfo?.address || order.customerAddress || estab?.address || "",
-      city: creditCardHolderInfo?.city || "",
-      state: creditCardHolderInfo?.state || "",
+      // billing
+      street: (creditCardHolderInfo as any)?.street || fullAddressString,
+      number: creditCardHolderInfo?.number || "s/n",
+      neighborhood: (creditCardHolderInfo as any)?.neighborhood || "",
+      city: (creditCardHolderInfo as any)?.city || "",
+      state: (creditCardHolderInfo as any)?.state || "SP",
+      cep: billingCep || "00000000",
+      address: fullAddressString,
+      // shipping = mesmo do billing (antifraude compara cobrança vs entrega)
+      shippingStreet: fullAddressString,
+      shippingNumber: creditCardHolderInfo?.number || "s/n",
+      shippingNeighborhood: "",
+      shippingCity: "",
+      shippingState: "SP",
+      shippingCep: billingCep || "00000000",
+      shippingRecipientName: creditCardHolderInfo?.name || order.customerName || "",
     }
 
     // Create Pagar.me customer
@@ -100,6 +124,7 @@ export async function POST(req: NextRequest) {
       creditCardHolderInfo: billingInfo,
       installments,
       splitRules,
+      clientIp,
     })
 
     await prisma.order.update({

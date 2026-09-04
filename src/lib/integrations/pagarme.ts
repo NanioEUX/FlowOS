@@ -206,6 +206,7 @@ export async function createCardTransaction({
   creditCardHolderInfo,
   installments,
   splitRules,
+  clientIp,
 }: {
   apiKey: string
   customerId: string
@@ -214,14 +215,51 @@ export async function createCardTransaction({
   orderId: string
   cardToken?: string
   creditCard?: { number: string; expiry: string; cvv: string }
-  creditCardHolderInfo?: { name: string; cpf: string; email: string; phone?: string; cep?: string; number?: string; address?: string; city?: string; state?: string }
+  creditCardHolderInfo?: {
+    name: string
+    cpf: string
+    email: string
+    phone?: string
+    cep?: string
+    number?: string
+    address?: string
+    city?: string
+    state?: string
+    neighborhood?: string
+    street?: string
+    complement?: string
+    // shipping (entrega) separado do billing
+    shippingStreet?: string
+    shippingNumber?: string
+    shippingNeighborhood?: string
+    shippingCity?: string
+    shippingState?: string
+    shippingCep?: string
+    shippingRecipientName?: string
+  }
   installments?: number
   splitRules?: SplitRule[]
+  clientIp?: string
 }): Promise<PagarmeTransactionResponse> {
   // Build credit card object - support both token and raw card data
   const creditCardObj: any = {
     installments: installments || 1,
     statement_descriptor: "FLOWOS",
+  }
+
+  const cepDigits = (creditCardHolderInfo?.cep || "").replace(/\D/g, "") || "00000000"
+  const shippingCepDigits = (creditCardHolderInfo?.shippingCep || "").replace(/\D/g, "") || cepDigits
+
+  // Billing address estruturado (formato V5 esperado pelo antifraude)
+  const billingAddress: any = {
+    line_1: [creditCardHolderInfo?.street || creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "Não informado",
+    zip_code: cepDigits,
+    city: creditCardHolderInfo?.city || "Não informado",
+    state: creditCardHolderInfo?.state || "SP",
+    country: "BR",
+  }
+  if (creditCardHolderInfo?.neighborhood) {
+    billingAddress.line_2 = creditCardHolderInfo.neighborhood
   }
 
   if (cardToken) {
@@ -235,13 +273,7 @@ export async function createCardTransaction({
       exp_month: parseInt(expMonth, 10),
       exp_year: parseInt(expYear.length === 2 ? `20${expYear}` : expYear, 10),
       cvv: creditCard.cvv,
-      billing_address: {
-        line_1: [creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "Não informado",
-        zip_code: (creditCardHolderInfo?.cep || "").replace(/\D/g, "") || "00000000",
-        city: creditCardHolderInfo?.city || "Não informado",
-        state: creditCardHolderInfo?.state || "SP",
-        country: "BR",
-      },
+      billing_address: billingAddress,
     }
   }
 
@@ -266,6 +298,30 @@ export async function createCardTransaction({
       },
     ],
     customer_id: customerId,
+  }
+
+  // Shipping separado (antifraude compara cobrança vs entrega)
+  if (creditCardHolderInfo?.shippingStreet || creditCardHolderInfo?.shippingCity) {
+    body.shipping = {
+      name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
+      recipient_name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
+      address: {
+        street: creditCardHolderInfo.shippingStreet || creditCardHolderInfo.street || creditCardHolderInfo.address || "Não informado",
+        number: creditCardHolderInfo.shippingNumber || creditCardHolderInfo.number || "s/n",
+        zip_code: shippingCepDigits,
+        neighborhood: creditCardHolderInfo.shippingNeighborhood || creditCardHolderInfo.neighborhood || "Não informado",
+        city: creditCardHolderInfo.shippingCity || creditCardHolderInfo.city || "Não informado",
+        state: creditCardHolderInfo.shippingState || creditCardHolderInfo.state || "SP",
+        country: "BR",
+      },
+    }
+  }
+
+  // IP do cliente (antifraude usa pra geolocalização e detecção de proxy/VPN)
+  if (clientIp) {
+    body.metadata = { ...(body.metadata || {}), client_ip: clientIp }
+    // Pagar.me aceita também em "ip" no nível da order (algumas versões)
+    body.ip = clientIp
   }
 
   // Add split rules if provided (V5 format)
