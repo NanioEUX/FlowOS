@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import type { Metadata } from "next"
-import Script from "next/script"
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const establishment = await prisma.establishment.findUnique({
@@ -33,15 +32,5 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default function PublicSlugLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {/* SDK Pagar.me para tokenização client-side de cartão (PCI-DSS).
-          Expõe window.PagarMe com método encryptCard(). */}
-      <Script
-        src="https://assets.pagar.me/pagarme-js/latest/pagarme.js"
-        strategy="afterInteractive"
-      />
-      {children}
-    </>
-  )
+  return <>{children}</>
 }

@@ -5911,73 +5911,25 @@ function PaymentModal({
     setCardProcessing(true)
     try {
       let cardEndpoint = "/api/payments/asaas/card"
-      let cardPayload: any = {
-        orderId,
-        establishmentId,
-        creditCardHolderInfo: {
-          name: cardName,
-          cpf: cardCpf,
-          email: cardEmail,
-          phone: cardPhone,
-          cep: cardCep,
-          number: cardAddressNum,
-        },
-      }
-
-      // Pagar.me: tokeniza cartão no front via SDK CDN para PCI-DSS.
-      // Envia apenas o card_token (card_id) para o backend.
       if (paymentProvider === "pagarme") {
         cardEndpoint = "/api/payments/pagarme/card"
-        const encryptionKey = process.env.NEXT_PUBLIC_PAGARME_ENCRYPTION_KEY || ""
-        if (!encryptionKey) {
-          setCardError("Chave de criptografia Pagar.me não configurada no frontend. Contate o administrador.")
-          setCardProcessing(false)
-          return
-        }
-        try {
-          // @ts-ignore - PagarMe é carregado via CDN
-          const PagarMe = (window as any).PagarMe
-          if (!PagarMe || !PagarMe.encryptCard) {
-            setCardError("SDK Pagar.me não carregou. Recarregue a página.")
-            setCardProcessing(false)
-            return
-          }
-          // @ts-ignore
-          const cardToken = await new Promise<string>((resolve, reject) => {
-            PagarMe.encryptCard(
-              {
-                encryptionKey,
-                holderName: cardName,
-                number: cardNumber.replace(/\s/g, ""),
-                expirationDate: cardExpiry.replace(/\D/g, ""), // AAAAMM
-                cvv: cardCvv,
-              },
-              (err: any, encrypted: string) => {
-                if (err) reject(err)
-                else resolve(encrypted)
-              }
-            )
-          })
-          cardPayload = { ...cardPayload, cardToken }
-          delete cardPayload.creditCard
-        } catch (e: any) {
-          console.error("[Card] Erro ao tokenizar:", e)
-          setCardError(`Erro ao tokenizar cartão: ${e?.message || "desconhecido"}`)
-          setCardProcessing(false)
-          return
-        }
-      } else {
-        // Asaas mantém o fluxo atual (cartão raw)
-        cardPayload = {
-          ...cardPayload,
-          creditCard: { number: cardNumber, expiry: cardExpiry, cvv: cardCvv },
-        }
       }
-
       const res = await fetch(cardEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cardPayload),
+        body: JSON.stringify({
+          orderId,
+          establishmentId,
+          creditCard: { number: cardNumber, expiry: cardExpiry, cvv: cardCvv },
+          creditCardHolderInfo: {
+            name: cardName,
+            cpf: cardCpf,
+            email: cardEmail,
+            phone: cardPhone,
+            cep: cardCep,
+            number: cardAddressNum,
+          },
+        }),
       })
       const data = await res.json()
       console.log("[Card] Response:", JSON.stringify(data), "status:", res.status)
