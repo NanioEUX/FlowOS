@@ -16,7 +16,8 @@ function buildSplitRules(
   totalAmount: number,
   establishmentRecipientId: string | null | undefined,
   saasCommissionPercentage: number,
-  saasRecipientId?: string | null
+  saasRecipientId?: string | null,
+  pagarmeConfig?: { feePercentage?: number; saasProfitPercentage?: number }
 ) {
   if (!establishmentRecipientId) return undefined
 
@@ -25,11 +26,17 @@ function buildSplitRules(
     return undefined
   }
 
+  // SaaS commission = Pagar.me fee + SaaS profit (configured in admin panel)
+  const totalCommission = (pagarmeConfig?.feePercentage || 1.09) + (pagarmeConfig?.saasProfitPercentage || 0.41)
+  const establishmentPercentage = 100 - totalCommission
+
+  console.log("[Orders] Split rules:", { totalCommission, establishmentPercentage, saasRecipientId, establishmentRecipientId })
+
   return [
     {
       recipientId: saasRecipientId,
       type: "percentage" as const,
-      amount: saasCommissionPercentage,
+      amount: totalCommission,
       options: {
         chargeProcessingFee: false,
         chargeRemainderFee: false,
@@ -39,7 +46,7 @@ function buildSplitRules(
     {
       recipientId: establishmentRecipientId,
       type: "percentage" as const,
-      amount: 100 - saasCommissionPercentage,
+      amount: establishmentPercentage,
       options: {
         chargeProcessingFee: true,
         chargeRemainderFee: true,
@@ -530,7 +537,8 @@ export async function POST(req: NextRequest) {
                 order.total,
                 establishment.pagarmeSplitReceiverId,
                 establishment.saasCommissionPercentage || 10,
-                pagarmeConfig.saasRecipientId
+                pagarmeConfig.saasRecipientId,
+                pagarmeConfig
               ),
             })
             
