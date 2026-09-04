@@ -1327,8 +1327,21 @@ export default function ConfigPage() {
             </div>
             
             {form.pagarmeSplitReceiverId ? (
-              <div className="rounded-lg bg-green-100/70 px-3 py-2 text-xs text-green-800">
-                <span className="font-medium">Conta configurada!</span> Receiver ID: {form.pagarmeSplitReceiverId}
+              <div className="space-y-3">
+                <div className="rounded-lg bg-green-100/70 px-3 py-2 text-xs text-green-800">
+                  <span className="font-medium">Conta configurada!</span> Receiver ID: {form.pagarmeSplitReceiverId}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Isso irá limpar a conta atual. Deseja reconfigurar?')) {
+                      setForm({ ...form, pagarmeSplitReceiverId: '' })
+                    }
+                  }}
+                  className="text-xs text-zinc-500 underline hover:text-zinc-700"
+                >
+                  Reconfigurar conta de recebimento
+                </button>
               </div>
             ) : (
               <p className="text-xs text-zinc-500">
