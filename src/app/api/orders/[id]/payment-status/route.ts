@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getInterPixStatus } from "@/lib/integrations/inter"
+import { getPagarmeConfig } from "@/lib/pagarme-config"
 
 const ASAAS_API_URL =
   process.env.ASAAS_ENVIRONMENT === "sandbox"
@@ -85,6 +86,31 @@ export async function GET(
         }
       }
     } catch {}
+  }
+
+  // Pagar.me payment status polling (charge IDs start with "ch_")
+  const isPagarmePayment = order.paymentId?.startsWith("ch_")
+  if (isPagarmePayment && order.paymentStatus === "pending" && order.paymentId) {
+    try {
+      const config = await getPagarmeConfig()
+      if (config.apiKey) {
+        const res = await fetch(`https://api.pagar.me/core/v5/charges/${order.paymentId}`, {
+          headers: { Authorization: `Basic ${Buffer.from(config.apiKey + ":").toString("base64")}` },
+        })
+        if (res.ok) {
+          const charge = await res.json()
+          if (charge.status === "paid" || charge.last_transaction_status === "paid") {
+            await prisma.order.update({
+              where: { id: params.id },
+              data: { paymentStatus: "paid", status: "confirmed" },
+            })
+            return NextResponse.json({ paymentStatus: "paid", status: "confirmed" })
+          }
+        }
+      }
+    } catch (e: any) {
+      console.error("[Pagar.me Payment Status] Error:", e.message)
+    }
   }
 
   return NextResponse.json({
