@@ -7,6 +7,7 @@ interface PagarmeConfig {
   environment: string
   feePercentage: number
   saasProfitPercentage: number
+  saasRecipientId?: string
 }
 
 let cached: PagarmeConfig | null = null
@@ -29,6 +30,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
         environment: parsed.environment || process.env.PAGARME_ENVIRONMENT || "sandbox",
         feePercentage: parsed.feePercentage || 1.09,
         saasProfitPercentage: parsed.saasProfitPercentage || 0.41,
+        saasRecipientId: parsed.saasRecipientId || process.env.PAGARME_SAAS_RECIPIENT_ID || "",
       }
     }
   } catch {}
@@ -41,6 +43,7 @@ export async function getPagarmeConfig(): Promise<PagarmeConfig> {
       environment: process.env.PAGARME_ENVIRONMENT || "sandbox",
       feePercentage: 1.09,
       saasProfitPercentage: 0.41,
+      saasRecipientId: process.env.PAGARME_SAAS_RECIPIENT_ID || "",
     }
   }
 

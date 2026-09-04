@@ -15,13 +15,13 @@ import crypto from "crypto"
 function buildSplitRules(
   totalAmount: number,
   establishmentRecipientId: string | null | undefined,
-  saasCommissionPercentage: number
+  saasCommissionPercentage: number,
+  saasRecipientId?: string | null
 ) {
   if (!establishmentRecipientId) return undefined
 
-  const saasRecipientId = process.env.PAGARME_SAAS_RECIPIENT_ID
   if (!saasRecipientId) {
-    console.warn("[Orders] PAGARME_SAAS_RECIPIENT_ID not configured, skipping split")
+    console.warn("[Orders] saasRecipientId not configured, skipping split")
     return undefined
   }
 
@@ -529,7 +529,8 @@ export async function POST(req: NextRequest) {
               splitRules: buildSplitRules(
                 order.total,
                 establishment.pagarmeSplitReceiverId,
-                establishment.saasCommissionPercentage || 10
+                establishment.saasCommissionPercentage || 10,
+                pagarmeConfig.saasRecipientId
               ),
             })
             

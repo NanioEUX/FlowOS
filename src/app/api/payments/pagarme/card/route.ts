@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Build split rules for Pagar.me V5
-    const saasRecipientId = process.env.PAGARME_SAAS_RECIPIENT_ID
+    const configData = await getPagarmeConfig()
+    const saasRecipientId = configData.saasRecipientId
     const commissionPercentage = order.establishment.saasCommissionPercentage || 10
     
     const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId)
