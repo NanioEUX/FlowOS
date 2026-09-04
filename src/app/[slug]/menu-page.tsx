@@ -6156,6 +6156,28 @@ function PaymentModal({
                   style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
                 />
               </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
+                  <input
+                    placeholder="00000-000"
+                    value={cardCep}
+                    onChange={(e) => setCardCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs" style={{ color: theme.textMuted }}>N°</label>
+                  <input
+                    placeholder="N°"
+                    value={cardAddressNum}
+                    onChange={(e) => setCardAddressNum(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ backgroundColor: theme.bgCardHover, color: theme.text, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderInput }}
+                  />
+                </div>
+              </div>
               {cardError && (
                 <div className="rounded-lg bg-red-500/10 p-2 text-xs text-red-400 border border-red-500/20">{cardError}</div>
               )}
@@ -6175,7 +6197,7 @@ function PaymentModal({
                 )}
               </button>
               <p className="text-[10px] text-center" style={{ color: theme.textMuted }}>
-                Pagamento seguro processado por Asaas
+                Pagamento seguro processado por Pagar.me
               </p>
             </div>
             )

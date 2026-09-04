@@ -37,6 +37,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pagar.me não configurado no servidor" }, { status: 500 })
     }
 
+    // Get establishment address as fallback for billing
+    const estab = await prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { address: true },
+    })
+
+    // Merge billing info: prefer creditCardHolderInfo, fallback to establishment
+    const billingInfo = {
+      ...creditCardHolderInfo,
+      cep: creditCardHolderInfo?.cep || "",
+      address: creditCardHolderInfo?.address || estab?.address || "",
+      city: creditCardHolderInfo?.city || "",
+      state: creditCardHolderInfo?.state || "",
+    }
+
     // Create Pagar.me customer
     const customer = await createPagarmeCustomer({
       apiKey,
@@ -76,7 +91,7 @@ export async function POST(req: NextRequest) {
       description: `Pedido #${order.orderNumber} - ${order.establishment.name}`,
       orderId: order.id,
       creditCard,
-      creditCardHolderInfo,
+      creditCardHolderInfo: billingInfo,
       installments,
       splitRules,
     })
@@ -96,6 +111,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("[Pagar.me Card] Error:", error.message)
-    return NextResponse.json({ error: "Erro ao processar cartão", details: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Erro ao processar cartão" }, { status: 500 })
   }
 }

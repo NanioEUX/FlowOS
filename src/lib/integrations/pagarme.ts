@@ -133,6 +133,7 @@ export async function createPixTransaction({
     items: [
       {
         id: orderId,
+        code: orderId.substring(0, 40),
         description: description.substring(0, 200),
         amount: Math.round(amount * 100),
         quantity: 1,
@@ -209,7 +210,7 @@ export async function createCardTransaction({
   orderId: string
   cardToken?: string
   creditCard?: { number: string; expiry: string; cvv: string }
-  creditCardHolderInfo?: { name: string; cpf: string; email: string; phone?: string; cep?: string; number?: string }
+  creditCardHolderInfo?: { name: string; cpf: string; email: string; phone?: string; cep?: string; number?: string; address?: string; city?: string; state?: string }
   installments?: number
   splitRules?: SplitRule[]
 }): Promise<PagarmeTransactionResponse> {
@@ -223,13 +224,20 @@ export async function createCardTransaction({
     creditCardObj.card_id = cardToken
   } else if (creditCard) {
     const [expMonth, expYear] = creditCard.expiry.split("/")
+    creditCardObj.recurrence_cycle = "first"
     creditCardObj.card = {
       number: creditCard.number.replace(/\s/g, ""),
       holder_name: creditCardHolderInfo?.name || "",
-      exp_month: expMonth,
-      exp_year: expYear.length === 2 ? `20${expYear}` : expYear,
+      exp_month: parseInt(expMonth, 10),
+      exp_year: parseInt(expYear.length === 2 ? `20${expYear}` : expYear, 10),
       cvv: creditCard.cvv,
-      document: creditCardHolderInfo?.cpf?.replace(/\D/g, "") || "",
+      billing_address: {
+        line_1: [creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "endereco nao informado",
+        zip_code: creditCardHolderInfo?.cep?.replace(/\D/g, "") || "01001000",
+        city: creditCardHolderInfo?.city || "Sao Paulo",
+        state: creditCardHolderInfo?.state || "SP",
+        country: "BR",
+      },
     }
   }
 
@@ -237,6 +245,7 @@ export async function createCardTransaction({
     items: [
       {
         id: orderId,
+        code: orderId.substring(0, 40),
         description: description.substring(0, 200),
         amount: Math.round(amount * 100),
         quantity: 1,
@@ -283,9 +292,11 @@ export async function createCardTransaction({
 
   // Check charge status for card failures
   const charge = data.charges?.[0]
-  if (charge && (charge.status === "failed" || charge.status === " declined")) {
-    const reason = charge.last_transaction_status || charge.status
-    throw new Error(`Cartão não autorizado: ${reason}`)
+  if (charge && (charge.status === "failed" || charge.status === "declined")) {
+    const acquirerMsg = charge.last_transaction?.acquirer_message
+    const gatewayErrors = charge.last_transaction?.gateway_response?.errors?.map((e: any) => e.message).join(", ")
+    const reason = acquirerMsg || gatewayErrors || charge.last_transaction_status || charge.status
+    throw new Error(`Cartao nao autorizado: ${reason}`)
   }
 
   return data as PagarmeTransactionResponse
