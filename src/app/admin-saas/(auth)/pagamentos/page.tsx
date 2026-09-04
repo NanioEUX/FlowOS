@@ -12,10 +12,9 @@ export default function PagamentosPage() {
   const [pagarmeWebhookKey, setPagarmeWebhookKey] = useState("")
   const [pagarmeEnvironment, setPagarmeEnvironment] = useState("sandbox")
   const [pagarmeFeePercentage, setPagarmeFeePercentage] = useState(1.09)
-  const [saasProfitPercentage, setSaasProfitPercentage] = useState(0.41)
+  const [saasProfitPercentage, setSaasProfitPercentage] = useState(0)
+  const [feeMode, setFeeMode] = useState<"pagarme_only" | "pagarme_plus_saas">("pagarme_only")
   const [showApiKey, setShowApiKey] = useState(false)
-
-  const totalCommission = pagarmeFeePercentage + saasProfitPercentage
 
   useEffect(() => {
     loadConfig()
@@ -30,7 +29,10 @@ export default function PagamentosPage() {
         setPagarmeWebhookKey(data.pagarmeWebhookKey || "")
         setPagarmeEnvironment(data.pagarmeEnvironment || "sandbox")
         if (data.pagarmeFeePercentage) setPagarmeFeePercentage(data.pagarmeFeePercentage)
-        if (data.saasProfitPercentage) setSaasProfitPercentage(data.saasProfitPercentage)
+        if (data.saasProfitPercentage) {
+          setSaasProfitPercentage(data.saasProfitPercentage)
+          setFeeMode(data.saasProfitPercentage > 0 ? "pagarme_plus_saas" : "pagarme_only")
+        }
       }
     } catch (e) {
       console.error("Erro ao carregar config:", e)
@@ -52,7 +54,7 @@ export default function PagamentosPage() {
           pagarmeApiKey,
           pagarmeWebhookKey,
           pagarmeEnvironment,
-          saasProfitPercentage,
+          saasProfitPercentage: feeMode === "pagarme_only" ? 0 : saasProfitPercentage,
         }),
       })
       const data = await res.json()
@@ -61,7 +63,6 @@ export default function PagamentosPage() {
         return
       }
 
-      // Auto-test after save
       const testRes = await fetch("/api/saas-admin/pagamentos/test")
       const testData = await testRes.json()
       setTestResult(testData)
@@ -80,6 +81,9 @@ export default function PagamentosPage() {
     )
   }
 
+  const saasPercentage = feeMode === "pagarme_only" ? 0 : Math.max(1, Math.round(saasProfitPercentage))
+  const establishmentPercentage = 100 - saasPercentage
+
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
@@ -89,20 +93,21 @@ export default function PagamentosPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-            <span className="text-xl">💳</span>
+      <div className="space-y-6">
+        {/* Dados de conexão */}
+        <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <span className="text-xl">💳</span>
+            </div>
+            <div>
+              <h2 className="font-semibold text-zinc-900">Pagar.me (Stone)</h2>
+              <p className="text-xs text-zinc-500">PIX + Cartão de crédito</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-zinc-900">Pagar.me (Stone)</h2>
-            <p className="text-xs text-zinc-500">PIX + Cartão de crédito</p>
-          </div>
-        </div>
 
-        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Environment</label>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">Ambiente</label>
             <select
               value={pagarmeEnvironment}
               onChange={(e) => setPagarmeEnvironment(e.target.value)}
@@ -120,7 +125,7 @@ export default function PagamentosPage() {
                 type={showApiKey ? "text" : "password"}
                 value={pagarmeApiKey}
                 onChange={(e) => setPagarmeApiKey(e.target.value)}
-                placeholder="pagarme_key_production_..."
+                placeholder="sk_..."
                 className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm pr-20"
               />
               <button
@@ -142,41 +147,115 @@ export default function PagamentosPage() {
               placeholder="Chave de validação do webhook"
               className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
             />
-            <p className="text-xs text-zinc-400 mt-1">
-              Usada para validar assinatura dos webhooks recebidos.
+          </div>
+        </div>
+
+        {/* Configurar taxas */}
+        <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-5">
+          <div>
+            <h2 className="font-semibold text-zinc-900">Configurar taxas</h2>
+            <p className="text-xs text-zinc-500 mt-1">
+              A taxa do Pagar.me ({pagarmeFeePercentage.toFixed(2)}%) é cobrada automaticamente a cada transação.
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Taxa Pagar.me</label>
-            <div className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-100 px-3 text-sm flex items-center text-zinc-600">
-              {pagarmeFeePercentage.toFixed(2)}%
+          {/* Taxa Pagar.me - sempre visível */}
+          <div className="bg-zinc-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-700">Taxa Pagar.me</p>
+                <p className="text-xs text-zinc-400">Cobrada automaticamente por transação</p>
+              </div>
+              <span className="text-lg font-bold text-zinc-900">{pagarmeFeePercentage.toFixed(2)}%</span>
             </div>
-            <p className="text-xs text-zinc-400 mt-1">
-              Taxa fixa cobrada pelo Pagar.me.
-            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Seu lucro (%)</label>
+          {/* Opção: Somente Pagar.me */}
+          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            feeMode === "pagarme_only"
+              ? "border-green-500 bg-green-50"
+              : "border-zinc-200 hover:border-zinc-300"
+          }`}>
             <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={saasProfitPercentage}
-              onChange={(e) => setSaasProfitPercentage(Number(e.target.value))}
-              className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
+              type="radio"
+              name="feeMode"
+              value="pagarme_only"
+              checked={feeMode === "pagarme_only"}
+              onChange={() => setFeeMode("pagarme_only")}
+              className="mt-0.5 accent-green-600"
             />
-            <p className="text-xs text-zinc-400 mt-1">
-              Quanto você quer lucrar por transação.
-            </p>
-          </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-900">Somente taxa Pagar.me</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Estabelecimento recebe tudo menos a taxa do Pagar.me. Sem comissão para o SaaS.
+              </p>
+            </div>
+          </label>
 
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-sm text-green-700">
-              Total a ser descontado por pedido: <span className="font-bold">{totalCommission.toFixed(2)}%</span>
-            </p>
+          {/* Opção: Pagar.me + SaaS */}
+          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            feeMode === "pagarme_plus_saas"
+              ? "border-green-500 bg-green-50"
+              : "border-zinc-200 hover:border-zinc-300"
+          }`}>
+            <input
+              type="radio"
+              name="feeMode"
+              value="pagarme_plus_saas"
+              checked={feeMode === "pagarme_plus_saas"}
+              onChange={() => setFeeMode("pagarme_plus_saas")}
+              className="mt-0.5 accent-green-600"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-zinc-900">Taxa Pagar.me + Taxa SaaS</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                SaaS cobra uma comissão extra sobre cada transação.
+              </p>
+
+              {feeMode === "pagarme_plus_saas" && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-zinc-500 whitespace-nowrap">SaaS fica com</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="10"
+                        value={saasProfitPercentage}
+                        onChange={(e) => setSaasProfitPercentage(Number(e.target.value))}
+                        className="w-20 h-8 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-center"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Pagar.me arredonda para inteiro: {saasPercentage}% SaaS / {establishmentPercentage}% estabelecimento
+                  </p>
+                </div>
+              )}
+            </div>
+          </label>
+
+          {/* Resumo */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-xs text-green-600 font-medium mb-2">Resumo por pedido de R$ 100,00</p>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-zinc-600">Estabelecimento recebe</span>
+                <span className="font-medium text-green-700">{establishmentPercentage}% = R$ {establishmentPercentage.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-600">Pagar.me cobra</span>
+                <span className="font-medium text-zinc-700">{pagarmeFeePercentage.toFixed(2)}% = R$ {(100 * pagarmeFeePercentage / 100).toFixed(2)}</span>
+              </div>
+              {saasPercentage > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-600">SaaS recebe</span>
+                  <span className="font-medium text-green-700">{saasPercentage}% = R$ {(100 * saasPercentage / 100).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -186,15 +265,13 @@ export default function PagamentosPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            onClick={handleSave}
-            disabled={saving || !pagarmeApiKey}
-            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-lg px-6 py-2.5 text-sm transition-all"
-          >
-            {saving ? "Salvando e testando..." : "Salvar e conectar"}
-          </button>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || !pagarmeApiKey}
+          className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-lg px-6 py-2.5 text-sm transition-all"
+        >
+          {saving ? "Salvando e testando..." : "Salvar e conectar"}
+        </button>
 
         {testResult && (
           <div className={`border rounded-lg px-4 py-3 text-sm ${testResult.ok ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
@@ -206,41 +283,9 @@ export default function PagamentosPage() {
           <p className="font-medium text-zinc-700">Como funciona:</p>
           <ul className="list-disc list-inside space-y-1">
             <li>A API Key é usada por todos os estabelecimentos (gateway centralizado)</li>
-            <li>Cada estabelecimento configura seu ID de receiver para split</li>
+            <li>Cada estabelecimento configura seu recipient para split</li>
             <li>O webhook recebe em: <code className="bg-zinc-100 px-1 rounded">/api/webhooks/pagarme</code></li>
           </ul>
-        </div>
-
-        {/* Taxas e comissão */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-6">
-          <h2 className="text-lg font-bold text-zinc-900 mb-4">Modelo de Taxas</h2>
-          <div className="bg-zinc-50 rounded-lg p-4 text-sm space-y-2">
-            <p className="font-medium text-zinc-700">Exemplo: Pedido de R$ 100,00</p>
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Estabelecimento recebe</span>
-                <span className="text-green-600 font-medium">{(100 - totalCommission).toFixed(2)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Pagar.me cobra</span>
-                <span className="text-zinc-900 font-medium">{pagarmeFeePercentage.toFixed(2)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Seu lucro (SaaS)</span>
-                <span className="text-green-600 font-medium">{saasProfitPercentage.toFixed(2)}%</span>
-              </div>
-              <div className="border-t border-zinc-200 pt-2 mt-2 flex justify-between">
-                <span className="text-zinc-700 font-medium">Total descontado</span>
-                <span className="text-green-600 font-bold">{totalCommission.toFixed(2)}%</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-zinc-400 mt-3">
-            Configure a comissão de cada estabelecimento em{" "}
-            <a href="/admin-saas/estabelecimentos" className="text-green-600 hover:underline">
-              Estabelecimentos → [nome] → Pagamentos
-            </a>
-          </p>
         </div>
       </div>
     </div>
