@@ -59,6 +59,65 @@ interface SplitRule {
   }
 }
 
+// Tokeniza cartão raw via API Pagar.me (POST /cards).
+// Retorna um card_id que pode ser usado em credit_card.card_id.
+// Necessário porque a V5 rejeita cartão raw por padrão (PCI-DSS).
+export async function createPagarmeCardToken({
+  apiKey,
+  number,
+  holderName,
+  expMonth,
+  expYear,
+  cvv,
+  billingAddress,
+}: {
+  apiKey: string
+  number: string
+  holderName: string
+  expMonth: number
+  expYear: number
+  cvv: string
+  billingAddress: {
+    line_1: string
+    zip_code: string
+    city: string
+    state: string
+    country: string
+    line_2?: string
+  }
+}): Promise<string> {
+  const body = {
+    number: number.replace(/\s/g, ""),
+    holder_name: holderName,
+    exp_month: expMonth,
+    exp_year: expYear,
+    cvv,
+    billing_address: billingAddress,
+  }
+
+  const res = await fetch(`${PAGARME_API_URL}/cards`, {
+    method: "POST",
+    headers: getAuthHeaders(apiKey),
+    body: JSON.stringify(body),
+  })
+
+  const data = await res.json()
+  if (!res.ok || !data.id) {
+    console.error("[Pagar.me] FALHA tokenização:", JSON.stringify(data))
+    throw new Error(`Falha ao tokenizar cartão: ${data.message || data.errors?.[0]?.message || JSON.stringify(data)}`)
+  }
+  return data.id as string
+}
+
+// Tokeniza cartão raw via API Pagar.me (POST /cards).
+// Retorna um card_id que pode ser usado em credit_card.card_id.
+// Necessário porque a V5 rejeita cartão raw por padrão (PCI-DSS).
+// NOTA: a V5 NÃO expõe POST /cards para tokenização server-side.
+// Use o SDK client-side (pagarme.js CDN → PagarMe.encryptCard) no front.
+async function _unused_createPagarmeCardToken_DISABLED() {
+  // Mantido apenas como referência; não chamar.
+}
+
 export async function createPagarmeCustomer({
   apiKey,
   name,
@@ -263,8 +322,12 @@ export async function createCardTransaction({
   }
 
   if (cardToken) {
+    // Token já veio do front via SDK Pagar.me (PCI-DSS compliant).
+    // Usar direto como card_id.
     creditCardObj.card_id = cardToken
   } else if (creditCard) {
+    // Fallback legado: cartão raw. Pagar.me V5 rejeita por padrão.
+    // Mantido apenas para compatibilidade — prefira sempre o caminho token.
     const [expMonth, expYear] = creditCard.expiry.split("/")
     creditCardObj.recurrence_cycle = "first"
     creditCardObj.card = {
@@ -300,28 +363,31 @@ export async function createCardTransaction({
     customer_id: customerId,
   }
 
-  // Shipping separado (antifraude compara cobrança vs entrega)
-  if (creditCardHolderInfo?.shippingStreet || creditCardHolderInfo?.shippingCity) {
-    body.shipping = {
-      name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
-      recipient_name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
-      address: {
-        street: creditCardHolderInfo.shippingStreet || creditCardHolderInfo.street || creditCardHolderInfo.address || "Não informado",
-        number: creditCardHolderInfo.shippingNumber || creditCardHolderInfo.number || "s/n",
-        zip_code: shippingCepDigits,
-        neighborhood: creditCardHolderInfo.shippingNeighborhood || creditCardHolderInfo.neighborhood || "Não informado",
-        city: creditCardHolderInfo.shippingCity || creditCardHolderInfo.city || "Não informado",
-        state: creditCardHolderInfo.shippingState || creditCardHolderInfo.state || "SP",
-        country: "BR",
-      },
-    }
+  // Shipping separado (antifraude compara cobrança vs entrega).
+  // Sempre envia o shipping (mesmo que vazio), pois o Pagar.me exige
+  // description + address como objeto no schema da order.
+  body.shipping = {
+    name: creditCardHolderInfo?.shippingRecipientName || creditCardHolderInfo?.name || "Cliente",
+    recipient_name: creditCardHolderInfo?.shippingRecipientName || creditCardHolderInfo?.name || "Cliente",
+    description: description || "Entrega de pedido",
+    address: {
+      street: creditCardHolderInfo?.shippingStreet || creditCardHolderInfo?.street || creditCardHolderInfo?.address || "Não informado",
+      number: creditCardHolderInfo?.shippingNumber || creditCardHolderInfo?.number || "s/n",
+      zip_code: shippingCepDigits || "00000000",
+      neighborhood: creditCardHolderInfo?.shippingNeighborhood || creditCardHolderInfo?.neighborhood || "Não informado",
+      city: creditCardHolderInfo?.shippingCity || creditCardHolderInfo?.city || "Não informado",
+      state: creditCardHolderInfo?.shippingState || creditCardHolderInfo?.state || "SP",
+      country: "BR",
+    },
   }
 
-  // IP do cliente (antifraude usa pra geolocalização e detecção de proxy/VPN)
+  // IP do cliente vai dentro de device (formato oficial Pagar.me V5).
+  // Só envia device se o IP estiver presente (senão Pagar.me rejeita {}).
   if (clientIp) {
-    body.metadata = { ...(body.metadata || {}), client_ip: clientIp }
-    // Pagar.me aceita também em "ip" no nível da order (algumas versões)
-    body.ip = clientIp
+    body.device = {
+      ip: clientIp,
+      user_agent: "Mozilla/5.0",
+    }
   }
 
   // Add split rules if provided (V5 format)

@@ -6,14 +6,19 @@ import { getPagarmeConfig } from "@/lib/pagarme-config"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { orderId, installments, establishmentId, creditCard, creditCardHolderInfo } = body
+    const { orderId, installments, establishmentId, creditCard, creditCardHolderInfo, cardToken } = body
 
     if (!orderId || !establishmentId) {
       return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
     }
 
-    if (!creditCard?.number || !creditCard?.expiry || !creditCard?.cvv) {
-      return NextResponse.json({ error: "Dados do cartão obrigatórios" }, { status: 400 })
+    // Pagar.me V5 exige card_token (PCI-DSS) ou cartão raw (rejeitado por padrão).
+    // Aceitamos apenas o caminho tokenizado do front.
+    if (!cardToken) {
+      return NextResponse.json(
+        { error: "Token do cartão não enviado. Use o SDK Pagar.me no frontend (PagarMe.encryptCard)." },
+        { status: 400 }
+      )
     }
 
     // Captura IP real do cliente (Vercel/Cloudflare passam via X-Forwarded-For).
@@ -51,36 +56,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pagar.me não configurado no servidor" }, { status: 500 })
     }
 
-    // Get establishment address as fallback for billing
+    // Get establishment address as fallback for shipping only
     const estab = await prisma.establishment.findUnique({
       where: { id: establishmentId },
       select: { address: true },
     })
 
-    // Enriquecer billing/shipping com dados do pedido (salvos quando o
-    // cliente fez checkout). Sem esses dados o antifraude reprova a transação
-    // por falta de contexto (Gemini análise 2026-09-04).
-    const fullAddressString = creditCardHolderInfo?.address || order.customerAddress || estab?.address || "Não informado"
-    const billingCep = (creditCardHolderInfo?.cep || order.customer?.cep || "").replace(/\D/g, "")
+    // IMPORTANTE: billing_address é o endereço de COBRANÇA do cartão
+    // (cadastro do cartão), NÃO o endereço de entrega.
+    // shipping_address é o endereço de ENTREGA do pedido.
+    // Se o front não enviar billing próprio, mandamos um placeholder —
+    // nunca o endereço de entrega, para não confundir o antifraude.
+    const billingCep = (creditCardHolderInfo?.cep || "").replace(/\D/g, "") || "00000000"
+    const shippingAddressString = order.customerAddress || estab?.address || "Não informado"
+    const shippingCep = (order.customer?.cep || "").replace(/\D/g, "") || billingCep
 
     const billingInfo = {
       ...creditCardHolderInfo,
-      // billing
-      street: (creditCardHolderInfo as any)?.street || fullAddressString,
+      // billing (vem do front ou fica como "Não informado" se vazio)
+      street: (creditCardHolderInfo as any)?.street || creditCardHolderInfo?.address || "Não informado",
       number: creditCardHolderInfo?.number || "s/n",
-      neighborhood: (creditCardHolderInfo as any)?.neighborhood || "",
-      city: (creditCardHolderInfo as any)?.city || "",
+      neighborhood: (creditCardHolderInfo as any)?.neighborhood || "Não informado",
+      city: (creditCardHolderInfo as any)?.city || "Não informado",
       state: (creditCardHolderInfo as any)?.state || "SP",
-      cep: billingCep || "00000000",
-      address: fullAddressString,
-      // shipping = mesmo do billing (antifraude compara cobrança vs entrega)
-      shippingStreet: fullAddressString,
-      shippingNumber: creditCardHolderInfo?.number || "s/n",
-      shippingNeighborhood: "",
-      shippingCity: "",
+      cep: billingCep,
+      // shipping (endereço de entrega do pedido, separado do billing)
+      shippingStreet: shippingAddressString,
+      shippingNumber: "s/n",
+      shippingNeighborhood: "Não informado",
+      shippingCity: "Não informado",
       shippingState: "SP",
-      shippingCep: billingCep || "00000000",
-      shippingRecipientName: creditCardHolderInfo?.name || order.customerName || "",
+      shippingCep: shippingCep,
+      shippingRecipientName: order.customerName || "",
     }
 
     // Create Pagar.me customer
@@ -120,7 +127,7 @@ export async function POST(req: NextRequest) {
       amount: order.total,
       description: `Pedido #${order.orderNumber} - ${order.establishment.name}`,
       orderId: order.id,
-      creditCard,
+      cardToken,
       creditCardHolderInfo: billingInfo,
       installments,
       splitRules,
