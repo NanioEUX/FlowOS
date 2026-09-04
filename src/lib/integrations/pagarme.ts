@@ -229,6 +229,7 @@ export async function createCardTransaction({
       exp_month: expMonth,
       exp_year: expYear.length === 2 ? `20${expYear}` : expYear,
       cvv: creditCard.cvv,
+      document: creditCardHolderInfo?.cpf?.replace(/\D/g, "") || "",
     }
   }
 
@@ -273,11 +274,18 @@ export async function createCardTransaction({
   })
 
   const data = await res.json()
-  console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status }))
+  console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status, charges: data.charges?.map((c: any) => ({ id: c.id, status: c.status, last_transaction_status: c.last_transaction_status })) }))
 
   if (!res.ok || !data.id) {
     console.error("[Pagar.me] FALHA transação:", JSON.stringify(data))
     throw new Error(`Falha ao criar transação cartão: ${data.message || data.errors?.[0]?.message || JSON.stringify(data)}`)
+  }
+
+  // Check charge status for card failures
+  const charge = data.charges?.[0]
+  if (charge && (charge.status === "failed" || charge.status === " declined")) {
+    const reason = charge.last_transaction_status || charge.status
+    throw new Error(`Cartão não autorizado: ${reason}`)
   }
 
   return data as PagarmeTransactionResponse
