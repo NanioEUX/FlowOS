@@ -233,9 +233,9 @@ export async function createCardTransaction({
       exp_year: parseInt(expYear.length === 2 ? `20${expYear}` : expYear, 10),
       cvv: creditCard.cvv,
       billing_address: {
-        line_1: [creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "endereco nao informado",
-        zip_code: creditCardHolderInfo?.cep?.replace(/\D/g, "") || "01001000",
-        city: creditCardHolderInfo?.city || "Sao Paulo",
+        line_1: [creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "Não informado",
+        zip_code: (creditCardHolderInfo?.cep || "").replace(/\D/g, "") || "00000000",
+        city: creditCardHolderInfo?.city || "Não informado",
         state: creditCardHolderInfo?.state || "SP",
         country: "BR",
       },
@@ -275,6 +275,10 @@ export async function createCardTransaction({
       },
     }))
   }
+
+  // Em cartão de crédito, forçar captura automática para evitar ficar
+  // preso em "waiting_capture" sem evento order.paid chegar.
+  creditCardObj.capture = true
 
   console.log("[Pagar.me] Criando transação cartão:", { customerId, amount, installments: installments || 1 })
 
@@ -323,8 +327,10 @@ export function mapPagarmeStatus(status: string): { paymentStatus: string; order
   const map: Record<string, { paymentStatus: string; orderStatus?: string }> = {
     pending: { paymentStatus: "pending" },
     waiting: { paymentStatus: "pending" },
+    waiting_capture: { paymentStatus: "paid", orderStatus: "confirmed" },
     unpaid: { paymentStatus: "pending" },
     paid: { paymentStatus: "paid", orderStatus: "confirmed" },
+    captured: { paymentStatus: "paid", orderStatus: "confirmed" },
     canceled: { paymentStatus: "cancelled", orderStatus: "cancelled" },
     refused: { paymentStatus: "cancelled" },
     refunded: { paymentStatus: "refunded" },

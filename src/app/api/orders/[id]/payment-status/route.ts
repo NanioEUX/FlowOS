@@ -89,18 +89,33 @@ export async function GET(
     } catch {}
   }
 
-  // Pagar.me payment status polling (charge IDs start with "ch_")
-  const isPagarmePayment = order.paymentId?.startsWith("ch_")
-  if (isPagarmePayment && order.paymentStatus === "pending" && order.paymentId) {
+  // Pagar.me payment status polling.
+  // Compatível tanto com order id (or_...) quanto com charge id (ch_...)
+  // dependendo do que foi gravado no paymentId.
+  const pagarmeId = order.paymentId
+  const isPagarmePayment = !!(pagarmeId && (pagarmeId.startsWith("ch_") || pagarmeId.startsWith("or_")))
+  if (isPagarmePayment && order.paymentStatus === "pending" && pagarmeId) {
     try {
       const config = await getPagarmeConfig()
       if (config.apiKey) {
-        const res = await fetch(`https://api.pagar.me/core/v5/charges/${order.paymentId}`, {
+        // Se for order id, buscar primeiro a order para descobrir a charge.
+        let chargeId = pagarmeId
+        if (pagarmeId.startsWith("or_")) {
+          const orderRes = await fetch(`https://api.pagar.me/core/v5/orders/${pagarmeId}`, {
+            headers: { Authorization: `Basic ${Buffer.from(config.apiKey + ":").toString("base64")}` },
+          })
+          if (orderRes.ok) {
+            const orderData = await orderRes.json()
+            chargeId = orderData?.charges?.[0]?.id || pagarmeId
+          }
+        }
+        const res = await fetch(`https://api.pagar.me/core/v5/charges/${chargeId}`, {
           headers: { Authorization: `Basic ${Buffer.from(config.apiKey + ":").toString("base64")}` },
         })
         if (res.ok) {
           const charge = await res.json()
-          if (charge.status === "paid" || charge.last_transaction_status === "paid") {
+          const isPaid = charge.status === "paid" || charge.last_transaction_status === "paid" || charge.status === "captured"
+          if (isPaid) {
             // Check autoAcceptOrders to decide between confirmed or preparing
             const est = await prisma.establishment.findUnique({
               where: { id: order.establishmentId },

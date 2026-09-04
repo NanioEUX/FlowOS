@@ -105,7 +105,10 @@ export async function POST(req: NextRequest) {
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        paymentId: String(transaction.id),
+        // Em Pagar.me V5 o webhook do cartão traz o id da charge (ch_...).
+        // Gravamos a charge id no paymentId para que tanto o webhook
+        // quanto o polling em /payment-status encontrem a order.
+        paymentId: String(transaction.charges?.[0]?.id || transaction.id),
         paymentStatus: "pending",
         status: "payment_pending",
       },
