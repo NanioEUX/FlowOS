@@ -131,6 +131,9 @@ export async function createPixTransaction({
 }): Promise<PagarmeTransactionResponse> {
   const body: any = {
     antifraud_enabled: false,
+    options: {
+      antifraud: { enabled: false },
+    },
     items: [
       {
         id: orderId,
@@ -244,6 +247,9 @@ export async function createCardTransaction({
 
   const body: any = {
     antifraud_enabled: false,
+    options: {
+      antifraud: { enabled: false },
+    },
     items: [
       {
         id: orderId,
@@ -298,10 +304,11 @@ export async function createCardTransaction({
 
   // Check charge status for card failures
   const charge = data.charges?.[0]
-  if (charge && (charge.status === "failed" || charge.status === "declined")) {
+  if (charge && (charge.status === "failed" || charge.status === "declined" || charge.status === "not_authorized")) {
     const acquirerMsg = charge.last_transaction?.acquirer_message || ""
     const lastTxStatus = charge.last_transaction_status || ""
     const gatewayCode = charge.last_transaction?.gateway_response?.code || ""
+    const antifraudStatus = charge.last_transaction?.antifraud_response?.status || ""
 
     // If acquirer approved or transaction was authorized/captured, treat as success
     const isApproved = acquirerMsg.toLowerCase().includes("aprovad") ||
@@ -313,7 +320,10 @@ export async function createCardTransaction({
 
     if (!isApproved) {
       const gatewayErrors = charge.last_transaction?.gateway_response?.errors?.map((e: any) => e.message).join(", ")
-      const reason = acquirerMsg || gatewayErrors || lastTxStatus || charge.status
+      let reason = acquirerMsg || gatewayErrors || lastTxStatus || charge.status
+      if (antifraudStatus === "reproved") {
+        reason = `Antifraude reprovou a transação (score: ${charge.last_transaction?.antifraud_response?.score || "n/a"}). Tente outro cartão ou entre em contato com a operadora.`
+      }
       throw new Error(`Cartao nao autorizado: ${reason}`)
     }
     // If approved but charge status is "failed", continue - webhook will update
