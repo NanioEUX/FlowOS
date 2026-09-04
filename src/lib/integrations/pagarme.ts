@@ -172,7 +172,14 @@ export async function createPixTransaction({
     body: JSON.stringify(body),
   })
 
-  const data = await res.json()
+  const text = await res.text()
+  let data: any
+  try {
+    data = JSON.parse(text)
+  } catch {
+    console.error("[Pagar.me] Resposta não-JSON:", text.substring(0, 500))
+    throw new Error(`Pagar.me retornou erro: ${text.substring(0, 200)}`)
+  }
   console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status }))
 
   if (!res.ok || !data.id) {

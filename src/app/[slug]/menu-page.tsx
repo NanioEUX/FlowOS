@@ -3033,9 +3033,8 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
-      {/* Bottom Navigation Bar */}
-      {!showCart && !showPaymentModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderCard, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* Bottom Navigation Bar - always visible */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderCard, paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -3110,7 +3109,6 @@ onPaymentConfirmed={handlePaymentSuccess}
             </button>
           </div>
         </div>
-      )}
 
       {/* Story Modal */}
       {activeStory && (() => {
@@ -4670,16 +4668,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <ShoppingBag className="h-4 w-4 shrink-0" />
                   {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
-                {!lastOrder?.paymentLink && !pendingOrderNumber && (
+                {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
                     className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
                     <ArrowLeft className="h-4 w-4" /> Continuar comprando
-                  </button>
-                )}
-                {lastOrder?.paymentLink && (
-                  <button onClick={() => checkAndOpenPayment(lastOrder.orderId, extractTrackingToken(lastOrder.trackingUrl))}
-                    className="w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2" style={{ backgroundColor: theme.primary }}>
-                    <CreditCard className="h-4 w-4" /> Pagar pedido
                   </button>
                 )}
               </>

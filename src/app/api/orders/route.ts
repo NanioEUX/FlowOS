@@ -571,6 +571,7 @@ export async function POST(req: NextRequest) {
               data: {
                 paymentId: pixPayment.id,
                 paymentLink: paymentLink,
+                pixPayload: pixPayload || "",
                 paymentStatus: "pending",
                 status: "payment_pending",
               },

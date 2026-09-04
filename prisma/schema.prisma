@@ -422,6 +422,7 @@ model Order {
   status             String          @default("pending")
   paymentId          String?
   paymentLink        String?
+  pixPayload         String?
   paymentStatus      String          @default("pending")
   notes              String?
   method             String          @default("site")

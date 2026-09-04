@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronRight, MessageCircle, Phone, Send, Loader2, Package, Clock, CheckCircle2, Bike, ShoppingBag, Store, RefreshCw } from "lucide-react"
+import { X, ChevronRight, MessageCircle, Phone, Send, Loader2, Package, Clock, CheckCircle2, Bike, ShoppingBag, Store, RefreshCw, Copy, Check } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface OrderItem {
@@ -30,6 +30,7 @@ interface Order {
   paymentStatus: string
   paymentMethod: string
   paymentLink: string | null
+  pixPayload: string | null
   orderType: string
   customerName: string
   customerAddress: string | null
@@ -139,6 +140,7 @@ export function OrdersScreen({
   const [chatInput, setChatInput] = useState("")
   const [chatSending, setChatSending] = useState(false)
   const [messages, setMessages] = useState<Record<string, OrderMessage[]>>({})
+  const [copiedPixOrderId, setCopiedPixOrderId] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const calcPoints = (total: number) => {
@@ -449,6 +451,29 @@ export function OrdersScreen({
                               <ChevronRight className="h-3 w-3 rotate-90" /> Menos detalhes
                             </button>
                           </div>
+                        )}
+
+                        {/* PIX Copy Button */}
+                        {order.paymentStatus === "pending" && order.pixPayload && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(order.pixPayload!)
+                                setCopiedPixOrderId(order.id)
+                                setTimeout(() => setCopiedPixOrderId(null), 2000)
+                              } catch {
+                                alert("Não foi possível copiar. Tente novamente.")
+                              }
+                            }}
+                            className="w-full mb-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-opacity hover:opacity-90"
+                            style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: `${theme.primary}08` }}
+                          >
+                            {copiedPixOrderId === order.id ? (
+                              <><Check className="h-4 w-4" /> Copiado!</>
+                            ) : (
+                              <><Copy className="h-4 w-4" /> Copiar código PIX</>
+                            )}
+                          </button>
                         )}
 
                         {/* Actions: Ajuda / Chat */}

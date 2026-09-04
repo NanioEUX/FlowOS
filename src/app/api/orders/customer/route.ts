@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
       paymentMethod: true,
       paymentStatus: true,
       paymentLink: true,
+      pixPayload: true,
       paymentId: true,
       trackingToken: true,
       deliveryFee: true,
