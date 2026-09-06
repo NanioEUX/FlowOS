@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useNewOrderAlerts, ensureNotificationPermission, playNewOrderSound } from "@/lib/use-new-order-alerts"
 import { SearchableSelect } from "@/components/searchable-select"
+import { SoundControl } from "@/components/sound-control"
 
 const statusLabels: Record<string, string> = {
   new: "Novo",
@@ -258,21 +259,31 @@ export default function PedidosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-zinc-900">Pedidos</h2>
-        <button
-          onClick={() => {
-            const user = JSON.parse(localStorage.getItem("pedefacil-user") || "{}")
-            if (user.establishmentId) {
-              localStorage.setItem("kds_token", user.token)
-              localStorage.setItem("kds_user", JSON.stringify(user))
-              localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
-              window.open("/kds/screen", "_blank")
-            }
-          }}
-          className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          <ChefHat className="w-4 h-4" />
-          Cozinha (KDS)
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="rounded-lg border border-zinc-200 bg-white">
+            <SoundControl
+              storageKey="atendimento_sound"
+              accentColor="#16a34a"
+              defaultEnabled={true}
+              defaultVolume={0.7}
+            />
+          </div>
+          <button
+            onClick={() => {
+              const user = JSON.parse(localStorage.getItem("pedefacil-user") || "{}")
+              if (user.establishmentId) {
+                localStorage.setItem("kds_token", user.token)
+                localStorage.setItem("kds_user", JSON.stringify(user))
+                localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
+                window.open("/kds/screen", "_blank")
+              }
+            }}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <ChefHat className="w-4 h-4" />
+            Cozinha (KDS)
+          </button>
+        </div>
       </div>
 
       {/* Motoboy summary removido — gestão de motoboys fica no módulo /entregas */}

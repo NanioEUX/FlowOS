@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { playKitchenBeep } from "@/components/sound-control"
 
 /**
  * Requests browser notification permission on first call.
@@ -16,16 +17,31 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   }
 }
 
+function readSoundPrefs(storageKey = "atendimento_sound"): { enabled: boolean; volume: number } {
+  if (typeof window === "undefined") return { enabled: true, volume: 0.7 }
+  try {
+    const stored = localStorage.getItem(storageKey)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return {
+        enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : true,
+        volume: typeof parsed.volume === "number" ? parsed.volume : 0.7,
+      }
+    }
+  } catch {}
+  return { enabled: true, volume: 0.7 }
+}
+
 /**
- * Plays a short audio cue (loaded from /public/sounds/new-order.mp3).
- * Falls back to the Notification API sound if audio is unavailable.
+ * Plays the kitchen beep pattern (3 cycles of double-beep) when a new order
+ * arrives. Volume and on/off are read from localStorage.
  */
 export function playNewOrderSound() {
   if (typeof window === "undefined") return
+  const { enabled, volume } = readSoundPrefs()
+  if (!enabled) return
   try {
-    const audio = new Audio("/sounds/new-order.mp3")
-    audio.volume = 0.6
-    void audio.play().catch(() => {})
+    playKitchenBeep(volume, 3)
   } catch {}
 }
 

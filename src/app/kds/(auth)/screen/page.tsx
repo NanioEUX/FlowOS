@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, LogOut, Volume2, VolumeX, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react"
+import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react"
+import { SoundControl, playKitchenBeep } from "@/components/sound-control"
 
 interface OrderMessage {
   id: string
@@ -38,7 +39,8 @@ export default function KdsScreen() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(false)
+  const [soundVolume, setSoundVolume] = useState(0.7)
   const [establishment, setEstablishment] = useState<any>(null)
   const lastCountRef = useRef(0)
   const [timers, setTimers] = useState<Record<string, string>>({})
@@ -59,6 +61,15 @@ export default function KdsScreen() {
     const estData = JSON.parse(est)
     estIdRef.current = estData.id
     setEstablishment(estData)
+
+    try {
+      const stored = localStorage.getItem("kds_sound")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (typeof parsed.enabled === "boolean") setSoundEnabled(parsed.enabled)
+        if (typeof parsed.volume === "number") setSoundVolume(parsed.volume)
+      }
+    } catch {}
 
     // Fetch full establishment data with logo from API
     fetch(`/api/kds/establishment?establishmentId=${estData.id}`)
@@ -88,7 +99,7 @@ export default function KdsScreen() {
 
         const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending").length
         if (newCount > lastCountRef.current && lastCountRef.current >= 0 && soundEnabled && lastCountRef.current > 0) {
-          playBeep()
+          playKitchenBeep(soundVolume, 3)
         }
         lastCountRef.current = newCount
         setOrders(filtered)
@@ -101,22 +112,7 @@ export default function KdsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [soundEnabled])
-
-  function playBeep() {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = 880
-      osc.type = "sine"
-      gain.gain.value = 0.3
-      osc.start()
-      osc.stop(ctx.currentTime + 0.2)
-    } catch {}
-  }
+  }, [soundEnabled, soundVolume])
 
   async function updateStatus(orderId: string, newStatus: string) {
     const token = localStorage.getItem("kds_token")
@@ -169,7 +165,7 @@ export default function KdsScreen() {
         const unread = msgs.filter(m => m.sender === "customer" && !m.read)
         const prevCount = lastMsgCountRef.current[oid] || 0
         if (unread.length > prevCount && prevCount >= 0 && lastMsgCountRef.current[oid] !== undefined) {
-          playBeep()
+          playKitchenBeep(soundVolume, 1)
         }
         lastMsgCountRef.current[oid] = unread.length
       }
@@ -353,9 +349,15 @@ export default function KdsScreen() {
               <Clock className="w-4 h-4 text-amber-400" />
               <span className="text-sm text-zinc-200">Média: <strong className="text-white">{avgTime}m</strong></span>
             </div>
-            <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-lg hover:bg-zinc-800">
-              {soundEnabled ? <Volume2 className="w-5 h-5 text-zinc-300" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
-            </button>
+            <SoundControl
+              storageKey="kds_sound"
+              defaultEnabled={soundEnabled}
+              defaultVolume={soundVolume}
+              onChange={(enabled, volume) => {
+                setSoundEnabled(enabled)
+                setSoundVolume(volume)
+              }}
+            />
           </div>
         </header>
 
