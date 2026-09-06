@@ -9,6 +9,9 @@ interface SoundControlProps {
   defaultEnabled?: boolean
   accentColor?: string
   onChange?: (enabled: boolean, volume: number) => void
+  // Estado controlado externamente (opcional). Se omitido, usa estado interno + localStorage.
+  controlledEnabled?: boolean
+  controlledVolume?: number
 }
 
 export function SoundControl({
@@ -17,29 +20,44 @@ export function SoundControl({
   defaultEnabled = true,
   accentColor = "#22c55e",
   onChange,
+  controlledEnabled,
+  controlledVolume,
 }: SoundControlProps) {
-  const [enabled, setEnabled] = useState(defaultEnabled)
-  const [volume, setVolume] = useState(defaultVolume)
+  const [internalEnabled, setInternalEnabled] = useState(defaultEnabled)
+  const [internalVolume, setInternalVolume] = useState(defaultVolume)
+  const enabled = controlledEnabled ?? internalEnabled
+  const volume = controlledVolume ?? internalVolume
+  const setEnabled = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === "function" ? v(enabled) : v
+    setInternalEnabled(next)
+    onChange?.(next, volume)
+  }
+  const setVolume = (v: number | ((p: number) => number)) => {
+    const next = typeof v === "function" ? v(volume) : v
+    setInternalVolume(next)
+    onChange?.(enabled, next)
+  }
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (controlledEnabled !== undefined) return
     try {
       const stored = localStorage.getItem(storageKey)
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (typeof parsed.enabled === "boolean") setEnabled(parsed.enabled)
-        if (typeof parsed.volume === "number") setVolume(parsed.volume)
+        if (typeof parsed.enabled === "boolean") setInternalEnabled(parsed.enabled)
+        if (typeof parsed.volume === "number") setInternalVolume(parsed.volume)
       }
     } catch {}
-  }, [storageKey])
+  }, [storageKey, controlledEnabled])
 
   useEffect(() => {
+    if (controlledEnabled !== undefined) return
     try {
       localStorage.setItem(storageKey, JSON.stringify({ enabled, volume }))
     } catch {}
-    onChange?.(enabled, volume)
-  }, [enabled, volume, storageKey, onChange])
+  }, [enabled, volume, storageKey, controlledEnabled])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -99,7 +117,11 @@ export function SoundControl({
           <button
             type="button"
             onClick={() => {
-              if (enabled) playKitchenBeep(volume, 1)
+              if (enabled) {
+                // Garante desbloqueio do AudioContext (política de autoplay)
+                getAudioCtx()
+                playKitchenBeep(volume, 1)
+              }
             }}
             disabled={!enabled}
             className="mt-3 w-full text-xs font-medium px-2 py-1.5 rounded border border-zinc-700 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 transition-colors"
@@ -114,47 +136,57 @@ export function SoundControl({
 
 // Padrão "cozinha": 3 ciclos de bip duplo (2 tons 1000Hz de 0.3s com pausa 0.2s),
 // repetindo a cada 2s. Auto-stop após o 3º ciclo.
-export function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {
+// AudioContext é cacheado e resumido a cada chamada para vencer a política
+// de autoplay do navegador (que suspende contexts sem interação prévia).
+let _audioCtx: any = null
+
+function getAudioCtx(): any {
   try {
     const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
-    if (!AudioCtx) return
-    const ctx = new AudioCtx()
-    const cycleGapMs = 2000
-    const toneMs = 300
-    const gapMs = 200
-    const repeatCount = cycles
-
-    let stopped = false
-    const stop = () => {
-      if (stopped) return
-      stopped = true
-      try { ctx.close() } catch {}
+    if (!AudioCtx) return null
+    if (!_audioCtx || _audioCtx.state === "closed") {
+      _audioCtx = new AudioCtx()
     }
-
-    function playBip(startMs: number) {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = "sine"
-      osc.frequency.value = 1000
-      gain.gain.value = 0
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-
-      const t0 = ctx.currentTime + startMs / 1000
-      gain.gain.linearRampToValueAtTime(volume, t0 + 0.02)
-      osc.start(t0)
-      gain.gain.setValueAtTime(volume, t0 + toneMs / 1000 - 0.02)
-      gain.gain.linearRampToValueAtTime(0, t0 + toneMs / 1000)
-      osc.stop(t0 + toneMs / 1000)
+    const ctx = _audioCtx
+    if (ctx.state === "suspended") {
+      void ctx.resume().catch(() => {})
     }
+    return ctx
+  } catch {
+    return null
+  }
+}
 
-    for (let i = 0; i < repeatCount; i++) {
-      const base = i * cycleGapMs
-      playBip(base)
-      playBip(base + toneMs + gapMs)
-    }
+export function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {
+  const ctx = getAudioCtx()
+  if (!ctx) return
 
-    const totalMs = repeatCount * cycleGapMs + 200
-    setTimeout(stop, totalMs)
-  } catch {}
+  const cycleGapMs = 2000
+  const toneMs = 300
+  const gapMs = 200
+  const repeatCount = cycles
+
+  function playBip(startMs: number) {
+    if (!ctx) return
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = "sine"
+    osc.frequency.value = 1000
+    gain.gain.value = 0
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    const t0 = ctx.currentTime + startMs / 1000
+    gain.gain.linearRampToValueAtTime(volume, t0 + 0.02)
+    osc.start(t0)
+    gain.gain.setValueAtTime(volume, t0 + toneMs / 1000 - 0.02)
+    gain.gain.linearRampToValueAtTime(0, t0 + toneMs / 1000)
+    osc.stop(t0 + toneMs / 1000)
+  }
+
+  for (let i = 0; i < repeatCount; i++) {
+    const base = i * cycleGapMs
+    playBip(base)
+    playBip(base + toneMs + gapMs)
+  }
 }

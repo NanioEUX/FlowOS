@@ -62,15 +62,6 @@ export default function KdsScreen() {
     estIdRef.current = estData.id
     setEstablishment(estData)
 
-    try {
-      const stored = localStorage.getItem("kds_sound")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (typeof parsed.enabled === "boolean") setSoundEnabled(parsed.enabled)
-        if (typeof parsed.volume === "number") setSoundVolume(parsed.volume)
-      }
-    } catch {}
-
     // Fetch full establishment data with logo from API
     fetch(`/api/kds/establishment?establishmentId=${estData.id}`)
       .then(res => res.json())
@@ -351,8 +342,10 @@ export default function KdsScreen() {
             </div>
             <SoundControl
               storageKey="kds_sound"
-              defaultEnabled={soundEnabled}
-              defaultVolume={soundVolume}
+              controlledEnabled={soundEnabled}
+              controlledVolume={soundVolume}
+              defaultEnabled={true}
+              defaultVolume={0.7}
               onChange={(enabled, volume) => {
                 setSoundEnabled(enabled)
                 setSoundVolume(volume)
