@@ -28,14 +28,18 @@ export function SoundControl({
   const enabled = controlledEnabled ?? internalEnabled
   const volume = controlledVolume ?? internalVolume
   const setEnabled = (v: boolean | ((p: boolean) => boolean)) => {
-    const next = typeof v === "function" ? v(enabled) : v
-    setInternalEnabled(next)
-    onChange?.(next, volume)
+    setInternalEnabled((prev) => {
+      const next = typeof v === "function" ? v(prev) : v
+      onChange?.(next, controlledVolume ?? internalVolume)
+      return next
+    })
   }
   const setVolume = (v: number | ((p: number) => number)) => {
-    const next = typeof v === "function" ? v(volume) : v
-    setInternalVolume(next)
-    onChange?.(enabled, next)
+    setInternalVolume((prev) => {
+      const next = typeof v === "function" ? v(prev) : v
+      onChange?.(controlledEnabled ?? internalEnabled, next)
+      return next
+    })
   }
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)

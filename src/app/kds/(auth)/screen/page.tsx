@@ -39,8 +39,28 @@ export default function KdsScreen() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(false)
-  const [soundVolume, setSoundVolume] = useState(0.7)
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === "undefined") return false
+    try {
+      const stored = localStorage.getItem("kds_sound")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (typeof parsed.enabled === "boolean") return parsed.enabled
+      }
+    } catch {}
+    return false
+  })
+  const [soundVolume, setSoundVolume] = useState(() => {
+    if (typeof window === "undefined") return 0.7
+    try {
+      const stored = localStorage.getItem("kds_sound")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (typeof parsed.volume === "number") return parsed.volume
+      }
+    } catch {}
+    return 0.7
+  })
   const [establishment, setEstablishment] = useState<any>(null)
   const lastCountRef = useRef(0)
   const [timers, setTimers] = useState<Record<string, string>>({})
@@ -342,9 +362,7 @@ export default function KdsScreen() {
             </div>
             <SoundControl
               storageKey="kds_sound"
-              controlledEnabled={soundEnabled}
-              controlledVolume={soundVolume}
-              defaultEnabled={true}
+              defaultEnabled={false}
               defaultVolume={0.7}
               onChange={(enabled, volume) => {
                 setSoundEnabled(enabled)
