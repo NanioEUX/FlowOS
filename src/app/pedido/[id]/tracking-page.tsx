@@ -82,8 +82,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
     items = []
   }
   const flowOrder = statusSteps.map(s => s.key)
-  const currentIndex = flowOrder.indexOf(order.status)
-  const cancelled = order.status === "cancelled"
 
   const [messages, setMessages] = useState<OrderMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -94,8 +92,34 @@ export function TrackingPage({ order, statusSteps }: Props) {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMsgCountRef = useRef(0)
+  const [orderStatus, setOrderStatus] = useState(order.status)
 
   const token = order.trackingToken || order.id
+
+  const currentIndex = flowOrder.indexOf(orderStatus)
+  const cancelled = orderStatus === "cancelled"
+
+  // Polling do status do pedido (a cada 10s) — atualiza timeline em tempo real.
+  useEffect(() => {
+    let cancelled = false
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`/api/tracking/${token}`)
+        if (res.ok && !cancelled) {
+          const data = await res.json()
+          if (data?.status && data.status !== orderStatus) {
+            setOrderStatus(data.status)
+          }
+        }
+      } catch {}
+    }
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 10000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [token, orderStatus])
 
   async function fetchMessages() {
     try {
@@ -186,7 +210,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
   const orderNumber = (order as any).orderNumber || order.id.substring(0, 8).toUpperCase()
 
   function getEstimatedTime(): string | null {
-    if (order.status === "delivered" || order.status === "cancelled") return null
+    if (orderStatus === "delivered" || orderStatus === "cancelled") return null
     const created = new Date(order.createdAt)
     const now = new Date()
     const elapsed = (now.getTime() - created.getTime()) / 60000
@@ -232,10 +256,10 @@ export function TrackingPage({ order, statusSteps }: Props) {
             </div>
           )}
           <div className="mb-2 text-4xl">
-            {cancelled ? "😢" : statusIcons[order.status] || "📋"}
+            {cancelled ? "😢" : statusIcons[orderStatus] || "📋"}
           </div>
           <h1 className="text-2xl font-bold text-zinc-900">
-            {cancelled ? "Pedido Cancelado" : statusLabels[order.status] || order.status}
+            {cancelled ? "Pedido Cancelado" : statusLabels[orderStatus] || orderStatus}
           </h1>
           <p className="text-3xl font-bold text-green-600 mt-2">
             Pedido #{(order as any).orderNumber || order.id.substring(0, 8).toUpperCase()}
@@ -243,7 +267,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
         </div>
 
         {/* Delivery Code - right at the top */}
-        {order.deliveryCode && order.status !== "delivered" && order.status !== "cancelled" && (
+        {order.deliveryCode && orderStatus !== "delivered" && orderStatus !== "cancelled" && (
           <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-center">
             <p className="text-xs font-medium text-amber-600">
               Código entrega: <span className="font-bold tracking-wider">{order.deliveryCode}</span>
@@ -469,7 +493,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
         )}
 
         {/* Payment info */}
-        {order.paymentLink && order.paymentStatus !== "paid" && order.status !== "cancelled" && (
+        {order.paymentLink && order.paymentStatus !== "paid" && orderStatus !== "cancelled" && (
           <Button className="w-full gap-2" onClick={() => setShowPaymentModal(true)}>
             <CreditCard className="h-4 w-4" />
             Pagar agora (Pix / Cartão)
