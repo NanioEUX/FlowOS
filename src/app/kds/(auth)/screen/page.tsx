@@ -31,7 +31,6 @@ type FilterOrigin = "all" | "mesas" | "online"
 
 const columns = [
   { status: "new", label: "Novos", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", btnColor: "bg-blue-600 hover:bg-blue-500" },
-  { status: "accepted", label: "Aceitos", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30", btnColor: "bg-cyan-600 hover:bg-cyan-500" },
   { status: "preparing", label: "Preparando", color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", btnColor: "bg-yellow-600 hover:bg-yellow-500" },
   { status: "ready", label: "Prontos", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30", btnColor: "bg-green-600 hover:bg-green-500" },
 ]
@@ -109,7 +108,7 @@ export default function KdsScreen() {
         const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "preparing", "ready"].includes(o.status))
         filtered.sort((a: Order, b: Order) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
-        const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending").length
+        const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending" || o.status === "accepted").length
         if (newCount > lastCountRef.current && lastCountRef.current >= 0 && soundEnabled && lastCountRef.current > 0) {
           playKitchenBeep(soundVolume, 3)
         }
@@ -238,7 +237,7 @@ export default function KdsScreen() {
 
   function getOrdersForColumn(colStatus: string): Order[] {
     return orders.filter(o => {
-      if (colStatus === "new") return o.status === "new" || o.status === "pending" || o.status === "confirmed"
+      if (colStatus === "new") return o.status === "new" || o.status === "pending" || o.status === "confirmed" || o.status === "accepted"
       return o.status === colStatus
     }).filter(o => {
       if (filter === "all") return true
