@@ -1773,7 +1773,7 @@ export default function CardapioPage() {
                               {getBadgeDisplay(product.badge)}
                             </div>
                             {product.description && (
-                              <p className="text-sm text-zinc-500 truncate">{product.description}</p>
+                              <p className="text-sm text-zinc-500 leading-tight">{product.description}</p>
                             )}
                             {(() => {
                               const cmv = computeProductCMV(product)
