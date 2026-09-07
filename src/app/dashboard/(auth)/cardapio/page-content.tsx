@@ -1753,46 +1753,52 @@ export default function CardapioPage() {
                             </span>
                           </div>
 
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/[.08] text-xl">
-                              🍕
-                            </div>
-                          )}
-
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-zinc-900">{product.name}</p>
-                              {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
-                              {hasCostAlert(product) && <Badge variant="warning">Custo alterado</Badge>}
-                              {getBadgeDisplay(product.badge)}
-                            </div>
-                            {product.description && (
-                              <p className="text-sm text-zinc-500 leading-tight">{product.description}</p>
+                          <button
+                            type="button"
+                            onClick={() => editProduct(product)}
+                            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer rounded-l-lg -m-3 p-3 transition-colors hover:bg-zinc-100/60 text-left"
+                          >
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="h-12 w-12 rounded-lg object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/[.08] text-xl shrink-0">
+                                🍕
+                              </div>
                             )}
-                            {(() => {
-                              const cmv = computeProductCMV(product)
-                              if (cmv > 0) {
-                                const lucro = product.price - cmv
-                                const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
-                                return (
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
-                                    <span className="text-[10px] text-zinc-300">•</span>
-                                    <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                      {margem.toFixed(0)}% lucro
-                                    </span>
-                                  </div>
-                                )
-                              }
-                              return null
-                            })()}
-                          </div>
+
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-zinc-900 hover:underline">{product.name}</p>
+                                {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
+                                {hasCostAlert(product) && <Badge variant="warning">Custo alterado</Badge>}
+                                {getBadgeDisplay(product.badge)}
+                              </div>
+                              {product.description && (
+                                <p className="text-sm text-zinc-500 leading-tight">{product.description}</p>
+                              )}
+                              {(() => {
+                                const cmv = computeProductCMV(product)
+                                if (cmv > 0) {
+                                  const lucro = product.price - cmv
+                                  const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
+                                  return (
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                      <span className="text-[10px] text-zinc-300">•</span>
+                                      <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        {margem.toFixed(0)}% lucro
+                                      </span>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
+                            </div>
+                          </button>
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="font-bold text-green-600 whitespace-nowrap">
                               {formatCurrency(product.price)}
