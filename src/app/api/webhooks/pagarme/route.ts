@@ -115,7 +115,9 @@ async function processWebhook(eventType: string, orderData: any) {
       select: { autoAcceptOrders: true },
     })
     if (establishment?.autoAcceptOrders) {
-      finalOrderStatus = "preparing"
+      // Auto-aceitar: pula direto pra 'accepted' (depois é só clicar em
+      // "Iniciar preparo" pra ir pra 'preparing').
+      finalOrderStatus = "accepted"
     }
   }
 

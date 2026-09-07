@@ -121,7 +121,7 @@ export async function GET(
               where: { id: order.establishmentId },
               select: { autoAcceptOrders: true },
             })
-            const newStatus = est?.autoAcceptOrders ? "preparing" : "confirmed"
+            const newStatus = est?.autoAcceptOrders ? "accepted" : "confirmed"
             await prisma.order.update({
               where: { id: params.id },
               data: { paymentStatus: "paid", status: newStatus },

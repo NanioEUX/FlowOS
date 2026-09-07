@@ -171,8 +171,11 @@ export async function POST(req: NextRequest) {
     // For presencial mesa orders: status=new, no payment at creation
     const isMesa = orderType === "presencial" && tableNumber
     const isOnlinePaymentMethod = ["pix", "card", "online", "asaas", "inter"].includes(paymentMethod)
-    const autoAccept = establishment.autoAcceptOrders && !isOnlinePaymentMethod && !isMesa
-    const initialStatus = body.status || (isMesa ? "new" : autoAccept ? "preparing" : "pending")
+    // Auto-aceite: TODOS os pedidos (online + balcão/PDV + mesa) pulam direto
+    // pra 'accepted' quando autoAcceptOrders=true. Depois é só clicar em
+    // "Iniciar preparo" pra ir pra 'preparing'.
+    const autoAccept = establishment.autoAcceptOrders
+    const initialStatus = body.status || (autoAccept ? "accepted" : (isMesa ? "new" : "pending"))
     console.log("[Orders POST] autoAccept:", { autoAcceptOrders: establishment.autoAcceptOrders, paymentMethod, isOnlinePaymentMethod, isMesa, initialStatus })
 
     // Find or create customer - CPF is unique identifier

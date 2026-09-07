@@ -840,7 +840,7 @@ export default function CaixaPOSPage() {
           orderType: "presencial",
           paymentMethod: isMesa ? "pending" : payment,
           method: "caixa",
-          status: savedNeedsPrep ? "pending" : (isMesa ? "new" : "delivered"),
+          status: savedNeedsPrep ? undefined : (isMesa ? "new" : "delivered"),
           tableNumber: activeTable,
         }),
       })
