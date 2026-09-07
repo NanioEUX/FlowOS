@@ -4734,6 +4734,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           theme={theme}
           orders={customerOrders}
           loading={loadingOrders}
+          onRefresh={loadCustomerOrders}
           onClose={() => setShowOrdersList(false)}
           onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
           onReorder={(order) => {
@@ -4755,7 +4756,6 @@ onPaymentConfirmed={handlePaymentSuccess}
             openCart()
           }}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
-          onRefresh={loadCustomerOrders}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
           loyaltyConfig={parsedLoyalty}
@@ -4794,9 +4794,9 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (() => {
                 const isPickup = trackingOrder.orderType === "pickup"
-                const allSteps = ["pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]
+                const allSteps = ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
                 const flowSteps = isPickup
-                  ? ["pending", "confirmed", "accepted", "preparing", "ready"]
+                  ? ["accepted", "preparing", "ready"]
                   : allSteps
                 const flowIdx = flowSteps.indexOf(trackingOrder.status)
                 const cancelled = trackingOrder.status === "cancelled"
@@ -4884,13 +4884,33 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     )}
 
+                    {/* Pay button (shown if still needs to pay) */}
+                    {trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink && (
+                      <button
+                        onClick={() => {
+                          setOrderResult({
+                            success: true,
+                            orderId: trackingOrder.id,
+                            paymentLink: trackingOrder.paymentLink,
+                            paymentMethod: trackingOrder.paymentMethod || "pix",
+                            orderTotal: trackingOrder.total,
+                            trackingUrl: `/pedido/${trackingOrder.trackingToken}`,
+                          })
+                          setShowPaymentModal(true)
+                        }}
+                        className="w-full rounded-lg px-3 py-2 text-center text-sm font-medium mb-4"
+                        style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}
+                      >
+                        💳 Pagar agora
+                      </button>
+                    )}
+
                     {/* Timeline */}
                     <div className="relative pl-4">
                       {flowSteps.map((step, i) => {
                         const isCompleted = !cancelled && i <= flowIdx
                         const isCurrent = !cancelled && i === flowIdx
                         const isLast = i === flowSteps.length - 1
-                        const showPayButton = step === "pending" && trackingOrder.paymentStatus === "pending" && trackingOrder.paymentLink
                         return (
                           <div key={step} className="flex items-start gap-3 relative">
                             {/* Vertical line */}
@@ -4917,24 +4937,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                               </span>
                               {isCurrent && estimatedTime && (
                                 <span className="ml-2 text-[11px] font-medium" style={{ color: theme.primary }}>{estimatedTime}</span>
-                              )}
-                              {showPayButton && (
-                                <button
-                                  onClick={() => {
-                                    setOrderResult({
-                                      success: true,
-                                      orderId: trackingOrder.id,
-                                      paymentLink: trackingOrder.paymentLink,
-                                      paymentMethod: trackingOrder.paymentMethod || "pix",
-                                      orderTotal: trackingOrder.total,
-                                    })
-                                    setTimeout(() => { setShowTracking(false); setShowPaymentModal(true) }, 300)
-                                  }}
-                                  className="ml-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
-                                  style={{ backgroundColor: theme.primary }}
-                                >
-                                  <CreditCard className="h-3 w-3" /> Pagar
-                                </button>
                               )}
                             </div>
                           </div>
