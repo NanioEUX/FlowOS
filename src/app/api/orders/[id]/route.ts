@@ -195,6 +195,7 @@ export async function PATCH(
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
+            accepted: "confirm",
             preparing: "startPreparation",
             ready: readyAction,
             dispatched: "dispatch",
@@ -206,12 +207,12 @@ export async function PATCH(
           }
           const action = statusActionMap[status]
           if (action && order.externalId) {
-            // When accepting a new iFood order (pending -> preparing), we need to
-            // call /confirm first, then /startPreparation. iFood requires confirm
-            // before any other status change.
-            if (action === "startPreparation" && order.status === "pending") {
+            // Auto-confirm quando iFood ainda não recebeu o confirm (pedido
+            // ainda em 'pending'/'new' no iFood). Dispara em pending → accepted
+            // OU pending → preparing.
+            if (action === "startPreparation" && (order.status === "pending" || order.status === "new")) {
               const confirmResult = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, "confirm", order.ifoodDeliveryBy ?? undefined)
-              console.log("[ifood status update] auto-confirm on accept:", { orderId: order.externalId, success: confirmResult.success, status: confirmResult.status })
+              console.log("[ifood status update] auto-confirm on startPreparation:", { orderId: order.externalId, success: confirmResult.success, status: confirmResult.status })
             }
             const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action, order.ifoodDeliveryBy ?? undefined, action === "cancel" ? (cancellationReason || undefined) : undefined)
             console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, isMerchantDelivery })
