@@ -13,7 +13,10 @@
     "db:studio": "prisma studio",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && npx tsx prisma/seed.ts",
-    "setup": "prisma db push && prisma generate && npx tsx prisma/seed.ts"
+    "setup": "prisma db push && prisma generate && npx tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -44,6 +47,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/web-push": "^3.6.4",
+    "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.0.0",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
@@ -52,6 +56,7 @@
     "sharp": "^0.35.3",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.22.4",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
   }
 }

@@ -219,7 +219,7 @@ export async function PATCH(
             // Auto-confirm quando iFood ainda não recebeu o confirm (pedido
             // ainda em 'pending'/'new' no iFood). Dispara em pending → accepted
             // OU pending → preparing.
-            if (action === "startPreparation" && (order.status === "pending" || order.status === "new")) {
+            if (action === "startPreparation" && (order.status === "pending" || order.status === "new" || order.status === "accepted" || order.status === "confirmed")) {
               const confirmResult = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, "confirm", order.ifoodDeliveryBy ?? undefined)
               console.log("[ifood status update] auto-confirm on startPreparation:", { orderId: order.externalId, success: confirmResult.success, status: confirmResult.status })
             }

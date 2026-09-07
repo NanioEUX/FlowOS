@@ -1709,7 +1709,7 @@ export default function CardapioPage() {
                       {sorted.map((product, idx) => (
                         <div
                           key={product.id}
-                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-zinc-50 p-3"
+                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-zinc-50 p-3 min-w-0 overflow-hidden"
                         >
                           <div className="flex flex-col gap-1">
                             <button
@@ -1793,8 +1793,8 @@ export default function CardapioPage() {
                               return null
                             })()}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-green-600">
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-bold text-green-600 whitespace-nowrap">
                               {formatCurrency(product.price)}
                             </span>
                             <button

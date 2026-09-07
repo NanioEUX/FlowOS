@@ -249,7 +249,7 @@ export default function KdsScreen() {
 
   function getNextAction(status: string, method?: string): { label: string; next: string } | null {
     // iFood: HOJE — 1 clique direto pra 'preparing'.
-    // Outros (cardápio online/balcão/mesa): 2 passos.
+    // Cardápio online / balcão / mesa: 2 passos (accepted → preparing).
     if (status === "new" || status === "pending" || status === "confirmed") {
       if (method === "ifood") return { label: "Aceitar e iniciar produção", next: "preparing" }
       return { label: "Aceitar e iniciar produção", next: "accepted" }
