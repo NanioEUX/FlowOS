@@ -9,7 +9,6 @@ import { formatCurrency } from "@/lib/utils"
 const statusLabels: Record<string, string> = {
   pending: "Pedido Recebido",
   payment_pending: "Aguardando Pagamento",
-  confirmed: "Confirmado",
   accepted: "Aceito",
   preparing: "Preparando",
   ready: "Pronto",
@@ -21,7 +20,6 @@ const statusLabels: Record<string, string> = {
 const statusIcons: Record<string, string> = {
   pending: "📥",
   payment_pending: "⏳",
-  confirmed: "✅",
   accepted: "👍",
   preparing: "👨‍🍳",
   ready: "📦",

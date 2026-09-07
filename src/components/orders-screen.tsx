@@ -211,14 +211,12 @@ export function OrdersScreen({
   function getActiveTimelineSteps(order: Order) {
     if (order.orderType === "pickup") {
       return [
-        { key: "confirmed", label: "Confirmado" },
         { key: "accepted", label: "Aceito" },
         { key: "preparing", label: "Preparando" },
         { key: "ready", label: "Pronto para Retirada" },
       ]
     }
     return [
-      { key: "confirmed", label: "Confirmado" },
       { key: "accepted", label: "Aceito" },
       { key: "preparing", label: "Preparando" },
       { key: "ready", label: "Pronto" },
@@ -229,8 +227,8 @@ export function OrdersScreen({
   function getTimelineIdx(order: Order) {
     const isPickup = order.orderType === "pickup"
     const statusOrder = isPickup
-      ? ["pending", "confirmed", "accepted", "preparing", "ready"]
-      : ["pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]
+      ? ["accepted", "preparing", "ready"]
+      : ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
     return statusOrder.indexOf(order.status)
   }
 
@@ -340,9 +338,9 @@ export function OrdersScreen({
                         {/* Timeline — 4 steps: Confirmado, Preparando, Pronto, Saiu */}
                         <div className="flex items-center gap-0 my-3">
                           {getActiveTimelineSteps(order).map((step, i) => {
-                            const stepIdx = ["pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
+                            const stepIdx = ["pending", "accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
                             const isCompleted = flowIdx > stepIdx || (flowIdx === stepIdx)
-                            const isCurrent = flowIdx === stepIdx + 1 || (step.key === "confirmed" && order.status === "confirmed") || (step.key === "accepted" && order.status === "accepted") || (step.key === "preparing" && order.status === "preparing") || (step.key === "ready" && order.status === "ready") || (step.key === "out_for_delivery" && order.status === "out_for_delivery")
+                            const isCurrent = flowIdx === stepIdx + 1 || (step.key === "accepted" && order.status === "accepted") || (step.key === "preparing" && order.status === "preparing") || (step.key === "ready" && order.status === "ready") || (step.key === "out_for_delivery" && order.status === "out_for_delivery")
                             const isDone = flowIdx > stepIdx
 
                             return (

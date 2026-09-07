@@ -4,9 +4,8 @@ import { TrackingPage } from "./tracking-page"
 import { redirect } from "next/navigation"
 
 const allStatusSteps = [
-  { key: "pending", label: "Pedido recebido", icon: "📥" },
-  { key: "payment_pending", label: "Aguardando pagamento", icon: "⏳" },
-  { key: "confirmed", label: "Confirmado", icon: "✅" },
+  { key: "pending", label: "Pedido Recebido", icon: "📥" },
+  { key: "payment_pending", label: "Aguardando Pagamento", icon: "⏳" },
   { key: "accepted", label: "Aceito", icon: "👍" },
   { key: "preparing", label: "Preparando", icon: "👨‍🍳" },
   { key: "ready", label: "Pronto", icon: "📦" },
@@ -94,6 +93,7 @@ export default async function OrderTrackingPage({
     notFound()
   }
 
+  // "Confirmado" removido da timeline do cliente (redundante com "Aceito").
   const statusSteps = updatedOrder.paymentMethod === "online"
     ? allStatusSteps
     : allStatusSteps.filter(s => s.key !== "payment_pending")
