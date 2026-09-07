@@ -1709,7 +1709,7 @@ export default function CardapioPage() {
                       {sorted.map((product, idx) => (
                         <div
                           key={product.id}
-                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-zinc-50 p-3 min-w-0 overflow-hidden"
+                          className="flex items-center gap-3 rounded-lg border border-white/[.04] bg-zinc-50 p-3 min-w-0"
                         >
                           <div className="flex flex-col gap-1">
                             <button
@@ -1793,80 +1793,83 @@ export default function CardapioPage() {
                               return null
                             })()}
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-bold text-green-600 whitespace-nowrap">
-                              {formatCurrency(product.price)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                product.sendToPrep
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={product.sendToPrep ? "Entra no preparo (clique para desativar)" : "Não vai para preparo (clique para ativar)"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                product.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  product.sendToPrep ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-green-600 whitespace-nowrap">
+                                {formatCurrency(product.price)}
                               </span>
-                              {product.sendToPrep ? "Preparo" : "Sem preparo"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                (product as any).onSale
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={(product as any).onSale ? "Em promoção (clique para editar)" : "Marcar como promoção"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  (product as any).onSale ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
-                              </span>
-                              {(product as any).onSale ? "Promoção" : "Sem promoção"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFeaturedModal(product) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                (product as any).featured
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={(product as any).featured ? "Em destaque (clique para editar)" : "Marcar como destaque"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
-                              </span>
-                              {(product as any).featured ? "Destaque" : "Sem destaque"}
-                            </button>
-                            <button
-                              onClick={() => editProduct(product)}
-                              className="flex items-center gap-1 text-zinc-500 hover:text-green-600 transition-colors"
-                            >
-                              <Pencil className="h-4 w-4" />
-                              <span className="text-xs font-medium">Editar</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProduct(product.id, product.name)}
-                              className="text-red-400 hover:text-red-400"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                              <button
+                                onClick={() => editProduct(product)}
+                                className="text-zinc-500 hover:text-green-600 transition-colors"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(product.id, product.name)}
+                                className="text-red-400 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
+                                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium transition-colors shrink-0 ${
+                                  product.sendToPrep
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-zinc-100 text-zinc-400"
+                                }`}
+                                title={product.sendToPrep ? "Entra no preparo (clique para desativar)" : "Não vai para preparo (clique para ativar)"}
+                              >
+                                <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
+                                  product.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    product.sendToPrep ? "translate-x-3" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                                Preparo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
+                                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium transition-colors shrink-0 ${
+                                  (product as any).onSale
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-zinc-100 text-zinc-400"
+                                }`}
+                                title={(product as any).onSale ? "Em promoção (clique para editar)" : "Marcar como promoção"}
+                              >
+                                <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
+                                  (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    (product as any).onSale ? "translate-x-3" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                                Promoção
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFeaturedModal(product) }}
+                                className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium transition-colors shrink-0 ${
+                                  (product as any).featured
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-zinc-100 text-zinc-400"
+                                }`}
+                                title={(product as any).featured ? "Em destaque (clique para editar)" : "Marcar como destaque"}
+                              >
+                                <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${
+                                  (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    (product as any).featured ? "translate-x-3" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                                Destaque
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
