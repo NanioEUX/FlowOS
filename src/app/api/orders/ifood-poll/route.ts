@@ -59,10 +59,18 @@ export async function POST(req: Request) {
               : event.code === 'READY_TO_PICKUP' ? 'ready'
               : 'dispatched'
 
-            // Don't downgrade a manually-completed order back to a delivery
-            // status. Once the operator marks "delivered" the iFood event
-            // could still be a few seconds behind.
-            if (existing.status === "delivered" && newStatus !== "delivered") {
+            // Status priority: delivered > out_for_delivery > ready > preparing > accepted
+            // Só faz downgrade de 'delivered'. Para os demais, ignora eventos
+            // do iFood que voltariam o pedido pra trás (ex: DISPATCHED vindo
+            // enquanto estamos em 'ready' faz o pedido sumir da aba Pronto).
+            const statusRank: Record<string, number> = {
+              pending: 0, new: 0, payment_pending: 0, confirmed: 1, accepted: 2,
+              preparing: 3, ready: 4, dispatched: 5, out_for_delivery: 6, delivered: 7,
+            }
+            const currentRank = statusRank[existing.status] ?? 0
+            const newRank = statusRank[newStatus] ?? 0
+
+            if (newRank < currentRank) {
               skipped++
               continue
             }
