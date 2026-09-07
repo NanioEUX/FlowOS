@@ -158,7 +158,7 @@ export function OrdersScreen({
     return () => clearInterval(interval)
   }, [onRefresh])
 
-  const activeOrders = orders.filter(o => ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
+  const activeOrders = orders.filter(o => ["pending", "payment_pending", "accepted", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
   const historyOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status) || (o.status === "pending" && o.paymentStatus === "expired"))
 
   const hasActive = activeOrders.length > 0

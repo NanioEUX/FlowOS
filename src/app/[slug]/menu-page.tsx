@@ -1303,7 +1303,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
     const inProgress = phone && customerOrders.length > 0
       ? customerOrders.find((o: any) =>
-          o.paymentStatus === "paid" && ["confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
+          o.paymentStatus === "paid" && ["accepted", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
         )
       : null
 
@@ -1319,6 +1319,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     if (inProgress && !seenPendingOrdersRef.current.has(inProgress.id)) {
       const statusLabels: Record<string, string> = {
         confirmed: "Confirmado",
+        accepted: "Aceito",
         preparing: "Preparando",
         ready: "Pronto",
         out_for_delivery: "Saiu para Entrega",
