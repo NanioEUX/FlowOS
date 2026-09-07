@@ -1765,7 +1765,7 @@ export default function CardapioPage() {
                             </div>
                           )}
 
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 overflow-hidden">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-zinc-900">{product.name}</p>
                               {!product.isAvailable && <Badge variant="danger">Indisponível</Badge>}
