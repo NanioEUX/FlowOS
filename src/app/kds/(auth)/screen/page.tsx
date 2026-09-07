@@ -31,6 +31,7 @@ type FilterOrigin = "all" | "mesas" | "online"
 
 const columns = [
   { status: "new", label: "Novos", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/30", btnColor: "bg-blue-600 hover:bg-blue-500" },
+  { status: "accepted", label: "Aceitos", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30", btnColor: "bg-cyan-600 hover:bg-cyan-500" },
   { status: "preparing", label: "Preparando", color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", btnColor: "bg-yellow-600 hover:bg-yellow-500" },
   { status: "ready", label: "Prontos", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30", btnColor: "bg-green-600 hover:bg-green-500" },
 ]
@@ -248,7 +249,8 @@ export default function KdsScreen() {
   }
 
   function getNextAction(status: string): { label: string; next: string } | null {
-    if (status === "new" || status === "pending" || status === "confirmed") return { label: "Iniciar Preparo", next: "preparing" }
+    if (status === "new" || status === "pending" || status === "confirmed") return { label: "Aceitar e iniciar produção", next: "accepted" }
+    if (status === "accepted") return { label: "Iniciar Preparo", next: "preparing" }
     if (status === "preparing") return { label: "Concluir Pedido", next: "ready" }
     return null
   }

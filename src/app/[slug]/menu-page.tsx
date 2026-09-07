@@ -1875,6 +1875,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           if (prevStatusRef.current && orderData.status !== prevStatusRef.current) {
             const labels: Record<string, string> = {
               confirmed: "Pedido confirmado!",
+              accepted: "Pedido aceito pela loja!",
               preparing: "Seu pedido está sendo preparado!",
               ready: "Pedido pronto para retirada!",
               out_for_delivery: "Saiu para entrega!",
@@ -2376,6 +2377,7 @@ const handlePaymentSuccess = useCallback(() => {
   const statusLabels: Record<string, string> = {
     pending: "Pedido Recebido",
     confirmed: "Confirmado",
+    accepted: "Aceito",
     preparing: "Preparando",
     ready: "Pronto para Retirada",
     out_for_delivery: "Saiu para Entrega",
@@ -2385,6 +2387,7 @@ const handlePaymentSuccess = useCallback(() => {
   const statusLabelsDelivery: Record<string, string> = {
     pending: "Pedido Recebido",
     confirmed: "Confirmado",
+    accepted: "Aceito",
     preparing: "Preparando",
     ready: "Pronto",
     out_for_delivery: "Saiu para Entrega",
@@ -4791,9 +4794,9 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (() => {
                 const isPickup = trackingOrder.orderType === "pickup"
-                const allSteps = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+                const allSteps = ["pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]
                 const flowSteps = isPickup
-                  ? ["pending", "confirmed", "preparing", "ready"]
+                  ? ["pending", "confirmed", "accepted", "preparing", "ready"]
                   : allSteps
                 const flowIdx = flowSteps.indexOf(trackingOrder.status)
                 const cancelled = trackingOrder.status === "cancelled"

@@ -7,6 +7,7 @@ const allStatusSteps = [
   { key: "pending", label: "Pedido recebido", icon: "📥" },
   { key: "payment_pending", label: "Aguardando pagamento", icon: "⏳" },
   { key: "confirmed", label: "Confirmado", icon: "✅" },
+  { key: "accepted", label: "Aceito", icon: "👍" },
   { key: "preparing", label: "Preparando", icon: "👨‍🍳" },
   { key: "ready", label: "Pronto", icon: "📦" },
   { key: "out_for_delivery", label: "Saiu para entrega", icon: "🛵" },

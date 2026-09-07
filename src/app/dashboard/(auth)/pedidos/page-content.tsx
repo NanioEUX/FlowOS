@@ -19,6 +19,7 @@ const statusLabels: Record<string, string> = {
   pending: "Pendente",
   payment_pending: "Aguard. Pagamento",
   confirmed: "Confirmado",
+  accepted: "Aceito",
   preparing: "Preparando",
   ready: "Pronto",
   out_for_delivery: "Saiu p/ Entrega",
@@ -31,6 +32,7 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   pending: "info",
   payment_pending: "danger",
   confirmed: "info",
+  accepted: "info",
   preparing: "warning",
   ready: "success",
   out_for_delivery: "info",
@@ -38,8 +40,8 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   cancelled: "danger",
 }
 
-const flowOrder = ["pending", "payment_pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
-const selectableStatuses = ["confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
+const flowOrder = ["pending", "payment_pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]
+const selectableStatuses = ["confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]
 
 const paymentMethodLabels: Record<string, string> = {
   online: "Online (Pix/Cartão)",
@@ -547,7 +549,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
-  const isNewOrder = ["pending", "payment_pending"].includes(order.status)
+  const isNewOrder = ["new", "pending", "payment_pending"].includes(order.status)
   const isIfoodOrder = order.method === "ifood"
   // Online orders that haven't been paid yet block production; cash-on-delivery
   // and paid online orders may proceed straight to preparation.
@@ -558,10 +560,13 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   if (isOnlinePaymentPending) {
     nextStatus = null
   } else if (isNewOrder) {
-    // iFood + cash orders jump pending -> preparing in one click ("accept + start").
-    nextStatus = "preparing"
+    // Balcão/PDV/mesa + iFood/cash orders: 2 steps (accept + start preparation).
+    nextStatus = "accepted"
   } else if (order.status === "confirmed") {
-    // Online payment confirmed by Asaas/Inter: ready to start preparation.
+    // Online payment confirmed by Asaas/Inter: accept first, then prepare.
+    nextStatus = "accepted"
+  } else if (order.status === "accepted") {
+    // Pedido aceito → iniciar preparo.
     nextStatus = "preparing"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"
@@ -689,11 +694,13 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }, [unreadCount, order.id, order.customerName, lastCustomerMsg?.message])
 
   const nextLabel: Record<string, string> = {
+    new: "Aceitar e iniciar produção",
     pending: isOnlinePaymentPending
       ? "Aguardando pagamento"
       : "Aceitar e iniciar produção",
     payment_pending: isOnlinePaymentPending ? "Aguardando pagamento" : "Aceitar e iniciar produção",
     confirmed: "Aceitar e iniciar produção",
+    accepted: "Iniciar preparo",
     preparing: "Finalizar preparo",
     ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
