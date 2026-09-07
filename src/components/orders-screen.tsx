@@ -229,7 +229,10 @@ export function OrdersScreen({
     const statusOrder = isPickup
       ? ["accepted", "preparing", "ready"]
       : ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
-    return statusOrder.indexOf(order.status)
+    const idx = statusOrder.indexOf(order.status)
+    // Se o status não está na lista (ex: pedido ainda em "pending" ou "new"),
+    // considera o primeiro step como atual pra mostrar progresso.
+    return idx === -1 ? 0 : idx
   }
 
   const paymentLabels: Record<string, string> = {
@@ -335,13 +338,13 @@ export function OrdersScreen({
                           </p>
                         )}
 
-                        {/* Timeline — 4 steps: Confirmado, Preparando, Pronto, Saiu */}
+                        {/* Timeline — Aceito, Preparando, Pronto, Saiu */}
                         <div className="flex items-center gap-0 my-3">
                           {getActiveTimelineSteps(order).map((step, i) => {
-                            const stepIdx = ["pending", "accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
-                            const isCompleted = flowIdx > stepIdx || (flowIdx === stepIdx)
-                            const isCurrent = flowIdx === stepIdx + 1 || (step.key === "accepted" && order.status === "accepted") || (step.key === "preparing" && order.status === "preparing") || (step.key === "ready" && order.status === "ready") || (step.key === "out_for_delivery" && order.status === "out_for_delivery")
-                            const isDone = flowIdx > stepIdx
+                            const stepIdx = ["accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
+                            const isCompleted = flowIdx > stepIdx
+                            const isCurrent = flowIdx === stepIdx
+                            const isDone = flowIdx > stepIdx || flowIdx === stepIdx
 
                             return (
                               <div key={step.key} className="flex-1 flex flex-col items-center relative">
@@ -350,14 +353,16 @@ export function OrdersScreen({
                                 )}
                                 <div
                                   className="relative z-10 w-3 h-3 rounded-full flex items-center justify-center"
-                                  style={isDone
-                                    ? { backgroundColor: theme.primary }
-                                    : { backgroundColor: theme.bgPage, border: `2px solid ${theme.borderCard}` }
+                                  style={isCurrent
+                                    ? { backgroundColor: theme.primary, boxShadow: `0 0 0 3px ${theme.bgPage}, 0 0 0 5px ${theme.primary}` }
+                                    : isDone
+                                      ? { backgroundColor: theme.primary }
+                                      : { backgroundColor: theme.bgPage, border: `2px solid ${theme.borderCard}` }
                                   }
                                 >
-                                  {isDone && <CheckCircle2 className="absolute -top-0.5 -left-0.5 h-3.5 w-3.5" style={{ color: theme.primary }} />}
+                                  {isDone && !isCurrent && <CheckCircle2 className="absolute -top-0.5 -left-0.5 h-3.5 w-3.5" style={{ color: theme.primary }} />}
                                 </div>
-                                <span className="text-[10px] mt-1 text-center leading-tight" style={{ color: isDone ? theme.text : theme.textMutedMore }}>
+                                <span className="text-[10px] mt-1 text-center leading-tight" style={{ color: (isDone || isCurrent) ? theme.text : theme.textMutedMore }}>
                                   {step.label}
                                 </span>
                               </div>
