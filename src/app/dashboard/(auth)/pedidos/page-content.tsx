@@ -146,8 +146,8 @@ export default function PedidosPage() {
     return () => clearInterval(syncInterval)
   }, [establishmentId, orders])
 
-  async function updateStatus(orderId: string, status: string) {
-    await fetchAuth(`/api/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) })
+  async function updateStatus(orderId: string, status: string, extras?: Record<string, unknown>) {
+    await fetchAuth(`/api/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, ...extras }) })
     loadOrders()
   }
 
@@ -527,7 +527,7 @@ export default function PedidosPage() {
 function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlightOrderId }: {
   title: string
   orders: any[]
-  onUpdateStatus: (id: string, s: string) => void
+  onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void
   onUpdateDelivery: (id: string, personId: string, personName: string) => void
   deliveryPeople: any[]
   onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void
@@ -545,12 +545,16 @@ function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliver
   )
 }
 
-function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlight }: { order: any; onUpdateStatus: (id: string, s: string) => void; onUpdateDelivery: (id: string, personId: string, personName: string) => void; deliveryPeople: any[]; onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void; highlight: boolean }) {
+function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlight }: { order: any; onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void; onUpdateDelivery: (id: string, personId: string, personName: string) => void; deliveryPeople: any[]; onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void; highlight: boolean }) {
   const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
   const isNewOrder = ["new", "pending", "payment_pending"].includes(order.status)
   const isIfoodOrder = order.method === "ifood"
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState("")
   // Online orders that haven't been paid yet block production; cash-on-delivery
   // and paid online orders may proceed straight to preparation.
   const isOnlinePaymentPending =
@@ -1095,6 +1099,11 @@ win.close()
                   {nextLabel[order.status] || "Avançar"}
                 </button>
               )}
+              {order.status !== "delivered" && order.status !== "cancelled" && (
+                <button onClick={() => { setShowCancelModal(true); setCancelReason(""); setCancelError("") }} className="rounded-lg p-2 text-red-400 border border-red-200 bg-white hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir pedido">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1132,6 +1141,64 @@ win.close()
           </div>
         )}
       </CardContent>
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !cancelling && setShowCancelModal(false)}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-start gap-3">
+              <div className="rounded-full bg-red-100 p-2">
+                <X className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900">Excluir pedido #{order.orderNumber || order.id.slice(0, 8)}</h3>
+                <p className="mt-1 text-sm text-zinc-600">O pedido será cancelado e ficará no histórico. O cliente será notificado.</p>
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Motivo do cancelamento</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={3}
+                placeholder="Ex: cliente desistiu, item em falta..."
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              />
+            </div>
+            {cancelError && (
+              <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {cancelError}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={() => setShowCancelModal(false)} disabled={cancelling} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50">
+                Voltar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!cancelReason.trim()) {
+                    setCancelError("Informe o motivo do cancelamento")
+                    return
+                  }
+                  setCancelling(true)
+                  setCancelError("")
+                  try {
+                    await onUpdateStatus(order.id, "cancelled", { cancellationReason: cancelReason, cancelledBy: "merchant" })
+                    setShowCancelModal(false)
+                  } catch (err: any) {
+                    setCancelError(err?.message || "Erro ao cancelar pedido")
+                  } finally {
+                    setCancelling(false)
+                  }
+                }}
+                disabled={cancelling}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelling ? "Excluindo..." : "Excluir pedido"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
