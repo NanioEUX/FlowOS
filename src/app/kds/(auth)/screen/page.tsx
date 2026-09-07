@@ -105,7 +105,7 @@ export default function KdsScreen() {
 
       if (res.ok) {
         const all = data.orders || data || []
-        const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "preparing", "ready"].includes(o.status))
+        const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "accepted", "preparing", "ready"].includes(o.status))
         filtered.sort((a: Order, b: Order) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
         const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending" || o.status === "accepted").length
