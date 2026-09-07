@@ -196,20 +196,17 @@ export async function PATCH(
         })
         if (establishment?.ifoodMerchantId) {
           // iFood state machine:
-          //   confirm -> startPreparation -> dispatch (delivery) or readyToPickup (takeout)
-          // For DELIVERY orders: use /dispatch (NOT /readyToPickup)
-          // For TAKEOUT orders: use /readyToPickup (NOT /dispatch)
+          //   confirm -> startPreparation -> readyToPickup -> dispatch (delivery)
+          // Operador clica "Concluir Pedido" → manda readyToPickup (pedido
+          // pronto). Quando operador clica "Sair p/ Entrega" → manda dispatch.
           const isDelivery = order.orderType === "delivery"
           const isMerchantDelivery = order.ifoodDeliveryBy === "MERCHANT"
-
-          // readyToPickup is ONLY for takeout; delivery uses dispatch directly
-          const readyAction = isDelivery ? "dispatch" : "readyForPickup"
 
           const statusActionMap: Record<string, string> = {
             confirmed: "confirm",
             accepted: "confirm",
             preparing: "startPreparation",
-            ready: readyAction,
+            ready: "readyForPickup",
             dispatched: "dispatch",
             out_to_delivery: "dispatch",
             out_for_delivery: "dispatch",

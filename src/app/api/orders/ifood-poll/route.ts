@@ -59,10 +59,17 @@ export async function POST(req: Request) {
               : event.code === 'READY_TO_PICKUP' ? 'ready'
               : 'dispatched'
 
+            // DISPATCHED (iFood motoboy saiu): só atualiza automaticamente se o
+            // status local ainda está em 'preparing'. Se já está em 'ready',
+            // significa que operador clicou manualmente — não pular pra
+            // 'out_for_delivery' sozinho.
+            if (newStatus === 'out_for_delivery' && existing.status === 'ready') {
+              skipped++
+              continue
+            }
+
             // Status priority: delivered > out_for_delivery > ready > preparing > accepted
-            // Só faz downgrade de 'delivered'. Para os demais, ignora eventos
-            // do iFood que voltariam o pedido pra trás (ex: DISPATCHED vindo
-            // enquanto estamos em 'ready' faz o pedido sumir da aba Pronto).
+            // Não faz downgrade do status local (ignora eventos antigos do iFood).
             const statusRank: Record<string, number> = {
               pending: 0, new: 0, payment_pending: 0, confirmed: 1, accepted: 2,
               preparing: 3, ready: 4, dispatched: 5, out_for_delivery: 6, delivered: 7,

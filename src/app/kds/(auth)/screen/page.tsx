@@ -247,8 +247,13 @@ export default function KdsScreen() {
     })
   }
 
-  function getNextAction(status: string): { label: string; next: string } | null {
-    if (status === "new" || status === "pending" || status === "confirmed") return { label: "Aceitar e iniciar produção", next: "accepted" }
+  function getNextAction(status: string, method?: string): { label: string; next: string } | null {
+    // iFood: HOJE — 1 clique direto pra 'preparing'.
+    // Outros (cardápio online/balcão/mesa): 2 passos.
+    if (status === "new" || status === "pending" || status === "confirmed") {
+      if (method === "ifood") return { label: "Aceitar e iniciar produção", next: "preparing" }
+      return { label: "Aceitar e iniciar produção", next: "accepted" }
+    }
     if (status === "accepted") return { label: "Iniciar Preparo", next: "preparing" }
     if (status === "preparing") return { label: "Concluir Pedido", next: "ready" }
     return null
@@ -400,7 +405,7 @@ export default function KdsScreen() {
                         const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
                         const orderCompleted = completedItems[order.id] || {}
                         const overdue = isOverdue(order.createdAt)
-                        const nextAction = getNextAction(order.status)
+                        const nextAction = getNextAction(order.status, order.method)
                         const msgs = orderMessages[order.id] || []
                         const unreadMsgs = msgs.filter(m => m.sender === "customer" && !m.read)
                         const isChatOpen = expandedChat === order.id
