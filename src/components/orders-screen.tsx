@@ -229,10 +229,9 @@ export function OrdersScreen({
     const statusOrder = isPickup
       ? ["accepted", "preparing", "ready"]
       : ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
-    const idx = statusOrder.indexOf(order.status)
-    // Se o status não está na lista (ex: pedido ainda em "pending" ou "new"),
-    // considera o primeiro step como atual pra mostrar progresso.
-    return idx === -1 ? 0 : idx
+    // Só marca a partir do "accepted". Se ainda em pending/new/confirmed
+    // (auto-aceite OFF), retorna -1 → nenhum step marcado.
+    return statusOrder.indexOf(order.status)
   }
 
   const paymentLabels: Record<string, string> = {
