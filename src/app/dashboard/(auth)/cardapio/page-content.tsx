@@ -2724,9 +2724,26 @@ export default function CardapioPage() {
                       </div>
                     </div>
                     {fichaTecnicaCost > 0 && (
-                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
-                        <p className="text-xs text-zinc-500">Custo (ficha técnica)</p>
-                        <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
+                          <p className="text-xs text-zinc-500">Custo (ficha técnica)</p>
+                          <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                        </div>
+                        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-right">
+                          <p className="text-xs text-zinc-500">Margem</p>
+                          <p className={`text-sm font-bold ${
+                            (parseFloat(productForm.price) || 0) > 0
+                              ? (((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100) >= 0
+                                ? "text-green-600"
+                                : "text-red-500"
+                              : "text-zinc-400"
+                          }`}>
+                            {(parseFloat(productForm.price) || 0) > 0
+                              ? `${(((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100).toFixed(0)}%`
+                              : "—"
+                            }
+                          </p>
+                        </div>
                       </div>
                     )}
                     {suggestedPrice != null && (
@@ -3199,15 +3216,49 @@ export default function CardapioPage() {
                       )}
                     </div>
                     {fichaTecnicaCost > 0 && (
-                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5">
-                        <p className="text-xs text-zinc-500">Custo total da ficha técnica</p>
-                        <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
-                      </div>
-                    )}
-                    {suggestedPrice != null && (
-                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
-                        <p className="text-xs text-green-600">Preço sugerido</p>
-                        <p className="text-sm font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 space-y-3">
+                        <div>
+                          <p className="text-xs text-zinc-500">Custo total da ficha técnica</p>
+                          <p className="text-sm font-semibold text-zinc-700">{formatCurrency(fichaTecnicaCost)}</p>
+                        </div>
+                        <div className="border-t border-zinc-200" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <label className="text-xs text-zinc-500">Preço de venda</label>
+                            <div className="relative mt-0.5">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={productForm.price}
+                                onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                                className="h-8 w-full rounded border border-zinc-200 bg-white pl-7 pr-2 text-sm font-semibold text-zinc-700 focus:border-green-600 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-zinc-500">Margem de lucro</p>
+                            <p className={`text-sm font-bold ${
+                              (parseFloat(productForm.price) || 0) > 0 && fichaTecnicaCost > 0
+                                ? (((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100) >= 0
+                                  ? "text-green-600"
+                                  : "text-red-500"
+                                : "text-zinc-400"
+                            }`}>
+                              {(parseFloat(productForm.price) || 0) > 0 && fichaTecnicaCost > 0
+                                ? `${(((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100).toFixed(0)}%`
+                                : "—"
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        {suggestedPrice != null && (
+                          <div className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5">
+                            <p className="text-[10px] text-green-600">Preço sugerido pela margem da categoria</p>
+                            <p className="text-xs font-bold text-green-700">{formatCurrency(suggestedPrice)}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {hasUnitError && (
