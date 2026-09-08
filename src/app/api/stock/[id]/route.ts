@@ -43,6 +43,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     if (data.supplierId === "") data.supplierId = null
     if (data.supplier === "") data.supplier = null
+    if (data.familyId && data.categoryId) {
+      const cat = await prisma.stockCategory.findUnique({ where: { id: data.categoryId } })
+      if (cat && !cat.familyId) {
+        await prisma.stockCategory.update({
+          where: { id: data.categoryId },
+          data: { familyId: data.familyId },
+        })
+      }
+    }
     const updated = await prisma.stockItem.update({
       where: { id: params.id },
       data,

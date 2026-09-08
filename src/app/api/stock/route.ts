@@ -69,6 +69,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === "item") {
+      if (body.familyId && body.categoryId) {
+        const cat = await prisma.stockCategory.findUnique({ where: { id: body.categoryId } })
+        if (cat && !cat.familyId) {
+          await prisma.stockCategory.update({
+            where: { id: body.categoryId },
+            data: { familyId: body.familyId },
+          })
+        }
+      }
       const item = await prisma.stockItem.create({
         data: {
           name: body.name,
