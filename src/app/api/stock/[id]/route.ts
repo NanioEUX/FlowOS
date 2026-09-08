@@ -9,13 +9,38 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
     const establishmentId = authUser.establishmentId
+    const body = await req.json()
+    const { type, ...data } = body
+
+    if (type === "family") {
+      const family = await prisma.stockFamily.findUnique({ where: { id: params.id } })
+      if (!family || family.establishmentId !== establishmentId) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+      }
+      const updated = await prisma.stockFamily.update({
+        where: { id: params.id },
+        data,
+      })
+      return NextResponse.json(updated)
+    }
+
+    if (type === "category") {
+      const cat = await prisma.stockCategory.findUnique({ where: { id: params.id } })
+      if (!cat || cat.establishmentId !== establishmentId) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+      }
+      if (data.familyId === "") data.familyId = null
+      const updated = await prisma.stockCategory.update({
+        where: { id: params.id },
+        data,
+      })
+      return NextResponse.json(updated)
+    }
+
     const item = await prisma.stockItem.findUnique({ where: { id: params.id } })
     if (!item || item.establishmentId !== establishmentId) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
     }
-
-    const body = await req.json()
-    const { type, ...data } = body
     if (data.supplierId === "") data.supplierId = null
     if (data.supplier === "") data.supplier = null
     const updated = await prisma.stockItem.update({
@@ -35,11 +60,31 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
     const establishmentId = authUser.establishmentId
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get("type") || "item"
+
+    if (type === "family") {
+      const family = await prisma.stockFamily.findUnique({ where: { id: params.id } })
+      if (!family || family.establishmentId !== establishmentId) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+      }
+      await prisma.stockFamily.delete({ where: { id: params.id } })
+      return NextResponse.json({ deleted: true })
+    }
+
+    if (type === "category") {
+      const cat = await prisma.stockCategory.findUnique({ where: { id: params.id } })
+      if (!cat || cat.establishmentId !== establishmentId) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+      }
+      await prisma.stockCategory.delete({ where: { id: params.id } })
+      return NextResponse.json({ deleted: true })
+    }
+
     const item = await prisma.stockItem.findUnique({ where: { id: params.id } })
     if (!item || item.establishmentId !== establishmentId) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
     }
-
     await prisma.stockItem.delete({ where: { id: params.id } })
     return NextResponse.json({ deleted: true })
   } catch (error) {

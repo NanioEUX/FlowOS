@@ -207,6 +207,7 @@ model Establishment {
   reviews                       Review[]
   cancellations                 CancellationLog[]
   aiUsageLogs                   AIUsageLog[]
+  stockFamilies                 StockFamily[]
   stockCategories               StockCategory[]
   stockItems                    StockItem[]
   suppliers                     Supplier[]
@@ -481,13 +482,26 @@ model OrderItemCost {
   @@index([orderId])
 }
 
+model StockFamily {
+  id              String          @id @default(cuid())
+  name            String
+  type            String          @default("alimentos")
+  order           Int             @default(0)
+  establishmentId String
+  createdAt       DateTime        @default(now())
+  establishment   Establishment   @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  categories      StockCategory[]
+}
+
 model StockCategory {
   id              String        @id @default(cuid())
   name            String
   order           Int           @default(0)
+  familyId        String?
   establishmentId String
   createdAt       DateTime      @default(now())
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  family          StockFamily?  @relation(fields: [familyId], references: [id], onDelete: SetNull)
   items           StockItem[]
 }
 
@@ -499,6 +513,8 @@ model StockItem {
   minQuantity      Float              @default(0)
   unitCost         Float              @default(0)
   previousUnitCost Float?
+  packageQty       Float?
+  packageCost      Float?
   supplier         String?
   supplierId       String?
   categoryId       String

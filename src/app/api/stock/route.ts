@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// Stock: 10s cache
 export const revalidate = 10
 
 export async function GET(req: NextRequest) {
@@ -11,7 +10,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
 
-  const [categories, items, movements] = await Promise.all([
+  const [families, categories, items, movements] = await Promise.all([
+    prisma.stockFamily.findMany({
+      where: { establishmentId },
+      include: { categories: { orderBy: { order: "asc" } } },
+      orderBy: { order: "asc" },
+    }),
     prisma.stockCategory.findMany({
       where: { establishmentId },
       orderBy: { order: "asc" },
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  return NextResponse.json({ categories, items, movements })
+  return NextResponse.json({ families, categories, items, movements })
 }
 
 export async function POST(req: NextRequest) {
@@ -42,9 +46,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { type, establishmentId } = body
 
+    if (type === "family") {
+      const family = await prisma.stockFamily.create({
+        data: {
+          name: body.name,
+          type: body.familyType || "alimentos",
+          establishmentId,
+        },
+      })
+      return NextResponse.json(family)
+    }
+
     if (type === "category") {
       const cat = await prisma.stockCategory.create({
-        data: { name: body.name, establishmentId },
+        data: {
+          name: body.name,
+          familyId: body.familyId || null,
+          establishmentId,
+        },
       })
       return NextResponse.json(cat)
     }
@@ -57,6 +76,8 @@ export async function POST(req: NextRequest) {
           quantity: body.quantity || 0,
           minQuantity: body.minQuantity || 0,
           unitCost: body.unitCost || 0,
+          packageQty: body.packageQty || null,
+          packageCost: body.packageCost || null,
           supplier: body.supplier,
           supplierId: body.supplierId || null,
           categoryId: body.categoryId,
