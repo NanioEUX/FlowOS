@@ -514,7 +514,7 @@ model StockItem {
   unitCost         Float              @default(0)
   previousUnitCost Float?
   packageQty       Float?
-  packageCost      Float?
+  useUnit          String?
   supplier         String?
   supplierId       String?
   categoryId       String

@@ -563,8 +563,15 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   let nextStatus: string | null
   if (isOnlinePaymentPending) {
     nextStatus = null
-  } else if (isNewOrder || order.status === "accepted") {
-    // HOJE: 1 clique "Aceitar e iniciar produção" vai direto pra 'preparing'.
+  } else if (isNewOrder) {
+    // iFood: HOJE — 1 clique direto pra 'preparing'.
+    // Cardápio online / balcão / mesa: 2 passos (accepted → preparing).
+    nextStatus = order.method === "ifood" ? "preparing" : "accepted"
+  } else if (order.status === "confirmed") {
+    // Online payment confirmed by Asaas/Inter: accept first, then prepare.
+    nextStatus = "accepted"
+  } else if (order.status === "accepted") {
+    // Pedido aceito (cardápio online) → iniciar preparo.
     nextStatus = "preparing"
   } else if (isPresencial && order.status === "ready") {
     nextStatus = "delivered"

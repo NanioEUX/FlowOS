@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           minQuantity: body.minQuantity || 0,
           unitCost: body.unitCost || 0,
           packageQty: body.packageQty || null,
-          packageCost: body.packageCost || null,
+          useUnit: body.useUnit || null,
           supplier: body.supplier,
           supplierId: body.supplierId || null,
           categoryId: body.categoryId,

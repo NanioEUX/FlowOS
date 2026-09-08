@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck, Edit3, DollarSign, Search, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react"
+import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Truck, Edit3, DollarSign, Search, ShoppingCart } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -27,6 +27,14 @@ const units = [
 ]
 
 const packageUnits = ["cx", "pct", "fardo", "saco"]
+
+const useUnits = [
+  { value: "un", label: "Unidade" },
+  { value: "kg", label: "Quilograma" },
+  { value: "g", label: "Grama" },
+  { value: "L", label: "Litro" },
+  { value: "ml", label: "Mililitro" },
+]
 
 const familyTypes = [
   { value: "alimentos", label: "Alimentos" },
@@ -69,14 +77,14 @@ export default function EstoquePage() {
   const [showFamilyForm, setShowFamilyForm] = useState(false)
   const [newFamilyName, setNewFamilyName] = useState("")
   const [newFamilyType, setNewFamilyType] = useState("alimentos")
-  const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set())
+  const [selectedFamilyFilter, setSelectedFamilyFilter] = useState<string | null>(null)
 
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [itemForm, setItemForm] = useState({
     name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0",
     supplier: "", supplierId: "", categoryId: "", familyId: "",
-    packageQty: "", packageCost: "",
+    packageQty: "", useUnit: "un",
   })
   const [products, setProducts] = useState<any[]>([])
   const [linkProductId, setLinkProductId] = useState("")
@@ -103,12 +111,9 @@ export default function EstoquePage() {
   const [recentPurchases, setRecentPurchases] = useState<any[]>([])
 
   const isPackageUnit = packageUnits.includes(itemForm.unit)
-  const calculatedUnitCost = isPackageUnit && parseFloat(itemForm.packageQty) > 0
-    ? (parseFloat(itemForm.packageCost) || 0) / parseFloat(itemForm.packageQty)
-    : parseFloat(itemForm.unitCost) || 0
 
-  const filteredCategories = itemForm.familyId
-    ? categories.filter((c) => c.familyId === itemForm.familyId)
+  const filteredCategories = selectedFamilyFilter
+    ? categories.filter((c) => c.familyId === selectedFamilyFilter)
     : categories
 
   async function loadAll() {
@@ -166,14 +171,15 @@ export default function EstoquePage() {
   async function saveItem() {
     if (!establishmentId || !itemForm.name || !itemForm.categoryId) return
     const isPackage = packageUnits.includes(itemForm.unit)
+    const pkgQty = isPackage ? (parseFloat(itemForm.packageQty) || 1) : 1
     const body: any = {
       ...itemForm,
       type: "item",
-      quantity: parseFloat(itemForm.quantity) || 0,
+      quantity: pkgQty,
       minQuantity: parseFloat(itemForm.minQuantity) || 0,
-      unitCost: isPackage ? calculatedUnitCost : (parseFloat(itemForm.unitCost) || 0),
-      packageQty: isPackage ? (parseFloat(itemForm.packageQty) || null) : null,
-      packageCost: isPackage ? (parseFloat(itemForm.packageCost) || null) : null,
+      unitCost: parseFloat(itemForm.unitCost) || 0,
+      packageQty: isPackage ? pkgQty : null,
+      useUnit: isPackage ? (itemForm.useUnit || "un") : null,
       establishmentId,
     }
     if (editingItem) {
@@ -187,7 +193,7 @@ export default function EstoquePage() {
   }
 
   function resetItemForm() {
-    setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: "", familyId: "", packageQty: "", packageCost: "" })
+    setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: "", familyId: "", packageQty: "", useUnit: "un" })
     setEditingItem(null)
     setShowItemForm(false)
   }
@@ -206,7 +212,7 @@ export default function EstoquePage() {
       categoryId: item.categoryId,
       familyId: cat?.familyId || "",
       packageQty: item.packageQty ? String(item.packageQty) : "",
-      packageCost: item.packageCost ? String(item.packageCost) : "",
+      useUnit: item.useUnit || "un",
     })
     setLinkProductId("")
     setLinkQuantity("1")
@@ -324,15 +330,6 @@ export default function EstoquePage() {
     }
   }
 
-  function toggleFamily(id: string) {
-    setExpandedFamilies((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   const stockItems = (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -350,106 +347,67 @@ export default function EstoquePage() {
         </div>
       </div>
 
-      {families.length === 0 && categories.length === 0 && items.length === 0 ? (
+      {families.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedFamilyFilter(null)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+          >
+            Todas
+          </button>
+          {families.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setSelectedFamilyFilter(selectedFamilyFilter === f.id ? null : f.id)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === f.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {categories.length === 0 && items.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-zinc-500">
             <Package className="mx-auto mb-3 h-10 w-10 text-zinc-300" />
             <p className="font-medium">Nenhum item cadastrado</p>
-            <p className="mt-1 text-xs">Comece criando uma família, categoria ou item</p>
+            <p className="mt-1 text-xs">Comece criando uma categoria ou item</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {families.map((family) => {
-            const familyCats = categories.filter((c) => c.familyId === family.id)
-            const familyItems = items.filter((i) => familyCats.some((c) => c.id === i.categoryId))
-            const isExpanded = expandedFamilies.has(family.id)
+          {filteredCategories.map((cat) => {
+            const catItems = items.filter((i) => i.categoryId === cat.id)
             return (
-              <div key={family.id} className="rounded-xl border border-zinc-200 bg-white">
-                <button
-                  onClick={() => toggleFamily(family.id)}
-                  className="flex w-full items-center justify-between p-3 hover:bg-zinc-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {isExpanded ? <ChevronDown className="h-4 w-4 text-zinc-400" /> : <ChevronRight className="h-4 w-4 text-zinc-400" />}
-                    <span className="font-medium text-zinc-800">{family.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${typeColors[family.type] || typeColors.alimentos}`}>
-                      {familyTypes.find((f) => f.value === family.type)?.label || family.type}
-                    </span>
-                    <span className="text-xs text-zinc-400">{familyItems.length} itens</span>
-                  </div>
-                </button>
-                {isExpanded && (
-                  <div className="border-t border-zinc-100 px-3 pb-3 space-y-3">
-                    {familyCats.map((cat) => {
-                      const catItems = items.filter((i) => i.categoryId === cat.id)
-                      return (
-                        <div key={cat.id} className="mt-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-zinc-500 uppercase">{cat.name}</span>
-                            <span className="text-[10px] text-zinc-400">{catItems.length} itens</span>
-                          </div>
-                          {catItems.length > 0 && (
-                            <div className="space-y-1">
-                              {catItems.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 hover:bg-zinc-100 transition-colors">
-                                  <div>
-                                    <p className="text-sm font-medium text-zinc-800">{item.name}</p>
-                                    <p className="text-xs text-zinc-500">{item.quantity} {item.unit} · {formatCurrency(item.unitCost)}/{item.unit}</p>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <button onClick={() => editItem(item)} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
-                                    <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+              <div key={cat.id}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-zinc-500 uppercase">{cat.name}</span>
+                  <span className="text-[10px] text-zinc-400">{catItems.length} itens</span>
+                </div>
+                {catItems.length > 0 ? (
+                  <div className="space-y-1">
+                    {catItems.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 hover:bg-zinc-100 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium text-zinc-800">{item.name}</p>
+                          <p className="text-xs text-zinc-500">{item.quantity} {item.unit} · {formatCurrency(item.unitCost)}/{item.unit}</p>
                         </div>
-                      )
-                    })}
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => editItem(item)} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
+                          <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <p className="text-xs text-zinc-400 italic">Nenhum item</p>
                 )}
               </div>
             )
           })}
 
-          {categories.filter((c) => !c.familyId).length > 0 && (
-            <div className="space-y-3">
-              {categories.filter((c) => !c.familyId).map((cat) => {
-                const catItems = items.filter((i) => i.categoryId === cat.id)
-                return (
-                  <div key={cat.id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-zinc-500 uppercase">{cat.name}</span>
-                      <span className="text-[10px] text-zinc-400">{catItems.length} itens</span>
-                    </div>
-                    {catItems.length > 0 && (
-                      <div className="space-y-1">
-                        {catItems.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 hover:bg-zinc-100 transition-colors">
-                            <div>
-                              <p className="text-sm font-medium text-zinc-800">{item.name}</p>
-                              <p className="text-xs text-zinc-500">{item.quantity} {item.unit} · {formatCurrency(item.unitCost)}/{item.unit}</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => editItem(item)} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
-                              <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {items.filter((i) => {
-            const cat = categories.find((c) => c.id === i.categoryId)
-            return !cat
-          }).length > 0 && (
+          {items.filter((i) => !categories.find((c) => c.id === i.categoryId)).length > 0 && !selectedFamilyFilter && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-zinc-500 uppercase">Sem categoria</span>
@@ -965,18 +923,26 @@ export default function EstoquePage() {
                     <label className="block text-sm font-medium text-zinc-700">Unidade de compra</label>
                     <SearchableSelect
                       value={itemForm.unit}
-                      onChange={(v) => setItemForm({ ...itemForm, unit: v, packageQty: "", packageCost: "" })}
+                      onChange={(v) => setItemForm({ ...itemForm, unit: v, packageQty: "" })}
                       options={units}
                       placeholder="Selecionar..."
                     />
                   </div>
 
                   {isPackageUnit && (
-                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 space-y-3">
-                      <p className="text-xs font-semibold text-violet-700">Configurar {units.find((u) => u.value === itemForm.unit)?.label}</p>
+                    <>
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-zinc-700">Unidade de uso</label>
+                        <SearchableSelect
+                          value={itemForm.useUnit || "un"}
+                          onChange={(v) => setItemForm({ ...itemForm, useUnit: v })}
+                          options={useUnits}
+                          placeholder="Selecionar..."
+                        />
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="block text-xs font-medium text-zinc-600">Contém</label>
+                          <label className="block text-sm font-medium text-zinc-700">Contém</label>
                           <div className="flex gap-1">
                             <input
                               type="number"
@@ -984,38 +950,35 @@ export default function EstoquePage() {
                               step="1"
                               value={itemForm.packageQty}
                               onChange={(e) => setItemForm({ ...itemForm, packageQty: e.target.value })}
-                              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+                              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                               placeholder="Ex: 10"
                             />
-                            <select
-                              value={itemForm.unit}
-                              disabled
-                              className="h-10 w-16 items-center rounded-lg border border-zinc-200 bg-zinc-100 px-2 text-xs text-zinc-500"
-                            >
-                              <option value={itemForm.unit}>un</option>
-                            </select>
+                            <span className="flex h-10 w-14 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 text-xs text-zinc-500">
+                              {itemForm.useUnit || "un"}
+                            </span>
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <label className="block text-xs font-medium text-zinc-600">Custo da embalagem (R$)</label>
+                          <label className="block text-sm font-medium text-zinc-700">Custo (R$)</label>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            value={itemForm.packageCost}
-                            onChange={(e) => setItemForm({ ...itemForm, packageCost: e.target.value })}
-                            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
-                            placeholder="0,00"
+                            value={itemForm.unitCost}
+                            onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })}
+                            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                           />
                         </div>
                       </div>
-                      {parseFloat(itemForm.packageQty) > 0 && (
-                        <div className="flex items-center justify-between rounded-md bg-white px-3 py-2 border border-violet-100">
-                          <span className="text-xs text-zinc-600">Custo por unidade:</span>
-                          <span className="text-sm font-bold text-violet-700">{formatCurrency(calculatedUnitCost)}</span>
+                      {parseFloat(itemForm.packageQty) > 0 && parseFloat(itemForm.unitCost) > 0 && (
+                        <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2">
+                          <span className="text-xs text-green-700">
+                            Custo da embalagem: <span className="font-bold">{formatCurrency(parseFloat(itemForm.unitCost) * parseFloat(itemForm.packageQty))}</span>
+                            {" "}({itemForm.packageQty} × {formatCurrency(parseFloat(itemForm.unitCost))})
+                          </span>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
 
                   {!isPackageUnit && (
@@ -1032,29 +995,16 @@ export default function EstoquePage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-zinc-700">Estoque atual</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={itemForm.quantity}
-                        onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-zinc-700">Estoque mínimo</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={itemForm.minQuantity}
-                        onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-zinc-700">Estoque mínimo</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.minQuantity}
+                      onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })}
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    />
                   </div>
 
                   <div className="space-y-1">
