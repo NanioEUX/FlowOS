@@ -78,6 +78,7 @@ export default function EstoquePage() {
 
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [addingFromCategory, setAddingFromCategory] = useState(false)
   const [inlineForm, setInlineForm] = useState<"family" | "category" | "supplier" | null>(null)
   const [inlineFormName, setInlineFormName] = useState("")
   const [itemForm, setItemForm] = useState({
@@ -230,6 +231,7 @@ export default function EstoquePage() {
     setItemForm({ name: "", unit: "un", quantity: "0", minQuantity: "0", unitCost: "0", supplier: "", supplierId: "", categoryId: "", familyId: "", packageQty: "", useUnit: "un" })
     setEditingItem(null)
     setShowItemForm(false)
+    setAddingFromCategory(false)
     setInlineForm(null)
     setInlineFormName("")
   }
@@ -434,7 +436,7 @@ export default function EstoquePage() {
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setEditingCategory(cat); setNewCatName(cat.name); setNewCatFamilyId(cat.familyId || ""); setShowCategoryForm(true) }} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
                     <button onClick={() => setDeleteCategoryConfirm({ open: true, id: cat.id, name: cat.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id })); setShowItemForm(true) }}>
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id, familyId: cat.familyId || "" })); setAddingFromCategory(true); setShowItemForm(true) }}>
                       <Plus className="mr-1 h-3 w-3" /> Adicionar
                     </Button>
                   </div>
@@ -957,6 +959,7 @@ export default function EstoquePage() {
                   <input type="text" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
                 </div>
 
+                {!addingFromCategory && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     {inlineForm === "family" ? (
@@ -1022,6 +1025,7 @@ export default function EstoquePage() {
                     )}
                   </div>
                 </div>
+                )}
 
                 <div className="border-t border-zinc-100 pt-3 space-y-3">
                   <p className="text-xs font-semibold text-zinc-500 uppercase">Unidade e Custo</p>
