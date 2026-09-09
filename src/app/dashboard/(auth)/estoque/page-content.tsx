@@ -900,54 +900,66 @@ export default function EstoquePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <label className="text-sm font-medium text-zinc-700">Família</label>
-                      <button type="button" onClick={() => { setInlineForm(inlineForm === "family" ? null : "family"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "family" ? "Fechar" : "+ Nova"}</button>
-                    </div>
                     {inlineForm === "family" ? (
-                      <div className="flex gap-1">
-                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome da família" className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <label className="text-sm font-medium text-zinc-700">Família</label>
+                          <button type="button" onClick={() => { setInlineForm(null); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">Fechar</button>
+                          <button type="button" onClick={async () => {
+                            if (!inlineFormName.trim() || !establishmentId) return
+                            const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "family", name: inlineFormName, establishmentId }) })
+                            if (res.ok) { const f = await res.json(); setItemForm({ ...itemForm, familyId: f.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
+                          }} className="text-xs text-green-600 hover:text-green-700 font-medium">Salvar</button>
+                        </div>
+                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome da família" className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
                           if (e.key === "Enter" && inlineFormName.trim() && establishmentId) {
                             const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "family", name: inlineFormName, establishmentId }) })
                             if (res.ok) { const f = await res.json(); setItemForm({ ...itemForm, familyId: f.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
                           }
                           if (e.key === "Escape") { setInlineForm(null); setInlineFormName("") }
                         }} />
-                        <Button size="sm" className="h-10 px-3 bg-green-600 hover:bg-green-700" onClick={async () => {
-                          if (!inlineFormName.trim() || !establishmentId) return
-                          const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "family", name: inlineFormName, establishmentId }) })
-                          if (res.ok) { const f = await res.json(); setItemForm({ ...itemForm, familyId: f.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
-                        }}>Salvar</Button>
-                      </div>
+                      </>
                     ) : (
-                      <select value={itemForm.familyId} onChange={(e) => setItemForm({ ...itemForm, familyId: e.target.value, categoryId: "" })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
-                        <option value="">Nenhuma</option>
-                        {families.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
-                      </select>
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <label className="text-sm font-medium text-zinc-700">Família</label>
+                          <button type="button" onClick={() => { setInlineForm("family"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">+ Nova</button>
+                        </div>
+                        <select value={itemForm.familyId} onChange={(e) => setItemForm({ ...itemForm, familyId: e.target.value, categoryId: "" })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
+                          <option value="">Nenhuma</option>
+                          {families.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
+                        </select>
+                      </>
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <label className="text-sm font-medium text-zinc-700">Categoria</label>
-                      <button type="button" onClick={() => { setInlineForm(inlineForm === "category" ? null : "category"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "category" ? "Fechar" : "+ Nova"}</button>
-                    </div>
                     {inlineForm === "category" ? (
-                      <div className="flex gap-1">
-                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome da categoria" className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <label className="text-sm font-medium text-zinc-700">Categoria</label>
+                          <button type="button" onClick={() => { setInlineForm(null); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">Fechar</button>
+                          <button type="button" onClick={async () => {
+                            if (!inlineFormName.trim() || !establishmentId) return
+                            const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "category", name: inlineFormName, familyId: itemForm.familyId || null, establishmentId }) })
+                            if (res.ok) { const c = await res.json(); setItemForm({ ...itemForm, categoryId: c.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
+                          }} className="text-xs text-green-600 hover:text-green-700 font-medium">Salvar</button>
+                        </div>
+                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome da categoria" className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
                           if (e.key === "Enter" && inlineFormName.trim() && establishmentId) {
                             const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "category", name: inlineFormName, familyId: itemForm.familyId || null, establishmentId }) })
                             if (res.ok) { const c = await res.json(); setItemForm({ ...itemForm, categoryId: c.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
                           }
                           if (e.key === "Escape") { setInlineForm(null); setInlineFormName("") }
                         }} />
-                        <Button size="sm" className="h-10 px-3 bg-green-600 hover:bg-green-700" onClick={async () => {
-                          if (!inlineFormName.trim() || !establishmentId) return
-                          const res = await fetchAuth("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "category", name: inlineFormName, familyId: itemForm.familyId || null, establishmentId }) })
-                          if (res.ok) { const c = await res.json(); setItemForm({ ...itemForm, categoryId: c.id }); setInlineForm(null); setInlineFormName(""); loadAll() }
-                        }}>Salvar</Button>
-                      </div>
+                      </>
                     ) : (
-                      <SearchableSelect value={itemForm.categoryId} onChange={(v) => setItemForm({ ...itemForm, categoryId: v })} options={[{ value: "", label: "Selecionar..." }, ...(itemForm.familyId ? categories.filter((c) => c.familyId === itemForm.familyId) : categories).map((c) => ({ value: c.id, label: c.name }))]} placeholder="Selecionar..." />
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <label className="text-sm font-medium text-zinc-700">Categoria</label>
+                          <button type="button" onClick={() => { setInlineForm("category"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">+ Nova</button>
+                        </div>
+                        <SearchableSelect value={itemForm.categoryId} onChange={(v) => setItemForm({ ...itemForm, categoryId: v })} options={[{ value: "", label: "Selecionar..." }, ...(itemForm.familyId ? categories.filter((c) => c.familyId === itemForm.familyId) : categories).map((c) => ({ value: c.id, label: c.name }))]} placeholder="Selecionar..." />
+                      </>
                     )}
                   </div>
                 </div>
@@ -1002,27 +1014,33 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-sm font-medium text-zinc-700">Fornecedor</label>
-                      <button type="button" onClick={() => { setInlineForm(inlineForm === "supplier" ? null : "supplier"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "supplier" ? "Fechar" : "+ Novo"}</button>
-                    </div>
                     {inlineForm === "supplier" ? (
-                      <div className="flex gap-1">
-                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome do fornecedor" className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-sm font-medium text-zinc-700">Fornecedor</label>
+                          <button type="button" onClick={() => { setInlineForm(null); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">Fechar</button>
+                          <button type="button" onClick={async () => {
+                            if (!inlineFormName.trim() || !establishmentId) return
+                            const res = await fetchAuth("/api/suppliers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: inlineFormName, establishmentId }) })
+                            if (res.ok) { const s = await res.json(); setItemForm({ ...itemForm, supplierId: s.id, supplier: s.name }); setInlineForm(null); setInlineFormName(""); loadAll() }
+                          }} className="text-xs text-green-600 hover:text-green-700 font-medium">Salvar</button>
+                        </div>
+                        <input type="text" value={inlineFormName} onChange={(e) => setInlineFormName(e.target.value)} placeholder="Nome do fornecedor" className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" autoFocus onKeyDown={async (e) => {
                           if (e.key === "Enter" && inlineFormName.trim() && establishmentId) {
                             const res = await fetchAuth("/api/suppliers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: inlineFormName, establishmentId }) })
                             if (res.ok) { const s = await res.json(); setItemForm({ ...itemForm, supplierId: s.id, supplier: s.name }); setInlineForm(null); setInlineFormName(""); loadAll() }
                           }
                           if (e.key === "Escape") { setInlineForm(null); setInlineFormName("") }
                         }} />
-                        <Button size="sm" className="h-10 px-3 bg-green-600 hover:bg-green-700" onClick={async () => {
-                          if (!inlineFormName.trim() || !establishmentId) return
-                          const res = await fetchAuth("/api/suppliers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: inlineFormName, establishmentId }) })
-                          if (res.ok) { const s = await res.json(); setItemForm({ ...itemForm, supplierId: s.id, supplier: s.name }); setInlineForm(null); setInlineFormName(""); loadAll() }
-                        }}>Salvar</Button>
-                      </div>
+                      </>
                     ) : (
-                      <SearchableSelect value={itemForm.supplierId || ""} onChange={(v) => { const supp = suppliers.find((s) => s.id === v); setItemForm({ ...itemForm, supplierId: v, supplier: supp?.name || "" }) }} options={[{ value: "", label: "Nenhum" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]} placeholder="Selecionar..." />
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-sm font-medium text-zinc-700">Fornecedor</label>
+                          <button type="button" onClick={() => { setInlineForm("supplier"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">+ Novo</button>
+                        </div>
+                        <SearchableSelect value={itemForm.supplierId || ""} onChange={(v) => { const supp = suppliers.find((s) => s.id === v); setItemForm({ ...itemForm, supplierId: v, supplier: supp?.name || "" }) }} options={[{ value: "", label: "Nenhum" }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]} placeholder="Selecionar..." />
+                      </>
                     )}
                   </div>
                 </div>
