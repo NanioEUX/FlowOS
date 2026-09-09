@@ -5507,7 +5507,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       className="w-full font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 border-2 mt-2"
                       style={{ borderColor: theme.primary, color: theme.primary }}
                     >
-                      <ShoppingCart className="w-5 h-5" />
+                      <ShoppingBag className="w-5 h-5" />
                       Ir para o carrinho · {formatCurrency(unitPrice * selectedProductQty)}
                     </button>
                   )}
