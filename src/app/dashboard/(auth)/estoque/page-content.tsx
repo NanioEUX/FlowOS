@@ -65,12 +65,16 @@ export default function EstoquePage() {
 
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [newCatName, setNewCatName] = useState("")
+  const [editingCategory, setEditingCategory] = useState<any>(null)
   const [newCatFamilyId, setNewCatFamilyId] = useState("")
 
   const [showFamilyForm, setShowFamilyForm] = useState(false)
   const [newFamilyName, setNewFamilyName] = useState("")
+  const [editingFamily, setEditingFamily] = useState<any>(null)
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState<string | null>(null)
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null)
+  const [deleteFamilyConfirm, setDeleteFamilyConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
+  const [deleteCategoryConfirm, setDeleteCategoryConfirm] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
 
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -141,25 +145,59 @@ export default function EstoquePage() {
 
   async function addFamily() {
     if (!newFamilyName.trim() || !establishmentId) return
-    await fetchAuth("/api/stock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "family", name: newFamilyName, establishmentId }),
-    })
+    if (editingFamily) {
+      await fetchAuth(`/api/stock/${editingFamily.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "family", name: newFamilyName }),
+      })
+    } else {
+      await fetchAuth("/api/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "family", name: newFamilyName, establishmentId }),
+      })
+    }
     setNewFamilyName("")
+    setEditingFamily(null)
     setShowFamilyForm(false)
+    loadAll()
+  }
+
+  async function deleteFamily(id: string) {
+    await fetchAuth(`/api/stock/${id}?type=family`, { method: "DELETE" })
+    toast("Família removida", "success")
+    setDeleteFamilyConfirm({ open: false, id: "", name: "" })
+    if (selectedFamilyFilter === id) setSelectedFamilyFilter(null)
+    loadAll()
+  }
+
+  async function deleteCategory(id: string) {
+    await fetchAuth(`/api/stock/${id}?type=category`, { method: "DELETE" })
+    toast("Categoria removida", "success")
+    setDeleteCategoryConfirm({ open: false, id: "", name: "" })
+    if (selectedCategoryFilter === id) setSelectedCategoryFilter(null)
     loadAll()
   }
 
   async function addCategory() {
     if (!newCatName.trim() || !establishmentId) return
-    await fetchAuth("/api/stock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "category", name: newCatName, familyId: newCatFamilyId || null, establishmentId }),
-    })
+    if (editingCategory) {
+      await fetchAuth(`/api/stock/${editingCategory.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "category", name: newCatName, familyId: newCatFamilyId || null }),
+      })
+    } else {
+      await fetchAuth("/api/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "category", name: newCatName, familyId: newCatFamilyId || null, establishmentId }),
+      })
+    }
     setNewCatName("")
     setNewCatFamilyId("")
+    setEditingCategory(null)
     setShowCategoryForm(false)
     loadAll()
   }
@@ -333,21 +371,24 @@ export default function EstoquePage() {
           Todas
         </button>
         {families.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => {
-              if (selectedFamilyFilter === f.id) {
-                setSelectedFamilyFilter(null)
-                setSelectedCategoryFilter(null)
-              } else {
-                setSelectedFamilyFilter(f.id)
-                setSelectedCategoryFilter(null)
-              }
-            }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === f.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-          >
-            {f.name}
-          </button>
+          <div key={f.id} className="flex items-center gap-0.5">
+            <button
+              onClick={() => {
+                if (selectedFamilyFilter === f.id) {
+                  setSelectedFamilyFilter(null)
+                  setSelectedCategoryFilter(null)
+                } else {
+                  setSelectedFamilyFilter(f.id)
+                  setSelectedCategoryFilter(null)
+                }
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === f.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+            >
+              {f.name}
+            </button>
+            <button onClick={() => { setEditingFamily(f); setNewFamilyName(f.name); setShowFamilyForm(true) }} className="p-0.5 rounded hover:bg-zinc-200"><Edit3 className="h-3 w-3 text-zinc-400" /></button>
+            <button onClick={() => setDeleteFamilyConfirm({ open: true, id: f.id, name: f.name })} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="h-3 w-3 text-zinc-400 hover:text-red-500" /></button>
+          </div>
         ))}
       </div>
 
@@ -390,9 +431,13 @@ export default function EstoquePage() {
                     <span className="font-semibold text-zinc-800">{cat.name}</span>
                     <span className="text-xs text-zinc-400">{catItems.length} itens</span>
                   </div>
-                  <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id })); setShowItemForm(true) }}>
-                    <Plus className="mr-1 h-3 w-3" /> Adicionar
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => { setEditingCategory(cat); setNewCatName(cat.name); setNewCatFamilyId(cat.familyId || ""); setShowCategoryForm(true) }} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
+                    <button onClick={() => setDeleteCategoryConfirm({ open: true, id: cat.id, name: cat.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id })); setShowItemForm(true) }}>
+                      <Plus className="mr-1 h-3 w-3" /> Adicionar
+                    </Button>
+                  </div>
                 </div>
                 {catItems.length > 0 ? (
                   <div className="divide-y divide-zinc-100">
@@ -848,8 +893,8 @@ export default function EstoquePage() {
           <Card className="w-full max-w-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Nova Família</h3>
-                <button onClick={() => setShowFamilyForm(false)}><X className="h-5 w-5" /></button>
+                <h3 className="font-semibold">{editingFamily ? "Editar Família" : "Nova Família"}</h3>
+                <button onClick={() => { setShowFamilyForm(false); setEditingFamily(null); setNewFamilyName("") }}><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
@@ -872,8 +917,8 @@ export default function EstoquePage() {
           <Card className="w-full max-w-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Nova Categoria</h3>
-                <button onClick={() => setShowCategoryForm(false)}><X className="h-5 w-5" /></button>
+                <h3 className="font-semibold">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</h3>
+                <button onClick={() => { setShowCategoryForm(false); setEditingCategory(null); setNewCatName(""); setNewCatFamilyId("") }}><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
@@ -1210,6 +1255,20 @@ export default function EstoquePage() {
           setDeleteSupplierConfirm({ open: false, id: "", name: "" })
           loadAll()
         }}
+      />
+      <ConfirmDialog
+        open={deleteFamilyConfirm.open}
+        onCancel={() => setDeleteFamilyConfirm({ open: false, id: "", name: "" })}
+        title="Remover família"
+        message={`Tem certeza que deseja remover "${deleteFamilyConfirm.name}"? As categorias dessa família ficarão sem vínculo.`}
+        onConfirm={() => deleteFamily(deleteFamilyConfirm.id)}
+      />
+      <ConfirmDialog
+        open={deleteCategoryConfirm.open}
+        onCancel={() => setDeleteCategoryConfirm({ open: false, id: "", name: "" })}
+        title="Remover categoria"
+        message={`Tem certeza que deseja remover "${deleteCategoryConfirm.name}"? Os itens dessa categoria ficarão sem categoria.`}
+        onConfirm={() => deleteCategory(deleteCategoryConfirm.id)}
       />
     </div>
   )
