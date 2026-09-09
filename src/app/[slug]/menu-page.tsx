@@ -5251,7 +5251,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex-1 overflow-y-auto">
               {/* Image */}
               {selectedProduct.image ? (
-                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-56 object-cover" />
+                <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full max-h-80 object-contain" />
               ) : (
                 <div className="w-full h-56 flex items-center justify-center" style={{ backgroundColor: theme.bgCardHover }}>
                   <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -5463,6 +5463,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
                 const unitPrice = basePrice + optionsPrice
                 return (
+                  <>
                   <button
                     onClick={() => {
                       if (selectedProductMissingRequired) return
@@ -5490,6 +5491,27 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <Plus className="w-5 h-5" />
                     {selectedProductMissingRequired ? "Selecione os itens obrigatórios" : `${editingCartItemId ? "Salvar" : "Adicionar"} · ${formatCurrency(unitPrice * selectedProductQty)}`}
                   </button>
+                  {!editingCartItemId && !selectedProductMissingRequired && (
+                    <button
+                      onClick={() => {
+                        setCart((prev) => {
+                          const existing = prev.find((item) => item.id === selectedProduct.id)
+                          if (existing) {
+                            return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
+                          }
+                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
+                        })
+                        setSelectedProduct(null)
+                        setShowCart(true)
+                      }}
+                      className="w-full font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 border-2 mt-2"
+                      style={{ borderColor: theme.primary, color: theme.primary }}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      Ir para o carrinho · {formatCurrency(unitPrice * selectedProductQty)}
+                    </button>
+                  )}
+                  </>
                 )
               })()}
             </div>
