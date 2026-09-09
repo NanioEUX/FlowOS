@@ -91,7 +91,7 @@ interface CustomerData {
 interface Props {
   establishment: Establishment & { categories: Category[] }
   paymentConfig: { online: boolean; delivery: boolean; pickup: boolean }
-  orderConfig: { delivery: boolean; pickup: boolean }
+  orderConfig: { delivery: boolean; pickup: boolean; dineIn: boolean }
   minimumOrder: { enabled: boolean; value: number; applyToDelivery: boolean; applyToPickup: boolean }
 }
 
@@ -277,7 +277,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
-  const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery")
+  const [orderType, setOrderType] = useState<"delivery" | "pickup" | "dineIn">("delivery")
   const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
   const [ordering, setOrdering] = useState(false)
   const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; pixPayload?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null } | null>(null)
@@ -1182,7 +1182,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   const isBelowMinimum = minimumOrder.enabled && subtotal > 0 && (
     (orderType === "delivery" && minimumOrder.applyToDelivery && subtotal < minimumOrder.value) ||
-    (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
+    (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value) ||
+    (orderType === "dineIn" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
 
 
@@ -1228,12 +1229,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     return () => clearTimeout(timer)
   }, [phoneInput, establishment.id])
 
-  function handleOrderTypeChange(type: "delivery" | "pickup") {
+  function handleOrderTypeChange(type: "delivery" | "pickup" | "dineIn") {
     setOrderType(type)
     // Define payment method based on available options for this order type
     if (type === "delivery" && paymentConfig.delivery) {
       setPaymentMethod("delivery")
     } else if (type === "pickup" && paymentConfig.pickup) {
+      setPaymentMethod("pickup")
+    } else if (type === "dineIn" && paymentConfig.pickup) {
       setPaymentMethod("pickup")
     } else if (paymentConfig.online) {
       setPaymentMethod("pix")
@@ -1250,6 +1253,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // mostra um campo para informar o valor que o cliente vai entregar.
   if (paymentConfig.delivery && orderType === "delivery") availablePayments.push({ key: "delivery", label: "Pagar na Entrega", icon: <Banknote className="h-5 w-5" /> })
   if (paymentConfig.pickup && orderType === "pickup") availablePayments.push({ key: "pickup", label: "Pagar na Retirada", icon: <Banknote className="h-5 w-5" /> })
+  if (paymentConfig.pickup && orderType === "dineIn") availablePayments.push({ key: "pickup", label: "Pagar no Local", icon: <Banknote className="h-5 w-5" /> })
 
   if (availablePayments.length > 0 && !availablePayments.find(p => p.key === paymentMethod)) {
     setPaymentMethod(availablePayments[0].key as any)
@@ -4071,7 +4075,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             {cartStep === "cart" && (
               <div className="max-w-lg mx-auto space-y-3 pb-4">
                 {/* Order type toggle */}
-                {(orderConfig.delivery || orderConfig.pickup) && (
+                {(orderConfig.delivery || orderConfig.pickup || orderConfig.dineIn) && (
                   <div className="flex gap-2">
                     {orderConfig.delivery && (
                       <button type="button" onClick={() => handleOrderTypeChange("delivery")}
@@ -4087,16 +4091,23 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <StoreIcon className="h-4 w-4" /> Retirada
                       </button>
                     )}
+                    {orderConfig.dineIn && (
+                      <button type="button" onClick={() => handleOrderTypeChange("dineIn")}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium transition-all"
+                        style={orderType === "dineIn" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        <Utensils className="h-4 w-4" /> No local
+                      </button>
+                    )}
                   </div>
                 )}
 
                 {/* Pickup address */}
-                {orderType === "pickup" && establishment.address && (
+                {(orderType === "pickup" || orderType === "dineIn") && establishment.address && (
                   <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
                       <div className="flex-1">
-                        <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
+                        <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
                         <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
                         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
                           Abrir no Maps
@@ -4469,12 +4480,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
 
                 {/* Pickup address — compact display */}
-                                        {orderType === "pickup" && establishment.address && (
+                                        {(orderType === "pickup" || orderType === "dineIn") && establishment.address && (
                                           <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
                                             <div className="flex items-start gap-2">
                                               <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
                                               <div className="flex-1">
-                                                <p className="text-sm font-medium" style={{ color: theme.accent }}>Retirada em:</p>
+                                                <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
                                                 <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
                                                 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
                                                   Abrir no Maps
@@ -4589,8 +4600,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard }}>
                   <p className="text-sm font-medium mb-2" style={{ color: theme.textSubtle }}>Resumo</p>
                   <div className="flex items-center gap-1 text-xs mb-2" style={{ color: theme.textMuted }}>
-                    {orderType === "delivery" ? <Bike className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
-                    {orderType === "delivery" ? "Entrega" : "Retirada"}
+                    {orderType === "delivery" ? <Bike className="h-3 w-3" /> : orderType === "dineIn" ? <Utensils className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
+                    {orderType === "delivery" ? "Entrega" : orderType === "dineIn" ? "No local" : "Retirada"}
                   </div>
                   {cart.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
@@ -4794,7 +4805,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {trackingOrder && (() => {
-                const isPickup = trackingOrder.orderType === "pickup"
+                const isPickup = trackingOrder.orderType === "pickup" || trackingOrder.orderType === "dineIn"
                 const allSteps = ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
                 const flowSteps = isPickup
                   ? ["accepted", "preparing", "ready"]
@@ -4846,7 +4857,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px solid ${theme.borderSubtle}` }}>
                         {trackingOrder.orderType && (
                           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
-                            {trackingOrder.orderType === "delivery" ? "🛵 Entrega" : "🏪 Retirada"}
+                            {trackingOrder.orderType === "delivery" ? "🛵 Entrega" : trackingOrder.orderType === "dineIn" ? "🍽️ No local" : "🏪 Retirada"}
                           </span>
                         )}
                         {trackingOrder.paymentMethod && (

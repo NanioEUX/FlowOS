@@ -85,7 +85,7 @@ export default async function EstablishmentPage({
 
   const { password, paymentConfig: pc, orderConfig: oc, ...rest } = establishment
   const paymentConfig = JSON.parse(pc || '{"online":true,"delivery":true,"pickup":true}')
-  const orderConfig = JSON.parse(oc || '{"delivery":true,"pickup":true}')
+  const orderConfig = JSON.parse(oc || '{"delivery":true,"pickup":true,"dineIn":true}')
   const minimumOrder = {
     enabled: rest.minimumOrderEnabled ?? false,
     value: rest.minimumOrderValue ?? 0,

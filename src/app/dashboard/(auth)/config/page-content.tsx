@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle, Utensils } from "lucide-react"
 import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -836,6 +836,7 @@ export default function ConfigPage() {
     const [orderConfig, setOrderConfig] = useState({
         delivery: true,
         pickup: true,
+        dineIn: true,
         serviceTaxEnabled: false,
         serviceTaxType: "percent" as "percent" | "fixed",
         serviceTaxValue: 10,
@@ -1638,7 +1639,7 @@ export default function ConfigPage() {
         <Card id="section-auto-accept" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold text-zinc-900">Aceite Automático</h3>
-            <p className="text-sm text-zinc-500">Quando ativado, todo pedido que chegar vai direto para produção (em preparo), sem precisar confirmar manualmente.</p>
+            <p className="text-sm text-zinc-500">Quando ativado, todo pedido já fica com status de aceito no cliente.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
               <input
                 type="checkbox"
@@ -1648,7 +1649,7 @@ export default function ConfigPage() {
               />
               <div>
                 <span className="font-medium text-zinc-900">Aceitar pedidos automaticamente</span>
-                <p className="text-xs text-zinc-500">Pedidos vão direto para "Em Preparo" sem confirmação manual</p>
+                <p className="text-xs text-zinc-500">Pedidos são confirmados automaticamente</p>
               </div>
             </label>
           </CardContent>
@@ -1678,6 +1679,16 @@ export default function ConfigPage() {
                     <span className="font-medium text-zinc-900">Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500">Cliente busca no local</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+                <input type="checkbox" checked={orderConfig.dineIn} onChange={(e) => setOrderConfig({ ...orderConfig, dineIn: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-zinc-400" />
+                    <span className="font-medium text-zinc-900">Consumir no local</span>
+                  </div>
+                  <p className="text-xs text-zinc-500">Cliente consome no estabelecimento</p>
                 </div>
               </label>
             </div>

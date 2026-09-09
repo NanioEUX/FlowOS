@@ -142,7 +142,7 @@ model Establishment {
   flowChavePix                  String? // Chave PIX para recebimento de liquidos (Modelo Flow)
   flowModoAtivado               Boolean? // Se o modelo Flow/Taxa Fixa foi ativado
   paymentConfig                 String             @default("{\"online\":true,\"delivery\":true,\"pickup\":true}")
-  orderConfig                   String             @default("{\"delivery\":true,\"pickup\":true}")
+  orderConfig                   String             @default("{\"delivery\":true,\"pickup\":true,\"dineIn\":true}")
   deliveryFeeType               String             @default("free")
   deliveryFeeAmount             Float?             @default(0)
   deliveryFreeAbove             Float?             @default(0)
