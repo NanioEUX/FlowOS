@@ -69,7 +69,6 @@ export default function EstoquePage() {
 
   const [showFamilyForm, setShowFamilyForm] = useState(false)
   const [newFamilyName, setNewFamilyName] = useState("")
-  const [newFamilyType, setNewFamilyType] = useState("alimentos")
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState<string | null>(null)
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null)
 
@@ -143,10 +142,9 @@ export default function EstoquePage() {
     await fetchAuth("/api/stock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "family", name: newFamilyName, familyType: newFamilyType, establishmentId }),
+      body: JSON.stringify({ type: "family", name: newFamilyName, establishmentId }),
     })
     setNewFamilyName("")
-    setNewFamilyType("alimentos")
     setShowFamilyForm(false)
     loadAll()
   }
@@ -323,19 +321,6 @@ export default function EstoquePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-zinc-500 uppercase">Famílias</span>
-        <button
-          onClick={() => { setSelectedFamilyFilter(null); setSelectedCategoryFilter(null) }}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-        >
-          Todas
-        </button>
-        <button
-          onClick={() => setShowFamilyForm(true)}
-          className="rounded-full border border-dashed border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-500 hover:border-green-400 hover:text-green-600 transition-colors"
-        >
-          + Nova
-        </button>
         {families.map((f) => (
           <button
             key={f.id}
@@ -356,19 +341,6 @@ export default function EstoquePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-zinc-500 uppercase">Categorias</span>
-        <button
-          onClick={() => setSelectedCategoryFilter(null)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedCategoryFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-        >
-          Todos
-        </button>
-        <button
-          onClick={() => setShowCategoryForm(true)}
-          className="rounded-full border border-dashed border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-500 hover:border-green-400 hover:text-green-600 transition-colors"
-        >
-          + Nova
-        </button>
         {filteredByFamily.map((c) => (
           <button
             key={c.id}
@@ -865,12 +837,6 @@ export default function EstoquePage() {
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
                   <input type="text" placeholder="Ex: Alimentos, Limpeza..." value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-zinc-700">Tipo</label>
-                  <select value={newFamilyType} onChange={(e) => setNewFamilyType(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none">
-                    {familyTypes.map((ft) => (<option key={ft.value} value={ft.value}>{ft.label}</option>))}
-                  </select>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" className="flex-1" onClick={() => setShowFamilyForm(false)}>Cancelar</Button>
