@@ -325,6 +325,13 @@ export default function EstoquePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-zinc-500 uppercase">Famílias</span>
+        <button
+          onClick={() => { setSelectedFamilyFilter(null); setSelectedCategoryFilter(null) }}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedFamilyFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+        >
+          Todas
+        </button>
         {families.map((f) => (
           <button
             key={f.id}
@@ -345,6 +352,13 @@ export default function EstoquePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-zinc-500 uppercase">Categorias</span>
+        <button
+          onClick={() => setSelectedCategoryFilter(null)}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedCategoryFilter === null ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+        >
+          Todas
+        </button>
         {filteredByFamily.map((c) => (
           <button
             key={c.id}
