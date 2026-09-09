@@ -900,7 +900,7 @@ export default function EstoquePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5 mb-1">
                       <label className="text-sm font-medium text-zinc-700">Família</label>
                       <button type="button" onClick={() => { setInlineForm(inlineForm === "family" ? null : "family"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "family" ? "Fechar" : "+ Nova"}</button>
                     </div>
@@ -927,7 +927,7 @@ export default function EstoquePage() {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5 mb-1">
                       <label className="text-sm font-medium text-zinc-700">Categoria</label>
                       <button type="button" onClick={() => { setInlineForm(inlineForm === "category" ? null : "category"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "category" ? "Fechar" : "+ Nova"}</button>
                     </div>
@@ -1002,7 +1002,7 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
                       <label className="text-sm font-medium text-zinc-700">Fornecedor</label>
                       <button type="button" onClick={() => { setInlineForm(inlineForm === "supplier" ? null : "supplier"); setInlineFormName("") }} className="text-xs text-green-600 hover:text-green-700 font-medium">{inlineForm === "supplier" ? "Fechar" : "+ Novo"}</button>
                     </div>
