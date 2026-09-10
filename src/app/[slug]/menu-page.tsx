@@ -504,6 +504,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setVerifyDevCode("")
       applyLocalVerified(phoneDigits)
       markSessionVerified()
+      if (showCart) {
+        setShowCheckout(true)
+        setCartStep("payment")
+      }
     } catch (e: any) {
       setVerifyError(e.message)
     } finally {
@@ -3204,7 +3208,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Identify Modal */}
       {showIdentifyModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
