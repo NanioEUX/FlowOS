@@ -4689,7 +4689,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={() => { setShowCheckout(true); setCartStep("payment") }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
+                <button onClick={() => {
+                  if (!customer.phone || !customer.name || !sessionVerified) {
+                    if (!customer.phone || !customer.name) {
+                      openIdentifyModal()
+                    } else {
+                      markVerifySessionStart()
+                      setShowIdentifyModal(true)
+                      setVerifyStep(2)
+                      setVerifyError("")
+                    }
+                    return
+                  }
+                  setShowCheckout(true)
+                  setCartStep("payment")
+                }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
