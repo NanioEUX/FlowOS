@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-const META_APP_ID = process.env.META_APP_ID
+const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
 
 export async function POST(
@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id } = params
     const body = await req.json()
-    const { code, phoneNumberId, wabaId, redirectUri, accessToken: existingToken, userName: clientUserName, userPicture: clientUserPicture } = body
+    const { code, phoneNumberId, wabaId, businessId: clientBusinessId, redirectUri, accessToken: existingToken, userName: clientUserName, userPicture: clientUserPicture } = body
 
     console.log("[Meta Embedded Signup] ========== START ==========")
     console.log("[Meta Embedded Signup] Establishment ID:", id)
@@ -86,6 +86,8 @@ export async function POST(
         }
       }
     }
+
+    // Step 1.5: OBO DISABLED - Using user token directly (System User tokens don't have access to establishment phone numbers)
 
     // Step 2: Try to get display_phone_number via API (best effort, don't block)
     let displayPhone = ""
