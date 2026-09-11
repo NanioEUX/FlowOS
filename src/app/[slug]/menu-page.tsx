@@ -4632,6 +4632,20 @@ onPaymentConfirmed={handlePaymentSuccess}
           onClose={() => setShowOrdersList(false)}
           onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
+          onReorder={(order) => {
+            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+            const cartItems: CartItem[] = items.map((item: any) => ({
+              id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
+              name: item.name,
+              price: item.price,
+              image: item.image || null,
+              quantity: item.quantity,
+              additionalOptions: item.additionalOptions || [],
+            }))
+            setCart(cartItems)
+            setShowOrdersList(false)
+            setActiveTab("menu")
+          }}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
           loyaltyConfig={parsedLoyalty}

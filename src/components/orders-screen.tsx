@@ -115,6 +115,7 @@ interface OrdersScreenProps {
   onOpenTracking: (orderId: string, trackingUrl: string) => void
   onOpenIdentify: () => void
   onRefresh?: () => void
+  onReorder?: (order: Order) => void
   hasPhone: boolean
   establishmentSlug: string
   loyaltyConfig?: { enabled?: boolean; pointsPerReal?: number } | null
@@ -128,6 +129,7 @@ export function OrdersScreen({
   onOpenTracking,
   onOpenIdentify,
   onRefresh,
+  onReorder,
   hasPhone,
   establishmentSlug,
   loyaltyConfig,
@@ -327,30 +329,35 @@ export function OrdersScreen({
                           </p>
                         )}
 
-                        {/* Timeline — Aceito, Preparando, Pronto, Saiu */}
-                        <div className="flex items-center gap-0 my-3">
-                          {getActiveTimelineSteps(order).map((step, i) => {
-                            const stepIdx = ["accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
-                            const isCompleted = flowIdx > stepIdx
-                            const isCurrent = flowIdx === stepIdx
-                            const isDone = flowIdx > stepIdx || flowIdx === stepIdx
-
-                            return (
-                              <div key={step.key} className="flex-1 flex flex-col items-center relative">
-                                {i > 0 && (
-                                  <div className="absolute top-[6px] right-1/2 w-full h-[2px]" style={{ backgroundColor: isDone ? theme.primary : theme.borderCard }} />
-                                )}
-                                <div
-                                  className="relative z-10 w-3 h-3 rounded-full flex items-center justify-center"
-                                  style={isCurrent
-                                    ? { backgroundColor: theme.primary, boxShadow: `0 0 0 3px ${theme.bgPage}, 0 0 0 5px ${theme.primary}` }
-                                    : isDone
-                                      ? { backgroundColor: theme.primary }
-                                      : { backgroundColor: theme.bgPage, border: `2px solid ${theme.borderCard}` }
-                                  }
-                                >
-                                  {isDone && !isCurrent && <CheckCircle2 className="absolute -top-0.5 -left-0.5 h-3.5 w-3.5" style={{ color: theme.primary }} />}
-                                </div>
+                        {/* Timeline — progresso horizontal */}
+                        <div className="my-3">
+                          <div className="flex items-center justify-between mb-1">
+                            {getActiveTimelineSteps(order).map((step, i) => {
+                              const stepIdx = ["accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
+                              const isDone = flowIdx >= stepIdx
+                              const isCurrent = flowIdx === stepIdx
+                              return (
+                                <span key={step.key} className="text-[10px] text-center flex-1" style={{ color: isDone ? theme.primary : theme.textMutedMore, fontWeight: isCurrent ? 700 : 400 }}>
+                                  {isDone && !isCurrent ? "✓ " : ""}{step.label}
+                                </span>
+                              )
+                            })}
+                          </div>
+                          <div className="relative h-1.5 w-full rounded-full" style={{ backgroundColor: theme.borderCard }}>
+                            <div
+                              className="absolute h-1.5 rounded-full transition-all duration-500"
+                              style={{
+                                backgroundColor: theme.primary,
+                                width: `${(() => {
+                                  const steps = getActiveTimelineSteps(order)
+                                  if (steps.length <= 1) return flowIdx >= 0 ? 100 : 0
+                                  const pctPerStep = 100 / (steps.length - 1)
+                                  return Math.min(100, flowIdx * pctPerStep)
+                                })()}`
+                              }}
+                            />
+                          </div>
+                        </div>
                                 <span className="text-[10px] mt-1 text-center leading-tight" style={{ color: (isDone || isCurrent) ? theme.text : theme.textMutedMore }}>
                                   {step.label}
                                 </span>
@@ -603,8 +610,22 @@ export function OrdersScreen({
                             {formatCurrency(order.total)}
                           </span>
                         </div>
+                        {order.deliveredAt && (
+                          <p className="text-[11px] mt-1" style={{ color: theme.textMutedMore }}>
+                            Entregue em {new Date(order.deliveredAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
                         {order.notes && (
                           <p className="text-[11px] italic mt-1" style={{ color: theme.textMutedMore }}>Obs: {order.notes}</p>
+                        )}
+                        {onReorder && !isCancelled && !isAbandoned && (
+                          <button
+                            onClick={() => onReorder(order)}
+                            className="mt-2 w-full py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                            style={{ backgroundColor: theme.primary }}
+                          >
+                            Pedir novamente
+                          </button>
                         )}
                       </div>
                     </div>
