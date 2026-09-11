@@ -440,11 +440,34 @@ export default function KdsScreen() {
                                 <button
                                   onClick={() => {
                                     const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]")
-                                    const text = `Pedido #${order.orderNumber}\n${items.map((it: any) => `${it.quantity}x ${it.name}`).join("\n")}${order.notes ? `\nObs: ${order.notes}` : ""}`
-                                    navigator.clipboard.writeText(text)
+                                    const win = window.open("", "_blank")
+                                    if (!win) return
+                                    win.document.write(`
+                                      <html><head><title>Pedido #${order.orderNumber}</title>
+                                      <style>
+                                        @page { margin: 0; }
+                                        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; color: #000; }
+                                        h1 { font-size: 16px; text-align: center; margin: 0 0 4px; }
+                                        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                                        .order-number { font-size: 20px; font-weight: bold; text-align: center; margin: 8px 0; }
+                                        .total { font-size: 14px; font-weight: bold; text-align: right; margin-top: 8px; }
+                                      </style></head><body>
+                                        <div class="order-number">Pedido #${order.orderNumber}</div>
+                                        <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+                                        ${order.tableNumber ? `<p><strong>Mesa:</strong> ${order.tableNumber}</p>` : ""}
+                                        ${order.customer?.name ? `<p><strong>Cliente:</strong> ${order.customer.name}</p>` : ""}
+                                        <div class="divider"></div>
+                                        ${items.map((it: any) => `<p>${it.quantity}x ${it.name}${it.obs ? ` (${it.obs})` : ""}</p>`).join("")}
+                                        ${order.notes ? `<div class="divider"></div><p><strong>Obs:</strong> ${order.notes}</p>` : ""}
+                                        <div class="divider"></div>
+                                      </body></html>`)
+                                    win.document.close()
+                                    win.focus()
+                                    win.print()
+                                    win.close()
                                   }}
                                   className="p-1 rounded hover:bg-zinc-700 transition-colors"
-                                  title="Copiar pedido"
+                                  title="Imprimir pedido"
                                 >
                                   <Printer className="w-3.5 h-3.5 text-zinc-400" />
                                 </button>
