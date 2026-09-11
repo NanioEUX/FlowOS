@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { ShoppingBag, Search, MessageCircle, ExternalLink, User, Plus, Loader2, X, Bike, Store, CreditCard, Banknote, Printer, Calendar, Package, Send, ChefHat } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -72,6 +72,7 @@ const orderTypeLabels: Record<string, string> = {
 
 export default function PedidosPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const hookEstablishmentId = useEstablishmentId()
   const searchParamsEstablishmentId = searchParams.get("establishment")
   const establishmentId = searchParamsEstablishmentId || hookEstablishmentId
@@ -279,7 +280,7 @@ export default function PedidosPage() {
                 if (user.establishment) {
                   localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
                 }
-                window.open("/kds/screen", "_blank")
+                router.push("/kds/screen")
               }
             }}
             className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"

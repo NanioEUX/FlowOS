@@ -40,9 +40,7 @@ export function playNewOrderSound() {
   if (typeof window === "undefined") return
   const { enabled, volume } = readSoundPrefs()
   if (!enabled) return
-  try {
-    playKitchenBeep(volume, 3)
-  } catch {}
+  playKitchenBeep(volume, 3).catch(() => {})
 }
 
 /**

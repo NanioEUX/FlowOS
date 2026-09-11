@@ -143,6 +143,7 @@ export function SoundControl({
 // AudioContext é cacheado e resumido a cada chamada para vencer a política
 // de autoplay do navegador (que suspende contexts sem interação prévia).
 let _audioCtx: any = null
+let _audioUnlocked = false
 
 function getAudioCtx(): any {
   try {
@@ -153,12 +154,25 @@ function getAudioCtx(): any {
     }
     const ctx = _audioCtx
     if (ctx.state === "suspended") {
-      void ctx.resume().catch(() => {})
+      ctx.resume().catch(() => {})
     }
     return ctx
   } catch {
     return null
   }
+}
+
+// Unlock AudioContext on first user interaction (click/touch)
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    if (_audioUnlocked) return
+    _audioUnlocked = true
+    getAudioCtx()
+    document.removeEventListener("click", unlock)
+    document.removeEventListener("touchstart", unlock)
+  }
+  document.addEventListener("click", unlock)
+  document.addEventListener("touchstart", unlock)
 }
 
 export async function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {
