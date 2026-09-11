@@ -3600,21 +3600,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
                   </div>
 
-                  {/* Histórico de pedidos */}
-                  <div>
-                    <button
-                      onClick={() => { setExpandedProfileItem(null); setShowCustomerProfile(false); setShowOrdersList(true) }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-70"
-                    >
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}10` }}>
-                        <Clock className="h-4 w-4" style={{ color: theme.primary }} />
-                      </div>
-                      <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>Histórico de pedidos</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-                    </button>
-                    <div className="h-px mx-4" style={{ backgroundColor: theme.borderSubtle }} />
-                  </div>
-
                   {/* Cupons de desconto */}
                   <div>
                     <button
