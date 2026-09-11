@@ -690,6 +690,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
         const msg = await res.json()
         setMessages((prev) => [...prev, msg])
         setNewMessage("")
+        markAsRead()
       }
     } catch {} finally {
       setSending(false)
@@ -783,7 +784,7 @@ win.close()
     <Card id={`order-${order.id}`} className={`${isNewOrder ? "border-l-4 border-l-blue-500" : ""} ${isUnaccepted ? "border-green-500 border-2 shadow-md shadow-green-200 animate-pulse" : ""} ${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${isCritical ? "border-red-500 border-2 shadow-md shadow-red-200" : isStale ? "border-amber-400 border-2" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
       <CardContent className="p-4">
         {unreadCount > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
+          <button onClick={() => setChatOpen(!chatOpen)} className="mb-3 w-full flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 hover:bg-red-500/20 transition-colors">
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500/100" />
@@ -792,7 +793,7 @@ win.close()
               {unreadCount} {unreadCount === 1 ? "nova mensagem" : "novas mensagens"} do cliente
             </p>
             <MessageCircle className="h-4 w-4 text-red-500 ml-auto" />
-          </div>
+          </button>
         )}
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex-1">
@@ -1101,6 +1102,12 @@ win.close()
               <button onClick={printReceipt} className="rounded-lg p-2 text-zinc-400 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600 transition-colors" title="Imprimir">
                 <Printer className="h-4 w-4" />
               </button>
+              {messages.length > 0 && (
+                <button onClick={() => setChatOpen(!chatOpen)} className={`rounded-lg p-2 border transition-colors ${chatOpen ? "bg-green-50 text-green-600 border-green-200" : "text-zinc-400 border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600"}`} title="Chat">
+                  <MessageCircle className="h-4 w-4" />
+                  {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-red-500 text-white text-[7px] font-bold items-center justify-center">{unreadCount}</span></span>}
+                </button>
+              )}
                {nextStatus && !isOnlinePaymentPending && order.status !== "delivered" && order.status !== "cancelled" && (
                 <button onClick={() => onUpdateStatus(order.id, nextStatus!)} className="rounded-lg bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 shadow-sm transition-colors flex items-center gap-1">
                   {nextLabel[order.status] || "Avançar"}

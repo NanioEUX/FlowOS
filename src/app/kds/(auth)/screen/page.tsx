@@ -201,10 +201,25 @@ export default function KdsScreen() {
           [orderId]: [...(prev[orderId] || []), msg],
         }))
         setChatInput("")
+        markMessagesRead(orderId, token)
       }
     } catch {} finally {
       setSendingMsg(false)
     }
+  }
+
+  async function markMessagesRead(orderId: string, token?: string | null) {
+    const t = token || localStorage.getItem("kds_token")
+    try {
+      await fetch(`/api/orders/${orderId}/messages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+      })
+      setOrderMessages(prev => ({
+        ...prev,
+        [orderId]: (prev[orderId] || []).map(m => m.sender === "customer" ? { ...m, read: true } : m),
+      }))
+    } catch {}
   }
 
   function getOrigin(order: Order): "mesa" | "online" {
@@ -516,7 +531,11 @@ export default function KdsScreen() {
                             {/* Message indicator + Chat toggle */}
                             <div className="px-3 pb-1">
                               <button
-                                onClick={() => setExpandedChat(isChatOpen ? null : order.id)}
+                                onClick={() => {
+                                  const next = isChatOpen ? null : order.id
+                                  setExpandedChat(next)
+                                  if (next && unreadMsgs.length > 0) markMessagesRead(order.id)
+                                }}
                                 className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-[10px] font-medium transition-colors ${
                                   unreadMsgs.length > 0
                                     ? "bg-red-500/20 text-red-400 border border-red-500/30"
