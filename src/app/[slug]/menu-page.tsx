@@ -339,7 +339,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   // Order status change indicator (blinks Pedidos icon)
   const [hasNewOrderStatus, setHasNewOrderStatus] = useState(false)
-  const prevOrderStatusesRef = useRef<Record<string, string>>({})
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
