@@ -177,10 +177,10 @@ export function OrdersScreen({
     if (!chatInput.trim() || chatSending) return
     setChatSending(true)
     try {
-      await fetch(`/api/orders/${orderId}/messages`, {
+      await fetch(`/api/orders/${orderId}/messages?token=${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: chatInput.trim(), token }),
+        body: JSON.stringify({ message: chatInput.trim() }),
       })
       setChatInput("")
       fetchMessages(orderId, token)
