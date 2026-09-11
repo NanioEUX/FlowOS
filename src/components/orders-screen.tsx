@@ -149,7 +149,6 @@ export function OrdersScreen({
   }
 
   const activeOrders = orders.filter(o => ["pending", "payment_pending", "accepted", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
-  const completedOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status))
 
   const fetchMessages = useCallback(async (orderId: string, token: string) => {
     try {
@@ -242,9 +241,14 @@ export function OrdersScreen({
             </div>
           ) : loading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" style={{ color: theme.primary }} /></div>
+          ) : activeOrders.length === 0 ? (
+            <div className="text-center py-10">
+              <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
+              <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido em andamento</p>
+            </div>
           ) : (
             <div className="space-y-3">
-                {activeOrders.length > 0 && activeOrders.map(order => {
+                {activeOrders.map(order => {
                   const items = parseItems(order.items)
                   const flowIdx = getTimelineIdx(order)
                   const deliveryCode = order.deliveryCode
@@ -515,67 +519,6 @@ export function OrdersScreen({
                     </div>
                   )
                 })}
-                {activeOrders.length === 0 && completedOrders.length === 0 && (
-                  <div className="text-center py-10">
-                    <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
-                    <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido encontrado</p>
-                  </div>
-                )}
-                {completedOrders.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-2 pt-4 pb-1">
-                      <div className="h-px flex-1" style={{ backgroundColor: theme.borderSubtle }} />
-                      <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Histórico</span>
-                      <div className="h-px flex-1" style={{ backgroundColor: theme.borderSubtle }} />
-                    </div>
-                    {completedOrders.map(order => {
-                      const items = parseItems(order.items)
-                      const isCancelled = order.status === "cancelled"
-                      const isExpanded = expandedOrder === order.id
-                      const msgs = messages[order.id] || []
-                      const unreadCount = msgs.filter(m => m.sender === "establishment" && !m.read).length
-
-                      return (
-                        <div
-                          key={order.id}
-                          className="rounded-xl border overflow-hidden"
-                          style={{
-                            borderColor: isCancelled ? "rgba(239,68,68,0.2)" : theme.borderCard,
-                            backgroundColor: theme.bgCard,
-                            opacity: 0.8,
-                          }}
-                        >
-                          <div className="p-4">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-base font-bold" style={{ color: theme.text }}>
-                                  Pedido #{order.orderNumber || order.id.slice(0, 8)}
-                                </span>
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{
-                                  backgroundColor: isCancelled ? "rgba(239,68,68,0.1)" : order.status === "abandoned" ? "rgba(249,115,22,0.1)" : "rgba(34,197,94,0.1)",
-                                  color: isCancelled ? "#ef4444" : order.status === "abandoned" ? "#f97316" : "#22c55e",
-                                }}>
-                                  {statusLabels[order.status] || order.status}
-                                </span>
-                              </div>
-                              <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
-                                {new Date(order.createdAt).toLocaleDateString("pt-BR")}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs" style={{ color: theme.textMutedMore }}>
-                                {items.map(it => `${it.quantity}x ${it.name}`).join(", ")}
-                              </div>
-                              <span className="text-sm font-bold" style={{ color: theme.text }}>
-                                {formatCurrency(order.total)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </>
-                )}
               </div>
           )}
         </div>
