@@ -694,6 +694,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
 
+  // Expire old pending orders on each dashboard poll
+  const estConfig = await prisma.establishment.findUnique({
+    where: { id: establishmentId },
+    select: { abandonedOrderMinutes: true },
+  })
+  const abandonMinutes = estConfig?.abandonedOrderMinutes ?? 15
+  const abandonThreshold = new Date(Date.now() - abandonMinutes * 60 * 1000)
+  await prisma.order.updateMany({
+    where: {
+      establishmentId,
+      status: { in: ["pending", "new", "payment_pending"] },
+      createdAt: { lt: abandonThreshold },
+    },
+    data: { status: "abandoned" },
+  })
+
   const where: any = { establishmentId }
   if (status) where.status = status
   // Regras para mostrar um pedido no painel de pedidos:
