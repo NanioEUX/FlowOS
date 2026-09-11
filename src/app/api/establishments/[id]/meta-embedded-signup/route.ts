@@ -4,6 +4,70 @@ import { prisma } from "@/lib/prisma"
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
 
+async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<{ token: string | null, debug: string[] }> {
+  const debug: string[] = []
+  if (!META_APP_ID || !META_APP_SECRET) {
+    debug.push("META_APP_ID or META_APP_SECRET not set")
+    return { token: null, debug }
+  }
+  const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
+  const redirectUris = [
+    origin + "/",
+    origin,
+    "https://www.facebook.com/connect/login/success.html",
+    "",
+  ]
+
+  for (const uri of redirectUris) {
+    try {
+      const url = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=${encodeURIComponent(uri)}&code=${code}`
+      const res = await fetch(url, { method: "GET" })
+      const data = await res.json()
+      const msg = `URI="${uri}" status=${res.status} ok=${res.ok} hasToken=${!!data.access_token} error=${data.error?.message || "none"}`
+      debug.push(msg)
+      console.log("[Token Exchange]", msg)
+      if (res.ok && data.access_token && data.access_token.startsWith("EAA")) {
+        return { token: data.access_token, debug }
+      }
+    } catch (e: any) {
+      debug.push(`URI="${uri}" exception=${e.message}`)
+    }
+  }
+  return { token: null, debug }
+}
+
+async function exchangeForLongLivedToken(shortToken: string): Promise<{ token: string | null, debug: string }> {
+  if (!META_APP_ID || !META_APP_SECRET) return { token: null, debug: "no app credentials" }
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${shortToken}`,
+      { method: "GET" }
+    )
+    const data = await res.json()
+    const debug = `status=${res.status} hasToken=${!!data.access_token} error=${data.error?.message || "none"}`
+    console.log("[Token Exchange] Long token:", debug)
+    if (data.access_token && data.access_token.startsWith("EAA")) {
+      return { token: data.access_token, debug }
+    }
+    return { token: null, debug }
+  } catch (e: any) {
+    return { token: null, debug: e.message }
+  }
+}
+
+async function debugToken(token: string): Promise<any> {
+  if (!META_APP_ID || !META_APP_SECRET) return null
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(token)}&access_token=${META_APP_ID}|${META_APP_SECRET}`
+    )
+    const data = await res.json()
+    return data.data || null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -11,85 +75,65 @@ export async function POST(
   try {
     const { id } = params
     const body = await req.json()
-    const { code, phoneNumberId, wabaId, businessId: clientBusinessId, redirectUri, accessToken: existingToken, userName: clientUserName, userPicture: clientUserPicture } = body
+    const { code, phoneNumberId, wabaId, businessId: clientBusinessId, redirectUri, accessToken: existingToken } = body
 
     console.log("[Meta Embedded Signup] ========== START ==========")
     console.log("[Meta Embedded Signup] Establishment ID:", id)
-    console.log("[Meta Embedded Signup] Code received:", !!code, "length:", code?.length)
-    console.log("[Meta Embedded Signup] phoneNumberId:", phoneNumberId)
-    console.log("[Meta Embedded Signup] wabaId:", wabaId)
-    console.log("[Meta Embedded Signup] redirectUri:", redirectUri)
-    console.log("[Meta Embedded Signup] existingToken:", !!existingToken, "length:", existingToken?.length)
-    console.log("[Meta Embedded Signup] clientUserName:", clientUserName)
+    console.log("[Meta Embedded Signup] Code:", !!code, "len:", code?.length, "prefix:", code?.substring(0, 10))
+    console.log("[Meta Embedded Signup] existingToken:", !!existingToken, "starts:", existingToken?.substring(0, 10))
 
-    if (!code && !existingToken) {
-      console.log("[Meta Embedded Signup] No code or token provided, saving IDs only")
-    }
-
-    // Step 1: Get access token
     let accessToken: string | null = null
-    const diagnostics: string[] = []
+    let tokenSource = "none"
+    const allDebug: string[] = []
 
-    diagnostics.push("received: code=" + (code || "null") + " existingToken=" + (existingToken ? "len=" + existingToken.length + " starts=" + existingToken.substring(0, 6) : "null"))
+    // PATH 1: Exchange code for fresh USER token (preferred)
+    if (code && code !== "no_code" && code.length > 10) {
+      allDebug.push("PATH 1: code exchange")
+      const { token: shortToken, debug: codeDebug } = await exchangeCodeForToken(code, redirectUri)
+      allDebug.push(...codeDebug)
 
-    if (existingToken && existingToken.length > 100) {
-      if (existingToken.startsWith("EAA")) {
+      if (shortToken) {
+        const { token: longToken, debug: longDebug } = await exchangeForLongLivedToken(shortToken)
+        allDebug.push("long_exchange: " + longDebug)
+        if (longToken) {
+          accessToken = longToken
+          tokenSource = "code_exchange_long"
+        } else {
+          accessToken = shortToken
+          tokenSource = "code_exchange_short"
+        }
+      } else {
+        allDebug.push("code exchange FAILED for all URIs")
+      }
+    } else {
+      allDebug.push("PATH 1 skipped: no valid code (code=" + (code || "null") + " len=" + (code?.length || 0) + ")")
+    }
+
+    // PATH 2: If code exchange failed, try existingToken
+    if (!accessToken && existingToken && existingToken.startsWith("EAA")) {
+      allDebug.push("PATH 2: existingToken exchange")
+      const { token: longToken, debug: longDebug } = await exchangeForLongLivedToken(existingToken)
+      allDebug.push("existing_exchange: " + longDebug)
+      if (longToken) {
+        accessToken = longToken
+        tokenSource = "existing_exchange_long"
+      } else {
+        allDebug.push("existing exchange FAILED, using raw token")
         accessToken = existingToken
-        diagnostics.push("existingToken: VALID (EAA)")
-      } else {
-        diagnostics.push("existingToken: INVALID prefix=" + existingToken.substring(0, 6))
+        tokenSource = "existing_raw"
       }
     }
 
-    if (!accessToken && code && code !== "no_code" && code.length > 10) {
-      if (!META_APP_ID || !META_APP_SECRET) {
-        console.log("[Meta Embedded Signup] ERROR - META_APP_ID or META_APP_SECRET not configured")
-      } else {
-        console.log("[Meta Embedded Signup] Exchanging code for token...")
-        const origin = redirectUri ? new URL(redirectUri).origin : "https://flowoshub.com"
-        const redirectUris = [origin, origin + "/", ""]
-
-        for (const uri of redirectUris) {
-          console.log("[Meta Embedded Signup] Trying URI:", uri)
-          try {
-            const tokenRes = await fetch(
-              `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&redirect_uri=${encodeURIComponent(uri)}&code=${code}`,
-              { method: "GET" }
-            )
-            const tokenData = await tokenRes.json()
-            console.log("[Meta Embedded Signup] Token response:", JSON.stringify(tokenData))
-            if (tokenRes.ok && tokenData.access_token && tokenData.access_token.startsWith("EAA")) {
-              accessToken = tokenData.access_token
-              console.log("[Meta Embedded Signup] Got VALID short token with URI:", uri, "length:", tokenData.access_token.length)
-              break
-            }
-          } catch (e: any) {
-            console.log("[Meta Embedded Signup] URI failed:", uri, e.message)
-          }
-        }
-
-        if (accessToken && META_APP_ID && META_APP_SECRET) {
-          console.log("[Meta Embedded Signup] Exchanging for long token...")
-          try {
-            const longRes = await fetch(
-              `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${accessToken}`,
-              { method: "GET" }
-            )
-            const longData = await longRes.json()
-            if (longData.access_token && longData.access_token.startsWith("EAA")) {
-              accessToken = longData.access_token
-              console.log("[Meta Embedded Signup] Long token OK, length:", longData.access_token.length)
-            }
-          } catch (e: any) {
-            console.log("[Meta Embedded Signup] Long token exchange failed:", e.message)
-          }
-        }
-      }
+    // Debug token type
+    if (accessToken) {
+      const info = await debugToken(accessToken)
+      allDebug.push(`final_token: type=${info?.type} expires=${info?.expires_at} issued=${info?.issued_at}`)
+      console.log("[Meta Embedded Signup] Final token:", JSON.stringify(info, null, 2))
+    } else {
+      allDebug.push("NO TOKEN OBTAINED")
     }
 
-    // Step 1.5: OBO DISABLED - Using user token directly (System User tokens don't have access to establishment phone numbers)
-
-    // Step 2: Try to get display_phone_number via API (best effort, don't block)
+    // Get phone display info
     let displayPhone = ""
     if (accessToken && phoneNumberId) {
       try {
@@ -98,14 +142,11 @@ export async function POST(
           { headers: { Authorization: `Bearer ${accessToken}` } }
         )
         const phoneInfo = await phoneRes.json()
-        console.log("[Meta Embedded Signup] Phone info:", JSON.stringify(phoneInfo))
         displayPhone = phoneInfo?.display_phone_number || ""
-      } catch (e: any) {
-        console.log("[Meta Embedded Signup] Phone info fetch failed:", e.message)
-      }
+      } catch {}
     }
 
-    // Step 2.5: Get business name from WABA
+    // Get business name
     let metaBusinessName = ""
     if (accessToken && wabaId) {
       try {
@@ -114,17 +155,11 @@ export async function POST(
           { method: "GET" }
         )
         const wabaData = await wabaRes.json()
-        console.log("[Meta Embedded Signup] WABA info:", JSON.stringify(wabaData))
         metaBusinessName = wabaData?.owner_business_info?.name || wabaData?.name || ""
-      } catch (e: any) {
-        console.log("[Meta Embedded Signup] WABA info fetch failed:", e.message)
-      }
+      } catch {}
     }
 
-    // Step 3: Save to database - IDs come from request, NOT from API
-    console.log("[Meta Embedded Signup] Saving to database...")
-    console.log("[Meta Embedded Signup] phoneNumberId:", phoneNumberId, "wabaId:", wabaId, "displayPhone:", displayPhone)
-
+    // Save to database
     await prisma.establishment.update({
       where: { id },
       data: {
@@ -138,10 +173,10 @@ export async function POST(
       },
     })
 
-    // Step 4: Subscribe WABA to app (required for webhook events)
+    // Subscribe WABA to app
     if (accessToken && wabaId) {
       try {
-        const subRes = await fetch(
+        await fetch(
           `https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`,
           {
             method: "POST",
@@ -151,17 +186,13 @@ export async function POST(
             },
           }
         )
-        const subData = await subRes.json()
-        console.log("[Meta Embedded Signup] Subscribe WABA response:", JSON.stringify(subData))
-      } catch (subErr: any) {
-        console.error("[Meta Embedded Signup] Subscribe WABA error:", subErr.message)
-      }
+      } catch {}
     }
 
-    // Step 5: Register phone (best effort)
+    // Register phone
     if (accessToken && phoneNumberId) {
       try {
-        const regRes = await fetch(
+        await fetch(
           `https://graph.facebook.com/v21.0/${phoneNumberId}/register`,
           {
             method: "POST",
@@ -169,27 +200,20 @@ export async function POST(
               Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              pin: "123456",
-            }),
+            body: JSON.stringify({ messaging_product: "whatsapp", pin: "123456" }),
           }
         )
-        const regData = await regRes.json()
-        console.log("[Meta Embedded Signup] Register response:", JSON.stringify(regData))
-      } catch (regErr: any) {
-        console.error("[Meta Embedded Signup] Register error:", regErr.message)
-      }
+      } catch {}
     }
 
-    console.log(`[Meta Embedded Signup] SUCCESS - phone: ${displayPhone} phoneNumberId: ${phoneNumberId} wabaId: ${wabaId}`)
+    console.log(`[Meta Embedded Signup] SUCCESS - source: ${tokenSource} phone: ${displayPhone}`)
 
     return NextResponse.json({
       success: true,
       phoneNumber: displayPhone,
       wabaId: wabaId,
-      _diagnostics: diagnostics,
-      _tokenValid: accessToken ? accessToken.startsWith("EAA") : false,
+      _tokenSource: tokenSource,
+      _debug: allDebug,
     })
   } catch (error: any) {
     console.error("[Meta Embedded Signup] ERROR:", error.message, error.stack)

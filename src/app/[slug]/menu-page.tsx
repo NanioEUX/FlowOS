@@ -337,9 +337,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
 
-  // Notifications
-  const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string }[]>([])
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false)
+  // Order status change indicator (blinks Pedidos icon)
+  const [hasNewOrderStatus, setHasNewOrderStatus] = useState(false)
+  const prevOrderStatusesRef = useRef<Record<string, string>>({})
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
@@ -1967,7 +1967,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         if (orderResult?.orderId === orderId) {
           setOrderResult(null)
         }
-        loadCustomerOrders()
+        loadCustomerOrders(true)
         // Close tracking if showing the cancelled order
         if (trackingOrder?.id === orderId) {
           setShowTracking(false)
@@ -1994,10 +1994,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     }
   }
 
-  const loadCustomerOrders = useCallback(async () => {
+  const loadCustomerOrders = useCallback(async (silent = false) => {
     const phone = customer.phone || customerData?.phone
     if (!phone) return
-    setLoadingOrders(true)
+    if (!silent) setLoadingOrders(true)
     try {
       const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
       if (res.ok) {
@@ -2005,7 +2005,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         setCustomerOrders(data)
       }
     } catch {} finally {
-      setLoadingOrders(false)
+      if (!silent) setLoadingOrders(false)
     }
   }, [customer.phone, customerData?.phone, establishment.id, establishment.slug])
 
@@ -2015,31 +2015,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const phone = customer.phone || customerData?.phone
     if (!phone) return
     const interval = setInterval(async () => {
-      await loadCustomerOrders()
-      // Detect status changes and auto-clear notifications for delivered orders
+      await loadCustomerOrders(true)
+      // Detect status changes and blink Pedidos icon
       try {
         const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
         if (res.ok) {
           const data = await res.json()
-          let hasDelivered = false
           for (const order of data) {
             const prev = prevOrderStatusesRef.current[order.id]
             if (prev && prev !== order.status) {
-              // Clear bell notifications when order is delivered
-              if (order.status === "delivered") {
-                hasDelivered = true
-              }
+              setHasNewOrderStatus(true)
             }
             prevOrderStatusesRef.current[order.id] = order.status
-          }
-          // Auto-clear order notifications from bell when any order is delivered
-          if (hasDelivered) {
-            fetch("/api/customers/notifications", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
-            }).catch(() => {})
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })))
           }
         }
       } catch {}
@@ -2047,23 +2034,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     return () => clearInterval(interval)
   }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
 
-  // Fetch notifications when customer is logged in
+  // Initialize prevOrderStatusesRef on first load
   useEffect(() => {
-    const phone = customer.phone || customerData?.phone
-    if (!phone || !sessionVerified) return
-    async function loadNotifications() {
-      try {
-        const res = await fetch(`/api/customers/notifications?phone=${phone}&establishmentId=${establishment.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setNotifications(data.notifications || [])
-        }
-      } catch { }
+    if (customerOrders.length > 0 && Object.keys(prevOrderStatusesRef.current).length === 0) {
+      for (const order of customerOrders) {
+        prevOrderStatusesRef.current[order.id] = order.status
+      }
     }
-    loadNotifications()
-    const interval = setInterval(loadNotifications, 30000)
-    return () => clearInterval(interval)
-  }, [customer.phone, customerData?.phone, establishment.id, sessionVerified])
+  }, [customerOrders])
 
 const handlePaymentSuccess = useCallback(() => {
     console.log("[handlePaymentSuccess] Called - clearing cart and pending order")
@@ -2079,7 +2057,7 @@ const handlePaymentSuccess = useCallback(() => {
       console.log("[handlePaymentSuccess] Payment confirmed, clearing paymentLink:", prev?.orderId)
       return prev ? { ...prev, paymentLink: undefined, paymentDone: true } : null
     })
-    loadCustomerOrders()
+    loadCustomerOrders(true)
     // Re-sync customer loyalty points after payment confirmation
     setUseLoyalty(false)
     if (customer.phone) {
@@ -2093,7 +2071,7 @@ const handlePaymentSuccess = useCallback(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
     function handleMessage(event: MessageEvent) {
       if (event.data?.type === "push-notification") {
-        loadCustomerOrders()
+        loadCustomerOrders(true)
         setPushNotification({ title: event.data.title || "", body: event.data.body || "", url: event.data.url || "" })
         setTimeout(() => setPushNotification(null), 6000)
       }
@@ -2598,24 +2576,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       {customerData?.loyaltyPoints || customerLoyaltyPoints} pts
                     </span>
                   </button>
-                  {/* Divider */}
-                  <span className="w-px h-4 bg-gray-300" />
-                  {/* Notification bell — toggles dropdown, or opens orders if no notifications */}
-                  <button onClick={() => {
-                    const unread = notifications.filter(n => !n.read).length
-                    if (unread === 0) {
-                      setShowOrdersList(true)
-                    } else {
-                      setShowNotifDropdown(prev => !prev)
-                    }
-                  }} className="relative flex items-center justify-center p-1">
-                    <svg className="h-6 w-6" style={{ color: theme.text }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                    {notifications.filter(n => !n.read).length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-red-500">
-                        {notifications.filter(n => !n.read).length}
-                      </span>
-                    )}
-                  </button>
                 </div>
               ) : (
                 <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
@@ -2626,86 +2586,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
       </div>
-
-      {/* Notification dropdown */}
-      {showNotifDropdown && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-[59]" onClick={() => {
-            // Delete all unread notifications when closing
-            setNotifications(prev => [])
-            const phone = customer.phone || customerData?.phone
-            if (phone) {
-              fetch("/api/customers/notifications", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
-              }).catch(() => {})
-            }
-            setShowNotifDropdown(false)
-          }} />
-          <div className="fixed left-0 right-0 z-[60] px-4" style={{ top: "calc(88px + env(safe-area-inset-top, 0px))" }}>
-            <div className="mx-auto max-w-3xl rounded-2xl border overflow-hidden" style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard, boxShadow: "0 12px 40px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15)" }}>
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: theme.borderCard }}>
-                <span className="text-base font-bold" style={{ color: theme.text }}>Notificações</span>
-                <button onClick={() => {
-                  setNotifications(prev => [])
-                  const phone = customer.phone || customerData?.phone
-                  if (phone) {
-                    fetch("/api/customers/notifications", {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ phone, establishmentId: establishment.id, markAllRead: true }),
-                    }).catch(() => {})
-                  }
-                  setShowNotifDropdown(false)
-                }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgPage, color: theme.textMuted }}>
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              {notifications.filter(n => !n.read).length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm" style={{ color: theme.textMutedMore }}>Nenhuma notificação</p>
-                </div>
-              ) : (
-                <div className="max-h-[50vh] overflow-y-auto">
-                  {notifications.filter(n => !n.read).slice(0, 10).map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => {
-                        setShowNotifDropdown(false)
-                        if (n.type === "order_status") {
-                          setShowOrdersList(true)
-                        }
-                        // Delete this notification
-                        setNotifications(prev => prev.filter(x => x.id !== n.id))
-                        const phone = customer.phone || customerData?.phone
-                        if (phone) {
-                          fetch("/api/customers/notifications", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ phone, establishmentId: establishment.id, deleteId: n.id }),
-                          }).catch(() => {})
-                        }
-                      }}
-                      className="w-full flex items-start gap-3 px-4 py-3.5 text-left border-b last:border-b-0"
-                      style={{ borderColor: theme.borderCard, backgroundColor: `${theme.primary}05` }}
-                    >
-                      <span className="text-xl shrink-0 mt-0.5">
-                        {n.type === "order_status" ? "📦" : n.type === "cashback" ? "💰" : n.type === "promo" ? "🔥" : "📢"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{n.title}</p>
-                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: theme.textMuted }}>{n.message}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Spacer for fixed header */}
       <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
@@ -3085,6 +2965,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </button>
             <button
               onClick={() => {
+                setHasNewOrderStatus(false)
                 setActiveTab("orders")
                 if (customer.phone || customerData?.phone) {
                   loadCustomerOrders()
@@ -3096,15 +2977,21 @@ onPaymentConfirmed={handlePaymentSuccess}
               className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors relative"
               style={{ color: activeTab === "orders" ? theme.primary : theme.textMuted }}
             >
-              <ClipboardList className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Pedidos</span>
+              <ClipboardList className={`h-5 w-5 ${hasNewOrderStatus ? "text-red-500 animate-pulse" : ""}`} />
+              <span className={`text-[10px] font-medium ${hasNewOrderStatus ? "text-red-500" : ""}`}>Pedidos</span>
               {mounted && activeOrdersCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white shadow-sm" style={{ backgroundColor: theme.primary }}>
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40" style={{ backgroundColor: theme.primary }} />
                   <span className="relative">{activeOrdersCount}</span>
                 </span>
               )}
-              {activeOrdersCount === 0 && hasEstablishmentReply && (
+              {hasNewOrderStatus && (
+                <span className="absolute -top-0.5 right-1 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                </span>
+              )}
+              {!hasNewOrderStatus && activeOrdersCount === 0 && hasEstablishmentReply && (
                 <span className="absolute -top-0.5 right-1 flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
@@ -4767,24 +4654,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           onRefresh={loadCustomerOrders}
           onClose={() => setShowOrdersList(false)}
           onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
-          onReorder={(order) => {
-            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            setCart(items.map((i: any) => ({
-              id: i.id || i.productId || i.name,
-              name: i.name,
-              price: i.price,
-              image: i.image,
-              quantity: i.quantity,
-              additionalOptions: i.additionalOptions || [],
-            })))
-            setOrderResult(null)
-            setLastOrder(null)
-            setPendingOrderItems([])
-            setPendingOrderNumber(null)
-            setCartStep("cart")
-            setShowOrdersList(false)
-            openCart()
-          }}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}

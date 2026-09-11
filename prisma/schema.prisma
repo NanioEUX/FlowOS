@@ -163,6 +163,7 @@ model Establishment {
   cancellationBlockWindowDays   Int                @default(7)
   cancellationBlockDurationDays Int                @default(7)
   autoAcceptOrders              Boolean            @default(false)
+  abandonedOrderMinutes         Int                @default(15) // minutos para marcar pedido como abandonado se não aceito
   ifoodMerchantId               String?
   ifoodAccessToken              String?
   ifoodRefreshToken             String?

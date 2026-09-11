@@ -273,10 +273,12 @@ export default function PedidosPage() {
           <button
             onClick={() => {
               const user = JSON.parse(localStorage.getItem("pedefacil-user") || "{}")
-              if (user.establishmentId) {
+              if (user.establishmentId && user.token) {
                 localStorage.setItem("kds_token", user.token)
                 localStorage.setItem("kds_user", JSON.stringify(user))
-                localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
+                if (user.establishment) {
+                  localStorage.setItem("kds_establishment", JSON.stringify(user.establishment))
+                }
                 window.open("/kds/screen", "_blank")
               }
             }}
@@ -768,13 +770,14 @@ win.close()
 }
 
   const ageMinutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
+  const isUnaccepted = ["pending", "new"].includes(order.status)
   const isStale =
     ageMinutes >= 30 &&
     !["delivered", "cancelled", "out_for_delivery"].includes(order.status)
   const isCritical = ageMinutes >= 45 && isStale
 
   return (
-    <Card id={`order-${order.id}`} className={`${isNewOrder ? "border-l-4 border-l-blue-500" : ""} ${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${isCritical ? "border-red-500 border-2 shadow-md shadow-red-200" : isStale ? "border-amber-400 border-2" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
+    <Card id={`order-${order.id}`} className={`${isNewOrder ? "border-l-4 border-l-blue-500" : ""} ${isUnaccepted ? "border-green-500 border-2 shadow-md shadow-green-200 animate-pulse" : ""} ${unreadCount > 0 ? "border-red-300 border-2 shadow-md shadow-red-100" : ""} ${isCritical ? "border-red-500 border-2 shadow-md shadow-red-200" : isStale ? "border-amber-400 border-2" : ""} ${highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""} transition-all duration-300`}>
       <CardContent className="p-4">
         {unreadCount > 0 && (
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">

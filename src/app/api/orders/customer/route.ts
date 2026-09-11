@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-const ASAAS_API_URL =
-  process.env.ASAAS_ENVIRONMENT === "sandbox"
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/v3"
-
-const PENDING_EXPIRY_MINUTES = Number(process.env.PENDING_ORDER_EXPIRY_MINUTES) || 5
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const phone = searchParams.get("phone")
@@ -17,20 +10,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
   }
 
-  const now = new Date()
-  const expiryThreshold = new Date(now.getTime() - PENDING_EXPIRY_MINUTES * 60 * 1000)
+  // Fetch establishment config for abandoned order timeout
+  const establishment = await prisma.establishment.findUnique({
+    where: { id: establishmentId },
+    select: { abandonedOrderMinutes: true },
+  })
+  const abandonedMinutes = establishment?.abandonedOrderMinutes ?? 15
 
-  // First, expire old pending orders
+  const now = new Date()
+  const expiryThreshold = new Date(now.getTime() - abandonedMinutes * 60 * 1000)
+
+  // Mark old pending orders as abandoned if not accepted within the configured time
   await prisma.order.updateMany({
     where: {
       customerPhone: phone,
       establishmentId,
-      paymentStatus: "pending",
+      status: { in: ["pending", "new"] },
       createdAt: { lt: expiryThreshold },
     },
     data: {
       status: "abandoned",
-      paymentStatus: "expired",
     },
   })
 

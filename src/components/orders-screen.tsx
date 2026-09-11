@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronRight, MessageCircle, Phone, Send, Loader2, Package, Clock, CheckCircle2, Bike, ShoppingBag, Store, RefreshCw, Copy, Check } from "lucide-react"
+import { X, ChevronRight, MessageCircle, Send, Loader2, Package, CheckCircle2, Copy, Check } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface OrderItem {
@@ -113,7 +113,6 @@ interface OrdersScreenProps {
   loading: boolean
   onClose: () => void
   onOpenTracking: (orderId: string, trackingUrl: string) => void
-  onReorder: (order: Order) => void
   onOpenIdentify: () => void
   onRefresh?: () => void
   hasPhone: boolean
@@ -127,14 +126,12 @@ export function OrdersScreen({
   loading,
   onClose,
   onOpenTracking,
-  onReorder,
   onOpenIdentify,
   onRefresh,
   hasPhone,
   establishmentSlug,
   loyaltyConfig,
 }: OrdersScreenProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "history">("active")
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState("")
@@ -151,24 +148,7 @@ export function OrdersScreen({
     return Math.floor(total / loyaltyConfig.pointsPerReal)
   }
 
-  // Poll for order updates every 15s
-  useEffect(() => {
-    if (!onRefresh) return
-    const interval = setInterval(() => onRefresh(), 15000)
-    return () => clearInterval(interval)
-  }, [onRefresh])
-
   const activeOrders = orders.filter(o => ["pending", "payment_pending", "accepted", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
-  const historyOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status) || (o.status === "pending" && o.paymentStatus === "expired"))
-
-  const hasActive = activeOrders.length > 0
-
-  // Auto-switch to history when no active orders
-  useEffect(() => {
-    if (!hasActive && activeTab === "active") {
-      setActiveTab("history")
-    }
-  }, [hasActive])
 
   const fetchMessages = useCallback(async (orderId: string, token: string) => {
     try {
@@ -252,28 +232,6 @@ export function OrdersScreen({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b shrink-0" style={{ borderColor: theme.borderCard }}>
-          {hasActive && (
-            <button
-              onClick={() => setActiveTab("active")}
-              className="flex-1 py-2.5 text-sm font-semibold text-center relative"
-              style={{ color: activeTab === "active" ? theme.primary : theme.textMutedMore }}
-            >
-              Em Andamento {activeOrders.length > 0 && <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: theme.primary }}>{activeOrders.length}</span>}
-              {activeTab === "active" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
-            </button>
-          )}
-          <button
-            onClick={() => setActiveTab("history")}
-            className="flex-1 py-2.5 text-sm font-semibold text-center relative"
-            style={{ color: activeTab === "history" ? theme.primary : theme.textMutedMore }}
-          >
-            Histórico
-            {activeTab === "history" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
-          </button>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {!hasPhone ? (
@@ -283,14 +241,13 @@ export function OrdersScreen({
             </div>
           ) : loading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" style={{ color: theme.primary }} /></div>
-          ) : activeTab === "active" ? (
-            activeOrders.length === 0 ? (
-              <div className="text-center py-10">
-                <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
-                <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido em andamento</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
+          ) : activeOrders.length === 0 ? (
+            <div className="text-center py-10">
+              <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
+              <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido em andamento</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
                 {activeOrders.map(order => {
                   const items = parseItems(order.items)
                   const flowIdx = getTimelineIdx(order)
@@ -563,107 +520,6 @@ export function OrdersScreen({
                   )
                 })}
               </div>
-            )
-          ) : (
-            /* History tab */
-            historyOrders.length === 0 ? (
-              <div className="text-center py-10">
-                <Clock className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
-                <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido no histórico</p>
-              </div>
-            ) : (() => {
-              // Group orders by month
-              const monthGroups: Record<string, Order[]> = {}
-              historyOrders.forEach(order => {
-                const d = new Date(order.createdAt)
-                const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`
-                const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-                if (!monthGroups[key]) monthGroups[key] = []
-                monthGroups[key].push(order)
-              })
-              const sortedKeys = Object.keys(monthGroups).sort().reverse()
-
-              return (
-                <div className="space-y-5">
-                  {sortedKeys.map(key => {
-                    const monthLabel = monthGroups[key][0].createdAt
-                      ? new Date(monthGroups[key][0].createdAt).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-                      : key
-                    return (
-                      <div key={key}>
-                        <h3 className="text-sm font-bold mb-2 capitalize" style={{ color: theme.text }}>{monthLabel}</h3>
-                        <div className="space-y-2">
-                           {monthGroups[key].map(order => {
-                            const items = parseItems(order.items)
-
-                            return (
-                              <div
-                                key={order.id}
-                                className="rounded-xl overflow-hidden border"
-                                style={{ backgroundColor: theme.bgCard, borderColor: theme.borderCard }}
-                              >
-                                <div className="p-3">
-                                  {/* Line 1: #number + pts + Dia X */}
-                                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-bold" style={{ color: theme.text }}>
-                                        #{order.orderNumber || order.id.slice(0, 8)}
-                                      </span>
-                                      {calcPoints(order.total) > 0 && (
-                                        <span className="text-[10px] font-bold" style={{ color: theme.success }}>
-                                          +{calcPoints(order.total)} pts
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
-                                      <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
-                                        Dia {order.createdAt ? new Date(order.createdAt).getDate() : "—"}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Items list */}
-                                  <div className="space-y-1.5">
-                                    {items.map((item: any, idx: number) => (
-                                      <div key={idx} className="flex items-center gap-2.5">
-                                        {item.image ? (
-                                          <img src={item.image} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                                        ) : (
-                                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                            {item.name?.charAt(0) || "#"}
-                                          </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-semibold truncate" style={{ color: theme.text }}>
-                                            {item.quantity}x {item.name}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-
-                                  {/* Pedir novamente */}
-                                  <div className="flex justify-end mt-2">
-                                    <button
-                                      onClick={() => onReorder(order)}
-                                      className="flex items-center gap-0.5 text-xs font-semibold"
-                                      style={{ color: theme.primary }}
-                                    >
-                                      Pedir novamente <ChevronRight className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()
           )}
         </div>
       </div>

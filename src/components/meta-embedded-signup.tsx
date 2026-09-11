@@ -75,14 +75,11 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     const payload: any = { phoneNumberId, wabaId, businessId, redirectUri }
     if (code && code !== "no_code") {
-      if (code.startsWith("EAA")) {
-        payload.accessToken = code
-      } else {
-        payload.code = code
-      }
+      payload.code = code
     }
 
-    if (pendingTokenRef.current) {
+    // Send existingToken as fallback only (may be stale/cached SYSTEM_USER)
+    if (pendingTokenRef.current && pendingTokenRef.current.startsWith("EAA")) {
       payload.accessToken = pendingTokenRef.current
     }
 
@@ -95,9 +92,13 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
     const data = await res.json()
     console.log("[Meta Embedded Signup] Server response:", data)
-    addDebug("Server response: success=" + data.success + " phone=" + (data.phoneNumber || "null") + " error=" + (data.error || "none"))
-    if (data._diagnostics) addDebug("Server diag: " + data._diagnostics.join(" | "))
-    if (data._tokenValid !== undefined) addDebug("Token valid (EAA): " + data._tokenValid)
+    addDebug("Server: success=" + data.success + " phone=" + (data.phoneNumber || "null"))
+    if (data._tokenSource) addDebug("Token source: " + data._tokenSource)
+    if (data._debug) {
+      for (const line of data._debug) {
+        addDebug(line)
+      }
+    }
 
     if (data.success) {
       setResult({ success: true, phone: data.phoneNumber || phoneNumberId, debug: [] })
@@ -158,7 +159,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
 
       const res = await fetchAuth("/api/establishments/" + establishmentId + "/meta-embedded-signup", {
         method: "POST",
-        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, businessId: pendingBusinessIdRef.current, redirectUri: window.location.origin, accessToken: pendingTokenRef.current }),
+        body: JSON.stringify({ code, phoneNumberId: phone.id, wabaId: phone.waba_id, businessId: pendingBusinessIdRef.current, redirectUri: window.location.origin }),
       })
 
       const data = await res.json()
@@ -301,6 +302,7 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
     setResult(null)
     setLoading(true)
     pendingCodeRef.current = null
+    pendingTokenRef.current = null
     pendingUserInfoRef.current = null
 
     loadingTimeoutRef.current = setTimeout(() => {
@@ -308,41 +310,59 @@ export function EmbeddedSignupButton({ onComplete }: { onComplete?: () => void }
       setResult({ success: false, error: "Tempo esgotado. Tente novamente." })
     }, 120000)
 
-    window.FB.login(
-      (response: any) => {
-        addDebug("FB.login: status=" + response?.status)
+    // CRITICAL: Logout first to clear cached SYSTEM_USER token from browser
+    const doLogin = () => {
+      console.log("[Meta Embedded Signup] Chamando FB.login com config_id:", META_CONFIG_ID)
+      window.FB.login(
+        (response: any) => {
+          addDebug("FB.login: status=" + response?.status)
 
-        if (response?.authResponse) {
-          const ar = response.authResponse
+          if (response?.authResponse) {
+            const ar = response.authResponse
 
-          if (ar.code) {
-            pendingCodeRef.current = ar.code
-            addDebug("code recebido: len=" + ar.code.length)
+            addDebug("authResponse keys: " + Object.keys(ar).join(", "))
+            addDebug("code: " + (ar.code ? "len=" + ar.code.length : "NULL"))
+            addDebug("accessToken: " + (ar.accessToken ? "len=" + ar.accessToken.length + " starts=" + ar.accessToken.substring(0, 10) : "NULL"))
+            addDebug("signedRequest: " + (ar.signedRequest ? "presente" : "NULL"))
+
+            if (ar.code) {
+              pendingCodeRef.current = ar.code
+            }
+
+            if (ar.accessToken) {
+              pendingTokenRef.current = ar.accessToken
+            }
+          } else {
+            addDebug("SEM authResponse - response: " + JSON.stringify(response))
           }
 
-          if (ar.accessToken) {
-            pendingTokenRef.current = ar.accessToken
-            addDebug("token recebido: len=" + ar.accessToken.length)
+          if (response?.status === "not_authorized") {
+            if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+            setLoading(false)
+            setResult({ success: false, error: "Permissao negada pelo usuario." })
           }
-        } else {
-          addDebug("SEM authResponse")
-        }
-
-        if (response?.status === "not_authorized") {
-          if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
-          setLoading(false)
-          setResult({ success: false, error: "Permissao negada pelo usuario." })
-        }
-      },
-      {
-        config_id: META_CONFIG_ID,
-        response_type: "code",
-        override_default_response_type: true,
-        extras: {
-          setup: {},
         },
-      }
-    )
+        {
+          config_id: META_CONFIG_ID,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+          },
+        }
+      )
+    }
+
+    // Fazer logout primeiro para limpar token SYSTEM_USER cacheado
+    if (window.FB?.getLogoutUrl) {
+      console.log("[Meta Embedded Signup] Limpando sessao FB anterior...")
+      window.FB.logout(() => {
+        console.log("[Meta Embedded Signup] FB.logout concluido")
+        doLogin()
+      })
+    } else {
+      doLogin()
+    }
   }
 
   if (!META_APP_ID || !META_CONFIG_ID) {

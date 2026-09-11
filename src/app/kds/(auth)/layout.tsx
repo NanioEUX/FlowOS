@@ -1,13 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 
 export default function KdsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
+  const checkedRef = useRef(false)
 
   useEffect(() => {
+    if (checkedRef.current) return
+    checkedRef.current = true
+
     // Check KDS token first
     const kdsToken = localStorage.getItem("kds_token")
     const kdsUser = localStorage.getItem("kds_user")
@@ -31,7 +35,9 @@ export default function KdsLayout({ children }: { children: React.ReactNode }) {
           // Store as kds_token so the screen page can use it
           localStorage.setItem("kds_token", parsed.token)
           localStorage.setItem("kds_user", JSON.stringify(parsed))
-          localStorage.setItem("kds_establishment", JSON.stringify(parsed.establishment))
+          if (parsed.establishment) {
+            localStorage.setItem("kds_establishment", JSON.stringify(parsed.establishment))
+          }
           setAuthorized(true)
           return
         }

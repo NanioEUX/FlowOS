@@ -763,6 +763,7 @@ export default function ConfigPage() {
     const [cancellationBlockThreshold, setCancellationBlockThreshold] = useState("3")
     const [cancellationBlockWindowDays, setCancellationBlockWindowDays] = useState("7")
     const [cancellationBlockDurationDays, setCancellationBlockDurationDays] = useState("7")
+    const [abandonedOrderMinutes, setAbandonedOrderMinutes] = useState("15")
     const [minimumOrderEnabled, setMinimumOrderEnabled] = useState(false)
     const [minimumOrderValue, setMinimumOrderValue] = useState("0")
     const [minimumOrderApplyToDelivery, setMinimumOrderApplyToDelivery] = useState(true)
@@ -899,6 +900,7 @@ export default function ConfigPage() {
                     setCancellationBlockThreshold(String(data.cancellationBlockThreshold ?? 3))
                     setCancellationBlockWindowDays(String(data.cancellationBlockWindowDays ?? 7))
                     setCancellationBlockDurationDays(String(data.cancellationBlockDurationDays ?? 7))
+                    setAbandonedOrderMinutes(String(data.abandonedOrderMinutes ?? 15))
                     setMinimumOrderEnabled(data.minimumOrderEnabled ?? false)
                     setMinimumOrderValue(String(data.minimumOrderValue ?? 0))
                     setMinimumOrderApplyToDelivery(data.minimumOrderApplyToDelivery ?? true)
@@ -1025,6 +1027,7 @@ export default function ConfigPage() {
                     cancellationBlockThreshold: Number(cancellationBlockThreshold) || 3,
                     cancellationBlockWindowDays: Number(cancellationBlockWindowDays) || 7,
                     cancellationBlockDurationDays: Number(cancellationBlockDurationDays) || 7,
+                    abandonedOrderMinutes: Number(abandonedOrderMinutes) || 15,
                     whatsappProvider,
                     flowChavePix: form.flowChavePix,
                     flowModoAtivado: form.flowModoAtivado,
@@ -1652,6 +1655,26 @@ export default function ConfigPage() {
                 <p className="text-xs text-zinc-500">Pedidos são confirmados automaticamente</p>
               </div>
             </label>
+          </CardContent>
+        </Card>
+
+        {/* Pedido Abandonado */}
+        <Card id="section-abandoned" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Pedido Abandonado</h3>
+            <p className="text-sm text-zinc-500">Tempo (em minutos) para marcar automaticamente um pedido como "abandonado" se não for aceito pelo estabelecimento.</p>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-zinc-700">Minutos:</label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={abandonedOrderMinutes}
+                onChange={(e) => setAbandonedOrderMinutes(e.target.value)}
+                className="w-24 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
+              />
+              <span className="text-xs text-zinc-500">minutos</span>
+            </div>
           </CardContent>
         </Card>
 

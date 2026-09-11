@@ -82,7 +82,7 @@ export function SoundControl({
         title={enabled ? `Som ligado (${Math.round(volume * 100)}%)` : "Som desligado"}
         aria-label="Controle de som"
       >
-        {enabled ? <Volume2 className="w-5 h-5 text-zinc-300" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
+        {enabled ? <Volume2 className="w-5 h-5 text-green-400 drop-shadow-[0_0_6px_rgba(74,222,128,0.6)]" /> : <VolumeX className="w-5 h-5 text-zinc-600" />}
       </button>
 
       {open && (
@@ -124,7 +124,7 @@ export function SoundControl({
               if (enabled) {
                 // Garante desbloqueio do AudioContext (política de autoplay)
                 getAudioCtx()
-                playKitchenBeep(volume, 1)
+                void playKitchenBeep(volume, 1)
               }
             }}
             disabled={!enabled}
@@ -161,9 +161,16 @@ function getAudioCtx(): any {
   }
 }
 
-export function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {
+export async function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {
   const ctx = getAudioCtx()
   if (!ctx) return
+
+  // Ensure AudioContext is resumed before playing (browser autoplay policy)
+  if (ctx.state === "suspended") {
+    try {
+      await ctx.resume()
+    } catch {}
+  }
 
   const cycleGapMs = 2000
   const toneMs = 300
