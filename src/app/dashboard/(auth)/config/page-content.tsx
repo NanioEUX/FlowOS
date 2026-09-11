@@ -1146,7 +1146,12 @@ export default function ConfigPage() {
         }
     }
     
-    const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99entregas">("geral")
+    const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99entregas">(() => {
+      if (typeof window !== "undefined") {
+        return (localStorage.getItem("configActiveGroup") as any) || "geral"
+      }
+      return "geral"
+    })
     
     const groups = [
         { id: "geral" as const, label: "Geral", desc: "Dados e horários", icon: "📋" },
@@ -1168,7 +1173,7 @@ export default function ConfigPage() {
                                 <button
                                 key={g.id}
                                 type="button"
-                                onClick={() => setActiveGroup(g.id)}
+                                onClick={() => { setActiveGroup(g.id); localStorage.setItem("configActiveGroup", g.id) }}
                                 className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-left transition-all ${
                 activeGroup === g.id
                   ? "bg-zinc-900 text-white shadow-sm"

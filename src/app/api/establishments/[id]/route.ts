@@ -49,7 +49,8 @@ const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover
   "ifoodEnabled", "ifoodMerchantId",
   "tipoEntregaAtiva", "api99Key", "api99EmployeeId",
   "pagarmeApiKey", "pagarmeEnvironment", "pagarmeWebhookKey", "pagarmeSplitReceiverId", "saasCommissionPercentage",
-  "flowChavePix", "flowModoAtivado"]
+  "flowChavePix", "flowModoAtivado",
+  "abandonedOrderMinutes"]
 
 export async function PATCH(
   req: NextRequest,

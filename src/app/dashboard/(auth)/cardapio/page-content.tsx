@@ -66,7 +66,12 @@ export default function CardapioPage() {
   const searchParamsEstablishmentId = searchParams.get("establishment")
   const establishmentId = searchParamsEstablishmentId || hookEstablishmentId
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<Tab>("produtos")
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("cardapioActiveTab") as Tab) || "produtos"
+    }
+    return "produtos"
+  })
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [establishmentSlug, setEstablishmentSlug] = useState<string>("")
@@ -1501,7 +1506,7 @@ export default function CardapioPage() {
       {/* Tabs */}
       <div className="flex gap-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
         <button
-          onClick={() => setActiveTab("produtos")}
+          onClick={() => { setActiveTab("produtos"); localStorage.setItem("cardapioActiveTab", "produtos") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "produtos"
               ? "bg-white text-zinc-900 shadow-sm"
@@ -1512,7 +1517,7 @@ export default function CardapioPage() {
           Produtos
         </button>
         <button
-          onClick={() => setActiveTab("preparo")}
+          onClick={() => { setActiveTab("preparo"); localStorage.setItem("cardapioActiveTab", "preparo") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "preparo"
               ? "bg-white text-zinc-900 shadow-sm"
@@ -1523,7 +1528,7 @@ export default function CardapioPage() {
           Preparo
         </button>
         <button
-          onClick={() => setActiveTab("promocao")}
+          onClick={() => { setActiveTab("promocao"); localStorage.setItem("cardapioActiveTab", "promocao") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "promocao"
               ? "bg-white text-zinc-900 shadow-sm"
@@ -1534,7 +1539,7 @@ export default function CardapioPage() {
           Promoção
         </button>
         <button
-          onClick={() => setActiveTab("destaques")}
+          onClick={() => { setActiveTab("destaques"); localStorage.setItem("cardapioActiveTab", "destaques") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "destaques"
               ? "bg-white text-zinc-900 shadow-sm"
@@ -1545,7 +1550,7 @@ export default function CardapioPage() {
           Destaques
         </button>
         <button
-          onClick={() => setActiveTab("aparencia")}
+          onClick={() => { setActiveTab("aparencia"); localStorage.setItem("cardapioActiveTab", "aparencia") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "aparencia"
               ? "bg-white text-zinc-900 shadow-sm"
@@ -1556,7 +1561,7 @@ export default function CardapioPage() {
           Aparência
         </button>
         <button
-          onClick={() => setActiveTab("cores")}
+          onClick={() => { setActiveTab("cores"); localStorage.setItem("cardapioActiveTab", "cores") }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "cores"
               ? "bg-white text-zinc-900 shadow-sm"
