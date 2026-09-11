@@ -358,13 +358,6 @@ export function OrdersScreen({
                             />
                           </div>
                         </div>
-                                <span className="text-[10px] mt-1 text-center leading-tight" style={{ color: (isDone || isCurrent) ? theme.text : theme.textMutedMore }}>
-                                  {step.label}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
 
                         {/* Items */}
                         <div className="mb-3 space-y-2">
