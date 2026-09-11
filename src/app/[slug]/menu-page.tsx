@@ -2980,14 +2980,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               <span className={`text-[10px] font-medium ${hasNewOrderStatus ? "text-red-500" : ""}`}>Pedidos</span>
               {mounted && activeOrdersCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white shadow-sm" style={{ backgroundColor: theme.primary }}>
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40" style={{ backgroundColor: theme.primary }} />
                   <span className="relative">{activeOrdersCount}</span>
-                </span>
-              )}
-              {hasNewOrderStatus && (
-                <span className="absolute -top-0.5 right-1 flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
                 </span>
               )}
               {!hasNewOrderStatus && activeOrdersCount === 0 && hasEstablishmentReply && (
