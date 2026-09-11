@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react"
+import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp, Printer } from "lucide-react"
 import { SoundControl, playKitchenBeep } from "@/components/sound-control"
 
 interface OrderMessage {
@@ -15,6 +15,7 @@ interface OrderMessage {
 
 interface Order {
   id: string
+  orderNumber: number
   createdAt: string
   status: string
   notes?: string
@@ -422,7 +423,10 @@ export default function KdsScreen() {
                                   {getOriginIcon(order)}
                                 </span>
                                 <div className="min-w-0">
-                                  <span className="font-bold text-sm text-white truncate block">{getOrderTitle(order)}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-sm text-white truncate">{getOrderTitle(order)}</span>
+                                    <span className="text-[10px] text-zinc-400 font-mono">#{order.orderNumber}</span>
+                                  </div>
                                   <span className="text-[9px] text-zinc-500">{getOrderTypeLabel(order)}</span>
                                 </div>
                                 {order.tableNumber && (
@@ -431,8 +435,19 @@ export default function KdsScreen() {
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1 shrink-0">
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 {overdue && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
+                                <button
+                                  onClick={() => {
+                                    const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]")
+                                    const text = `Pedido #${order.orderNumber}\n${items.map((it: any) => `${it.quantity}x ${it.name}`).join("\n")}${order.notes ? `\nObs: ${order.notes}` : ""}`
+                                    navigator.clipboard.writeText(text)
+                                  }}
+                                  className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                  title="Copiar pedido"
+                                >
+                                  <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                                </button>
                                 <span className={`text-xs font-mono ${overdue ? "text-red-400" : "text-zinc-300"}`}>
                                   {timers[order.id] || "0:00"}
                                 </span>
