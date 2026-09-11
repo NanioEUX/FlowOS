@@ -20,11 +20,19 @@ interface Order {
   status: string
   notes?: string
   items: any
+  total?: number
+  deliveryFee?: number
   customer?: { name?: string; phone?: string }
+  customerName?: string
+  customerPhone?: string
+  customerAddress?: string
   tableNumber?: string
   waiterName?: string
   method?: string
   orderType?: string
+  paymentMethod?: string
+  deliveryPerson?: string
+  deliveryCode?: string
   messages?: OrderMessage[]
 }
 
@@ -455,26 +463,55 @@ export default function KdsScreen() {
                                 <button
                                   onClick={() => {
                                     const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]")
+                                    const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
+                                    const statusLabels: Record<string, string> = { new: "Novo", pending: "Pendente", confirmed: "Confirmado", accepted: "Aceito", preparing: "Preparando", ready: "Pronto", out_for_delivery: "Saiu p/ Entrega", delivered: "Entregue", cancelled: "Cancelado", abandoned: "Pedido expirado" }
+                                    const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial" }
+                                    const paymentLabels: Record<string, string> = { cash: "Dinheiro", delivery: "Dinheiro (entrega)", pickup: "Dinheiro (retirada)", card_delivery: "Cartão (entrega)", card_pickup: "Cartão (retirada)", pix: "Pix", online: "Online", asaas: "Asaas", inter: "Inter" }
                                     const win = window.open("", "_blank")
                                     if (!win) return
+                                    const estName = establishment?.name || "Estabelecimento"
+                                    const custName = order.customerName || order.customer?.name || ""
+                                    const custPhone = order.customerPhone || order.customer?.phone || ""
                                     win.document.write(`
                                       <html><head><title>Pedido #${order.orderNumber}</title>
                                       <style>
                                         @page { margin: 0; }
                                         body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; color: #000; }
                                         h1 { font-size: 16px; text-align: center; margin: 0 0 4px; }
+                                        h2 { font-size: 14px; text-align: center; margin: 0 0 12px; font-weight: normal; }
                                         .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                                        table { width: 100%; border-collapse: collapse; }
+                                        td { padding: 2px 0; }
+                                        .right { text-align: right; }
+                                        .total { font-size: 14px; font-weight: bold; }
+                                        .label { color: #555; }
+                                        .footer { text-align: center; margin-top: 12px; font-size: 10px; }
                                         .order-number { font-size: 20px; font-weight: bold; text-align: center; margin: 8px 0; }
-                                        .total { font-size: 14px; font-weight: bold; text-align: right; margin-top: 8px; }
                                       </style></head><body>
+                                        <h1>${estName}</h1>
+                                        <h2>--- CUPOM ---</h2>
                                         <div class="order-number">Pedido #${order.orderNumber}</div>
                                         <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+                                        <p>Status: ${statusLabels[order.status] || order.status}</p>
+                                        <div class="divider"></div>
+                                        ${custName ? `<p><strong>Cliente:</strong> ${custName}</p>` : ""}
+                                        ${custPhone ? `<p><strong>WhatsApp:</strong> ${custPhone}</p>` : ""}
+                                        ${order.customerAddress ? `<p><strong>Endereço:</strong> ${order.customerAddress}</p>` : ""}
+                                        ${order.orderType ? `<p><strong>Tipo:</strong> ${orderTypeLabels[order.orderType] || order.orderType}</p>` : ""}
                                         ${order.tableNumber ? `<p><strong>Mesa:</strong> ${order.tableNumber}</p>` : ""}
-                                        ${order.customer?.name ? `<p><strong>Cliente:</strong> ${order.customer.name}</p>` : ""}
+                                        ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentLabels[order.paymentMethod] || order.paymentMethod}</p>` : ""}
+                                        ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${order.deliveryPerson}</p>` : ""}
+                                        ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${order.deliveryCode}</p>` : ""}
                                         <div class="divider"></div>
-                                        ${items.map((it: any) => `<p>${it.quantity}x ${it.name}${it.obs ? ` (${it.obs})` : ""}</p>`).join("")}
-                                        ${order.notes ? `<div class="divider"></div><p><strong>Obs:</strong> ${order.notes}</p>` : ""}
+                                        <table>
+                                          <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td></tr>
+                                          ${items.map((it: any) => `<tr><td>${it.name}${it.notes ? ` (${it.notes})` : ""}</td><td class="right">${it.quantity}x</td></tr>`).join("")}
+                                        </table>
+                                        ${order.deliveryFee && order.deliveryFee > 0 ? `<p class="right">Taxa entrega: ${fmt(order.deliveryFee)}</p>` : ""}
+                                        ${order.total ? `<div class="divider"></div><p class="total right">Total: ${fmt(order.total)}</p>` : ""}
+                                        ${order.notes ? `<p><span class="label">Obs:</span> ${order.notes}</p>` : ""}
                                         <div class="divider"></div>
+                                        <p class="footer">Obrigado pela preferência!</p>
                                       </body></html>`)
                                     win.document.close()
                                     win.focus()
