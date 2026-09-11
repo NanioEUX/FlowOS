@@ -72,7 +72,7 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: "Saiu para Entrega",
   delivered: "Entregue",
   cancelled: "Cancelado",
-  abandoned: "Expirado",
+  abandoned: "Pedido expirado",
 }
 
 function timeAgo(date: string | Date): string {

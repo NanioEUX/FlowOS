@@ -25,6 +25,7 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: "Saiu p/ Entrega",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  abandoned: "Pedido expirado",
 }
 
 const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "default"> = {
@@ -38,6 +39,7 @@ const statusColors: Record<string, "info" | "warning" | "success" | "danger" | "
   out_for_delivery: "info",
   delivered: "success",
   cancelled: "danger",
+  abandoned: "default",
 }
 
 const flowOrder = ["pending", "payment_pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery", "delivered"]

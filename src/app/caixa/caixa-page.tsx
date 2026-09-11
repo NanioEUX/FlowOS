@@ -2730,6 +2730,7 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: "Saiu p/ Entrega",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  abandoned: "Pedido expirado",
 }
 
 const statusColors: Record<string, string> = {

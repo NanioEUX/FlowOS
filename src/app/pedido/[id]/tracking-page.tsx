@@ -15,6 +15,7 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: "Saiu para Entrega",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  abandoned: "Pedido expirado",
 }
 
 const statusIcons: Record<string, string> = {
@@ -26,6 +27,7 @@ const statusIcons: Record<string, string> = {
   out_for_delivery: "🛵",
   delivered: "🎉",
   cancelled: "❌",
+  abandoned: "⏰",
 }
 
 interface OrderMessage {

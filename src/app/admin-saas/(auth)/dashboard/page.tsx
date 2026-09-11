@@ -194,6 +194,7 @@ function StatusBadge({ status }: { status: string }) {
     delivering: { label: "Entregando", color: "bg-purple-100 text-purple-700" },
     delivered: { label: "Entregue", color: "bg-green-100 text-green-700" },
     cancelled: { label: "Cancelado", color: "bg-red-100 text-red-700" },
+    abandoned: { label: "Pedido expirado", color: "bg-orange-100 text-orange-700" },
   }
   const s = map[status] || { label: status, color: "bg-zinc-100 text-zinc-700" }
   return <span className={`inline-block px-2 py-1 text-xs rounded-full ${s.color}`}>{s.label}</span>

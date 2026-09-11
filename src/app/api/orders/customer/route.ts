@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     where: {
       customerPhone: phone,
       establishmentId,
-      status: { in: ["pending", "new"] },
+      status: { in: ["pending", "new", "payment_pending"] },
       createdAt: { lt: expiryThreshold },
     },
     data: {
