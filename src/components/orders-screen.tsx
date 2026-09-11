@@ -141,6 +141,7 @@ export function OrdersScreen({
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState("")
   const [cancelling, setCancelling] = useState(false)
+  const [activeTab, setActiveTab] = useState<"active" | "history">("active")
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const calcPoints = (total: number) => {
@@ -149,6 +150,15 @@ export function OrdersScreen({
   }
 
   const activeOrders = orders.filter(o => ["pending", "payment_pending", "accepted", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status))
+  const historyOrders = orders.filter(o => ["delivered", "cancelled", "abandoned"].includes(o.status) || (o.status === "pending" && o.paymentStatus === "expired"))
+
+  const hasActive = activeOrders.length > 0
+
+  useEffect(() => {
+    if (!hasActive && activeTab === "active") {
+      setActiveTab("history")
+    }
+  }, [hasActive])
 
   const fetchMessages = useCallback(async (orderId: string, token: string) => {
     try {
@@ -232,6 +242,28 @@ export function OrdersScreen({
           </button>
         </div>
 
+        {/* Tabs */}
+        {hasPhone && !loading && (
+          <div className="flex border-b shrink-0" style={{ borderColor: theme.borderCard }}>
+            <button
+              onClick={() => setActiveTab("active")}
+              className="flex-1 py-2.5 text-xs font-semibold text-center relative transition-colors"
+              style={{ color: activeTab === "active" ? theme.primary : theme.textMutedMore }}
+            >
+              Em Andamento {activeOrders.length > 0 && <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: theme.primary }}>{activeOrders.length}</span>}
+              {activeTab === "active" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
+            </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              className="flex-1 py-2.5 text-xs font-semibold text-center relative transition-colors"
+              style={{ color: activeTab === "history" ? theme.primary : theme.textMutedMore }}
+            >
+              Histórico {historyOrders.length > 0 && <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: theme.textMutedMore }}>{historyOrders.length}</span>}
+              {activeTab === "history" && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: theme.primary }} />}
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {!hasPhone ? (
@@ -241,12 +273,13 @@ export function OrdersScreen({
             </div>
           ) : loading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" style={{ color: theme.primary }} /></div>
-          ) : activeOrders.length === 0 ? (
-            <div className="text-center py-10">
-              <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
-              <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido em andamento</p>
-            </div>
-          ) : (
+          ) : activeTab === "active" ? (
+            activeOrders.length === 0 ? (
+              <div className="text-center py-10">
+                <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
+                <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido em andamento</p>
+              </div>
+            ) : (
             <div className="space-y-3">
                 {activeOrders.map(order => {
                   const items = parseItems(order.items)
@@ -520,6 +553,65 @@ export function OrdersScreen({
                   )
                 })}
               </div>
+            )
+          ) : (
+            /* History tab */
+            historyOrders.length === 0 ? (
+              <div className="text-center py-10">
+                <Package className="mx-auto h-8 w-8 mb-2" style={{ color: theme.textMutedMore }} />
+                <p className="text-sm" style={{ color: theme.textMuted }}>Nenhum pedido no histórico</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {historyOrders.map(order => {
+                  const items = parseItems(order.items)
+                  const isExpanded = expandedOrder === order.id
+                  const isCancelled = order.status === "cancelled"
+                  const isAbandoned = order.status === "abandoned"
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="rounded-xl border overflow-hidden"
+                      style={{
+                        borderColor: isCancelled ? "rgba(239,68,68,0.2)" : isAbandoned ? "rgba(249,115,22,0.2)" : theme.borderCard,
+                        backgroundColor: theme.bgCard,
+                      }}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold" style={{ color: theme.text }}>
+                              Pedido #{order.orderNumber || order.id.slice(0, 8)}
+                            </span>
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{
+                              backgroundColor: isCancelled ? "rgba(239,68,68,0.1)" : isAbandoned ? "rgba(249,115,22,0.1)" : "rgba(34,197,94,0.1)",
+                              color: isCancelled ? "#ef4444" : isAbandoned ? "#f97316" : "#22c55e",
+                            }}>
+                              {statusLabels[order.status] || order.status}
+                            </span>
+                          </div>
+                          <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                            {new Date(order.createdAt).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs truncate flex-1 mr-2" style={{ color: theme.textMutedMore }}>
+                            {items.map(it => `${it.quantity}x ${it.name}`).join(", ")}
+                          </div>
+                          <span className="text-sm font-bold" style={{ color: theme.text }}>
+                            {formatCurrency(order.total)}
+                          </span>
+                        </div>
+                        {order.notes && (
+                          <p className="text-[11px] italic mt-1" style={{ color: theme.textMutedMore }}>Obs: {order.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
           )}
         </div>
       </div>
