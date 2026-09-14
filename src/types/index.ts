@@ -4,6 +4,7 @@ export interface CartItem {
   price: number
   quantity: number
   image?: string | null
+  originalPrice?: number
   additionalOptions?: { name: string; price: number; quantity: number }[]
 }
 

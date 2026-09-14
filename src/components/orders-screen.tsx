@@ -203,13 +203,13 @@ export function OrdersScreen({
   function getActiveTimelineSteps(order: Order) {
     if (order.orderType === "pickup") {
       return [
-        { key: "accepted", label: "Aceito" },
+        { key: "confirmed", label: "Aceito" },
         { key: "preparing", label: "Preparando" },
         { key: "ready", label: "Pronto para Retirada" },
       ]
     }
     return [
-      { key: "accepted", label: "Aceito" },
+      { key: "confirmed", label: "Aceito" },
       { key: "preparing", label: "Preparando" },
       { key: "ready", label: "Pronto" },
       { key: "out_for_delivery", label: "Saiu p/ Entrega" },
@@ -219,10 +219,8 @@ export function OrdersScreen({
   function getTimelineIdx(order: Order) {
     const isPickup = order.orderType === "pickup"
     const statusOrder = isPickup
-      ? ["accepted", "preparing", "ready"]
-      : ["accepted", "preparing", "ready", "out_for_delivery", "delivered"]
-    // Só marca a partir do "accepted". Se ainda em pending/new/confirmed
-    // (auto-aceite OFF), retorna -1 → nenhum step marcado.
+      ? ["confirmed", "preparing", "ready"]
+      : ["confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
     return statusOrder.indexOf(order.status)
   }
 
@@ -333,12 +331,13 @@ export function OrdersScreen({
                         <div className="my-3">
                           <div className="flex items-center justify-between mb-1">
                             {getActiveTimelineSteps(order).map((step, i) => {
-                              const stepIdx = ["accepted", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
+                              const stepIdx = ["confirmed", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
                               const isDone = flowIdx >= stepIdx
                               const isCurrent = flowIdx === stepIdx
                               return (
-                                <span key={step.key} className="text-[10px] text-center flex-1" style={{ color: isDone ? theme.primary : theme.textMutedMore, fontWeight: isCurrent ? 700 : 400 }}>
-                                  {isDone && !isCurrent ? "✓ " : ""}{step.label}
+                                <span key={step.key} className="text-[10px] text-center flex-1 flex flex-col items-center gap-1" style={{ color: isDone ? theme.primary : theme.textMutedMore, fontWeight: isCurrent ? 700 : 400 }}>
+                                  <span className={`w-2.5 h-2.5 rounded-full ${isDone ? "" : "border"}`} style={{ backgroundColor: isDone ? theme.primary : "transparent", borderColor: isDone ? theme.primary : theme.textMutedMore }} />
+                                  {step.label}
                                 </span>
                               )
                             })}
@@ -364,7 +363,7 @@ export function OrdersScreen({
                           {items.slice(0, isExpanded ? items.length : 2).map((item, idx) => (
                             <div key={idx} className="flex items-center gap-2.5">
                               {item.image && (
-                                <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate" style={{ color: theme.text }}>

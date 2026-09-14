@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -1430,7 +1430,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      return [...prev, { id: product.id, name: product.name, price: (product as any).promoPrice && (product as any).onSale ? (product as any).promoPrice : product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
+      const hasDiscount = (product as any).promoPrice && (product as any).onSale
+      return [...prev, { id: product.id, name: product.name, price: hasDiscount ? (product as any).promoPrice : product.price, originalPrice: hasDiscount ? product.price : undefined, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
@@ -2954,14 +2955,14 @@ onPaymentConfirmed={handlePaymentSuccess}
               style={{ color: cart.length > 0 ? theme.primary : theme.textMuted }}
             >
               <div className="relative">
-                <ShoppingBag className="h-5 w-5" />
+                <ShoppingCart className="h-5 w-5" />
                 {cart.length > 0 && (
                   <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
                     {totalItems}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-medium">Sacola</span>
+              <span className="text-[10px] font-medium">Carrinho</span>
             </button>
             <button
               onClick={() => {
@@ -3989,7 +3990,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Delivery fee / free */}
                 {orderType === "delivery" && deliveryFee > 0 && (
                   <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
-                    <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                      <span className="flex items-center gap-1 text-xs opacity-80">
+                        <Clock className="h-3 w-3" />
+                        {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
+                      </span>
+                    </div>
                     {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
                       <>
                         <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
@@ -4002,7 +4009,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
                 {orderType === "delivery" && deliveryFee === 0 && (
                   <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
-                    <p className="font-medium">Entrega grátis! 🎉</p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">Entrega grátis! 🎉</p>
+                      <span className="flex items-center gap-1 text-xs opacity-80">
+                        <Clock className="h-3 w-3" />
+                        {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -4111,14 +4124,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       return (
                         <div key={item.id} className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                           <div className="flex items-center gap-3">
-                            {item.image && <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
-                              <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {!isFromPendingOrder && hasOptions && (
-                                <button onClick={() => {
+                            {item.image && (
+                              <button
+                                onClick={() => {
+                                  if (!hasOptions || isFromPendingOrder) return
                                   const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
                                   if (!product) return
                                   setSelectedProduct(product)
@@ -4126,10 +4135,25 @@ onPaymentConfirmed={handlePaymentSuccess}
                                   setSelectedProductOptions(item.additionalOptions || [])
                                   setEditingCartItemId(item.id)
                                   setShowCart(false)
-                                }} className="p-1 rounded" style={{ color: theme.textMutedMore }}>
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
+                                }}
+                                className={`flex-shrink-0 rounded-xl overflow-hidden ${hasOptions && !isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
+                                disabled={!hasOptions || isFromPendingOrder}
+                              >
+                                <img src={item.image} alt="" loading="lazy" className="w-14 h-14 object-cover" />
+                              </button>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                              {(item as any).originalPrice ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency((item as any).originalPrice)}</span>
+                                  <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency((item as any).basePrice || item.price)}</span>
+                                </div>
+                              ) : (
+                                <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
                               )}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
                               {!isFromPendingOrder && (
                                 <>
                                   <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: Math.max(1, ci.quantity - 1) } : ci))}
@@ -4598,12 +4622,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <ShoppingBag className="h-4 w-4 shrink-0" />
                   {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
-                {orderType === "delivery" && cart.length > 0 && (
-                  <p className="text-center text-xs" style={{ color: theme.textMuted }}>
-                    <Timer className="inline h-3 w-3 mr-1" />
-                    Estimativa: {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
-                  </p>
-                )}
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
                     className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-1 border-2 transition-colors" style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: "transparent" }}>
@@ -5571,6 +5589,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   return false
                 })
                 const basePrice = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price
+                const hasDiscount = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
                 return (
                   <button
                     onClick={() => {
@@ -5579,7 +5598,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setCart((prev) => {
                         const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                         if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
+                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
                       })
                       setBottomSheetProduct(null)
                       setAddedItemId(bottomSheetProduct.id)
