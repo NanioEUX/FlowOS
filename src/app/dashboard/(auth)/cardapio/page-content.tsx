@@ -1475,7 +1475,7 @@ export default function CardapioPage() {
               <ExternalLink className="h-4 w-4" />
               Link cardápio
             </a>
-            <Button variant="outline" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium">
+            <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium">
               <Download className="h-4 w-4" />
               Importar cardápio do iFood
             </Button>
