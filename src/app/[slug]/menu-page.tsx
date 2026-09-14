@@ -3940,7 +3940,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Unified Cart/Checkout Full-Screen Flow */}
       {showCart && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)' }}>
 
           {/* Header */}
           <div className="flex-shrink-0 max-w-lg mx-auto w-full flex items-center justify-between px-4 py-3">
@@ -4642,7 +4642,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
 
           {/* Fixed bottom buttons — always in same position */}
-          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-2 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
                 {isBelowMinimum && (
