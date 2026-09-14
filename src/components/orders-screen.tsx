@@ -604,10 +604,36 @@ export function OrdersScreen({
                             {new Date(order.createdAt).toLocaleDateString("pt-BR")}
                           </span>
                         </div>
+                        {/* Items with photos */}
+                        <div className="mb-2 space-y-2">
+                          {items.slice(0, isExpanded ? items.length : 2).map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2.5">
+                              {item.image && (
+                                <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate" style={{ color: theme.text }}>
+                                  {item.quantity}x {item.name}
+                                </p>
+                                {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                    {item.additionalOptions.map((opt: any, i: number) => (
+                                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.textMuted }}>
+                                        {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-medium shrink-0" style={{ color: theme.textMuted }}>{formatCurrency(item.price * item.quantity)}</span>
+                            </div>
+                          ))}
+                          {!isExpanded && items.length > 2 && (
+                            <p className="text-[11px] font-medium" style={{ color: theme.primary }}>+{items.length - 2} {items.length - 2 === 1 ? "outro item" : "outros itens"}</p>
+                          )}
+                        </div>
                         <div className="flex items-center justify-between">
-                          <div className="text-xs truncate flex-1 mr-2" style={{ color: theme.textMutedMore }}>
-                            {items.map(it => `${it.quantity}x ${it.name}`).join(", ")}
-                          </div>
+                          <div />
                           <span className="text-sm font-bold" style={{ color: theme.text }}>
                             {formatCurrency(order.total)}
                           </span>
