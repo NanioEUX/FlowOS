@@ -4256,15 +4256,30 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Coupon */}
                 {cart.length > 0 && (
                   <div className="space-y-1">
-                    <div className="flex gap-2">
-                      <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
-                        className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
-                      <button onClick={validateCoupon} disabled={couponLoading}
-                        className="px-5 py-2.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: theme.primary, color: "#fff" }}>
-                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                    {!couponData && !couponError && (
+                      <button
+                        onClick={() => setExpandedProfileItem(expandedProfileItem === "coupon" ? null : "coupon")}
+                        className="flex items-center gap-2 py-1.5 text-xs font-medium transition-colors"
+                        style={{ color: theme.textMutedMore }}
+                      >
+                        <Tag className="h-3.5 w-3.5" />
+                        Tem um cupom de desconto?
+                        <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedProfileItem === "coupon" ? "rotate-90" : ""}`} />
                       </button>
-                    </div>
-                    {couponError && <p className="text-xs text-red-400">{couponError}</p>}
+                    )}
+                    {((expandedProfileItem === "coupon") || couponData || couponError) && (
+                      <>
+                        <div className="flex gap-2">
+                          <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
+                            className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
+                          <button onClick={validateCoupon} disabled={couponLoading}
+                            className="px-5 py-2.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: theme.primary, color: "#fff" }}>
+                            {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                          </button>
+                        </div>
+                        {couponError && <p className="text-xs text-red-400">{couponError}</p>}
+                      </>
+                    )}
                     {couponData && (
                       <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
                         <div className="flex items-center gap-2">
