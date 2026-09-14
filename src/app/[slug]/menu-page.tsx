@@ -27,12 +27,17 @@ interface Product {
   image: string | null
   badge: string | null
   additionalOptions?: any[]
+  recommendedProductIds?: string | null
+  onSale?: boolean
+  promoPrice?: number
+  categoryId?: string
 }
 
 interface Category {
   id: string
   name: string
   products: Product[]
+  recommendedProductIds?: string | null
 }
 
 interface Establishment {
@@ -5415,37 +5420,63 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )
               })()}
 
-              {/* Cross-sell: "Quem pediu, também pediu" */}
-              {selectedProduct.additionalOptions && selectedProduct.additionalOptions.length > 0 && (
-                <div className="px-5 pb-4">
-                  <div className="p-3 rounded-xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
-                      <span className="text-xs font-bold" style={{ color: theme.primary }}>Quem pediu, também pediu</span>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-                      {selectedProduct.additionalOptions.slice(0, 3).map((opt: any, i: number) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            const existing = selectedProductOptions.find((o) => o.name === opt.name)
-                            if (existing) setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: o.quantity + 1 } : o))
-                            else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
-                          }}
-                          className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
-                          style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
-                        >
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: `${theme.primary}15` }}>🍫</div>
-                          <div className="text-left">
-                            <div className="text-[10px] font-medium" style={{ color: theme.text }}>{opt.name}</div>
-                            <div className="text-[10px] font-bold" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</div>
-                          </div>
-                        </button>
-                      ))}
+              {/* Recommendations */}
+              {(() => {
+                const productRecIds: string[] = (selectedProduct as any).recommendedProductIds ? JSON.parse((selectedProduct as any).recommendedProductIds) : []
+                const category = sortedCategories.find(c => c.id === (selectedProduct as any).categoryId)
+                const catRecIds: string[] = category?.recommendedProductIds ? JSON.parse(category.recommendedProductIds) : []
+                const recIds = productRecIds.length > 0 ? productRecIds : catRecIds
+                if (recIds.length === 0) return null
+                const allProducts = sortedCategories.flatMap(c => c.products)
+                const recProducts = recIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean).slice(0, 3)
+                if (recProducts.length === 0) return null
+                return (
+                  <div className="px-5 pb-4">
+                    <div className="p-3 rounded-xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
+                        <span className="text-xs font-bold" style={{ color: theme.primary }}>Quem pediu, também pediu</span>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                        {recProducts.map((rec: any) => (
+                          <button
+                            key={rec.id}
+                            onClick={() => {
+                              setCart((prev) => {
+                                const hasDiscount = rec.onSale && rec.promoPrice
+                                const unitPrice = hasDiscount ? rec.promoPrice : rec.price
+                                const existing = prev.find((item) => item.id === rec.id)
+                                if (existing) {
+                                  return prev.map((item) => item.id === rec.id ? { ...item, quantity: item.quantity + 1 } : item)
+                                }
+                                return [...prev, {
+                                  id: rec.id, name: rec.name, price: unitPrice,
+                                  originalPrice: hasDiscount ? rec.price : undefined,
+                                  basePrice: unitPrice, image: rec.image, quantity: 1,
+                                  additionalOptions: []
+                                } as CartItem]
+                              })
+                              toast({ title: `${rec.name} adicionado!` })
+                            }}
+                            className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
+                            style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
+                          >
+                            {rec.image ? (
+                              <img src={rec.image} alt={rec.name} className="w-8 h-8 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: `${theme.primary}15` }}>🍔</div>
+                            )}
+                            <div className="text-left">
+                              <div className="text-[10px] font-medium" style={{ color: theme.text }}>{rec.name}</div>
+                              <div className="text-[10px] font-bold" style={{ color: theme.primary }}>{formatCurrency(rec.onSale && rec.promoPrice ? rec.promoPrice : rec.price)}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
 
             {/* Fixed bottom button */}

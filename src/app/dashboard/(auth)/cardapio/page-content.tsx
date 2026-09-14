@@ -124,6 +124,13 @@ export default function CardapioPage() {
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
 
+  // Recommendation state
+  const [recommendModal, setRecommendModal] = useState<{ open: boolean; type: "category" | "product"; targetId: string; targetName: string; currentIds: string[] }>({
+    open: false, type: "category", targetId: "", targetName: "", currentIds: []
+  })
+  const [recommendSearch, setRecommendSearch] = useState("")
+  const [savingRecommend, setSavingRecommend] = useState(false)
+
   // Stories state
   const [stories, setStories] = useState<any[]>([])
   const [autoStories, setAutoStories] = useState<any[]>([])
@@ -1680,6 +1687,24 @@ export default function CardapioPage() {
                         <Plus className="h-4 w-4" />
                         Adicionar
                       </Button>
+                      {(() => {
+                        const recIds: string[] = cat.recommendedProductIds ? JSON.parse(cat.recommendedProductIds) : []
+                        return (
+                          <button
+                            onClick={() => setRecommendModal({
+                              open: true, type: "category", targetId: cat.id, targetName: cat.name, currentIds: recIds
+                            })}
+                            className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                              recIds.length > 0
+                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                            }`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Recomendar{recIds.length > 0 && ` (${recIds.length})`}
+                          </button>
+                        )
+                      })()}
                       <button
                         onClick={() => handleDeleteCategory(cat.id, cat.name, cat.products.length)}
                         className="text-red-400 hover:text-red-400 p-1"
@@ -3056,10 +3081,45 @@ export default function CardapioPage() {
                         </div>
                       )}
                     </div>
+                    {/* Recommendation */}
+                    {editingProduct && (
+                      <div className="rounded-lg border border-zinc-200 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">✨</span>
+                            <div>
+                              <p className="text-sm font-medium text-zinc-900">Recomendar com</p>
+                              <p className="text-xs text-zinc-500">Produtos sugeridos ao cliente (sobrepõe recomendação da categoria)</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const recIds: string[] = editingProduct.recommendedProductIds ? JSON.parse(editingProduct.recommendedProductIds) : []
+                              setRecommendModal({
+                                open: true, type: "product", targetId: editingProduct.id, targetName: editingProduct.name, currentIds: recIds
+                              })
+                            }}
+                            className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                              (() => {
+                                const recIds: string[] = editingProduct.recommendedProductIds ? JSON.parse(editingProduct.recommendedProductIds) : []
+                                return recIds.length > 0
+                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                              })()
+                            }`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {(() => {
+                              const recIds: string[] = editingProduct.recommendedProductIds ? JSON.parse(editingProduct.recommendedProductIds) : []
+                              return recIds.length > 0 ? `${recIds.length} itens` : "Configurar"
+                            })()}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                {/* Aba Ficha técnica */}
                 {productTab === "ficha" && (
                   <div className="space-y-4">
                     <div>
@@ -3962,6 +4022,129 @@ export default function CardapioPage() {
               className="h-full w-full border-0"
               style={{ pointerEvents: "auto" }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Recommendation Modal */}
+      {recommendModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 flex max-h-[80vh] w-full max-w-md flex-col rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900">
+                  {recommendModal.type === "category" ? "Recomendar para" : "Recomendar com"}
+                </h3>
+                <p className="text-sm text-zinc-500">{recommendModal.targetName}</p>
+              </div>
+              <button onClick={() => setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })} className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  value={recommendSearch}
+                  onChange={(e) => setRecommendSearch(e.target.value)}
+                  placeholder="Buscar produto..."
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 py-2 pl-9 pr-3 text-sm focus:border-green-600 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 pb-2">
+              {(() => {
+                const excludeCatId = recommendModal.type === "category" ? recommendModal.targetId : null
+                const filtered = categories
+                  .filter(c => c.id !== excludeCatId)
+                  .flatMap(c => c.products.map(p => ({ ...p, categoryName: c.name })))
+                  .filter(p => p.name.toLowerCase().includes(recommendSearch.toLowerCase()))
+                const grouped = filtered.reduce((acc, p) => {
+                  if (!acc[p.categoryName]) acc[p.categoryName] = []
+                  acc[p.categoryName].push(p)
+                  return acc
+                }, {} as Record<string, typeof filtered>)
+                return Object.entries(grouped).map(([catName, prods]) => (
+                  <div key={catName} className="mb-3">
+                    <p className="mb-1 text-xs font-semibold text-zinc-500 uppercase">{catName}</p>
+                    <div className="space-y-1">
+                      {prods.map(p => {
+                        const isSelected = recommendModal.currentIds.includes(p.id)
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              setRecommendModal(prev => ({
+                                ...prev,
+                                currentIds: isSelected
+                                  ? prev.currentIds.filter(id => id !== p.id)
+                                  : [...prev.currentIds, p.id]
+                              }))
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                              isSelected ? "bg-green-50 border border-green-200" : "hover:bg-zinc-50 border border-transparent"
+                            }`}
+                          >
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="h-8 w-8 rounded-lg object-cover" />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-lg">🍔</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-zinc-900 truncate">{p.name}</p>
+                              <p className="text-xs text-zinc-500">{formatCurrency(p.price)}</p>
+                            </div>
+                            {isSelected && <Check className="h-4 w-4 text-green-600 shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+            <div className="flex gap-3 border-t border-zinc-200 px-6 py-4">
+              <button
+                onClick={() => setRecommendModal(prev => ({ ...prev, currentIds: [] }))}
+                className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+              >
+                Limpar
+              </button>
+              <button
+                onClick={async () => {
+                  setSavingRecommend(true)
+                  try {
+                    if (recommendModal.type === "category") {
+                      await fetchAuth(`/api/categories/${recommendModal.targetId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
+                      })
+                      setCategories(prev => prev.map(c =>
+                        c.id === recommendModal.targetId ? { ...c, recommendedProductIds: JSON.stringify(recommendModal.currentIds) } : c
+                      ))
+                    } else {
+                      await fetchAuth(`/api/products/${recommendModal.targetId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
+                      })
+                    }
+                    toast({ title: "Recomendações salvas!" })
+                    setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })
+                    setRecommendSearch("")
+                  } catch (e) {
+                    toast({ title: "Erro ao salvar", variant: "error" })
+                  }
+                  setSavingRecommend(false)
+                }}
+                disabled={savingRecommend}
+                className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {savingRecommend ? "Salvando..." : `Salvar (${recommendModal.currentIds.length} itens)`}
+              </button>
+            </div>
           </div>
         </div>
       )}
