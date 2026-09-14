@@ -2587,31 +2587,30 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
+        {/* Info card — sticky inside fixed header */}
+        {orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) && (
+          <div className="mx-auto max-w-3xl px-4 pb-2">
+            <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+              {minimumOrder.enabled && minimumOrder.value > 0 && (
+                <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.textMuted }}>
+                  <Package className="h-3 w-3" /> Mín. {formatCurrency(minimumOrder.value)}
+                </span>
+              )}
+              {minimumOrder.enabled && minimumOrder.value > 0 && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
+                <span className="text-[11px]" style={{ color: theme.borderCard }}>•</span>
+              )}
+              {establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
+                <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.success }}>
+                  🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Spacer for fixed header */}
-      <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
-
-      {/* Info card — delivery info */}
-      {orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) && (
-        <div className="mx-auto max-w-3xl px-4 pt-2">
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-            {minimumOrder.enabled && minimumOrder.value > 0 && (
-              <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.textMuted }}>
-                <Package className="h-3 w-3" /> Mín. {formatCurrency(minimumOrder.value)}
-              </span>
-            )}
-            {minimumOrder.enabled && minimumOrder.value > 0 && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-              <span className="text-[11px]" style={{ color: theme.borderCard }}>•</span>
-            )}
-            {establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-              <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.success }}>
-                🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+      <div style={{ height: orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) ? "calc(130px + env(safe-area-inset-top, 0px))" : "calc(92px + env(safe-area-inset-top, 0px))" }} />
 
       {/* Closed banner — configurable */}
       {!isOpen && closedMessage && (
@@ -3965,7 +3964,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto px-4">
             {cartStep === "cart" && (
-              <div className="max-w-lg mx-auto space-y-3 pb-2">
+              <div className="max-w-lg mx-auto space-y-3 pb-4">
                 {/* Order type toggle */}
                 {(orderConfig.delivery || orderConfig.pickup || orderConfig.dineIn) && (
                   <div className="flex gap-2">
@@ -4643,7 +4642,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
 
           {/* Fixed bottom buttons — always in same position */}
-          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-3 pt-2 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
                 {isBelowMinimum && (
@@ -4666,15 +4665,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setShowCheckout(true)
                   setCartStep("payment")
                 }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
-                  className="w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
                   {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
-                    className="w-full py-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 border-2 transition-colors" style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: "transparent" }}>
-                    <ArrowLeft className="h-3.5 w-3.5" /> Continuar comprando
+                    className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-1 border-2 transition-colors" style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: "transparent" }}>
+                    <ArrowLeft className="h-4 w-4" /> Continuar comprando
                   </button>
                 )}
               </>
@@ -4682,14 +4681,14 @@ onPaymentConfirmed={handlePaymentSuccess}
             {cartStep === "payment" && (
               <>
                 <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
-                  className="w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[44px]"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[50px]"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <CheckCircle className="h-4 w-4 shrink-0" />}
                   {ordering ? "Enviando..." : "Confirmar pedido"}
                 </button>
                 <button onClick={() => setCartStep("cart")}
-                  className="w-full py-2 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
-                  <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao carrinho
+                  className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
+                  <ArrowLeft className="h-4 w-4" /> Voltar ao carrinho
                 </button>
               </>
             )}
@@ -4698,7 +4697,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {orderResult?.orderId && (
                   <button onClick={() => {
                     setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); openTracking(); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
-                  }} className="w-full py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
+                  }} className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
                     style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                     <ExternalLink className="h-4 w-4" /> Acompanhar pedido
                   </button>
@@ -4707,7 +4706,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); setUseLoyalty(false)
                   setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
                   setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
-                }} className="w-full py-2 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
+                }} className="w-full py-2.5 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
                   Fechar
                 </button>
               </>
