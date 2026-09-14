@@ -369,6 +369,15 @@ export function OrdersScreen({
                                 <p className="text-sm font-medium truncate" style={{ color: theme.text }}>
                                   {item.quantity}x {item.name}
                                 </p>
+                                {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {item.additionalOptions.map((opt: any, i: number) => (
+                                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.textMuted }}>
+                                        {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}

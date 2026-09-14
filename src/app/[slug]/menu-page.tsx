@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -1431,7 +1431,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         )
       }
       const hasDiscount = (product as any).promoPrice && (product as any).onSale
-      return [...prev, { id: product.id, name: product.name, price: hasDiscount ? (product as any).promoPrice : product.price, originalPrice: hasDiscount ? product.price : undefined, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
+      const unitPrice = hasDiscount ? (product as any).promoPrice : product.price
+      return [...prev, { id: product.id, name: product.name, price: unitPrice, originalPrice: hasDiscount ? product.price : undefined, basePrice: unitPrice, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
@@ -2556,11 +2557,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                 ) : (
                   <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                 )}
-                <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                   </span>
+                  {minimumOrder.enabled && minimumOrder.value > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
+                      Mín. {formatCurrency(minimumOrder.value)}
+                    </span>
+                  )}
+                  {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
+                      🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
+                    </span>
+                  )}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
@@ -4136,21 +4147,41 @@ onPaymentConfirmed={handlePaymentSuccess}
                                   setEditingCartItemId(item.id)
                                   setShowCart(false)
                                 }}
-                                className={`flex-shrink-0 rounded-xl overflow-hidden ${hasOptions && !isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
+                                className={`flex-shrink-0 rounded-xl overflow-hidden relative ${hasOptions && !isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
                                 disabled={!hasOptions || isFromPendingOrder}
                               >
                                 <img src={item.image} alt="" loading="lazy" className="w-14 h-14 object-cover" />
+                                {hasOptions && !isFromPendingOrder && (
+                                  <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                                    <Pencil className="h-2.5 w-2.5 text-white" />
+                                  </span>
+                                )}
                               </button>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                              <button
+                                onClick={() => {
+                                  if (!hasOptions || isFromPendingOrder) return
+                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                                  if (!product) return
+                                  setSelectedProduct(product)
+                                  setSelectedProductQty(item.quantity)
+                                  setSelectedProductOptions(item.additionalOptions || [])
+                                  setEditingCartItemId(item.id)
+                                  setShowCart(false)
+                                }}
+                                className={`text-left w-full ${hasOptions && !isFromPendingOrder ? "active:opacity-70 transition-opacity" : ""}`}
+                                disabled={!hasOptions || isFromPendingOrder}
+                              >
+                                <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                              </button>
                               {(item as any).originalPrice ? (
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency((item as any).originalPrice)}</span>
-                                  <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency((item as any).basePrice || item.price)}</span>
+                                  <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency((item as any).basePrice ?? item.price)}</span>
                                 </div>
                               ) : (
-                                <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
+                                <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice ?? item.price)}</p>
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -5598,7 +5629,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setCart((prev) => {
                         const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                         if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
+                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, basePrice: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
                       })
                       setBottomSheetProduct(null)
                       setAddedItemId(bottomSheetProduct.id)
