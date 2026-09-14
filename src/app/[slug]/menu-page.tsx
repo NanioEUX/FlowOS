@@ -40,6 +40,7 @@ interface Establishment {
   name: string
   slug: string
   phone: string
+  whatsappNumber: string | null
   logo: string | null
   cover: string | null
   description: string | null
@@ -3990,7 +3991,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
                     <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
                     {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
-                      <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
+                      <>
+                        <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
+                        <div className="mt-2 h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (subtotal / (establishment.deliveryFreeAbove || 1)) * 100)}%`, backgroundColor: theme.primary }} />
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -4027,7 +4033,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             }}
                             className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
                             style={{
-                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}22` : theme.bgCard,
                               border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
                             }}
                           >
@@ -4148,7 +4154,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <div className="flex flex-wrap gap-1 mt-2">
                               {selectedOpts.map((opt: any, i: number) => (
                                 <span key={i} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                  {opt.name}
+                                  {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
                                 </span>
                               ))}
                             </div>
@@ -4157,11 +4163,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                       )
                     })}
                   </div>
-                )}
-
-                {/* Empty cart button */}
-                {cart.length > 0 && (
-                  <button onClick={() => setCart([])} className="text-xs font-medium" style={{ color: "#EF4444" }}>Esvaziar carrinho</button>
                 )}
 
                 {/* First purchase bonus banner */}
@@ -4187,7 +4188,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
                         className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
                       <button onClick={validateCoupon} disabled={couponLoading}
-                        className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        className="px-5 py-2.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: theme.primary, color: "#fff" }}>
                         {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
                       </button>
                     </div>
@@ -4214,10 +4215,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <Star className="h-4 w-4" style={{ color: theme.primary }} />
                       <div>
                         <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meus pontos</div>
-                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
-                        {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount && (
-                          <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Máx. {parsedLoyalty.redeemPoints} pts/pedido = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto</div>
+                        {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount ? (
+                          <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
+                            Usar {parsedLoyalty.redeemPoints} pts = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto
+                          </div>
+                        ) : (
+                          <div className="text-[12px] font-semibold" style={{ color: theme.text }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
                         )}
+                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Saldo: {customerLoyaltyPoints} pts</div>
                       </div>
                     </div>
                     <button onClick={() => { const next = !useLoyalty; console.log("[loyalty] toggle clicked:", { next, customerLoyaltyPoints, parsedLoyalty, subtotal }); setUseLoyalty(next); }}
@@ -4295,7 +4300,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             }}
                             className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
                             style={{
-                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}22` : theme.bgCard,
                               border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
                             }}
                           >
@@ -4470,11 +4475,25 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="flex items-center gap-1 text-xs mb-2" style={{ color: theme.textMuted }}>
                     {orderType === "delivery" ? <Bike className="h-3 w-3" /> : orderType === "dineIn" ? <Utensils className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
                     {orderType === "delivery" ? "Entrega" : orderType === "dineIn" ? "No local" : "Retirada"}
+                    {orderType === "delivery" && deliveryFee === 0 && (
+                      <span className="ml-1 font-medium" style={{ color: theme.success }}>(Grátis)</span>
+                    )}
                   </div>
                   {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                      <span>{item.name} x{item.quantity}</span>
-                      <span>{formatCurrency(item.price * item.quantity)}</span>
+                    <div key={item.id} className="mb-2">
+                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                        <span>{item.name} x{item.quantity}</span>
+                        <span>{formatCurrency(item.price * item.quantity)}</span>
+                      </div>
+                      {item.additionalOptions && item.additionalOptions.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.additionalOptions.map((opt: any, i: number) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.textMuted }}>
+                              {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div className="mt-2 space-y-1 border-t pt-2" style={{ borderColor: theme.borderCard }}>
@@ -4507,7 +4526,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal && (
                       <div className="flex items-center gap-1.5 pt-1">
-                        <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                        <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
                           Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
                         </span>
@@ -4522,7 +4541,6 @@ onPaymentConfirmed={handlePaymentSuccess}
               <OrderConfirmationScreen
                 theme={theme}
                 title={establishment.confirmationTitle || "Pedido enviado!"}
-                logo={establishment.logo || undefined}
                 establishmentName={establishment.name || "Pedefacil"}
                 orderNumber={orderResult?.orderNumber}
                 items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
@@ -4542,6 +4560,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 deliveryCode={orderResult?.deliveryCode}
                 deliveryAddress={orderType === "delivery" ? fullAddress : null}
                 establishmentAddress={establishment.address || null}
+                estimatedDeliveryMin={establishment.estimatedDeliveryMin}
+                estimatedDeliveryMax={establishment.estimatedDeliveryMax}
+                whatsappPhone={establishment.whatsappNumber || establishment.phone}
                 onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
@@ -4577,9 +4598,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <ShoppingBag className="h-4 w-4 shrink-0" />
                   {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
                 </button>
+                {orderType === "delivery" && cart.length > 0 && (
+                  <p className="text-center text-xs" style={{ color: theme.textMuted }}>
+                    <Timer className="inline h-3 w-3 mr-1" />
+                    Estimativa: {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
+                  </p>
+                )}
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
-                    className="w-full py-2.5 text-xs font-medium flex items-center justify-center gap-1" style={{ color: theme.textMutedMore }}>
+                    className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-1 border-2 transition-colors" style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: "transparent" }}>
                     <ArrowLeft className="h-4 w-4" /> Continuar comprando
                   </button>
                 )}
@@ -4590,7 +4617,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[50px]"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
-                  {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Shield className="h-4 w-4 shrink-0" />}
+                  {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <CheckCircle className="h-4 w-4 shrink-0" />}
                   {ordering ? "Enviando..." : "Confirmar pedido"}
                 </button>
                 <button onClick={() => setCartStep("cart")}

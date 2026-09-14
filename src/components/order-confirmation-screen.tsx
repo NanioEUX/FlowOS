@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Gift, Sparkles, ArrowRight, MapPin } from "lucide-react"
+import { CheckCircle, Gift, Sparkles, ArrowRight, MapPin, Clock, MessageCircle } from "lucide-react"
 
 interface ConfirmationItemOption {
   name: string
@@ -18,7 +18,6 @@ interface ConfirmationItem {
 interface Props {
   theme: any
   title?: string
-  logo?: string
   establishmentName: string
   orderNumber?: number
   items: ConfirmationItem[]
@@ -38,6 +37,9 @@ interface Props {
   deliveryCode?: string | null
   deliveryAddress?: string | null
   establishmentAddress?: string | null
+  estimatedDeliveryMin?: number
+  estimatedDeliveryMax?: number
+  whatsappPhone?: string
   onTrack: () => void
   onContinue: () => void
 }
@@ -45,7 +47,6 @@ interface Props {
 export function OrderConfirmationScreen({
   theme,
   title,
-  logo,
   establishmentName,
   orderNumber,
   items,
@@ -65,6 +66,9 @@ export function OrderConfirmationScreen({
   deliveryCode,
   deliveryAddress,
   establishmentAddress,
+  estimatedDeliveryMin,
+  estimatedDeliveryMax,
+  whatsappPhone,
   onTrack,
   onContinue,
 }: Props) {
@@ -93,13 +97,6 @@ export function OrderConfirmationScreen({
         <div className="mx-auto w-full max-w-lg">
           {/* Header */}
           <div className="mb-6 text-center">
-            {logo ? (
-              <img src={logo} alt={establishmentName} className="mx-auto mb-3 h-14 w-14 rounded-full object-cover shadow-md" />
-            ) : (
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold shadow-md" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
-                {establishmentName.charAt(0).toUpperCase()}
-              </div>
-            )}
             <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.success}15` }}>
               <CheckCircle className="h-9 w-9" style={{ color: theme.success }} />
             </div>
@@ -109,6 +106,12 @@ export function OrderConfirmationScreen({
             {orderNumber != null && (
               <p className="text-xl font-black mt-1" style={{ color: theme.success }}>
                 Nº {orderNumber}
+              </p>
+            )}
+            {orderType === "delivery" && estimatedDeliveryMin && estimatedDeliveryMax && (
+              <p className="text-sm mt-2 flex items-center justify-center gap-1.5" style={{ color: theme.textMuted }}>
+                <Clock className="h-3.5 w-3.5" />
+                Previsão de entrega: {estimatedDeliveryMin} a {estimatedDeliveryMax} min
               </p>
             )}
           </div>
@@ -178,7 +181,17 @@ export function OrderConfirmationScreen({
                 <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
                 <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Endereço da entrega</span>
               </div>
-              <p className="text-sm" style={{ color: theme.text }}>{deliveryAddress}</p>
+              {(() => {
+                const parts = deliveryAddress.split(" - ")
+                return parts.length > 1 ? (
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: theme.text }}>{parts[0]}</p>
+                    <p className="text-xs" style={{ color: theme.textMuted }}>{parts.slice(1).join(" - ")}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: theme.text }}>{deliveryAddress}</p>
+                )
+              })()}
             </div>
           )}
 
@@ -198,10 +211,11 @@ export function OrderConfirmationScreen({
 
           {/* Delivery Code */}
           {deliveryCode && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 mb-3 text-center">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-3 mb-3 text-center">
               <p className="text-xs font-medium text-amber-600">
                 Código entrega: <span className="font-bold tracking-wider">{deliveryCode}</span>
               </p>
+              <p className="text-[10px] text-amber-500 mt-1">Informe este código ao entregador ao receber</p>
             </div>
           )}
 
@@ -234,7 +248,7 @@ export function OrderConfirmationScreen({
       </div>
 
       {/* Sticky CTA - Track button */}
-      <div className="flex-shrink-0 px-4 pt-3 pb-4" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))", backgroundColor: theme.bgPage }}>
+      <div className="flex-shrink-0 px-4 pt-3 pb-4 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))", backgroundColor: theme.bgPage }}>
         <button
           onClick={onTrack}
           className="w-full py-4 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
@@ -242,6 +256,18 @@ export function OrderConfirmationScreen({
         >
           Acompanhar pedido <ArrowRight className="h-4 w-4" />
         </button>
+        {whatsappPhone && (
+          <a
+            href={`https://wa.me/${whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Preciso de ajuda com meu pedido Nº ${orderNumber || ""}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
+            style={{ color: theme.textMuted, border: `1px solid ${theme.borderCard}` }}
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            Precisa de ajuda?
+          </a>
+        )}
       </div>
     </div>
   )
