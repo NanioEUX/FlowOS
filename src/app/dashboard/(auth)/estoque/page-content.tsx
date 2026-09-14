@@ -436,7 +436,7 @@ export default function EstoquePage() {
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setEditingCategory(cat); setNewCatName(cat.name); setNewCatFamilyId(cat.familyId || ""); setShowCategoryForm(true) }} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
                     <button onClick={() => setDeleteCategoryConfirm({ open: true, id: cat.id, name: cat.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id, familyId: cat.familyId || "" })); setAddingFromCategory(true); setShowItemForm(true) }}>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id, familyId: cat.familyId || "" })); setAddingFromCategory(true); setShowItemForm(true) }}>
                       <Plus className="mr-1 h-3 w-3" /> Adicionar
                     </Button>
                   </div>
