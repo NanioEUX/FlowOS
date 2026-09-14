@@ -379,6 +379,7 @@ export function OrdersScreen({
                                   </div>
                                 )}
                               </div>
+                              <span className="text-xs font-medium shrink-0" style={{ color: theme.textMuted }}>{formatCurrency(item.price * item.quantity)}</span>
                             </div>
                           ))}
                           {!isExpanded && items.length > 2 && (

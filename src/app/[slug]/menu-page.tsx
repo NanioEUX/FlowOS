@@ -2557,21 +2557,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                 ) : (
                   <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                 )}
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <div className="flex items-center gap-1.5 mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                   </span>
-                  {minimumOrder.enabled && minimumOrder.value > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
-                      Mín. {formatCurrency(minimumOrder.value)}
-                    </span>
-                  )}
-                  {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
-                      🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
-                    </span>
-                  )}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
@@ -2601,6 +2591,27 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Spacer for fixed header */}
       <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
+
+      {/* Info card — min order + free delivery */}
+      {cart.length === 0 && !showCart && orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) && (
+        <div className="mx-auto max-w-3xl px-4 pt-2">
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+            {minimumOrder.enabled && minimumOrder.value > 0 && (
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.textMuted }}>
+                <Package className="h-3 w-3" /> Mín. {formatCurrency(minimumOrder.value)}
+              </span>
+            )}
+            {minimumOrder.enabled && minimumOrder.value > 0 && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
+              <span className="text-[11px]" style={{ color: theme.borderCard }}>•</span>
+            )}
+            {orderType === "delivery" && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.success }}>
+                🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Closed banner — configurable */}
       {!isOpen && closedMessage && (
@@ -4175,14 +4186,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                               >
                                 <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
                               </button>
-                              {(item as any).originalPrice ? (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency((item as any).originalPrice)}</span>
-                                  <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency((item as any).basePrice ?? item.price)}</span>
-                                </div>
-                              ) : (
-                                <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice ?? item.price)}</p>
-                              )}
+                              {(() => {
+                                const product = sortedCategories.flatMap(c => c.products).find((p: any) => p.id === item.id) as any
+                                const origPrice = (item as any).originalPrice || (product?.onSale && product?.promoPrice ? product.price : undefined)
+                                const unitBase = (item as any).basePrice ?? item.price
+                                const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
+                                const totalUnit = unitBase + optsPrice
+                                return origPrice ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice + optsPrice)}</span>
+                                    <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency(totalUnit)}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency(totalUnit)}</p>
+                                )
+                              })()}
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               {!isFromPendingOrder && (
@@ -4710,17 +4728,26 @@ onPaymentConfirmed={handlePaymentSuccess}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
           onReorder={(order) => {
             const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            const cartItems: CartItem[] = items.map((item: any) => ({
-              id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
-              name: item.name,
-              price: item.price,
-              image: item.image || null,
-              quantity: item.quantity,
-              additionalOptions: item.additionalOptions || [],
-            }))
+            const cartItems: CartItem[] = items.map((item: any) => {
+              const product = establishment.categories.flatMap(c => c.products).find((p: any) => p.id === (item.productId || item.id))
+              const currentPrice = product?.price ?? item.price
+              const hasDiscount = product && (product as any).promoPrice && (product as any).onSale
+              const unitPrice = hasDiscount ? (product as any).promoPrice : currentPrice
+              return {
+                id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
+                name: item.name,
+                price: unitPrice,
+                originalPrice: hasDiscount ? currentPrice : (item.originalPrice || undefined),
+                basePrice: unitPrice,
+                image: item.image || product?.image || null,
+                quantity: item.quantity,
+                additionalOptions: item.additionalOptions || [],
+              }
+            })
             setCart(cartItems)
             setShowOrdersList(false)
-            setActiveTab("menu")
+            setShowCart(true)
+            setCartStep("cart")
           }}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
