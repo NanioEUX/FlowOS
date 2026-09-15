@@ -29,6 +29,7 @@ interface Product {
   order: number
   badge: string | null
   categoryId: string
+  recommendedProductIds?: string | null
 }
 
 interface Category {
@@ -38,6 +39,7 @@ interface Category {
   products: Product[]
   targetMarginPercent?: number | null
   priceRounding?: string | null
+  recommendedProductIds?: string | null
 }
 
 const BADGE_OPTIONS = [
@@ -1482,7 +1484,7 @@ export default function CardapioPage() {
               <ExternalLink className="h-4 w-4" />
               Link cardápio
             </a>
-            <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium">
+            <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium text-zinc-900">
               <Download className="h-4 w-4" />
               Importar cardápio do iFood
             </Button>
@@ -1501,7 +1503,7 @@ export default function CardapioPage() {
               className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium transition-colors ${showPreview ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
             >
               <Eye className="h-4 w-4" />
-              Preview cardápio
+              {showPreview ? "Fechar cardápio" : "Visualizar cardápio"}
             </button>
           </>
         )}
@@ -1611,7 +1613,7 @@ export default function CardapioPage() {
           {[...categories].sort((a, b) => a.order - b.order).map((cat, catIdx) => {
             const sorted = [...cat.products].sort((a, b) => a.order - b.order)
             return (
-              <Card key={cat.id} id={`category-${cat.id}`}>
+              <Card key={cat.id} id={`category-${cat.id}`} className="mb-4">
                 <CardContent className="p-4 overflow-hidden">
                   <div className="mb-4 flex items-center justify-between">
                     {editingCategoryId === cat.id ? (
@@ -2608,7 +2610,12 @@ export default function CardapioPage() {
                   <span className="h-3 w-3 rounded-full bg-yellow-500" />
                   <span className="h-3 w-3 rounded-full bg-green-500" />
                 </div>
-                <span className="ml-2 text-xs text-zinc-400 font-mono">/{establishmentSlug}</span>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="ml-2 text-xs text-zinc-300 hover:text-white font-medium transition-colors"
+                >
+                  Fechar
+                </button>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -3982,7 +3989,12 @@ export default function CardapioPage() {
                 <span className="h-3 w-3 rounded-full bg-yellow-500" />
                 <span className="h-3 w-3 rounded-full bg-green-500" />
               </div>
-              <span className="ml-2 text-xs text-zinc-400 font-mono">/{establishmentSlug}</span>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="ml-2 text-xs text-zinc-300 hover:text-white font-medium transition-colors"
+              >
+                Fechar
+              </button>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -4131,11 +4143,11 @@ export default function CardapioPage() {
                         body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
                       })
                     }
-                    toast({ title: "Recomendações salvas!" })
+                    toast("Recomendações salvas!", "success")
                     setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })
                     setRecommendSearch("")
                   } catch (e) {
-                    toast({ title: "Erro ao salvar", variant: "error" })
+                    toast("Erro ao salvar", "error")
                   }
                   setSavingRecommend(false)
                 }}
