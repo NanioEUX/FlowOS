@@ -31,8 +31,7 @@ interface Props {
   showLoyalty: boolean
   cashEarned: number
   loyaltyBalance: number
-  redeemPoints?: number
-  redeemDiscount?: number
+  maxRedeemPercent?: number
   orderType?: string
   deliveryCode?: string | null
   deliveryAddress?: string | null
@@ -60,8 +59,7 @@ export function OrderConfirmationScreen({
   showLoyalty,
   cashEarned,
   loyaltyBalance,
-  redeemPoints,
-  redeemDiscount,
+  maxRedeemPercent,
   orderType,
   deliveryCode,
   deliveryAddress,
@@ -71,12 +69,8 @@ export function OrderConfirmationScreen({
   whatsappPhone,
   onTrack,
   onContinue,
-}: Props) {
+  }: Props) {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-  const pointsToR$ = (points: number) => {
-    if (!redeemPoints || !redeemDiscount) return 0
-    return (points / redeemPoints) * redeemDiscount
-  }
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col" style={{ backgroundColor: theme.bgPage }}>
@@ -164,7 +158,7 @@ export function OrderConfirmationScreen({
               )}
               {loyaltyDiscount > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.success }}>
-                  <span>Desconto (pontos)</span><span>-{fmt(loyaltyDiscount)}</span>
+                  <span>Desconto (cashback)</span><span>-{fmt(loyaltyDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base pt-1" style={{ color: theme.text }}>
@@ -225,8 +219,8 @@ export function OrderConfirmationScreen({
               <div className="flex items-center gap-2">
                 <Gift className="h-5 w-5" style={{ color: theme.success }} />
                 <div>
-                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +{cashEarned} pts</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {loyaltyBalance} pts ({fmt(pointsToR$(loyaltyBalance))})</p>
+                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +R$ {cashEarned.toFixed(2)} de cashback</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {(loyaltyBalance * 0.01).toFixed(2)}</p>
                 </div>
               </div>
             </div>

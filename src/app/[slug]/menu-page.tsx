@@ -1110,41 +1110,33 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const loyaltyDiscount = useMemo(() => {
     const _debug = { useLoyalty, enabled: parsedLoyalty?.enabled, pts: customerLoyaltyPoints, subtotal, config: parsedLoyalty }
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) { console.log("[loyaltyDiscount] BLOCKED (first guard):", _debug); return 0 }
-    const pointsNeeded = parsedLoyalty.redeemPoints || 100
-    if (parsedLoyalty.redeemType === "product") {
-      return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
-    }
-    const discount = parsedLoyalty.redeemDiscount || 10
-    if (customerLoyaltyPoints < pointsNeeded) { console.log("[loyaltyDiscount] BLOCKED (points < needed):", _debug, { pointsNeeded }); return 0 }
+    if (parsedLoyalty.redeemType === "product") return 0
+
+    const balance = customerLoyaltyPoints * 0.01
+    if (balance <= 0) return 0
 
     const minOrder = parsedLoyalty.minOrderToRedeem || 0
     if (minOrder > 0 && subtotal < minOrder) { console.log("[loyaltyDiscount] BLOCKED (below min):", _debug, { minOrder }); return 0 }
 
-    const limitType = parsedLoyalty.redeemLimitType || "percentage"
-    const limitValue = parsedLoyalty.redeemLimitValue || 30
-    let maxDiscount = discount
-
-    if (limitType === "percentage") {
-      maxDiscount = (subtotal * limitValue) / 100
-    } else {
-      maxDiscount = limitValue
-    }
-
-    const result = Math.min(discount, maxDiscount)
-    console.log("[loyaltyDiscount] RESULT:", { result, discount, maxDiscount, ..._debug })
+    const maxRedeemPercent = parsedLoyalty.maxRedeemPercent || parsedLoyalty.redeemLimitValue || 25
+    const maxDiscount = (subtotal * maxRedeemPercent) / 100
+    const result = Math.min(balance, maxDiscount)
+    console.log("[loyaltyDiscount] RESULT:", { result, balance, maxDiscount, ..._debug })
     return result
   }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
 
   const loyaltyFreeProduct = useMemo(() => {
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
     if (parsedLoyalty.redeemType !== "product") return null
-    const pointsNeeded = parsedLoyalty.redeemPoints || 100
-    if (customerLoyaltyPoints >= pointsNeeded) {
+    const balance = customerLoyaltyPoints * 0.01
+    const minOrder = parsedLoyalty.minOrderToRedeem || 0
+    if (minOrder > 0 && subtotal < minOrder) return null
+    if (balance > 0) {
       const product = cart.find((item: any) => item.productId === parsedLoyalty.redeemProductId)
       return product || null
     }
     return null
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart])
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart, subtotal])
   // Status real do pedido pendente para decidir se o botão "Cancelar" aparece.
   // customerOrders filtra pedidos pending no pagamento online, então pode estar
   // desatualizado; usamos o que estiver em memória (lastOrder/pendingOrderItems).
@@ -1729,7 +1721,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           couponDiscount: couponDiscount || 0,
           firstPurchaseDiscount: firstPurchaseDiscountValue || 0,
           useLoyalty: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct),
-          loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? (parsedLoyalty?.redeemPoints || 0) : 0,
+          loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? Math.round(loyaltyDiscount * 100) : 0,
           loyaltyDiscount: loyaltyDiscount + (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0),
           loyaltyFreeProduct: loyaltyFreeProduct ? loyaltyFreeProduct.name : null,
           notes: customer.notes,
@@ -2580,7 +2572,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {/* Points */}
                   <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
                     <span className="text-[12px] font-bold text-gray-800">
-                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pts
+                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
                     </span>
                   </button>
                 </div>
@@ -2593,27 +2585,43 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
         {/* Info card — sticky inside fixed header */}
-        {orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) && (
-          <div className="mx-auto max-w-3xl px-4 pb-2">
-            <div className="flex items-center gap-4 rounded-xl px-3 py-2.5" style={{ backgroundColor: theme.bgCard, borderLeft: `3px solid ${theme.success}`, border: `1px solid ${theme.borderCard}`, borderLeftWidth: "3px", borderLeftColor: theme.success }}>
-              {minimumOrder.enabled && minimumOrder.value > 0 && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.primary}15` }}>📦</span>
-                  Mín. <span style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
-                </span>
-              )}
-              {minimumOrder.enabled && minimumOrder.value > 0 && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-                <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
-              )}
-              {establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.success}15` }}>🛵</span>
-                  Frete grátis acima de <span style={{ color: theme.success }}>{formatCurrency(establishment.deliveryFreeAbove)}</span>
-                </span>
-              )}
+        {(() => {
+          const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
+          const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
+          const hasLoyalty = parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal
+          const showInfoCard = hasMinOrder || hasFreeDelivery || hasLoyalty
+          if (!showInfoCard) return null
+          return (
+            <div className="mx-auto max-w-3xl px-4 pb-2">
+              <div className="flex items-center gap-3 flex-wrap rounded-xl px-3 py-2.5" style={{ backgroundColor: theme.bgCard, borderLeft: `3px solid ${theme.success}`, border: `1px solid ${theme.borderCard}`, borderLeftWidth: "3px", borderLeftColor: theme.success }}>
+                {hasMinOrder && (
+                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.primary}15` }}>📦</span>
+                    Mín. <span style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
+                  </span>
+                )}
+                {hasMinOrder && hasFreeDelivery && (
+                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
+                )}
+                {hasFreeDelivery && (
+                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.success}15` }}>🛵</span>
+                    Frete grátis acima de <span style={{ color: theme.success }}>{formatCurrency(establishment.deliveryFreeAbove || 0)}</span>
+                  </span>
+                )}
+                {(hasMinOrder || hasFreeDelivery) && hasLoyalty && (
+                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
+                )}
+                {hasLoyalty && (
+                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.accent}15` }}>⭐</span>
+                    {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}% cashback
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* Spacer for fixed header */}
@@ -3369,26 +3377,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Loyalty Card */}
                 {parsedLoyalty?.enabled && (() => {
                   const currentPts = customerData?.loyaltyPoints || customerLoyaltyPoints || 0
-                  const ptsToCurrency = pointsToCurrency(currentPts, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount)
-                  const discountValue = parsedLoyalty?.redeemDiscount || 10
-                  const ptsNeeded = parsedLoyalty?.redeemPoints || 100
-                  const progressPct = Math.min(100, (currentPts / ptsNeeded) * 100)
+                  const cashbackValue = currentPts * 0.01
+                  const maxRedeem = parsedLoyalty?.maxRedeemPercent || 25
                   return (
                     <div className="mx-4 mb-4 rounded-2xl p-4" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 4px 20px ${theme.primary}40` }}>
                       <p className="text-[10px] font-medium text-white/60 uppercase tracking-wider">Seu saldo</p>
-                      <p className="text-2xl font-bold text-white mt-1">{currentPts} pts</p>
-                      <p className="text-xs text-white/70 mt-0.5">{formatCurrency(ptsToCurrency)}</p>
-                      <div className="mt-3">
-                        <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/20">
-                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #ffffffcc, #ffffff)" }} />
-                        </div>
-                        <p className="text-[10px] text-white/60 mt-1">
-                          {currentPts >= ptsNeeded
-                            ? `Pronto para resgatar! ${formatCurrency(discountValue)} de desconto`
-                            : `Faltam ${ptsNeeded - currentPts} pts para ${formatCurrency(discountValue)} de desconto`
-                          }
-                        </p>
-                      </div>
+                      <p className="text-2xl font-bold text-white mt-1">R$ {cashbackValue.toFixed(2)}</p>
+                      <p className="text-xs text-white/70 mt-0.5">Cashback disponível</p>
+                      <p className="text-[10px] text-white/50 mt-1">Use até {maxRedeem}% do pedido</p>
                     </div>
                   )
                 })()}
@@ -3407,8 +3403,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2.5 flex-1">
                       <span className="text-2xl">💰</span>
                       <div>
-                        <p className="text-lg font-bold" style={{ color: theme.text }}>{formatCurrency((customerData?.realTotalSpent ?? customerData?.totalSpent) || 0)}</p>
-                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Economizados</p>
+                        <p className="text-lg font-bold" style={{ color: theme.text }}>R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}</p>
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
                       </div>
                     </div>
                   </div>
@@ -4337,15 +4333,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4" style={{ color: theme.primary }} />
                       <div>
-                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meus pontos</div>
-                        {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount ? (
-                          <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
-                            Usar {parsedLoyalty.redeemPoints} pts = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto
-                          </div>
-                        ) : (
-                          <div className="text-[12px] font-semibold" style={{ color: theme.text }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
-                        )}
-                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Saldo: {customerLoyaltyPoints} pts</div>
+                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</div>
+                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
+                          Saldo: R$ {(customerLoyaltyPoints * 0.01).toFixed(2)}
+                        </div>
+                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Use até {parsedLoyalty?.maxRedeemPercent || 25}% do pedido</div>
                       </div>
                     </div>
                     <button onClick={() => { const next = !useLoyalty; console.log("[loyalty] toggle clicked:", { next, customerLoyaltyPoints, parsedLoyalty, subtotal }); setUseLoyalty(next); }}
@@ -4374,7 +4366,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                     {loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm text-amber-400">
-                        <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                        <span>Desconto (cashback)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
                       </div>
                     )}
                     {firstPurchaseDiscountValue > 0 && (
@@ -4390,7 +4382,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-1.5 pt-1">
                         <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
+                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
                         </span>
                       </div>
                     )}
@@ -4640,7 +4632,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                     {useLoyalty && loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: theme.success }}>
-                        <span>Desconto (pontos)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                        <span>Desconto (cashback)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold" style={{ color: theme.text }}>
@@ -4651,7 +4643,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-1.5 pt-1">
                         <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
+                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
                         </span>
                       </div>
                     )}
@@ -4675,10 +4667,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier : 0}
+                cashEarned={total * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 10) / 100 * tierMultiplier}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
-                redeemPoints={parsedLoyalty?.redeemPoints}
-                redeemDiscount={parsedLoyalty?.redeemDiscount}
+                maxRedeemPercent={parsedLoyalty?.maxRedeemPercent || parsedLoyalty?.redeemLimitValue || 25}
                 orderType={orderResult?.orderType}
                 deliveryCode={orderResult?.deliveryCode}
                 deliveryAddress={orderType === "delivery" ? fullAddress : null}

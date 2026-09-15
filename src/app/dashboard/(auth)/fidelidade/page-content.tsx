@@ -12,7 +12,7 @@ import { SearchableSelect } from "@/components/searchable-select"
 
 interface Tier {
   name: string
-  minSpent: number
+  minOrders: number
   multiplier: number
   emoji: string
   color: string
@@ -24,10 +24,10 @@ interface TierConfig {
 }
 
 const DEFAULT_TIERS: Tier[] = [
-  { name: "Bronze", minSpent: 0, multiplier: 1, emoji: "🥉", color: "#CD7F32" },
-  { name: "Prata", minSpent: 300, multiplier: 1.5, emoji: "🥈", color: "#C0C0C0" },
-  { name: "Ouro", minSpent: 800, multiplier: 2, emoji: "🥇", color: "#FFD700" },
-  { name: "Diamante", minSpent: 2000, multiplier: 3, emoji: "💎", color: "#B9F2FF" },
+  { name: "Bronze", minOrders: 0, multiplier: 1, emoji: "🥉", color: "#CD7F32" },
+  { name: "Prata", minOrders: 2, multiplier: 1.5, emoji: "🥈", color: "#C0C0C0" },
+  { name: "Ouro", minOrders: 4, multiplier: 2, emoji: "🥇", color: "#FFD700" },
+  { name: "Diamante", minOrders: 8, multiplier: 3, emoji: "💎", color: "#B9F2FF" },
 ]
 
 export default function FidelidadePageContent() {
@@ -40,13 +40,8 @@ export default function FidelidadePageContent() {
   const [saved, setSaved] = useState(false)
   const [loyaltyConfig, setLoyaltyConfig] = useState({
     enabled: false,
-    pointsPerReal: 1,
-    redeemPoints: 100,
-    redeemDiscount: 10,
-    redeemType: "discount",
-    redeemProductId: "",
-    redeemLimitType: "percentage",
-    redeemLimitValue: 30,
+    cashbackPercent: 10,
+    maxRedeemPercent: 25,
     minOrderToRedeem: 0,
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
@@ -126,7 +121,7 @@ export default function FidelidadePageContent() {
   function addTier() {
     setTierConfig((prev) => ({
       ...prev,
-      tiers: [...prev.tiers, { name: "Novo Nível", minSpent: 0, multiplier: 1, emoji: "⭐", color: "#888888" }],
+      tiers: [...prev.tiers, { name: "Novo Nível", minOrders: 0, multiplier: 1, emoji: "⭐", color: "#888888" }],
     }))
   }
 
@@ -174,140 +169,47 @@ export default function FidelidadePageContent() {
           {loyaltyConfig.enabled && (
             <div className="rounded-lg bg-zinc-50 p-4 space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Cash por R$ 1</label>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Cashback por pedido (%)</label>
                 <input
                   type="number"
                   min="1"
-                  value={loyaltyConfig.pointsPerReal}
-                  onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, pointsPerReal: Number(e.target.value) })}
+                  max="100"
+                  value={loyaltyConfig.cashbackPercent}
+                  onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, cashbackPercent: Number(e.target.value) })}
                   className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
+                <p className="mt-1 text-xs text-zinc-400">Ex: 10% → cliente ganha R$ 10 de volta a cada R$ 100 gasto</p>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">Tipo de resgate</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "discount" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType !== "product" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
-                  >
-                    Desconto (R$)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemType: "product" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemType === "product" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
-                  >
-                    Produto grátis
-                  </button>
-                </div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Limite de uso por pedido (%)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={loyaltyConfig.maxRedeemPercent}
+                  onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, maxRedeemPercent: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Ex: 25% → pedido R$ 100, pode usar no máximo R$ 25 do saldo</p>
               </div>
 
-              {loyaltyConfig.redeemType !== "product" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cash para resgatar</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={loyaltyConfig.redeemPoints}
-                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto (R$)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="0.50"
-                      value={loyaltyConfig.redeemDiscount}
-                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemDiscount: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Cash para resgatar</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={loyaltyConfig.redeemPoints}
-                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemPoints: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Produto para resgate</label>
-                    <SearchableSelect
-                      value={loyaltyConfig.redeemProductId || ""}
-                      onChange={(v) => setLoyaltyConfig({ ...loyaltyConfig, redeemProductId: v })}
-                      options={[{ value: "", label: "Selecionar produto..." }, ...allProducts.map((p: any) => ({ value: p.id, label: `${p.name} (${formatCurrency(p.price)})` }))]}
-                      placeholder="Selecionar produto..."
-                    />
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Pedido mínimo para usar saldo (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="5"
+                  value={loyaltyConfig.minOrderToRedeem}
+                  onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, minOrderToRedeem: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                  placeholder="0 = sem mínimo"
+                />
+              </div>
 
-              <p className="text-xs text-zinc-400">
-                {loyaltyConfig.redeemType !== "product"
-                  ? `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = R$ ${loyaltyConfig.redeemDiscount} de desconto`
-                  : `Ex: ${loyaltyConfig.pointsPerReal} cash por R$ 1 • ${loyaltyConfig.redeemPoints} cash = produto selecionado`}
-              </p>
-
-              {/* Limite de resgate por pedido */}
-              <div className="pt-4 border-t border-zinc-200">
-                <label className="mb-2 block text-sm font-medium text-zinc-700">Limite de desconto por pedido</label>
-                <div className="flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitType: "percentage" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemLimitType === "percentage" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
-                  >
-                    Percentual (%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitType: "fixed" })}
-                    className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-colors ${loyaltyConfig.redeemLimitType === "fixed" ? "border-green-600 bg-green-600/10 text-green-600" : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"}`}
-                  >
-                    Valor fixo (R$)
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">
-                      {loyaltyConfig.redeemLimitType === "percentage" ? "Percentual máximo" : "Valor máximo (R$)"}
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max={loyaltyConfig.redeemLimitType === "percentage" ? 100 : 9999}
-                      value={loyaltyConfig.redeemLimitValue}
-                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, redeemLimitValue: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Pedido mínimo (R$)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="5"
-                      value={loyaltyConfig.minOrderToRedeem}
-                      onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, minOrderToRedeem: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                      placeholder="0 = sem mínimo"
-                    />
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-zinc-400">
-                  {loyaltyConfig.redeemLimitType === "percentage"
-                    ? `Ex: máximo ${loyaltyConfig.redeemLimitValue}% do pedido. Pedido R$ 100 → desconto máx R$ ${loyaltyConfig.redeemLimitValue}`
-                    : `Ex: máximo R$ ${loyaltyConfig.redeemLimitValue} de desconto por pedido`}
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs text-amber-700">
+                  <strong>Regras:</strong> Cashback não acumula com cupons. O saldo expira em 21 dias.
                 </p>
               </div>
             </div>
@@ -322,7 +224,7 @@ export default function FidelidadePageContent() {
             <Award className="h-4 w-4" />
             Níveis de Fidelidade
           </h3>
-          <p className="text-sm text-zinc-500">Níveis automáticos baseados no total gasto. Clientes em níveis mais altos ganham mais cash.</p>
+          <p className="text-sm text-zinc-500">Níveis automáticos baseados no número de pedidos. Clientes em níveis mais altos ganham mais cash.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
               type="checkbox"
@@ -370,16 +272,16 @@ export default function FidelidadePageContent() {
                     className="w-28 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                   />
                   <div className="flex-1">
-                    <label className="text-xs text-zinc-500">Mínimo gasto</label>
+                    <label className="text-xs text-zinc-500">Mín. pedidos</label>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-zinc-400">R$</span>
                       <input
                         type="number"
                         min="0"
-                        value={tier.minSpent}
-                        onChange={(e) => updateTier(index, "minSpent", Number(e.target.value))}
+                        value={tier.minOrders}
+                        onChange={(e) => updateTier(index, "minOrders", Number(e.target.value))}
                         className="w-20 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                       />
+                      <span className="text-xs text-zinc-400">pedidos</span>
                     </div>
                   </div>
                   <div className="w-20">
