@@ -115,5 +115,5 @@ export default async function EstablishmentPage({
     )
   }
 
-  return <MenuPage establishment={rest} paymentConfig={paymentConfig} orderConfig={orderConfig} minimumOrder={minimumOrder} />
+  return <MenuPage establishment={rest as any} paymentConfig={paymentConfig} orderConfig={orderConfig} minimumOrder={minimumOrder} />
 }
