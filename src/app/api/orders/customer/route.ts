@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
       total: true,
       status: true,
       createdAt: true,
+      deliveredAt: true,
       orderType: true,
       paymentMethod: true,
       paymentStatus: true,
@@ -74,5 +75,17 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json(orders)
+  const orderIds = orders.map((o) => o.id)
+  const reviews = await prisma.review.findMany({
+    where: { orderId: { in: orderIds } },
+    select: { orderId: true },
+  })
+  const reviewedSet = new Set(reviews.map((r) => r.orderId))
+
+  const ordersWithReview = orders.map((o) => ({
+    ...o,
+    reviewed: reviewedSet.has(o.id),
+  }))
+
+  return NextResponse.json(ordersWithReview)
 }

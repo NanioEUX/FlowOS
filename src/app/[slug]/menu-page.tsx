@@ -813,11 +813,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
       .then((r) => r.json())
       .then((data) => {
-        if (!data.error && Array.isArray(data.orders)) {
-          const delivered = data.orders.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed)
+        if (!data.error && Array.isArray(data)) {
+          const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed)
           if (delivered) {
-            const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
             const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
+            const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
             if (hoursSinceDelivery > reviewDelayMinutes / 60) {
               setPendingReviewOrder(delivered)
               setShowReviewModal(true)
