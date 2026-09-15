@@ -316,7 +316,6 @@ model Category {
   products            Product[]
   targetMarginPercent Float?
   priceRounding       String?       @default("none")
-  recommendedProductIds String?     @default("[]")
 }
 
 model Product {
@@ -345,7 +344,6 @@ model Product {
   categoryId            String
   establishmentId       String
   stockItemId           String?
-  recommendedProductIds String?     @default("[]")
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   category              Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -356,21 +354,6 @@ model Product {
   stockedByAdditionals  AdditionalOption[] @relation("StockProduct")
   comboItems            DailyComboItem[]
   storyItems            StoryItem[]
-  likes                 Int                @default(0)
-  productLikes          ProductLike[]
-}
-
-model ProductLike {
-  id          String   @id @default(cuid())
-  productId   String
-  customerId  String?
-  deviceKey   String?
-  createdAt   DateTime @default(now())
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([productId, deviceKey])
-  @@index([productId])
-  @@index([deviceKey])
 }
 
 model DailyCombo {
@@ -789,7 +772,6 @@ model Review {
   rating          Int
   comment         String?
   customerId      String?
-  customerPhone   String?
   tableNumber     Int?
   orderId         String?
   establishmentId String
@@ -797,7 +779,6 @@ model Review {
   customer        Customer?     @relation(fields: [customerId], references: [id])
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
 
-  @@unique([orderId])
   @@index([establishmentId, createdAt])
   @@index([establishmentId, rating])
 }

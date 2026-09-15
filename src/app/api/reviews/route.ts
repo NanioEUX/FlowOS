@@ -3,22 +3,28 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: NextRequest) {
   try {
-    const { rating, comment, phone, tableNumber, orderId, establishmentId } = await req.json()
+    const { rating, comment, customerPhone, orderId, establishmentId } = await req.json()
 
     if (!establishmentId || !rating || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
     }
 
-    // Find or create customer by phone
+    if (orderId) {
+      const existing = await prisma.review.findUnique({ where: { orderId } })
+      if (existing) {
+        return NextResponse.json({ error: "Pedido já avaliado" }, { status: 409 })
+      }
+    }
+
     let customerId: string | undefined
-    if (phone) {
-      const cleanPhone = phone.replace(/\D/g, "")
+    if (customerPhone) {
+      const cleanPhone = customerPhone.replace(/\D/g, "")
       let customer = await prisma.customer.findFirst({
         where: { phone: cleanPhone, establishmentId },
       })
       if (!customer) {
         customer = await prisma.customer.create({
-          data: { phone: cleanPhone, name: "Cliente Avaliação", establishmentId },
+          data: { phone: cleanPhone, name: "Cliente", establishmentId },
         })
       }
       customerId = customer.id
@@ -29,15 +35,18 @@ export async function POST(req: NextRequest) {
         rating,
         comment: comment || null,
         customerId: customerId || null,
-        tableNumber: tableNumber || null,
+        customerPhone: customerPhone || null,
         orderId: orderId || null,
         establishmentId,
       },
     })
 
     return NextResponse.json(review)
-  } catch (error) {
-    console.error(error)
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json({ error: "Pedido já avaliado" }, { status: 409 })
+    }
+    console.error("[reviews:POST]", error)
     return NextResponse.json({ error: "Erro ao salvar avaliação" }, { status: 500 })
   }
 }
@@ -45,6 +54,12 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const establishmentId = searchParams.get("establishmentId")
+  const orderId = searchParams.get("orderId")
+
+  if (orderId) {
+    const review = await prisma.review.findUnique({ where: { orderId } })
+    return NextResponse.json({ reviewed: !!review, review })
+  }
 
   if (!establishmentId) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
@@ -52,8 +67,9 @@ export async function GET(req: NextRequest) {
 
   const reviews = await prisma.review.findMany({
     where: { establishmentId },
-    include: { customer: { select: { name: true, phone: true } } },
+    include: { customer: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
+    take: 50,
   })
 
   const avgResult = await prisma.review.aggregate({

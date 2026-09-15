@@ -1156,8 +1156,8 @@ export default function ConfigPage() {
     const groups = [
         { id: "geral" as const, label: "Geral", desc: "Dados e horários", icon: "📋" },
         { id: "pedidos" as const, label: "Pedidos", desc: "Tipos, mesas e taxas", icon: "🛒" },
-        { id: "pagamentos" as const, label: "Pagamentos", desc: "Asaas e formas", icon: "💳" },
-        { id: "whatsapp" as const, label: "WhatsApp", desc: "Bot e automação", icon: "💬" },
+        { id: "pagamentos" as const, label: "Pagamentos", desc: "Formas", icon: "💳" },
+        { id: "whatsapp" as const, label: "WhatsApp", desc: "Automação", icon: "💬" },
         { id: "ifood" as const, label: "iFood", desc: "Integração", icon: "🍔" },
         { id: "99entregas" as const, label: "Entregas", desc: "Integração", icon: "🚀" },
     ]
@@ -1657,7 +1657,7 @@ export default function ConfigPage() {
               />
               <div>
                 <span className="font-medium text-zinc-900">Aceitar pedidos automaticamente</span>
-                <p className="text-xs text-zinc-500">Pedidos são confirmados automaticamente</p>
+                <p className="text-xs text-zinc-500"></p>
               </div>
             </label>
           </CardContent>
@@ -1666,8 +1666,8 @@ export default function ConfigPage() {
         {/* Pedido Abandonado */}
         <Card id="section-abandoned" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Pedido Abandonado</h3>
-            <p className="text-sm text-zinc-500">Tempo (em minutos) para marcar automaticamente um pedido como "abandonado" se não for aceito pelo estabelecimento.</p>
+            <h3 className="font-semibold text-zinc-900">Pedido Expirado</h3>
+            <p className="text-sm text-zinc-500">Tempo (em minutos) para marcar automaticamente um pedido como "expirado" se não for aceito pelo estabelecimento.</p>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-zinc-700">Minutos:</label>
               <input
@@ -1696,7 +1696,7 @@ export default function ConfigPage() {
                     <Bike className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Entrega</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Cliente recebe em casa</p>
+                  <p className="text-xs text-zinc-500"></p>
                 </div>
               </label>
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -1706,7 +1706,7 @@ export default function ConfigPage() {
                     <Store className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Retirada</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Cliente busca no local</p>
+                  <p className="text-xs text-zinc-500"></p>
                 </div>
               </label>
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -1716,7 +1716,7 @@ export default function ConfigPage() {
                     <Utensils className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Consumir no local</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Cliente consome no estabelecimento</p>
+                  <p className="text-xs text-zinc-500"></p>
                 </div>
               </label>
             </div>
@@ -1771,7 +1771,7 @@ export default function ConfigPage() {
               />
               <div>
                 <span className="font-medium text-zinc-900">Habilitar pedido mínimo</span>
-                <p className="text-xs text-zinc-500">Quando ativo, pedidos abaixo do valor não poderão ser realizados</p>
+                <p className="text-xs text-zinc-500"></p>
               </div>
             </label>
             {minimumOrderEnabled && (
@@ -1936,9 +1936,9 @@ export default function ConfigPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 {[
-                  { value: "free", label: "Grátis", desc: "Sem taxa de entrega" },
-                  { value: "fixed", label: "Taxa fixa", desc: "Valor único por pedido" },
-                  { value: "free_above", label: "Grátis acima de R$ X", desc: "Cobra taxa só em pedidos abaixo de um valor" },
+                  { value: "free", label: "Grátis", desc: "" },
+                  { value: "fixed", label: "Taxa fixa", desc: "" },
+                  { value: "free_above", label: "Grátis acima de R$ X", desc: "" },
                 ].map((opt) => (
                   <label key={opt.value} className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                     <input
@@ -2038,7 +2038,7 @@ export default function ConfigPage() {
                     <CreditCard className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Online (Pix / Cartão)</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Paga online</p>
+                  <p className="text-xs text-zinc-500"></p>
                 </div>
               </label>
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -2048,7 +2048,7 @@ export default function ConfigPage() {
                     <Banknote className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Pagar na Entrega</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Paga em pix, dinheiro, cartão na entrega</p>
+                  <p className="text-xs text-zinc-500"> </p>
                 </div>
               </label>
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -2084,7 +2084,7 @@ export default function ConfigPage() {
                     className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                 </div>
-                <p className="mt-1 text-xs text-zinc-400">Pedidos acima desse valor só podem ser pagos online. Use 0 para desabilitar a entrega.</p>
+                <p className="mt-1 text-xs text-zinc-400">Use 0 para desabilitar a entrega.</p>
               </div>
               <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                 <input
@@ -2098,7 +2098,7 @@ export default function ConfigPage() {
                     <Shield className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium text-zinc-900">Bloquear segundo pedido na entrega</span>
                   </div>
-                  <p className="text-xs text-zinc-500">Enquanto um pedido na entrega está em andamento (pendente, confirmado, preparando ou pronto), o cliente só pode fazer novos pedidos com pagamento online.</p>
+                  <p className="text-xs text-zinc-500">Quando o pedido está em andamento, o cliente só pode fazer novos pedidos com pagamento online.</p>
                 </div>
               </label>
             </div>

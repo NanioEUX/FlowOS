@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -27,17 +27,12 @@ interface Product {
   image: string | null
   badge: string | null
   additionalOptions?: any[]
-  recommendedProductIds?: string | null
-  onSale?: boolean
-  promoPrice?: number
-  categoryId?: string
 }
 
 interface Category {
   id: string
   name: string
   products: Product[]
-  recommendedProductIds?: string | null
 }
 
 interface Establishment {
@@ -45,7 +40,6 @@ interface Establishment {
   name: string
   slug: string
   phone: string
-  whatsappNumber: string | null
   logo: string | null
   cover: string | null
   description: string | null
@@ -759,21 +753,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [useLoyalty, setUseLoyalty] = useState(false)
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0)
   const [customerTier, setCustomerTier] = useState("bronze")
-  const [productLikes, setProductLikes] = useState<Record<string, { likes: number; liked: boolean }>>({})
-  const [reviewStats, setReviewStats] = useState<{ average: number; total: number }>({ average: 0, total: 0 })
-
-  useEffect(() => {
-    fetch(`/api/reviews?establishmentId=${establishment.id}`)
-      .then((r) => r.json())
-      .then((data) => { if (!data.error) setReviewStats({ average: data.average || 0, total: data.total || 0 }) })
-      .catch(() => {})
-  }, [establishment.id])
-
-  const [showReviewModal, setShowReviewModal] = useState(false)
-  const [pendingReviewOrder, setPendingReviewOrder] = useState<any>(null)
-  const [reviewRating, setReviewRating] = useState(5)
-  const [reviewComment, setReviewComment] = useState("")
-  const [reviewSubmitting, setReviewSubmitting] = useState(false)
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
@@ -788,68 +767,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, cep }))
     }
   }, [customer, cep])
-
-  useEffect(() => {
-    fetch(`/api/products/likes?establishmentId=${establishment.id}`)
-      .then((r) => r.json())
-      .then((data) => { if (!data.error) setProductLikes(data) })
-      .catch(() => {})
-  }, [establishment.id])
-
-  const toggleLike = useCallback(async (productId: string) => {
-    setProductLikes((prev) => {
-      const current = prev[productId] || { likes: 0, liked: false }
-      return { ...prev, [productId]: { likes: current.liked ? current.likes - 1 : current.likes + 1, liked: !current.liked } }
-    })
-    try {
-      const res = await fetch(`/api/products/${productId}/like`, { method: "POST" })
-      const data = await res.json()
-      setProductLikes((prev) => ({ ...prev, [productId]: { likes: data.likes, liked: data.liked } }))
-    } catch {}
-  }, [])
-
-  useEffect(() => {
-    if (!customer.phone) return
-    fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.error && Array.isArray(data.orders)) {
-          const delivered = data.orders.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed)
-          if (delivered) {
-            const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
-            if (hoursSinceDelivery > 0.5) {
-              setPendingReviewOrder(delivered)
-              setShowReviewModal(true)
-            }
-          }
-        }
-      })
-      .catch(() => {})
-  }, [customer.phone, establishment.id])
-
-  const submitReview = useCallback(async () => {
-    if (!pendingReviewOrder) return
-    setReviewSubmitting(true)
-    try {
-      await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rating: reviewRating,
-          comment: reviewComment || null,
-          customerPhone: customer.phone || null,
-          orderId: pendingReviewOrder.id,
-          establishmentId: establishment.id,
-        }),
-      })
-      setShowReviewModal(false)
-      setPendingReviewOrder(null)
-      setReviewRating(5)
-      setReviewComment("")
-    } catch {}
-    setReviewSubmitting(false)
-  }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id])
-
   const [couponLoading, setCouponLoading] = useState(false)
 
   // Tab & search
@@ -1187,33 +1104,41 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const loyaltyDiscount = useMemo(() => {
     const _debug = { useLoyalty, enabled: parsedLoyalty?.enabled, pts: customerLoyaltyPoints, subtotal, config: parsedLoyalty }
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) { console.log("[loyaltyDiscount] BLOCKED (first guard):", _debug); return 0 }
-    if (parsedLoyalty.redeemType === "product") return 0
-
-    const balance = customerLoyaltyPoints * 0.01
-    if (balance <= 0) return 0
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (parsedLoyalty.redeemType === "product") {
+      return customerLoyaltyPoints >= pointsNeeded ? 0 : 0
+    }
+    const discount = parsedLoyalty.redeemDiscount || 10
+    if (customerLoyaltyPoints < pointsNeeded) { console.log("[loyaltyDiscount] BLOCKED (points < needed):", _debug, { pointsNeeded }); return 0 }
 
     const minOrder = parsedLoyalty.minOrderToRedeem || 0
     if (minOrder > 0 && subtotal < minOrder) { console.log("[loyaltyDiscount] BLOCKED (below min):", _debug, { minOrder }); return 0 }
 
-    const maxRedeemPercent = parsedLoyalty.maxRedeemPercent || parsedLoyalty.redeemLimitValue || 25
-    const maxDiscount = (subtotal * maxRedeemPercent) / 100
-    const result = Math.min(balance, maxDiscount)
-    console.log("[loyaltyDiscount] RESULT:", { result, balance, maxDiscount, ..._debug })
+    const limitType = parsedLoyalty.redeemLimitType || "percentage"
+    const limitValue = parsedLoyalty.redeemLimitValue || 30
+    let maxDiscount = discount
+
+    if (limitType === "percentage") {
+      maxDiscount = (subtotal * limitValue) / 100
+    } else {
+      maxDiscount = limitValue
+    }
+
+    const result = Math.min(discount, maxDiscount)
+    console.log("[loyaltyDiscount] RESULT:", { result, discount, maxDiscount, ..._debug })
     return result
   }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, subtotal])
 
   const loyaltyFreeProduct = useMemo(() => {
     if (!useLoyalty || !parsedLoyalty?.enabled || !customerLoyaltyPoints) return null
     if (parsedLoyalty.redeemType !== "product") return null
-    const balance = customerLoyaltyPoints * 0.01
-    const minOrder = parsedLoyalty.minOrderToRedeem || 0
-    if (minOrder > 0 && subtotal < minOrder) return null
-    if (balance > 0) {
+    const pointsNeeded = parsedLoyalty.redeemPoints || 100
+    if (customerLoyaltyPoints >= pointsNeeded) {
       const product = cart.find((item: any) => item.productId === parsedLoyalty.redeemProductId)
       return product || null
     }
     return null
-  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart, subtotal])
+  }, [useLoyalty, parsedLoyalty, customerLoyaltyPoints, cart])
   // Status real do pedido pendente para decidir se o botão "Cancelar" aparece.
   // customerOrders filtra pedidos pending no pagamento online, então pode estar
   // desatualizado; usamos o que estiver em memória (lastOrder/pendingOrderItems).
@@ -1504,9 +1429,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      const hasDiscount = (product as any).promoPrice && (product as any).onSale
-      const unitPrice = hasDiscount ? (product as any).promoPrice : product.price
-      return [...prev, { id: product.id, name: product.name, price: unitPrice, originalPrice: hasDiscount ? product.price : undefined, basePrice: unitPrice, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
+      return [...prev, { id: product.id, name: product.name, price: (product as any).promoPrice && (product as any).onSale ? (product as any).promoPrice : product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
     setTimeout(() => setAddedItemId(null), 800)
@@ -1798,7 +1721,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           couponDiscount: couponDiscount || 0,
           firstPurchaseDiscount: firstPurchaseDiscountValue || 0,
           useLoyalty: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct),
-          loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? Math.round(loyaltyDiscount * 100) : 0,
+          loyaltyPointsUsed: useLoyalty && (loyaltyDiscount > 0 || loyaltyFreeProduct) ? (parsedLoyalty?.redeemPoints || 0) : 0,
           loyaltyDiscount: loyaltyDiscount + (loyaltyFreeProduct ? loyaltyFreeProduct.price : 0),
           loyaltyFreeProduct: loyaltyFreeProduct ? loyaltyFreeProduct.name : null,
           notes: customer.notes,
@@ -2629,15 +2552,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-                    {reviewStats.total > 0 && (
-                      <span className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
-                        <Star className="h-2.5 w-2.5" fill="#f59e0b" stroke="#f59e0b" />
-                        {reviewStats.average.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
+                  <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                 )}
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
@@ -2657,7 +2572,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {/* Points */}
                   <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
                     <span className="text-[12px] font-bold text-gray-800">
-                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
+                      {customerData?.loyaltyPoints || customerLoyaltyPoints} pts
                     </span>
                   </button>
                 </div>
@@ -2669,48 +2584,10 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* Info card — sticky inside fixed header */}
-        {(() => {
-          const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
-          const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
-          const hasLoyalty = parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal
-          const showInfoCard = hasMinOrder || hasFreeDelivery || hasLoyalty
-          if (!showInfoCard) return null
-          return (
-            <div className="mx-auto max-w-3xl px-4 pb-2">
-              <div className="flex items-center gap-3 flex-wrap rounded-xl px-3 py-2.5" style={{ backgroundColor: theme.bgCard, borderLeft: `3px solid ${theme.success}`, border: `1px solid ${theme.borderCard}`, borderLeftWidth: "3px", borderLeftColor: theme.success }}>
-                {hasMinOrder && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.primary}15` }}>📦</span>
-                    Mín. <span style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
-                  </span>
-                )}
-                {hasMinOrder && hasFreeDelivery && (
-                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
-                )}
-                {hasFreeDelivery && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.success}15` }}>🛵</span>
-                    Frete grátis acima de <span style={{ color: theme.success }}>{formatCurrency(establishment.deliveryFreeAbove || 0)}</span>
-                  </span>
-                )}
-                {(hasMinOrder || hasFreeDelivery) && hasLoyalty && (
-                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
-                )}
-                {hasLoyalty && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.accent}15` }}>⭐</span>
-                    {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}% cashback
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })()}
       </div>
 
       {/* Spacer for fixed header */}
-      <div style={{ height: orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) ? "calc(130px + env(safe-area-inset-top, 0px))" : "calc(92px + env(safe-area-inset-top, 0px))" }} />
+      <div style={{ height: "calc(92px + env(safe-area-inset-top, 0px))" }} />
 
       {/* Closed banner — configurable */}
       {!isOpen && closedMessage && (
@@ -2948,12 +2825,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                         R$ {item.price.toFixed(2).replace(".", ",")}
                       </span>
                     </div>
-                    {(productLikes[item.id]?.likes || 0) > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px]" style={{ color: theme.textMutedMore }}>
-                        <Heart className="h-3 w-3" fill="#ef4444" stroke="#ef4444" />
-                        {productLikes[item.id]?.likes}
-                      </span>
-                    )}
+                    <span className="text-[10px] font-medium" style={{ color: theme.textMutedMore }}>
+                      ⭐ {(item as any).rating || "4.8"}
+                    </span>
                   </div>
                 </div>
               </button>
@@ -3007,7 +2881,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.name}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {filtered.map((product) => (
-                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
+                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
                     ))}
                   </div>
                 </div>
@@ -3026,7 +2900,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               >
                 <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} />
                   ))}
                 </div>
               </div>
@@ -3079,14 +2953,14 @@ onPaymentConfirmed={handlePaymentSuccess}
               style={{ color: cart.length > 0 ? theme.primary : theme.textMuted }}
             >
               <div className="relative">
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingBag className="h-5 w-5" />
                 {cart.length > 0 && (
                   <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ backgroundColor: theme.primary }}>
                     {totalItems}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-medium">Carrinho</span>
+              <span className="text-[10px] font-medium">Sacola</span>
             </button>
             <button
               onClick={() => {
@@ -3465,14 +3339,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Loyalty Card */}
                 {parsedLoyalty?.enabled && (() => {
                   const currentPts = customerData?.loyaltyPoints || customerLoyaltyPoints || 0
-                  const cashbackValue = currentPts * 0.01
-                  const maxRedeem = parsedLoyalty?.maxRedeemPercent || 25
+                  const ptsToCurrency = pointsToCurrency(currentPts, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount)
+                  const discountValue = parsedLoyalty?.redeemDiscount || 10
+                  const ptsNeeded = parsedLoyalty?.redeemPoints || 100
+                  const progressPct = Math.min(100, (currentPts / ptsNeeded) * 100)
                   return (
                     <div className="mx-4 mb-4 rounded-2xl p-4" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.primary}cc)`, boxShadow: `0 4px 20px ${theme.primary}40` }}>
                       <p className="text-[10px] font-medium text-white/60 uppercase tracking-wider">Seu saldo</p>
-                      <p className="text-2xl font-bold text-white mt-1">R$ {cashbackValue.toFixed(2)}</p>
-                      <p className="text-xs text-white/70 mt-0.5">Cashback disponível</p>
-                      <p className="text-[10px] text-white/50 mt-1">Use até {maxRedeem}% do pedido</p>
+                      <p className="text-2xl font-bold text-white mt-1">{currentPts} pts</p>
+                      <p className="text-xs text-white/70 mt-0.5">{formatCurrency(ptsToCurrency)}</p>
+                      <div className="mt-3">
+                        <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/20">
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #ffffffcc, #ffffff)" }} />
+                        </div>
+                        <p className="text-[10px] text-white/60 mt-1">
+                          {currentPts >= ptsNeeded
+                            ? `Pronto para resgatar! ${formatCurrency(discountValue)} de desconto`
+                            : `Faltam ${ptsNeeded - currentPts} pts para ${formatCurrency(discountValue)} de desconto`
+                          }
+                        </p>
+                      </div>
                     </div>
                   )
                 })()}
@@ -3491,8 +3377,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2.5 flex-1">
                       <span className="text-2xl">💰</span>
                       <div>
-                        <p className="text-lg font-bold" style={{ color: theme.text }}>R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}</p>
-                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Cashback</p>
+                        <p className="text-lg font-bold" style={{ color: theme.text }}>{formatCurrency((customerData?.realTotalSpent ?? customerData?.totalSpent) || 0)}</p>
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: theme.textMutedMore }}>Economizados</p>
                       </div>
                     </div>
                   </div>
@@ -4031,7 +3917,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Unified Cart/Checkout Full-Screen Flow */}
       {showCart && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
           {/* Header */}
           <div className="flex-shrink-0 max-w-lg mx-auto w-full flex items-center justify-between px-4 py-3">
@@ -4102,61 +3988,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Delivery fee / free */}
                 {orderType === "delivery" && deliveryFee > 0 && (
                   <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
-                      <span className="flex items-center gap-1 text-xs opacity-80">
-                        <Clock className="h-3 w-3" />
-                        {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
-                      </span>
-                    </div>
-                    {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (() => {
-                      const missing = (establishment.deliveryFreeAbove || 0) - subtotal
-                      const pct = Math.min(100, (subtotal / (establishment.deliveryFreeAbove || 1)) * 100)
-                      const close = pct >= 70
-                      const veryClose = pct >= 85
-                      const progressColor = veryClose ? "#22c55e" : close ? "#eab308" : theme.primary
-                      return (
-                        <>
-                          <div className="mt-1.5 flex items-center gap-1.5">
-                            {veryClose ? (
-                              <span className="text-xs">🎉</span>
-                            ) : close ? (
-                              <span className="text-xs">🔥</span>
-                            ) : null}
-                            <p className={`font-bold ${veryClose ? "text-sm" : "text-xs"}`} style={{ color: veryClose ? "#22c55e" : close ? "#eab308" : theme.textMuted }}>
-                              {veryClose ? `Faltam só ${formatCurrency(missing)}!` : `Faltam ${formatCurrency(missing)} para frete grátis!`}
-                            </p>
-                          </div>
-                          {veryClose && (
-                            <p className="text-[10px] mt-0.5" style={{ color: "#22c55e" }}>Adicione mais um item e ganhe frete grátis! 🛵</p>
-                          )}
-                          <div className="mt-2 h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}15` }}>
-                            <div
-                              className="h-full rounded-full transition-all duration-700 ease-out"
-                              style={{
-                                width: `${pct}%`,
-                                background: veryClose
-                                  ? "linear-gradient(90deg, #22c55e, #4ade80)"
-                                  : close
-                                    ? "linear-gradient(90deg, #eab308, #facc15)"
-                                    : `linear-gradient(90deg, ${theme.primary}, ${theme.primary}cc)`
-                              }}
-                            />
-                          </div>
-                        </>
-                      )
-                    })()}
+                    <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                    {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
+                      <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
+                    )}
                   </div>
                 )}
                 {orderType === "delivery" && deliveryFee === 0 && (
                   <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">Entrega grátis! 🎉</p>
-                      <span className="flex items-center gap-1 text-xs opacity-80">
-                        <Clock className="h-3 w-3" />
-                        {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
-                      </span>
-                    </div>
+                    <p className="font-medium">Entrega grátis! 🎉</p>
                   </div>
                 )}
 
@@ -4187,7 +4027,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             }}
                             className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
                             style={{
-                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}22` : theme.bgCard,
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
                               border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
                             }}
                           >
@@ -4265,63 +4105,25 @@ onPaymentConfirmed={handlePaymentSuccess}
                       return (
                         <div key={item.id} className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                           <div className="flex items-center gap-3">
-                            {item.image && (
-                              <button
-                                onClick={() => {
-                                  if (!hasOptions || isFromPendingOrder) return
-                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
-                                  if (!product) return
-                                  setSelectedProduct(product)
-                                  setSelectedProductQty(item.quantity)
-                                  setSelectedProductOptions(item.additionalOptions || [])
-                                  setEditingCartItemId(item.id)
-                                  setShowCart(false)
-                                }}
-                                className={`flex-shrink-0 rounded-xl overflow-hidden relative ${hasOptions && !isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
-                                disabled={!hasOptions || isFromPendingOrder}
-                              >
-                                <img src={item.image} alt="" loading="lazy" className="w-14 h-14 object-cover" />
-                                {hasOptions && !isFromPendingOrder && (
-                                  <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                                    <Pencil className="h-2.5 w-2.5 text-white" />
-                                  </span>
-                                )}
-                              </button>
-                            )}
+                            {item.image && <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
                             <div className="flex-1 min-w-0">
-                              <button
-                                onClick={() => {
-                                  if (!hasOptions || isFromPendingOrder) return
-                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
-                                  if (!product) return
-                                  setSelectedProduct(product)
-                                  setSelectedProductQty(item.quantity)
-                                  setSelectedProductOptions(item.additionalOptions || [])
-                                  setEditingCartItemId(item.id)
-                                  setShowCart(false)
-                                }}
-                                className={`text-left w-full ${hasOptions && !isFromPendingOrder ? "active:opacity-70 transition-opacity" : ""}`}
-                                disabled={!hasOptions || isFromPendingOrder}
-                              >
-                                <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
-                              </button>
-                              {(() => {
-                                const product = sortedCategories.flatMap(c => c.products).find((p: any) => p.id === item.id) as any
-                                const origPrice = (item as any).originalPrice || (product?.onSale && product?.promoPrice ? product.price : undefined)
-                                const unitBase = (item as any).basePrice ?? item.price
-                                const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
-                                const totalUnit = unitBase + optsPrice
-                                return origPrice ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice + optsPrice)}</span>
-                                    <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency(totalUnit)}</span>
-                                  </div>
-                                ) : (
-                                  <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency(totalUnit)}</p>
-                                )
-                              })()}
+                              <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
+                              <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency((item as any).basePrice || item.price)}</p>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {!isFromPendingOrder && hasOptions && (
+                                <button onClick={() => {
+                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                                  if (!product) return
+                                  setSelectedProduct(product)
+                                  setSelectedProductQty(item.quantity)
+                                  setSelectedProductOptions(item.additionalOptions || [])
+                                  setEditingCartItemId(item.id)
+                                  setShowCart(false)
+                                }} className="p-1 rounded" style={{ color: theme.textMutedMore }}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                               {!isFromPendingOrder && (
                                 <>
                                   <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: Math.max(1, ci.quantity - 1) } : ci))}
@@ -4346,7 +4148,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <div className="flex flex-wrap gap-1 mt-2">
                               {selectedOpts.map((opt: any, i: number) => (
                                 <span key={i} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                  {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
+                                  {opt.name}
                                 </span>
                               ))}
                             </div>
@@ -4355,6 +4157,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                       )
                     })}
                   </div>
+                )}
+
+                {/* Empty cart button */}
+                {cart.length > 0 && (
+                  <button onClick={() => setCart([])} className="text-xs font-medium" style={{ color: "#EF4444" }}>Esvaziar carrinho</button>
                 )}
 
                 {/* First purchase bonus banner */}
@@ -4376,30 +4183,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Coupon */}
                 {cart.length > 0 && (
                   <div className="space-y-1">
-                    {!couponData && !couponError && (
-                      <button
-                        onClick={() => setExpandedProfileItem(expandedProfileItem === "coupon" ? null : "coupon")}
-                        className="flex items-center gap-2 py-1.5 text-xs font-medium transition-colors"
-                        style={{ color: theme.textMutedMore }}
-                      >
-                        <Tag className="h-3.5 w-3.5" />
-                        Tem um cupom de desconto?
-                        <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedProfileItem === "coupon" ? "rotate-90" : ""}`} />
+                    <div className="flex gap-2">
+                      <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
+                      <button onClick={validateCoupon} disabled={couponLoading}
+                        className="px-4 py-2.5 rounded-xl text-xs font-medium border" style={{ borderColor: theme.borderCard, color: theme.textSubtle }}>
+                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
                       </button>
-                    )}
-                    {((expandedProfileItem === "coupon") || couponData || couponError) && (
-                      <>
-                        <div className="flex gap-2">
-                          <input placeholder="Cupom de desconto" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
-                            className="flex-1 px-3 py-2.5 rounded-xl text-sm border" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput }} />
-                          <button onClick={validateCoupon} disabled={couponLoading}
-                            className="px-5 py-2.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: theme.primary, color: "#fff" }}>
-                            {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
-                          </button>
-                        </div>
-                        {couponError && <p className="text-xs text-red-400">{couponError}</p>}
-                      </>
-                    )}
+                    </div>
+                    {couponError && <p className="text-xs text-red-400">{couponError}</p>}
                     {couponData && (
                       <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ backgroundColor: `${theme.success}15`, border: `1px solid ${theme.success}30` }}>
                         <div className="flex items-center gap-2">
@@ -4421,11 +4213,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4" style={{ color: theme.primary }} />
                       <div>
-                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</div>
-                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
-                          Saldo: R$ {(customerLoyaltyPoints * 0.01).toFixed(2)}
-                        </div>
-                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Use até {parsedLoyalty?.maxRedeemPercent || 25}% do pedido</div>
+                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meus pontos</div>
+                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>{customerLoyaltyPoints} pts = {formatCurrency(pointsToCurrency(customerLoyaltyPoints, parsedLoyalty?.redeemPoints, parsedLoyalty?.redeemDiscount))}</div>
+                        {parsedLoyalty?.redeemPoints && parsedLoyalty?.redeemDiscount && (
+                          <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Máx. {parsedLoyalty.redeemPoints} pts/pedido = {formatCurrency(parsedLoyalty.redeemDiscount)} de desconto</div>
+                        )}
                       </div>
                     </div>
                     <button onClick={() => { const next = !useLoyalty; console.log("[loyalty] toggle clicked:", { next, customerLoyaltyPoints, parsedLoyalty, subtotal }); setUseLoyalty(next); }}
@@ -4454,7 +4246,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                     {loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm text-amber-400">
-                        <span>Desconto (cashback)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                        <span>Desconto (cash)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
                       </div>
                     )}
                     {firstPurchaseDiscountValue > 0 && (
@@ -4470,7 +4262,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-1.5 pt-1">
                         <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
+                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
                         </span>
                       </div>
                     )}
@@ -4503,7 +4295,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             }}
                             className="flex-shrink-0 rounded-xl p-3 text-left transition-all min-w-[140px] max-w-[180px]"
                             style={{
-                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}22` : theme.bgCard,
+                              backgroundColor: selectedAddressId === addr.id ? `${theme.primary}14` : theme.bgCard,
                               border: `2px solid ${selectedAddressId === addr.id ? theme.primary : theme.borderCard}`,
                             }}
                           >
@@ -4678,25 +4470,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="flex items-center gap-1 text-xs mb-2" style={{ color: theme.textMuted }}>
                     {orderType === "delivery" ? <Bike className="h-3 w-3" /> : orderType === "dineIn" ? <Utensils className="h-3 w-3" /> : <StoreIcon className="h-3 w-3" />}
                     {orderType === "delivery" ? "Entrega" : orderType === "dineIn" ? "No local" : "Retirada"}
-                    {orderType === "delivery" && deliveryFee === 0 && (
-                      <span className="ml-1 font-medium" style={{ color: theme.success }}>(Grátis)</span>
-                    )}
                   </div>
                   {cart.map((item) => (
-                    <div key={item.id} className="mb-2">
-                      <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
-                        <span>{item.name} x{item.quantity}</span>
-                        <span>{formatCurrency(item.price * item.quantity)}</span>
-                      </div>
-                      {item.additionalOptions && item.additionalOptions.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {item.additionalOptions.map((opt: any, i: number) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.textMuted }}>
-                              {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    <div key={item.id} className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>{formatCurrency(item.price * item.quantity)}</span>
                     </div>
                   ))}
                   <div className="mt-2 space-y-1 border-t pt-2" style={{ borderColor: theme.borderCard }}>
@@ -4720,7 +4498,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                     {useLoyalty && loyaltyDiscount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: theme.success }}>
-                        <span>Desconto (cashback)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
+                        <span>Desconto (pontos)</span><span>-{formatCurrency(loyaltyDiscount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold" style={{ color: theme.text }}>
@@ -4729,9 +4507,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {parsedLoyalty?.enabled && parsedLoyalty?.pointsPerReal && (
                       <div className="flex items-center gap-1.5 pt-1">
-                        <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                        <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
+                          Você ganhará +{Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier} pontos
                         </span>
                       </div>
                     )}
@@ -4744,6 +4522,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               <OrderConfirmationScreen
                 theme={theme}
                 title={establishment.confirmationTitle || "Pedido enviado!"}
+                logo={establishment.logo || undefined}
                 establishmentName={establishment.name || "Pedefacil"}
                 orderNumber={orderResult?.orderNumber}
                 items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
@@ -4755,16 +4534,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                 loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={total * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 10) / 100 * tierMultiplier}
+                cashEarned={parsedLoyalty?.pointsPerReal ? Math.floor(total / parsedLoyalty.pointsPerReal) * tierMultiplier : 0}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
-                maxRedeemPercent={parsedLoyalty?.maxRedeemPercent || parsedLoyalty?.redeemLimitValue || 25}
+                redeemPoints={parsedLoyalty?.redeemPoints}
+                redeemDiscount={parsedLoyalty?.redeemDiscount}
                 orderType={orderResult?.orderType}
                 deliveryCode={orderResult?.deliveryCode}
                 deliveryAddress={orderType === "delivery" ? fullAddress : null}
                 establishmentAddress={establishment.address || null}
-                estimatedDeliveryMin={establishment.estimatedDeliveryMin}
-                estimatedDeliveryMax={establishment.estimatedDeliveryMax}
-                whatsappPhone={establishment.whatsappNumber || establishment.phone}
                 onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
@@ -4772,7 +4549,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
 
           {/* Fixed bottom buttons — always in same position */}
-          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-2 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
                 {isBelowMinimum && (
@@ -4813,7 +4590,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <button onClick={(e) => { e.preventDefault(); handleSiteOrder(e as any) }} disabled={ordering}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap overflow-hidden min-h-[50px]"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
-                  {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <CheckCircle className="h-4 w-4 shrink-0" />}
+                  {ordering ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Shield className="h-4 w-4 shrink-0" />}
                   {ordering ? "Enviando..." : "Confirmar pedido"}
                 </button>
                 <button onClick={() => setCartStep("cart")}
@@ -4857,26 +4634,17 @@ onPaymentConfirmed={handlePaymentSuccess}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
           onReorder={(order) => {
             const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            const cartItems: CartItem[] = items.map((item: any) => {
-              const product = establishment.categories.flatMap(c => c.products).find((p: any) => p.id === (item.productId || item.id))
-              const currentPrice = product?.price ?? item.price
-              const hasDiscount = product && (product as any).promoPrice && (product as any).onSale
-              const unitPrice = hasDiscount ? (product as any).promoPrice : currentPrice
-              return {
-                id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
-                name: item.name,
-                price: unitPrice,
-                originalPrice: hasDiscount ? currentPrice : (item.originalPrice || undefined),
-                basePrice: unitPrice,
-                image: item.image || product?.image || null,
-                quantity: item.quantity,
-                additionalOptions: item.additionalOptions || [],
-              }
-            })
+            const cartItems: CartItem[] = items.map((item: any) => ({
+              id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
+              name: item.name,
+              price: item.price,
+              image: item.image || null,
+              quantity: item.quantity,
+              additionalOptions: item.additionalOptions || [],
+            }))
             setCart(cartItems)
             setShowOrdersList(false)
-            setShowCart(true)
-            setCartStep("cart")
+            setActiveTab("menu")
           }}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
@@ -5407,15 +5175,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <Clock className="h-3.5 w-3.5" />
                     <span className="text-xs">~15 min</span>
                   </div>
-                  <button
-                    onClick={() => toggleLike(selectedProduct.id)}
-                    className="flex items-center gap-1 text-xs transition-colors"
-                    style={{ color: productLikes[selectedProduct.id]?.liked ? "#ef4444" : theme.textMutedMore }}
-                  >
-                    <Heart className="h-4 w-4" fill={productLikes[selectedProduct.id]?.liked ? "#ef4444" : "none"} />
-                    {(productLikes[selectedProduct.id]?.likes || 0) > 0 && (
-                      <span>{productLikes[selectedProduct.id]?.likes}</span>
-                    )}
+                  <button className="flex items-center gap-1 text-xs transition-colors" style={{ color: theme.textMutedMore }}>
+                    <Heart className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -5537,63 +5298,37 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )
               })()}
 
-              {/* Recommendations */}
-              {(() => {
-                const productRecIds: string[] = (selectedProduct as any).recommendedProductIds ? JSON.parse((selectedProduct as any).recommendedProductIds) : []
-                const category = sortedCategories.find(c => c.id === (selectedProduct as any).categoryId)
-                const catRecIds: string[] = category?.recommendedProductIds ? JSON.parse(category.recommendedProductIds) : []
-                const recIds = productRecIds.length > 0 ? productRecIds : catRecIds
-                if (recIds.length === 0) return null
-                const allProducts = sortedCategories.flatMap(c => c.products)
-                const recProducts = recIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean).slice(0, 3)
-                if (recProducts.length === 0) return null
-                return (
-                  <div className="px-5 pb-4">
-                    <div className="p-3 rounded-xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
-                        <span className="text-xs font-bold" style={{ color: theme.primary }}>Quem pediu, também pediu</span>
-                      </div>
-                      <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-                        {recProducts.map((rec: any) => (
-                          <button
-                            key={rec.id}
-                            onClick={() => {
-                              setCart((prev) => {
-                                const hasDiscount = rec.onSale && rec.promoPrice
-                                const unitPrice = hasDiscount ? rec.promoPrice : rec.price
-                                const existing = prev.find((item) => item.id === rec.id)
-                                if (existing) {
-                                  return prev.map((item) => item.id === rec.id ? { ...item, quantity: item.quantity + 1 } : item)
-                                }
-                                return [...prev, {
-                                  id: rec.id, name: rec.name, price: unitPrice,
-                                  originalPrice: hasDiscount ? rec.price : undefined,
-                                  basePrice: unitPrice, image: rec.image, quantity: 1,
-                                  additionalOptions: []
-                                } as CartItem]
-                              })
-                              toast(`${rec.name} adicionado!`, "success")
-                            }}
-                            className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
-                            style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
-                          >
-                            {rec.image ? (
-                              <img src={rec.image} alt={rec.name} className="w-8 h-8 rounded-lg object-cover" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: `${theme.primary}15` }}>🍔</div>
-                            )}
-                            <div className="text-left">
-                              <div className="text-[10px] font-medium" style={{ color: theme.text }}>{rec.name}</div>
-                              <div className="text-[10px] font-bold" style={{ color: theme.primary }}>{formatCurrency(rec.onSale && rec.promoPrice ? rec.promoPrice : rec.price)}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+              {/* Cross-sell: "Quem pediu, também pediu" */}
+              {selectedProduct.additionalOptions && selectedProduct.additionalOptions.length > 0 && (
+                <div className="px-5 pb-4">
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles className="h-4 w-4" style={{ color: theme.primary }} />
+                      <span className="text-xs font-bold" style={{ color: theme.primary }}>Quem pediu, também pediu</span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                      {selectedProduct.additionalOptions.slice(0, 3).map((opt: any, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const existing = selectedProductOptions.find((o) => o.name === opt.name)
+                            if (existing) setSelectedProductOptions(selectedProductOptions.map((o) => o.name === opt.name ? { ...o, quantity: o.quantity + 1 } : o))
+                            else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                          }}
+                          className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
+                          style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ backgroundColor: `${theme.primary}15` }}>🍫</div>
+                          <div className="text-left">
+                            <div className="text-[10px] font-medium" style={{ color: theme.text }}>{opt.name}</div>
+                            <div className="text-[10px] font-bold" style={{ color: theme.primary }}>+{formatCurrency(opt.price)}</div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                )
-              })()}
+                </div>
+              )}
             </div>
 
             {/* Fixed bottom button */}
@@ -5809,7 +5544,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   return false
                 })
                 const basePrice = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price
-                const hasDiscount = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
                 return (
                   <button
                     onClick={() => {
@@ -5818,7 +5552,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setCart((prev) => {
                         const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                         if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, basePrice: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
+                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
                       })
                       setBottomSheetProduct(null)
                       setAddedItemId(bottomSheetProduct.id)
@@ -5835,52 +5569,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </button>
                 )
               })()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Review Modal — post-delivery */}
-      {showReviewModal && pendingReviewOrder && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl p-6 shadow-2xl w-[min(400px,95vw)]" style={{ backgroundColor: theme.bgCard }}>
-            <h3 className="text-lg font-bold mb-1" style={{ color: theme.text }}>Como foi seu pedido?</h3>
-            <p className="text-xs mb-4" style={{ color: theme.textMuted }}>Sua avaliação ajuda outros clientes</p>
-            <div className="flex items-center justify-center gap-2 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button key={star} onClick={() => setReviewRating(star)} className="transition-transform active:scale-125">
-                  <Star
-                    className="h-8 w-8"
-                    fill={star <= reviewRating ? "#facc15" : "none"}
-                    stroke={star <= reviewRating ? "#facc15" : theme.textMuted}
-                  />
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-              placeholder="Conte mais sobre sua experiência (opcional)"
-              rows={3}
-              className="w-full rounded-xl border px-3 py-2 text-sm mb-4 resize-none focus:outline-none focus:ring-1 focus:ring-green-500"
-              style={{ borderColor: theme.borderInput, backgroundColor: theme.bgInput, color: theme.text }}
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowReviewModal(false); setPendingReviewOrder(null) }}
-                className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
-                style={{ border: `1px solid ${theme.borderCard}`, color: theme.textMuted }}
-              >
-                Agora não
-              </button>
-              <button
-                onClick={submitReview}
-                disabled={reviewSubmitting}
-                className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white transition-colors"
-                style={{ backgroundColor: theme.primary, opacity: reviewSubmitting ? 0.6 : 1 }}
-              >
-                {reviewSubmitting ? "Enviando..." : "Enviar"}
-              </button>
             </div>
           </div>
         </div>
@@ -6508,7 +6196,7 @@ function PaymentModal({
   )
 }
 
-function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes, liked, onToggleLike }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void; likes?: number; liked?: boolean; onToggleLike?: (productId: string) => void }) {
+function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect }: { product: Product; onAdd: (p: Product) => void; theme: { primary: string; bgCard: string; bgCardHover: string; borderCard: string; borderCardHover: string; text: string; textMuted: string; shadowPrimary: string }; disabled?: boolean; isAdded?: boolean; onSelect?: (p: Product) => void }) {
   const hasPromo = (product as any).promoPrice && (product as any).onSale
   const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
   const hasDiscount = hasPromo || hasFeaturedDiscount
@@ -6558,20 +6246,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
         )}
       </div>
       <div className="p-2.5">
-        <div className="flex items-start justify-between">
-          <h3 className="font-semibold text-xs leading-tight flex-1" style={{ color: theme.text }}>{product.name}</h3>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleLike?.(product.id); }}
-            className="ml-1 flex-shrink-0 transition-transform active:scale-125"
-            aria-label={liked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-          >
-            <Heart
-              className="h-4 w-4 transition-colors"
-              fill={liked ? "#ef4444" : "none"}
-              stroke={liked ? "#ef4444" : theme.textMuted}
-            />
-          </button>
-        </div>
+        <h3 className="font-semibold text-xs leading-tight" style={{ color: theme.text }}>{product.name}</h3>
         {product.description && (
           <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
@@ -6584,30 +6259,22 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
               {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {(likes || 0) > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px]" style={{ color: theme.textMuted }}>
-                <Heart className="h-3 w-3" fill="#ef4444" stroke="#ef4444" />
-                {likes}
-              </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onAdd(product); }}
+            aria-label={`Adicionar ${product.name} ao carrinho`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+            style={{
+              backgroundColor: isAdded ? "#22c55e" : theme.primary,
+              boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
+            }}
+            disabled={disabled}
+          >
+            {isAdded ? (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <Plus className="h-4 w-4" />
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); onAdd(product); }}
-              aria-label={`Adicionar ${product.name} ao carrinho`}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
-              style={{
-                backgroundColor: isAdded ? "#22c55e" : theme.primary,
-                boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
-              }}
-              disabled={disabled}
-            >
-              {isAdded ? (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+          </button>
         </div>
       </div>
     </div>
