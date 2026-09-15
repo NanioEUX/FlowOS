@@ -817,7 +817,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           const delivered = data.orders.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed)
           if (delivered) {
             const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
-            if (hoursSinceDelivery > 0.5) {
+            const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
+            if (hoursSinceDelivery > reviewDelayMinutes / 60) {
               setPendingReviewOrder(delivered)
               setShowReviewModal(true)
             }

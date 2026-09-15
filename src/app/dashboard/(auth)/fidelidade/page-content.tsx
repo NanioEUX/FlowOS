@@ -44,6 +44,7 @@ export default function FidelidadePageContent() {
     maxRedeemPercent: 25,
     minOrderToRedeem: 0,
     cashbackExpirationDays: 21,
+    reviewPromptMinutes: 30,
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
     enabled: false,
@@ -228,6 +229,29 @@ export default function FidelidadePageContent() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Review Config */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <Star className="h-4 w-4" />
+            Avaliação Pós-Pedido
+          </h3>
+          <p className="text-sm text-zinc-500">Configure quando o cliente receberá o pedido de avaliação.</p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-700">Tempo para enviar avaliação (minutos)</label>
+            <input
+              type="number"
+              min="5"
+              max="1440"
+              value={loyaltyConfig.reviewPromptMinutes}
+              onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, reviewPromptMinutes: Number(e.target.value) })}
+              className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+            />
+            <p className="mt-1 text-xs text-zinc-400">Ex: 30 = cliente recebe pedido de avaliação 30min após a entrega</p>
+          </div>
         </CardContent>
       </Card>
 
