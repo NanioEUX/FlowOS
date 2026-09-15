@@ -43,6 +43,7 @@ export default function FidelidadePageContent() {
     cashbackPercent: 10,
     maxRedeemPercent: 25,
     minOrderToRedeem: 0,
+    cashbackExpirationDays: 21,
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
     enabled: false,
@@ -207,9 +208,22 @@ export default function FidelidadePageContent() {
                 />
               </div>
 
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Dias para expirar o saldo</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={loyaltyConfig.cashbackExpirationDays}
+                  onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, cashbackExpirationDays: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Saldo não utilizado expira após este período</p>
+              </div>
+
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                 <p className="text-xs text-amber-700">
-                  <strong>Regras:</strong> Cashback não acumula com cupons. O saldo expira em 21 dias.
+                  <strong>Regras:</strong> Cashback não acumula com cupons. O saldo expira em {loyaltyConfig.cashbackExpirationDays} dias.
                 </p>
               </div>
             </div>
