@@ -2595,18 +2595,20 @@ onPaymentConfirmed={handlePaymentSuccess}
         {/* Info card — sticky inside fixed header */}
         {orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) && (
           <div className="mx-auto max-w-3xl px-4 pb-2">
-            <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+            <div className="flex items-center gap-4 rounded-xl px-3 py-2.5" style={{ backgroundColor: theme.bgCard, borderLeft: `3px solid ${theme.success}`, border: `1px solid ${theme.borderCard}`, borderLeftWidth: "3px", borderLeftColor: theme.success }}>
               {minimumOrder.enabled && minimumOrder.value > 0 && (
-                <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.textMuted }}>
-                  <Package className="h-3 w-3" /> Mín. {formatCurrency(minimumOrder.value)}
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.primary}15` }}>📦</span>
+                  Mín. <span style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
                 </span>
               )}
               {minimumOrder.enabled && minimumOrder.value > 0 && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-                <span className="text-[11px]" style={{ color: theme.borderCard }}>•</span>
+                <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
               )}
               {establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && (
-                <span className="flex items-center gap-1 text-[11px]" style={{ color: theme.success }}>
-                  🛵 Frete grátis acima de {formatCurrency(establishment.deliveryFreeAbove)}
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.success}15` }}>🛵</span>
+                  Frete grátis acima de <span style={{ color: theme.success }}>{formatCurrency(establishment.deliveryFreeAbove)}</span>
                 </span>
               )}
             </div>
@@ -4023,14 +4025,43 @@ onPaymentConfirmed={handlePaymentSuccess}
                         {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                       </span>
                     </div>
-                    {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (
-                      <>
-                        <p className="text-xs mt-1 opacity-70">Faltam {formatCurrency((establishment.deliveryFreeAbove || 0) - subtotal)} para frete grátis!</p>
-                        <div className="mt-2 h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
-                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (subtotal / (establishment.deliveryFreeAbove || 1)) * 100)}%`, backgroundColor: theme.primary }} />
-                        </div>
-                      </>
-                    )}
+                    {establishment.deliveryFeeType === "free_above" && subtotal < (establishment.deliveryFreeAbove || 0) && (() => {
+                      const missing = (establishment.deliveryFreeAbove || 0) - subtotal
+                      const pct = Math.min(100, (subtotal / (establishment.deliveryFreeAbove || 1)) * 100)
+                      const close = pct >= 70
+                      const veryClose = pct >= 85
+                      const progressColor = veryClose ? "#22c55e" : close ? "#eab308" : theme.primary
+                      return (
+                        <>
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            {veryClose ? (
+                              <span className="text-xs">🎉</span>
+                            ) : close ? (
+                              <span className="text-xs">🔥</span>
+                            ) : null}
+                            <p className={`font-bold ${veryClose ? "text-sm" : "text-xs"}`} style={{ color: veryClose ? "#22c55e" : close ? "#eab308" : theme.textMuted }}>
+                              {veryClose ? `Faltam só ${formatCurrency(missing)}!` : `Faltam ${formatCurrency(missing)} para frete grátis!`}
+                            </p>
+                          </div>
+                          {veryClose && (
+                            <p className="text-[10px] mt-0.5" style={{ color: "#22c55e" }}>Adicione mais um item e ganhe frete grátis! 🛵</p>
+                          )}
+                          <div className="mt-2 h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: `${theme.primary}15` }}>
+                            <div
+                              className="h-full rounded-full transition-all duration-700 ease-out"
+                              style={{
+                                width: `${pct}%`,
+                                background: veryClose
+                                  ? "linear-gradient(90deg, #22c55e, #4ade80)"
+                                  : close
+                                    ? "linear-gradient(90deg, #eab308, #facc15)"
+                                    : `linear-gradient(90deg, ${theme.primary}, ${theme.primary}cc)`
+                              }}
+                            />
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
                 {orderType === "delivery" && deliveryFee === 0 && (
@@ -5456,7 +5487,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                   additionalOptions: []
                                 } as CartItem]
                               })
-                              toast({ title: `${rec.name} adicionado!` })
+                              toast(`${rec.name} adicionado!`, "success")
                             }}
                             className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
                             style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
