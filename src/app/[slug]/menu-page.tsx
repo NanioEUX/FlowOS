@@ -366,6 +366,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+      localStorage.removeItem(`pedefacil-review-dismissed-${establishment.slug}`)
     }
     prevUserPhoneRef.current = customer.phone || null
   }, [customer.phone, establishment.slug])
@@ -855,11 +856,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   useEffect(() => {
     if (!customer.phone) return
+    const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
+    let dismissed: Record<string, number> = {}
+    try { dismissed = JSON.parse(dismissedRaw) } catch {}
+    const now = Date.now()
+    Object.keys(dismissed).forEach((k) => { if (now - dismissed[k] > 30 * 24 * 60 * 60 * 1000) delete dismissed[k] })
+
     fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.error && Array.isArray(data)) {
-          const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed)
+          const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed && !dismissed[o.id])
           if (delivered) {
             const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
             const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
@@ -1141,6 +1148,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         if (data.addresses.length === 0) {
           setSelectedAddressId(null)
           setAddressSaved(false)
+          setCep("")
+          setCepAddress(null)
+          setCustomer((prev) => ({ ...prev, address: "" }))
         } else {
           const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0]
           if (defaultAddr) {
@@ -4054,6 +4064,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+                  localStorage.removeItem(`pedefacil-review-dismissed-${establishment.slug}`)
                   setShowCustomerProfile(false)
                   setShowLogoutConfirm(false)
                 }}
@@ -5995,7 +6006,17 @@ onPaymentConfirmed={handlePaymentSuccess}
             />
             <div className="flex gap-2">
               <button
-                onClick={() => { setShowReviewModal(false); setPendingReviewOrder(null) }}
+                onClick={() => {
+                  if (pendingReviewOrder) {
+                    const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
+                    let dismissed: Record<string, number> = {}
+                    try { dismissed = JSON.parse(dismissedRaw) } catch {}
+                    dismissed[pendingReviewOrder.id] = Date.now()
+                    localStorage.setItem(`pedefacil-review-dismissed-${establishment.slug}`, JSON.stringify(dismissed))
+                  }
+                  setShowReviewModal(false)
+                  setPendingReviewOrder(null)
+                }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                 style={{ border: `1px solid ${theme.borderCard}`, color: theme.textMuted }}
               >
