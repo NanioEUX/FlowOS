@@ -571,6 +571,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const markSessionVerified = () => {
     setSessionVerified(true)
     setReviewGateOpen(true)
+    reviewCheckedRef.current = false
     try { localStorage.setItem(SESSION_KEY, "1") } catch {}
     // Show first purchase bonus screen if eligible
     if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
@@ -874,11 +875,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const now = Date.now()
     Object.keys(dismissed).forEach((k) => { if (now - dismissed[k] > 30 * 24 * 60 * 60 * 1000) delete dismissed[k] })
 
+    console.log("[reviewCheck] phone:", customer.phone, "sessionVerified:", sessionVerified, "reviewGateOpen:", reviewGateOpen, "dismissed:", Object.keys(dismissed))
+
     fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (!data.error && Array.isArray(data)) {
           const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed && !dismissed[o.id])
+          console.log("[reviewCheck] orders:", data.length, "delivered unreviewed not-dismissed:", delivered?.id || "NONE", "all delivered:", data.filter((o: any) => o.status === "delivered").map((o: any) => ({ id: o.id, reviewed: o.reviewed, dismissed: !!dismissed[o.id] })))
           if (delivered) {
             const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
             const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
@@ -899,6 +903,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     try { dismissed = JSON.parse(raw) } catch {}
     dismissed[orderId] = Date.now()
     localStorage.setItem(key, JSON.stringify(dismissed))
+    console.log("[dismissReview] saved orderId:", orderId, "key:", key, "all dismissed:", Object.keys(dismissed))
   }, [establishment.slug])
 
   const submitReview = useCallback(async () => {
