@@ -3299,10 +3299,17 @@ onPaymentConfirmed={handlePaymentSuccess}
         <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
-                <Shield className="h-5 w-5" style={{ color: theme.accent }} />
-                Confirmar WhatsApp
-              </h2>
+              <div className="flex items-center gap-2">
+                {(whatsappSent || verifyDevCode) && (
+                  <button onClick={() => { setWhatsappSent(false); setVerifyDevCode(""); setVerifyCode(""); setVerifyError(""); }} className="hover:opacity-70" style={{ color: theme.textMuted }}>
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+                <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
+                  <Shield className="h-5 w-5" style={{ color: theme.accent }} />
+                  Confirmar WhatsApp
+                </h2>
+              </div>
               <button onClick={() => { setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
                 <X className="h-5 w-5" />
               </button>
@@ -3969,32 +3976,20 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             {/* City + State */}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs" style={{ color: theme.textMuted }}>Cidade</label>
-                <input
-                  value={addressForm.city}
-                  onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
-                  placeholder="Cidade"
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                />
-              </div>
-              <div className="w-16">
-                <label className="text-xs" style={{ color: theme.textMuted }}>UF</label>
-                <input
-                  value={addressForm.state}
-                  onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value.toUpperCase().slice(0, 2) }))}
-                  placeholder="SC"
-                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
-                />
-              </div>
+            <div>
+              <label className="text-xs" style={{ color: theme.textMuted }}>Cidade</label>
+              <input
+                value={addressForm.city ? `${addressForm.city}${addressForm.state ? " - " + addressForm.state : ""}` : ""}
+                readOnly
+                placeholder="Preenchido pelo CEP"
+                className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                style={{ backgroundColor: theme.bgCard, color: theme.textMuted, borderColor: theme.borderInput, borderWidth: 1, cursor: "not-allowed", opacity: 0.7 }}
+              />
             </div>
 
             <button
               onClick={saveNewAddress}
-              disabled={addressFormLoading || !addressForm.street || !addressForm.number || !addressForm.city || !addressForm.state || !addressForm.cep}
+              disabled={addressFormLoading || !addressForm.street || !addressForm.number || !addressForm.cep}
               className="w-full rounded-lg py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: theme.primary }}
             >
@@ -4338,65 +4333,17 @@ onPaymentConfirmed={handlePaymentSuccess}
                       </div>
                     )}
 
-                    {/* No addresses — show CEP input */}
+                    {/* No addresses — show add button */}
                     {addresses.length === 0 && (
-                      <>
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Nome do endereço</label>
-                          <input placeholder="Ex: Casa, Trabalho" value={addressLabel} onChange={(e) => setAddressLabel(e.target.value)}
-                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
-                        </div>
-                        <div className="flex gap-2">
-                          <div className="space-y-1">
-                            <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
-                            <input placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                              className="w-32 h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
-                              style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved && !!cepAddress} />
-                          </div>
-                          {cep.length === 8 && !cepLoading && (
-                            <button type="button" onClick={lookupCep} className="mt-6 text-xs hover:underline self-start" style={{ color: theme.accent }}>Buscar</button>
-                          )}
-                          {cepLoading && <Loader2 className="mt-7 h-4 w-4 animate-spin" style={{ color: theme.textMutedMore }} />}
-                        </div>
-                        {cepError && <p className="text-xs text-red-400">{cepError}</p>}
-                        {cepAddress && <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>}
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
-                          <input ref={numberInputRef} placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
-                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
-                        </div>
-                        {cepAddress && customer.address && (
-                          <button type="button" onClick={async () => {
-                            if (customerData?.id) {
-                              try {
-                                await fetch("/api/addresses", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    customerId: customerData.id,
-                                    establishmentId: establishment.id,
-                                    label: addressLabel || null,
-                                    street: cepAddress.logradouro,
-                                    number: customer.address,
-                                    neighborhood: cepAddress.bairro,
-                                    city: cepAddress.localidade,
-                                    state: cepAddress.uf,
-                                    cep: cep,
-                                  }),
-                                })
-                                await fetchAddresses(customerData.id)
-                              } catch {}
-                            }
-                            setAddressSaved(true)
-                            setEditingAddress(false)
-                          }}
-                            className="w-full rounded-xl px-4 py-2 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: theme.primary }}>
-                            Salvar endereço
-                          </button>
-                        )}
-                      </>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddressForm(true)}
+                        className="w-full rounded-xl border-2 border-dashed p-4 text-sm font-medium flex items-center justify-center gap-2 hover:opacity-80 transition-opacity"
+                        style={{ borderColor: theme.primary, color: theme.primary }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Adicionar endereço
+                      </button>
                     )}
                   </div>
                 )}
