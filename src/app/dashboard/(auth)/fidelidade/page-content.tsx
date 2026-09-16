@@ -358,15 +358,14 @@ export default function FidelidadePageContent() {
               </Button>
               {tierConfig.enabled && loyaltyConfig.enabled && (
                 <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 mt-2">
-                  <p className="text-xs font-semibold text-zinc-600 mb-2">Exemplo com pedido de R$ 50,00</p>
-                  <div className="space-y-1">
-                    <p className="text-xs text-zinc-500">Base ({loyaltyConfig.cashbackPercent || 0}%): R$ {(50 * (loyaltyConfig.cashbackPercent || 0) / 100).toFixed(2)}</p>
+                  <p className="text-xs font-semibold text-zinc-600 mb-2">Exemplo com R$ 60,00</p>
+                  <div className="space-y-1.5">
                     {tierConfig.tiers.map((tier) => {
-                      const base = 50 * (loyaltyConfig.cashbackPercent || 0) / 100
+                      const base = 60 * (loyaltyConfig.cashbackPercent || 0) / 100
                       const total = base * tier.multiplier
                       return (
                         <p key={tier.name} className="text-xs" style={{ color: tier.color }}>
-                          {tier.emoji} {tier.name} ({tier.multiplier}x): R$ {total.toFixed(2)}
+                          {tier.emoji} {tier.name}: R$ 60 × {loyaltyConfig.cashbackPercent || 0}% = R$ {base.toFixed(2)} x {tier.multiplier} = R$ {total.toFixed(2)}
                         </p>
                       )
                     })}
