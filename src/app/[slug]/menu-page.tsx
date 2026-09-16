@@ -880,28 +880,44 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       .catch(() => {})
   }, [customer.phone, establishment.id])
 
+  const dismissReview = useCallback((orderId: string) => {
+    const key = `pedefacil-review-dismissed-${establishment.slug}`
+    const raw = localStorage.getItem(key) || "{}"
+    let dismissed: Record<string, number> = {}
+    try { dismissed = JSON.parse(raw) } catch {}
+    dismissed[orderId] = Date.now()
+    localStorage.setItem(key, JSON.stringify(dismissed))
+  }, [establishment.slug])
+
   const submitReview = useCallback(async () => {
     if (!pendingReviewOrder) return
     setReviewSubmitting(true)
+    const orderId = pendingReviewOrder.id
     try {
-      await fetch("/api/reviews", {
+      const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rating: reviewRating,
           comment: reviewComment || null,
           customerPhone: customer.phone || null,
-          orderId: pendingReviewOrder.id,
+          orderId,
           establishmentId: establishment.id,
         }),
       })
-      setShowReviewModal(false)
-      setPendingReviewOrder(null)
-      setReviewRating(5)
-      setReviewComment("")
-    } catch {}
+      if (!res.ok) {
+        console.error("[submitReview] API error:", res.status)
+      }
+    } catch (e) {
+      console.error("[submitReview] fetch error:", e)
+    }
+    dismissReview(orderId)
+    setShowReviewModal(false)
+    setPendingReviewOrder(null)
+    setReviewRating(5)
+    setReviewComment("")
     setReviewSubmitting(false)
-  }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id])
+  }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id, dismissReview])
 
   const [couponLoading, setCouponLoading] = useState(false)
 
@@ -6007,13 +6023,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  if (pendingReviewOrder) {
-                    const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
-                    let dismissed: Record<string, number> = {}
-                    try { dismissed = JSON.parse(dismissedRaw) } catch {}
-                    dismissed[pendingReviewOrder.id] = Date.now()
-                    localStorage.setItem(`pedefacil-review-dismissed-${establishment.slug}`, JSON.stringify(dismissed))
-                  }
+                  if (pendingReviewOrder) dismissReview(pendingReviewOrder.id)
                   setShowReviewModal(false)
                   setPendingReviewOrder(null)
                 }}
