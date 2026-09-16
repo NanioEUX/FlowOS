@@ -860,10 +860,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     } catch {}
   }, [])
 
+  const reviewCheckedRef = useRef(false)
+
   useEffect(() => {
     if (!customer.phone) return
     if (!sessionVerified) return
     if (!reviewGateOpen) return
+    if (reviewCheckedRef.current) return
+    reviewCheckedRef.current = true
     const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
     let dismissed: Record<string, number> = {}
     try { dismissed = JSON.parse(dismissedRaw) } catch {}
