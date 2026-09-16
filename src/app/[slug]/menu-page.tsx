@@ -4934,13 +4934,18 @@ onPaymentConfirmed={handlePaymentSuccess}
                 items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
                 subtotal={confirmationSubtotal}
                 deliveryFee={orderResult?.deliveryFee ?? deliveryFee}
+                deliveryFeeType={establishment.deliveryFeeType}
                 couponDiscount={couponDiscount}
                 firstPurchaseDiscount={firstPurchaseDiscountValue}
                 firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
                 loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={orderResult?.cashEarned ?? subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
+                cashEarned={orderResult?.cashEarned ?? Math.floor(subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
+                cashbackBase={subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
+                tierBonus={subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
+                tierName={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.name })()}
+                tierEmoji={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.emoji })()}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 maxRedeemPercent={parsedLoyalty?.maxRedeemPercent || parsedLoyalty?.redeemLimitValue || 25}
                 orderType={orderResult?.orderType}

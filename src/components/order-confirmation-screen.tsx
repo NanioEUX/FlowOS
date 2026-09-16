@@ -23,6 +23,7 @@ interface Props {
   items: ConfirmationItem[]
   subtotal: number
   deliveryFee: number
+  deliveryFeeType?: string
   couponDiscount: number
   firstPurchaseDiscount: number
   firstPurchaseBonus: number
@@ -30,6 +31,10 @@ interface Props {
   total: number
   showLoyalty: boolean
   cashEarned: number
+  cashbackBase?: number
+  tierBonus?: number
+  tierName?: string
+  tierEmoji?: string
   loyaltyBalance: number
   maxRedeemPercent?: number
   orderType?: string
@@ -51,6 +56,7 @@ export function OrderConfirmationScreen({
   items,
   subtotal,
   deliveryFee,
+  deliveryFeeType,
   couponDiscount,
   firstPurchaseDiscount,
   firstPurchaseBonus,
@@ -58,6 +64,10 @@ export function OrderConfirmationScreen({
   total,
   showLoyalty,
   cashEarned,
+  cashbackBase,
+  tierBonus,
+  tierName,
+  tierEmoji,
   loyaltyBalance,
   maxRedeemPercent,
   orderType,
@@ -141,11 +151,15 @@ export function OrderConfirmationScreen({
               <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
                 <span>Subtotal</span><span>{fmt(subtotal)}</span>
               </div>
-              {deliveryFee > 0 && (
+              {deliveryFee > 0 ? (
                 <div className="flex justify-between text-sm" style={{ color: theme.textMuted }}>
                   <span>Entrega</span><span>{fmt(deliveryFee)}</span>
                 </div>
-              )}
+              ) : orderType === "delivery" && deliveryFeeType === "free_above" ? (
+                <div className="flex justify-between text-sm" style={{ color: theme.success }}>
+                  <span>Entrega</span><span>Grátis</span>
+                </div>
+              ) : null}
               {couponDiscount > 0 && (
                 <div className="flex justify-between text-sm" style={{ color: theme.success }}>
                   <span>Cupom</span><span>-{fmt(couponDiscount)}</span>
@@ -216,12 +230,19 @@ export function OrderConfirmationScreen({
           {/* Cashback earned */}
           {showLoyalty && cashEarned > 0 && (
             <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}20` }}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-1">
                 <Gift className="h-5 w-5" style={{ color: theme.success }} />
-                <div>
-                  <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +R$ {cashEarned.toFixed(2)} de cashback</p>
-                   <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance + Math.round(cashEarned * 100)) * 0.01).toFixed(2)}</p>
-                </div>
+                <p className="text-sm font-bold" style={{ color: theme.success }}>Cashback ganho</p>
+              </div>
+              <div className="ml-7 space-y-0.5">
+                {cashbackBase != null && (
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Base: +R$ {cashbackBase.toFixed(2)}</p>
+                )}
+                {tierBonus != null && tierBonus > 0 && tierName && (
+                  <p className="text-xs" style={{ color: theme.textMuted }}>{tierEmoji} {tierName}: +R$ {tierBonus.toFixed(2)}</p>
+                )}
+                <p className="text-xs font-bold" style={{ color: theme.success }}>Total: +R$ {cashEarned.toFixed(2)}</p>
+                <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance + Math.round(cashEarned * 100)) * 0.01).toFixed(2)}</p>
               </div>
             </div>
           )}
