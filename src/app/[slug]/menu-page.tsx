@@ -366,7 +366,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-      reviewCheckedRef.current = false
     }
     prevUserPhoneRef.current = customer.phone || null
   }, [customer.phone, establishment.slug])
@@ -570,8 +569,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // explícito apaga esse flag e exige nova verificação.
   const markSessionVerified = () => {
     setSessionVerified(true)
-    setReviewGateOpen(true)
-    reviewCheckedRef.current = false
     try { localStorage.setItem(SESSION_KEY, "1") } catch {}
     // Show first purchase bonus screen if eligible
     if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
@@ -580,7 +577,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   }
   const clearSessionVerified = () => {
     setSessionVerified(false)
-    setReviewGateOpen(false)
     try { localStorage.removeItem(SESSION_KEY) } catch {}
     verifyAppliedRef.current = false
     markVerifySessionStart()
@@ -826,7 +822,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [reviewComment, setReviewComment] = useState("")
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [sessionVerified, setSessionVerified] = useState(false)
-  const [reviewGateOpen, setReviewGateOpen] = useState(false)
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
@@ -861,41 +856,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     } catch {}
   }, [])
 
-  const reviewCheckedRef = useRef(false)
-
-  useEffect(() => {
-    if (!customer.phone) return
-    if (!sessionVerified) return
-    if (!reviewGateOpen) return
-    if (reviewCheckedRef.current) return
-    reviewCheckedRef.current = true
-    const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
-    let dismissed: Record<string, number> = {}
-    try { dismissed = JSON.parse(dismissedRaw) } catch {}
-    const now = Date.now()
-    Object.keys(dismissed).forEach((k) => { if (now - dismissed[k] > 30 * 24 * 60 * 60 * 1000) delete dismissed[k] })
-
-    console.log("[reviewCheck] phone:", customer.phone, "sessionVerified:", sessionVerified, "reviewGateOpen:", reviewGateOpen, "dismissed:", Object.keys(dismissed))
-
-    fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.error && Array.isArray(data)) {
-          const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed && !dismissed[o.id])
-          console.log("[reviewCheck] orders:", data.length, "delivered unreviewed not-dismissed:", delivered?.id || "NONE", "all delivered:", data.filter((o: any) => o.status === "delivered").map((o: any) => ({ id: o.id, reviewed: o.reviewed, dismissed: !!dismissed[o.id] })))
-          if (delivered) {
-            const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
-            const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
-            if (hoursSinceDelivery > reviewDelayMinutes / 60) {
-              setPendingReviewOrder(delivered)
-              setShowReviewModal(true)
-            }
-          }
-        }
-      })
-      .catch(() => {})
-  }, [customer.phone, establishment.id, sessionVerified, reviewGateOpen])
-
   const dismissReview = useCallback((orderId: string) => {
     const key = `pedefacil-review-dismissed-${establishment.slug}`
     const raw = localStorage.getItem(key) || "{}"
@@ -903,7 +863,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     try { dismissed = JSON.parse(raw) } catch {}
     dismissed[orderId] = Date.now()
     localStorage.setItem(key, JSON.stringify(dismissed))
-    console.log("[dismissReview] saved orderId:", orderId, "key:", key, "all dismissed:", Object.keys(dismissed))
   }, [establishment.slug])
 
   const submitReview = useCallback(async () => {
@@ -934,7 +893,40 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setReviewRating(5)
     setReviewComment("")
     setReviewSubmitting(false)
+    if (pendingReviewRef.current) {
+      pendingReviewRef.current = false
+      setShowCheckout(true)
+      setCartStep("payment")
+    }
   }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id, dismissReview])
+
+  const pendingReviewRef = useRef(false)
+
+  async function checkPendingReview(): Promise<boolean> {
+    if (!customer.phone) return false
+    try {
+      const res = await fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
+      const data = await res.json()
+      if (data.error || !Array.isArray(data)) return false
+      const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
+      let dismissed: Record<string, number> = {}
+      try { dismissed = JSON.parse(dismissedRaw) } catch {}
+      const now = Date.now()
+      Object.keys(dismissed).forEach((k) => { if (now - dismissed[k] > 30 * 24 * 60 * 60 * 1000) delete dismissed[k] })
+      const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed && !dismissed[o.id])
+      if (delivered) {
+        const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
+        const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
+        if (hoursSinceDelivery > reviewDelayMinutes / 60) {
+          pendingReviewRef.current = true
+          setPendingReviewOrder(delivered)
+          setShowReviewModal(true)
+          return true
+        }
+      }
+    } catch {}
+    return false
+  }
 
   const [couponLoading, setCouponLoading] = useState(false)
 
@@ -4091,7 +4083,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-review-dismissed-${establishment.slug}`)
-      reviewCheckedRef.current = false
                   setShowCustomerProfile(false)
                   setShowLogoutConfirm(false)
                 }}
@@ -4898,7 +4889,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={() => {
+                <button onClick={async () => {
                   if (!customer.phone || !customer.name || !sessionVerified) {
                     if (!customer.phone || !customer.name) {
                       openIdentifyModal()
@@ -4910,6 +4901,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     }
                     return
                   }
+                  const hasReview = await checkPendingReview()
+                  if (hasReview) return
                   setShowCheckout(true)
                   setCartStep("payment")
                 }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
@@ -5989,6 +5982,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (pendingReviewOrder) dismissReview(pendingReviewOrder.id)
                   setShowReviewModal(false)
                   setPendingReviewOrder(null)
+                  if (pendingReviewRef.current) {
+                    pendingReviewRef.current = false
+                    setShowCheckout(true)
+                    setCartStep("payment")
+                  }
                 }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                 style={{ border: `1px solid ${theme.borderCard}`, color: theme.textMuted }}
