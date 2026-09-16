@@ -258,7 +258,7 @@ export async function POST(req: NextRequest) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
-              let basePoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
+              let basePoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
               // Apply tier multiplier based on real delivered totals
               let tierMultiplier = 1
               if (establishment.tierConfig) {
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
-              initialPoints = Math.floor(subtotal * (lc.pointsPerReal || 1))
+              initialPoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
             }
           } catch {}
         }
