@@ -286,7 +286,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [orderType, setOrderType] = useState<"delivery" | "pickup" | "dineIn">("delivery")
   const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
   const [ordering, setOrdering] = useState(false)
-  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; pixPayload?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null } | null>(null)
+  const [orderResult, setOrderResult] = useState<{ success: boolean; trackingUrl?: string; paymentLink?: string; pixPayload?: string; paymentError?: string; message?: string; orderId?: string; orderNumber?: number; orderType?: string; paymentMethod?: string; orderTotal?: number; paymentDone?: boolean; deliveryCode?: string | null; deliveryFee?: number; cashEarned?: number } | null>(null)
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const userClosedPaymentModalRef = useRef(false)
@@ -1960,6 +1960,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         paymentMethod: paymentMethod,
         orderTotal: total,
         deliveryCode: data.order?.deliveryCode,
+        deliveryFee: deliveryFee,
+        cashEarned: subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100,
       })
 
       const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
@@ -4609,7 +4611,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-1.5 pt-1">
                         <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
+                          Você ganhará +R$ {(subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100).toFixed(2)} de cashback
                         </span>
                       </div>
                     )}
@@ -4870,7 +4872,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-1.5 pt-1">
                         <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
                         <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(total * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 10) / 100 * tierMultiplier).toFixed(2)} de cashback
+                          Você ganhará +R$ {(subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100).toFixed(2)} de cashback
                         </span>
                       </div>
                     )}
@@ -4887,14 +4889,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                 orderNumber={orderResult?.orderNumber}
                 items={confirmationItems.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price, additionalOptions: item.additionalOptions }))}
                 subtotal={confirmationSubtotal}
-                deliveryFee={deliveryFee}
+                deliveryFee={orderResult?.deliveryFee ?? deliveryFee}
                 couponDiscount={couponDiscount}
                 firstPurchaseDiscount={firstPurchaseDiscountValue}
                 firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
                 loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={total * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 10) / 100 * tierMultiplier}
+                cashEarned={orderResult?.cashEarned ?? subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
                 maxRedeemPercent={parsedLoyalty?.maxRedeemPercent || parsedLoyalty?.redeemLimitValue || 25}
                 orderType={orderResult?.orderType}

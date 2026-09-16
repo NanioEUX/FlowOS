@@ -220,7 +220,7 @@ export function OrderConfirmationScreen({
                 <Gift className="h-5 w-5" style={{ color: theme.success }} />
                 <div>
                   <p className="text-sm font-bold" style={{ color: theme.success }}>Você ganhou +R$ {cashEarned.toFixed(2)} de cashback</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {(loyaltyBalance * 0.01).toFixed(2)}</p>
+                   <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance + Math.round(cashEarned * 100)) * 0.01).toFixed(2)}</p>
                 </div>
               </div>
             </div>
