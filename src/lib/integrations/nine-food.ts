@@ -1,108 +1,86 @@
-import https from "https"
-
-const NINE_FOOD_API = "api-developer.99food.com"
-
-// Token cache: key = apiKey, value = { token, expiresAt }
-const tokenCache = new Map<string, { token: string; expiresAt: number }>()
-
 /**
- * Authenticate with 99Food API.
- * 99Food uses API key authentication (x-api-key header).
- * If they use OAuth, this function will need to be updated.
- */
-export async function getNineFoodAuth(apiKey: string): Promise<{ token: string } | null> {
-  const cached = tokenCache.get(apiKey)
-  if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) {
-    return { token: cached.token }
-  }
-
-  // For now, we use the API key directly as the token
-  // If 99Food uses OAuth, we'll need to implement the auth flow here
-  tokenCache.set(apiKey, {
-    token: apiKey,
-    expiresAt: Date.now() + 3600 * 1000, // 1 hour default
-  })
-
-  return { token: apiKey }
-}
-
-/**
- * Map 99Food order format to internal Flow format.
- * This is a flexible mapper that handles various possible 99Food structures.
- * Will be refined once we receive actual webhook payloads.
+ * Map 99Food order payload to internal Flow format.
+ *
+ * 99Food uses Open Delivery Abrasel standard:
+ * {
+ *   "displayId": "4567",
+ *   "deliveryMethod": "99_DELIVERY",
+ *   "payment": { "prepaid": true, "method": "ONLINE_CREDIT_CARD", "totalAmount": 45.90 },
+ *   "items": [{ "id", "name", "quantity", "unitPrice", "options": [{ "name", "price", "quantity" }] }],
+ *   "delivery": { "fee": 0.00, "deliveryAddress": { "formattedAddress", "coordinates": { "lat", "lng" } } }
+ * }
  */
 export function map99FoodOrderToFlow(order: any, establishmentId: string, eventCode?: string) {
-  const rawItems = Array.isArray(order?.items) ? order.items :
-                   Array.isArray(order?.orderItems) ? order.orderItems :
-                   Array.isArray(order?.products) ? order.products : []
-
+  // Items with options (addons)
+  const rawItems = Array.isArray(order?.items) ? order.items : []
   const items = rawItems.map((item: any) => {
-    const name = item.name || item.productName || item.itemName || "Item"
-    const observation = item.observation || item.note || item.observations || ""
-    const price = item.unitPrice || item.price || item.unit_price || 0
-    const quantity = item.quantity || item.qty || 1
-    const totalPrice = item.totalPrice || item.total || (price * quantity)
-
+    let observation = ""
+    if (item.options && item.options.length > 0) {
+      observation = item.options
+        .map((opt: any) => `${opt.name}${opt.quantity > 1 ? ` x${opt.quantity}` : ""} (+R$ ${(opt.price || 0).toFixed(2)})`)
+        .join(", ")
+    }
     return {
-      productId: item.productId || item.id || "",
-      code: item.code || item.externalCode || "",
-      name,
-      price,
-      quantity,
+      productId: item.id || "",
+      code: item.id || "",
+      name: item.name || "Item",
+      price: item.unitPrice || 0,
+      quantity: item.quantity || 1,
       observation,
-      totalPrice,
+      totalPrice: (item.unitPrice || 0) * (item.quantity || 1),
     }
   })
 
-  // Determine payment status
-  const paymentMethod = order.paymentMethod || order.payment?.method || "online"
-  const paymentStatus = order.paymentStatus || order.payment?.status || "pending"
-  const flowPaymentMethod = paymentMethod === "cash" || paymentMethod === "CASH"
-    ? "cash"
-    : paymentMethod === "card" || paymentMethod === "CREDIT" || paymentMethod === "DEBIT"
-    ? "card"
-    : "online"
+  // Payment mapping (Abrasel standard)
+  const payment = order.payment || {}
+  const paymentMethod = payment.method || ""
+  const prepaid = payment.prepaid === true
 
-  // Determine order type
-  const orderType = order.orderType || order.type || "delivery"
-  const flowOrderType = orderType === "pickup" || orderType === "PICKUP" ? "pickup" : "delivery"
+  // Flow payment method
+  let flowPaymentMethod = "online"
+  if (paymentMethod === "CASH" || paymentMethod === "cash") {
+    flowPaymentMethod = "cash"
+  } else if (["CREDIT_CARD", "DEBIT_CARD", "CARD"].includes(paymentMethod)) {
+    flowPaymentMethod = prepaid ? "online" : "card"
+  }
 
-  // Get customer info
-  const customerName = order.customerName || order.customer?.name || "Cliente 99Food"
-  const customerPhone = order.customerPhone || order.customer?.phone || order.customer?.phoneNumber || ""
-  const customerAddress = order.deliveryAddress || order.customer?.address || order.address || null
+  // Payment status
+  const paymentStatus = prepaid ? "paid" : "pending"
 
-  // Get totals
-  const total = order.total || order.totalAmount || order.orderAmount || 0
-  const deliveryFee = order.deliveryFee || order.delivery?.fee || 0
+  // Order type from deliveryMethod
+  const deliveryMethod = order.deliveryMethod || ""
+  const orderType = deliveryMethod === "PICKUP" || deliveryMethod === "MERCHANT_DELIVERY"
+    ? "pickup"
+    : "delivery"
 
-  // Get notes
-  const notes = order.notes || order.observation || order.delivery?.observations || ""
+  // Delivery fee
+  const deliveryFee = order.delivery?.fee || 0
 
-  // Get external display ID
-  const externalDisplayId = order.displayId || order.orderNumber || order.code || null
+  // Total from payment
+  const total = payment.totalAmount || 0
 
-  // Determine initial status based on event code
-  const code = eventCode || ""
-  const initialStatus = code === "PLACED" || code === "NEW" || code === "placed"
-    ? "pending"
-    : code === "CONFIRMED" || code === "confirmed"
-    ? "confirmed"
-    : "preparing"
+  // Customer address
+  const addr = order.delivery?.deliveryAddress
+  const customerAddress = addr?.formattedAddress || null
+
+  // Coordinates for delivery tracking
+  const coordinates = addr?.coordinates || null
 
   return {
     establishmentId,
-    customerName,
-    customerPhone,
+    customerName: order.customerName || "Cliente 99Food",
+    customerPhone: order.customerPhone || "",
     customerAddress,
-    orderType: flowOrderType,
+    customerLat: coordinates?.latitude || coordinates?.lat || null,
+    customerLng: coordinates?.longitude || coordinates?.lng || null,
+    orderType,
     paymentMethod: flowPaymentMethod,
     items: JSON.stringify(items),
     total,
     deliveryFee,
-    notes,
-    externalDisplayId,
-    status: initialStatus,
+    notes: order.delivery?.observations || order.observations || "",
+    externalDisplayId: order.displayId || null,
+    status: "pending",
     paymentStatus,
     method: "99food",
   }

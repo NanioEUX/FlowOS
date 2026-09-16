@@ -2,13 +2,13 @@ import { prisma } from "@/lib/prisma"
 
 /**
  * Upsert customer from 99Food order data.
- * Follows the same pattern as upsertIfoodCustomer.
+ * 99Food uses Open Delivery Abrasel standard.
  */
 export async function upsert99FoodCustomer(establishmentId: string, customerData: any) {
-  const phone = (customerData?.phone || customerData?.phoneNumber || "").replace(/\D/g, "") || null
+  const phone = (customerData?.phone || "").replace(/\D/g, "") || null
   const email = customerData?.email || null
   const name = customerData?.name || "Cliente 99Food"
-  const address = customerData?.address || customerData?.deliveryAddress || null
+  const address = customerData?.address || null
 
   if (!phone) return null
 
