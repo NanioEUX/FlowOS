@@ -1961,7 +1961,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         orderTotal: total,
         deliveryCode: data.order?.deliveryCode,
         deliveryFee: deliveryFee,
-        cashEarned: subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100,
+        cashEarned: Math.floor(subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier),
       })
 
       const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
@@ -4607,14 +4607,31 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <span style={{ color: theme.text }}>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
                     </div>
-                    {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
-                        <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100).toFixed(2)} de cashback
-                        </span>
-                      </div>
-                    )}
+                    {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (() => {
+                      const base = subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
+                      const tiers = parsedTierConfig?.tiers || []
+                      const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
+                      const multiplier = currentTierData?.multiplier || 1
+                      const tierBonus = base * (multiplier - 1)
+                      return (
+                        <div className="pt-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                            <span className="text-xs font-medium" style={{ color: theme.success }}>
+                              Você ganhará +R$ {base.toFixed(2)} de cashback
+                            </span>
+                          </div>
+                          {multiplier > 1 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs">{currentTierData?.emoji || "⭐"}</span>
+                              <span className="text-xs font-medium" style={{ color: theme.success }}>
+                                +R$ {tierBonus.toFixed(2)} pela sua categoria ({currentTierData?.name})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
 
@@ -4868,14 +4885,31 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <span>Total</span>
                       <span style={{ color: theme.accent }}>{formatCurrency(total)}</span>
                     </div>
-                    {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
-                        <span className="text-xs font-medium" style={{ color: theme.success }}>
-                          Você ganhará +R$ {(subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100).toFixed(2)} de cashback
-                        </span>
-                      </div>
-                    )}
+                    {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (() => {
+                      const base = subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
+                      const tiers = parsedTierConfig?.tiers || []
+                      const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
+                      const multiplier = currentTierData?.multiplier || 1
+                      const tierBonus = base * (multiplier - 1)
+                      return (
+                        <div className="pt-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
+                            <span className="text-xs font-medium" style={{ color: theme.success }}>
+                              Você ganhará +R$ {base.toFixed(2)} de cashback
+                            </span>
+                          </div>
+                          {multiplier > 1 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs">{currentTierData?.emoji || "⭐"}</span>
+                              <span className="text-xs font-medium" style={{ color: theme.success }}>
+                                +R$ {tierBonus.toFixed(2)} pela sua categoria ({currentTierData?.name})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
