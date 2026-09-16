@@ -570,6 +570,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // explícito apaga esse flag e exige nova verificação.
   const markSessionVerified = () => {
     setSessionVerified(true)
+    setReviewGateOpen(true)
     try { localStorage.setItem(SESSION_KEY, "1") } catch {}
     // Show first purchase bonus screen if eligible
     if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
@@ -578,6 +579,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   }
   const clearSessionVerified = () => {
     setSessionVerified(false)
+    setReviewGateOpen(false)
     try { localStorage.removeItem(SESSION_KEY) } catch {}
     verifyAppliedRef.current = false
     markVerifySessionStart()
@@ -823,6 +825,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [reviewComment, setReviewComment] = useState("")
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [sessionVerified, setSessionVerified] = useState(false)
+  const [reviewGateOpen, setReviewGateOpen] = useState(false)
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
@@ -857,19 +860,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     } catch {}
   }, [])
 
-  const phoneFromStorage = (() => {
-    try {
-      const s = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
-      return s ? (JSON.parse(s).phone || "").replace(/\D/g, "") : ""
-    } catch { return "" }
-  })()
-
   useEffect(() => {
     if (!customer.phone) return
     if (!sessionVerified) return
-    // Skip if phone was just restored from localStorage (page reload/PWA reopen)
-    // vs actively set by user login
-    if (customer.phone.replace(/\D/g, "") === phoneFromStorage) return
+    if (!reviewGateOpen) return
     const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
     let dismissed: Record<string, number> = {}
     try { dismissed = JSON.parse(dismissedRaw) } catch {}
@@ -892,7 +886,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         }
       })
       .catch(() => {})
-  }, [customer.phone, establishment.id, sessionVerified])
+  }, [customer.phone, establishment.id, sessionVerified, reviewGateOpen])
 
   const dismissReview = useCallback((orderId: string) => {
     const key = `pedefacil-review-dismissed-${establishment.slug}`
