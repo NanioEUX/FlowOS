@@ -237,6 +237,43 @@ export async function PATCH(
       }
     }
 
+    // Sync status to 99Food when order is from 99Food marketplace
+    if (order.method === "99food" && status && order.externalId) {
+      try {
+        const establishment = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+          select: { nineFoodApiKey: true, nineFoodMerchantId: true },
+        })
+
+        if (establishment?.nineFoodApiKey && establishment.nineFoodMerchantId) {
+          const { update99FoodStatus } = await import("@/lib/integrations/nine-food-status")
+
+          const statusActionMap: Record<string, string> = {
+            confirmed: "confirm",
+            accepted: "confirm",
+            preparing: "startPreparation",
+            ready: "readyForPickup",
+            dispatched: "dispatch",
+            out_for_delivery: "dispatch",
+            delivered: "dispatch",
+            cancelled: "cancel",
+          }
+          const action = statusActionMap[status]
+          if (action) {
+            const result = await update99FoodStatus(
+              establishment.nineFoodApiKey,
+              order.externalId,
+              action,
+              status === "cancel" ? (cancellationReason || undefined) : undefined
+            )
+            console.log("[99food status update]", { orderId: order.externalId, action, success: result.success, status: result.status })
+          }
+        }
+      } catch (err) {
+        console.error("99Food status sync error:", err)
+      }
+    }
+
     // Despachar corrida 99 quando pedido fica "Em Entrega"
     if (status === "out_for_delivery" && order.orderType === "delivery") {
       try {

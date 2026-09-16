@@ -168,6 +168,10 @@ model Establishment {
   ifoodAccessToken              String?
   ifoodRefreshToken             String?
   ifoodEnabled                  Boolean            @default(false)
+  // 99Food - Marketplace
+  nineFoodMerchantId            String?
+  nineFoodApiKey                String?
+  nineFoodEnabled               Boolean            @default(false)
   // 99Entrega - Logística externa
   tipoEntregaAtiva              String             @default("propria") // "propria" | "99entrega"
   api99Key                      String?                                // x-api-key da 99 Empresas

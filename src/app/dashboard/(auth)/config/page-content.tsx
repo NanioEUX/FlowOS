@@ -742,6 +742,9 @@ export default function ConfigPage() {
         interPixKey: "",
         ifoodEnabled: false,
         ifoodMerchantId: "",
+        nineFoodEnabled: false,
+        nineFoodMerchantId: "",
+        nineFoodApiKey: "",
         deliveryFeeType: "free",
         deliveryFeeAmount: "0",
         deliveryFreeAbove: "0",
@@ -881,6 +884,9 @@ export default function ConfigPage() {
                         interCertificatePassword: data.interCertificatePassword || "",
                         ifoodEnabled: data.ifoodEnabled || false,
                         ifoodMerchantId: data.ifoodMerchantId || "",
+                        nineFoodEnabled: data.nineFoodEnabled || false,
+                        nineFoodMerchantId: data.nineFoodMerchantId || "",
+                        nineFoodApiKey: data.nineFoodApiKey || "",
                         interPixKey: data.interPixKey || "",
                         deliveryFeeType: data.deliveryFeeType || "free",
                         deliveryFeeAmount: String(data.deliveryFeeAmount || "0"),
@@ -1085,6 +1091,9 @@ export default function ConfigPage() {
                     minimumOrderApplyToPickup,
                     ifoodEnabled: form.ifoodEnabled || false,
                     ifoodMerchantId: form.ifoodMerchantId || "",
+                    nineFoodEnabled: form.nineFoodEnabled || false,
+                    nineFoodMerchantId: form.nineFoodMerchantId || "",
+                    nineFoodApiKey: form.nineFoodApiKey || "",
                     metaCardBrand: metaCardBrand || null,
                     metaCardLast4: metaCardLast4 || null,
                     tipoEntregaAtiva,
@@ -1146,7 +1155,7 @@ export default function ConfigPage() {
         }
     }
     
-    const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99entregas">(() => {
+    const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99food" | "99entregas">(() => {
       if (typeof window !== "undefined") {
         return (localStorage.getItem("configActiveGroup") as any) || "geral"
       }
@@ -1159,6 +1168,7 @@ export default function ConfigPage() {
         { id: "pagamentos" as const, label: "Pagamentos", desc: "Formas", icon: "💳" },
         { id: "whatsapp" as const, label: "WhatsApp", desc: "Automação", icon: "💬" },
         { id: "ifood" as const, label: "iFood", desc: "Integração", icon: "🍔" },
+        { id: "99food" as const, label: "99Food", desc: "Marketplace", icon: "🛵" },
         { id: "99entregas" as const, label: "Entregas", desc: "Integração", icon: "🚀" },
     ]
     
@@ -1752,6 +1762,50 @@ export default function ConfigPage() {
                   />
                 </div>
                 <p className="text-xs text-zinc-400">Encontre o Merchant ID no painel do desenvolvedor iFood.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 99Food */}
+        <Card id="section-99food" className={activeGroup !== "99food" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-zinc-900">99Food</h3>
+            </div>
+            <p className="text-sm text-zinc-500">Integração com 99Food marketplace para receber pedidos automaticamente.</p>
+            <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+              <input
+                type="checkbox"
+                checked={form.nineFoodEnabled || false}
+                onChange={(e) => setForm({ ...form, nineFoodEnabled: e.target.checked })}
+                className="h-4 w-4 rounded border-zinc-300 text-yellow-600 focus:ring-yellow-500"
+              />
+              <span className="text-sm font-medium text-zinc-700">Ativar integração 99Food</span>
+            </label>
+            {form.nineFoodEnabled && (
+              <div className="rounded-lg bg-zinc-50 p-4 space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">Merchant ID</label>
+                  <input
+                    type="text"
+                    placeholder="ID da loja no 99Food"
+                    value={form.nineFoodMerchantId || ""}
+                    onChange={(e) => setForm({ ...form, nineFoodMerchantId: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-zinc-700">API Key</label>
+                  <input
+                    type="password"
+                    placeholder="Chave de API do 99Food"
+                    value={form.nineFoodApiKey || ""}
+                    onChange={(e) => setForm({ ...form, nineFoodApiKey: e.target.value })}
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+                <p className="text-xs text-zinc-400">Webhook: https://flowoshub.com/api/orders/99food-webhook</p>
               </div>
             )}
           </CardContent>
