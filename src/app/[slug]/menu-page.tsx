@@ -328,14 +328,44 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
-  // Clear cart & addresses when user changes
+  // Clear all user data when phone changes (different user)
   useEffect(() => {
     if (prevUserPhoneRef.current !== null && prevUserPhoneRef.current !== customer.phone) {
       setCart([])
-      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
       setAddresses([])
       setSelectedAddressId(null)
       setAddressSaved(false)
+      setAddressLabel("")
+      setEditingAddress(false)
+      setUseLoyalty(false)
+      setCustomerLoyaltyPoints(0)
+      setCustomerTier("bronze")
+      setLastOrder(null)
+      setCustomerOrders([])
+      setCouponData(null)
+      setCouponCode("")
+      setCouponError("")
+      setCep("")
+      setCepAddress(null)
+      setCepError("")
+      setPendingOrderConfirm(null)
+      setInProgressOrder(null)
+      setPendingOrderItems([])
+      setPendingOrderNumber(null)
+      setPendingOrderModal(null)
+      setPendingOrderAction(null)
+      setOrderResult(null)
+      setCartStep("cart")
+      setEditingCartItemId(null)
+      setShowCart(false)
+      setShowOrdersList(false)
+      setActiveTab("menu")
+      setOrderType("delivery")
+      setPaymentMethod("pix")
+      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+      localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+      localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+      localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
     }
     prevUserPhoneRef.current = customer.phone || null
   }, [customer.phone, establishment.slug])
@@ -3972,14 +4002,58 @@ onPaymentConfirmed={handlePaymentSuccess}
               </button>
               <button
                 onClick={() => {
+                  // User data
                   setCustomerData(null)
                   setPhoneInput("")
                   setCustomer({ name: "", phone: "", address: "", notes: "" })
+                  // Cart & addresses
+                  setCart([])
+                  setAddresses([])
+                  setSelectedAddressId(null)
+                  setAddressSaved(false)
+                  setAddressLabel("")
+                  setEditingAddress(false)
+                  setShowAddressForm(false)
+                  // CEP
                   setCep("")
                   setCepAddress(null)
+                  setCepError("")
+                  // Loyalty & coupons
+                  setUseLoyalty(false)
+                  setCustomerLoyaltyPoints(0)
+                  setCustomerTier("bronze")
+                  setCouponData(null)
+                  setCouponCode("")
+                  setCouponError("")
+                  // Orders
+                  setLastOrder(null)
+                  setCustomerOrders([])
+                  setPendingOrderConfirm(null)
+                  setInProgressOrder(null)
+                  setPendingOrderItems([])
+                  setPendingOrderNumber(null)
+                  setPendingOrderModal(null)
+                  setPendingOrderAction(null)
+                  // Cart UI
+                  setCartStep("cart")
+                  setOrderResult(null)
+                  setEditingCartItemId(null)
+                  setShowCart(false)
+                  setShowOrdersList(false)
+                  setActiveTab("menu")
+                  // Payment
+                  setOrderType("delivery")
+                  setPaymentMethod("pix")
+                  setCashSubMethod(null)
+                  setChangeFor("")
+                  // Session
                   clearSessionVerified()
+                  // localStorage
                   localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                  localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+                  localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+                  localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
                   setShowCustomerProfile(false)
                   setShowLogoutConfirm(false)
                 }}
