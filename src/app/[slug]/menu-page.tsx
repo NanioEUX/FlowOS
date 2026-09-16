@@ -366,7 +366,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
-      localStorage.removeItem(`pedefacil-review-dismissed-${establishment.slug}`)
       reviewCheckedRef.current = false
     }
     prevUserPhoneRef.current = customer.phone || null
