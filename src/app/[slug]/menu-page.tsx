@@ -847,7 +847,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // Check for pending review on app open — show modal if delivered order exists
   const reviewCheckedOnMountRef = useRef(false)
   useEffect(() => {
-    console.log("[review] mount effect, phone:", customer.phone, "ref:", reviewCheckedOnMountRef.current)
     if (!customer.phone) return
     if (reviewCheckedOnMountRef.current) return
     reviewCheckedOnMountRef.current = true
@@ -919,11 +918,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id, dismissReview])
 
   async function checkPendingReview(): Promise<boolean> {
-    if (!customer.phone) { console.log("[review] no phone, skip"); return false }
+    if (!customer.phone) return false
     try {
       const res = await fetch(`/api/orders/customer?phone=${customer.phone.replace(/\D/g, "")}&establishmentId=${establishment.id}`)
       const data = await res.json()
-      console.log("[review] orders:", data.length, data.map((o: any) => ({ id: o.id, status: o.status, deliveredAt: o.deliveredAt, reviewed: o.reviewed })))
       if (data.error || !Array.isArray(data)) return false
       const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
       let dismissed: Record<string, number> = {}
@@ -931,18 +929,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       const now = Date.now()
       Object.keys(dismissed).forEach((k) => { if (now - dismissed[k] > 30 * 24 * 60 * 60 * 1000) delete dismissed[k] })
       const delivered = data.find((o: any) => o.status === "delivered" && o.deliveredAt && !o.reviewed && !dismissed[o.id])
-      console.log("[review] delivered candidate:", delivered?.id, "dismissed:", dismissed)
       if (delivered) {
-        const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 5
-        const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
-        console.log("[review] delay:", reviewDelayMinutes, "min, hours since delivery:", hoursSinceDelivery.toFixed(2), "show:", hoursSinceDelivery > reviewDelayMinutes / 60)
-        if (hoursSinceDelivery > reviewDelayMinutes / 60) {
-          setPendingReviewOrder(delivered)
-          setShowReviewModal(true)
-          return true
-        }
+        setPendingReviewOrder(delivered)
+        setShowReviewModal(true)
+        return true
       }
-    } catch (e) { console.error("[review] error:", e) }
+    } catch {}
     return false
   }
 
