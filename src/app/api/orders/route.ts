@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
     if (customerPhone || customerCpf) {
-      let customer = null
+      let customer: any = null
 
       // 1. Try to find by CPF first (unique per person)
       if (customerCpf) {
@@ -265,8 +265,8 @@ export async function POST(req: NextRequest) {
                 try {
                   const tc = JSON.parse(establishment.tierConfig)
                   if (tc.enabled && tc.tiers?.length) {
-                    const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-                    const currentTier = sortedTiers.find((t: any) => deliveredTotal >= (t.minSpent || 0))
+                    const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
+                    const currentTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
                     tierMultiplier = currentTier?.multiplier || 1
                   }
                 } catch {}
@@ -280,8 +280,8 @@ export async function POST(req: NextRequest) {
           try {
             const tc = JSON.parse(establishment.tierConfig)
             if (tc.enabled && tc.tiers?.length) {
-              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-              const matchedTier = sortedTiers.find((t: any) => deliveredTotal >= (t.minSpent || 0))
+              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
+              const matchedTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
               if (matchedTier) newTier = matchedTier.name.toLowerCase()
             }
           } catch {}
