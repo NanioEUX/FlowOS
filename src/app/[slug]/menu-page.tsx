@@ -328,6 +328,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
+  // Clear cart & addresses when user changes
+  useEffect(() => {
+    if (prevUserPhoneRef.current !== null && prevUserPhoneRef.current !== customer.phone) {
+      setCart([])
+      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+      setAddresses([])
+      setSelectedAddressId(null)
+      setAddressSaved(false)
+    }
+    prevUserPhoneRef.current = customer.phone || null
+  }, [customer.phone, establishment.slug])
+
   const [lastOrder, setLastOrder] = useState<{ orderId: string; trackingUrl: string; paymentLink?: string; paymentMethod?: string; total?: number; paymentDone?: boolean; orderNumber?: number; items?: CartItem[] } | null>(null)
   const [hasEstablishmentReply, setHasEstablishmentReply] = useState(false)
   const prevMsgCountRef = useRef(0)
@@ -669,6 +681,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const skipPendingCheckRef = useRef(false)
   const orderingRef = useRef(false)
   const lastOrderIdRef = useRef<string | null>(null)
+  const prevUserPhoneRef = useRef<string | null>(null)
   const paidOrderIdsRef = useRef(new Set<string>())
   const seenPendingOrdersRef = useRef(new Set<string>())
 
@@ -1095,10 +1108,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       const data = await res.json()
       if (data.addresses) {
         setAddresses(data.addresses)
-        // Auto-select default or first
-        const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0]
-        if (defaultAddr) {
-          setSelectedAddressId(defaultAddr.id)
+        if (data.addresses.length === 0) {
+          setSelectedAddressId(null)
+          setAddressSaved(false)
+        } else {
+          const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0]
+          if (defaultAddr) {
+            setSelectedAddressId(defaultAddr.id)
+          }
         }
       }
     } catch { }
