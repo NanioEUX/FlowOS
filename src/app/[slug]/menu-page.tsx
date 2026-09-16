@@ -844,6 +844,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       .catch(() => {})
   }, [establishment.id])
 
+  // Check for pending review on app open — show modal if delivered order exists
+  const reviewCheckedOnMountRef = useRef(false)
+  useEffect(() => {
+    if (!customer.phone) return
+    if (reviewCheckedOnMountRef.current) return
+    reviewCheckedOnMountRef.current = true
+    checkPendingReview()
+  }, [customer.phone, establishment.id])
+
   const toggleLike = useCallback(async (productId: string) => {
     setProductLikes((prev) => {
       const current = prev[productId] || { likes: 0, liked: false }
@@ -856,14 +865,27 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     } catch {}
   }, [])
 
-  const dismissReview = useCallback((orderId: string) => {
+  const dismissReview = useCallback(async (orderId: string) => {
     const key = `pedefacil-review-dismissed-${establishment.slug}`
     const raw = localStorage.getItem(key) || "{}"
     let dismissed: Record<string, number> = {}
     try { dismissed = JSON.parse(raw) } catch {}
     dismissed[orderId] = Date.now()
     localStorage.setItem(key, JSON.stringify(dismissed))
-  }, [establishment.slug])
+    try {
+      await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: 0,
+          comment: null,
+          customerPhone: customer.phone || null,
+          orderId,
+          establishmentId: establishment.id,
+        }),
+      })
+    } catch {}
+  }, [establishment.slug, customer.phone, establishment.id])
 
   const submitReview = useCallback(async () => {
     if (!pendingReviewOrder) return
@@ -895,8 +917,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setReviewSubmitting(false)
   }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id, dismissReview])
 
-  const pendingReviewRef = useRef(false)
-
   async function checkPendingReview(): Promise<boolean> {
     if (!customer.phone) return false
     try {
@@ -913,7 +933,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         const reviewDelayMinutes = parsedLoyalty?.reviewPromptMinutes || 30
         const hoursSinceDelivery = (Date.now() - new Date(delivered.deliveredAt).getTime()) / (1000 * 60 * 60)
         if (hoursSinceDelivery > reviewDelayMinutes / 60) {
-          pendingReviewRef.current = true
           setPendingReviewOrder(delivered)
           setShowReviewModal(true)
           return true
@@ -1952,8 +1971,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         localStorage.setItem(`pedefacil-install-prompted-${establishment.slug}`, "1")
         setTimeout(() => setShowInstallPrompt(true), 2500)
       }
-
-      checkPendingReview().then(has => console.log("[checkPendingReview] result:", has))
 
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 

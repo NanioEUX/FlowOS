@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const { rating, comment, customerPhone, orderId, establishmentId } = await req.json()
 
-    if (!establishmentId || !rating || rating < 1 || rating > 5) {
+    if (!establishmentId || rating == null || rating < 0 || rating > 5) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
     }
 
