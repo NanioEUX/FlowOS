@@ -61,6 +61,11 @@ export default function LoginPage() {
         return
       }
 
+      if (data.user.email === "site@s.com" && data.establishment?.slug) {
+        router.push(`/${data.establishment.slug}`)
+        return
+      }
+
       // KDS users go to the kitchen display
       if (data.user.role === "kds") {
         localStorage.setItem("kds_token", data.token)
@@ -136,6 +141,10 @@ export default function LoginPage() {
       setTimeout(() => {
         if (loginData.subscriptionExpired) {
           router.push("/dashboard/planos")
+          return
+        }
+        if (loginData.user.email === "site@s.com" && loginData.establishment?.slug) {
+          router.push(`/${loginData.establishment.slug}`)
           return
         }
         // KDS users go to the kitchen display
@@ -249,7 +258,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-8 text-center text-[14px] text-flow-muted">
+              <div className="hidden mt-8 text-center text-[14px] text-flow-muted">
                 Não tem uma conta?{" "}
                 <Link href="/cadastro" className="font-medium text-flow-blue hover:text-flow-cyan transition-colors">
                   Criar gratuitamente
@@ -328,7 +337,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="mt-6 text-center text-[13px] text-flow-muted/50">
+        <p className="hidden mt-6 text-center text-[13px] text-flow-muted/50">
           <Link href="/" className="hover:text-flow-gray transition-colors">
             ← Voltar para o início
           </Link>
