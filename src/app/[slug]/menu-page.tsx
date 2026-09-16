@@ -809,6 +809,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           minSpent: undefined,
         }))
       }
+      // Default periodDays
+      if (!parsed.periodDays) parsed.periodDays = 90
       return parsed
     } catch { return null }
   }, [establishment.tierConfig])

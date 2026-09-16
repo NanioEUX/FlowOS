@@ -259,8 +259,9 @@ export async function POST(req: NextRequest) {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
               let basePoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
-              // Apply tier multiplier based on order count
+              // Apply tier multiplier based on order count within period
               let tierMultiplier = 1
+              let ordersInPeriod = customer.totalOrders || 0
               if (establishment.tierConfig) {
                 try {
                   const tc = JSON.parse(establishment.tierConfig)
@@ -269,8 +270,20 @@ export async function POST(req: NextRequest) {
                     tc.tiers = tc.tiers.map((t: any) => ({ ...t, minOrders: t.minSpent ?? 0 }))
                   }
                   if (tc.enabled && tc.tiers?.length) {
+                    // Count orders in period
+                    const periodDays = tc.periodDays || 90
+                    const periodStart = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000)
+                    const countResult = await prisma.order.aggregate({
+                      _count: { id: true },
+                      where: {
+                        customerId: customer.id,
+                        status: { not: "cancelled" },
+                        createdAt: { gte: periodStart },
+                      },
+                    })
+                    ordersInPeriod = countResult._count.id || 0
                     const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
-                    const currentTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
+                    const currentTier = sortedTiers.find((t: any) => ordersInPeriod >= (t.minOrders || 0))
                     tierMultiplier = currentTier?.multiplier || 1
                   }
                 } catch {}
@@ -288,8 +301,19 @@ export async function POST(req: NextRequest) {
               tc.tiers = tc.tiers.map((t: any) => ({ ...t, minOrders: t.minSpent ?? 0 }))
             }
             if (tc.enabled && tc.tiers?.length) {
+              const periodDays = tc.periodDays || 90
+              const periodStart = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000)
+              const countResult = await prisma.order.aggregate({
+                _count: { id: true },
+                where: {
+                  customerId: customer.id,
+                  status: { not: "cancelled" },
+                  createdAt: { gte: periodStart },
+                },
+              })
+              const ordersInPeriod = countResult._count.id || 0
               const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
-              const matchedTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
+              const matchedTier = sortedTiers.find((t: any) => ordersInPeriod >= (t.minOrders || 0))
               if (matchedTier) newTier = matchedTier.name.toLowerCase()
             }
           } catch {}

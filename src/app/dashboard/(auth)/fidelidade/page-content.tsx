@@ -20,6 +20,7 @@ interface Tier {
 
 interface TierConfig {
   enabled: boolean
+  periodDays: number
   tiers: Tier[]
 }
 
@@ -48,6 +49,7 @@ export default function FidelidadePageContent() {
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
     enabled: false,
+    periodDays: 90,
     tiers: DEFAULT_TIERS,
   })
   const [firstPurchaseEnabled, setFirstPurchaseEnabled] = useState(false)
@@ -277,6 +279,22 @@ export default function FidelidadePageContent() {
           </label>
           {tierConfig.enabled && (
             <div className="space-y-3">
+              <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                <div className="flex-1">
+                  <label className="text-xs text-zinc-500">Período de avaliação</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="1"
+                      value={tierConfig.periodDays}
+                      onChange={(e) => setTierConfig({ ...tierConfig, periodDays: Number(e.target.value) || 90 })}
+                      className="w-20 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                    />
+                    <span className="text-xs text-zinc-400">dias</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-zinc-400 flex-1">Pedidos contados nos últimos {tierConfig.periodDays} dias</p>
+              </div>
               {tierConfig.tiers.map((tier, index) => (
                 <div key={index} className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                   <div className="flex flex-col gap-1">
@@ -358,14 +376,14 @@ export default function FidelidadePageContent() {
               </Button>
               {tierConfig.enabled && loyaltyConfig.enabled && (
                 <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 mt-2">
-                  <p className="text-xs font-semibold text-zinc-600 mb-2">Exemplo com R$ 60,00</p>
+                  <p className="text-xs font-semibold text-zinc-600 mb-2">Exemplo com R$ 60,00 (últimos {tierConfig.periodDays} dias)</p>
                   <div className="space-y-1.5">
                     {tierConfig.tiers.map((tier) => {
                       const base = 60 * (loyaltyConfig.cashbackPercent || 0) / 100
                       const total = base * tier.multiplier
                       return (
                         <p key={tier.name} className="text-xs" style={{ color: tier.color }}>
-                          {tier.emoji} {tier.name}: R$ 60 × {loyaltyConfig.cashbackPercent || 0}% = R$ {base.toFixed(2)} x {tier.multiplier} = R$ {total.toFixed(2)}
+                          {tier.emoji} {tier.name} ({tier.minOrders}+ pedidos): R$ 60 × {loyaltyConfig.cashbackPercent || 0}% = R$ {base.toFixed(2)} x {tier.multiplier} = R$ {total.toFixed(2)}
                         </p>
                       )
                     })}
