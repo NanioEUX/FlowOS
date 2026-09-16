@@ -652,6 +652,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [addressFormLoading, setAddressFormLoading] = useState(false)
   const [addressFormError, setAddressFormError] = useState("")
   const [addressSaved, setAddressSaved] = useState(false)
+  const [addressLabel, setAddressLabel] = useState("")
+  const numberInputRef = useRef<HTMLInputElement>(null)
   const [cepError, setCepError] = useState("")
   const [orderError, setOrderError] = useState("")
   const [couponCode, setCouponCode] = useState("")
@@ -1079,6 +1081,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setCepAddress(null)
     setCepError("")
   }, [cep, orderType])
+
+  useEffect(() => {
+    if (cepAddress && numberInputRef.current) {
+      numberInputRef.current.focus()
+    }
+  }, [cepAddress])
 
   // Address management
   async function fetchAddresses(customerId: string) {
@@ -4214,7 +4222,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {/* No addresses — show CEP input */}
                     {addresses.length === 0 && (
                       <>
-                        <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Nome do endereço</label>
+                          <input placeholder="Ex: Casa, Trabalho" value={addressLabel} onChange={(e) => setAddressLabel(e.target.value)}
+                            className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
+                            style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
+                        </div>
                         <div className="flex gap-2">
                           <div className="space-y-1">
                             <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>CEP</label>
@@ -4231,12 +4244,35 @@ onPaymentConfirmed={handlePaymentSuccess}
                         {cepAddress && <p className="text-xs" style={{ color: theme.textMuted }}>{cepAddress.logradouro} - {cepAddress.bairro}, {cepAddress.localidade} - {cepAddress.uf}</p>}
                         <div className="space-y-1">
                           <label className="block text-sm font-medium" style={{ color: theme.textSubtle }}>Número</label>
-                          <input placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                          <input ref={numberInputRef} placeholder="Ex: 123" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                             className="w-full h-10 rounded-xl border px-3 py-2 text-sm placeholder:opacity-40 focus:outline-none"
                             style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} disabled={addressSaved} />
                         </div>
                         {cepAddress && customer.address && (
-                          <button type="button" onClick={() => { setAddressSaved(true); setEditingAddress(false) }}
+                          <button type="button" onClick={async () => {
+                            if (customerData?.id) {
+                              try {
+                                await fetch("/api/addresses", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    customerId: customerData.id,
+                                    establishmentId: establishment.id,
+                                    label: addressLabel || null,
+                                    street: cepAddress.logradouro,
+                                    number: customer.address,
+                                    neighborhood: cepAddress.bairro,
+                                    city: cepAddress.localidade,
+                                    state: cepAddress.uf,
+                                    cep: cep,
+                                  }),
+                                })
+                                await fetchAddresses(customerData.id)
+                              } catch {}
+                            }
+                            setAddressSaved(true)
+                            setEditingAddress(false)
+                          }}
                             className="w-full rounded-xl px-4 py-2 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: theme.primary }}>
                             Salvar endereço
                           </button>
