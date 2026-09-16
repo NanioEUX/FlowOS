@@ -799,7 +799,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   const parsedTierConfig = useMemo(() => {
     try {
-      return establishment.tierConfig ? JSON.parse(establishment.tierConfig) : null
+      if (!establishment.tierConfig) return null
+      const parsed = JSON.parse(establishment.tierConfig)
+      // Migrate old minSpent → minOrders format
+      if (parsed.tiers?.length && parsed.tiers[0]?.minSpent !== undefined && parsed.tiers[0]?.minOrders === undefined) {
+        parsed.tiers = parsed.tiers.map((t: any) => ({
+          ...t,
+          minOrders: t.minSpent ?? 0,
+          minSpent: undefined,
+        }))
+      }
+      return parsed
     } catch { return null }
   }, [establishment.tierConfig])
 

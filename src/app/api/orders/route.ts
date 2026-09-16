@@ -259,11 +259,15 @@ export async function POST(req: NextRequest) {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
               let basePoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
-              // Apply tier multiplier based on real delivered totals
+              // Apply tier multiplier based on order count
               let tierMultiplier = 1
               if (establishment.tierConfig) {
                 try {
                   const tc = JSON.parse(establishment.tierConfig)
+                  // Migrate old minSpent → minOrders
+                  if (tc.tiers?.length && tc.tiers[0]?.minSpent !== undefined && tc.tiers[0]?.minOrders === undefined) {
+                    tc.tiers = tc.tiers.map((t: any) => ({ ...t, minOrders: t.minSpent ?? 0 }))
+                  }
                   if (tc.enabled && tc.tiers?.length) {
                     const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
                     const currentTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
@@ -279,6 +283,10 @@ export async function POST(req: NextRequest) {
         if (establishment.tierConfig) {
           try {
             const tc = JSON.parse(establishment.tierConfig)
+            // Migrate old minSpent → minOrders
+            if (tc.tiers?.length && tc.tiers[0]?.minSpent !== undefined && tc.tiers[0]?.minOrders === undefined) {
+              tc.tiers = tc.tiers.map((t: any) => ({ ...t, minOrders: t.minSpent ?? 0 }))
+            }
             if (tc.enabled && tc.tiers?.length) {
               const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
               const matchedTier = sortedTiers.find((t: any) => (customer.totalOrders || 0) >= (t.minOrders || 0))
@@ -323,9 +331,13 @@ export async function POST(req: NextRequest) {
         if (establishment.tierConfig) {
           try {
             const tc = JSON.parse(establishment.tierConfig)
+            // Migrate old minSpent → minOrders
+            if (tc.tiers?.length && tc.tiers[0]?.minSpent !== undefined && tc.tiers[0]?.minOrders === undefined) {
+              tc.tiers = tc.tiers.map((t: any) => ({ ...t, minOrders: t.minSpent ?? 0 }))
+            }
             if (tc.enabled && tc.tiers?.length) {
-              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minSpent || 0) - (a.minSpent || 0))
-              const matchedTier = sortedTiers.find((t: any) => calculatedTotal >= (t.minSpent || 0))
+              const sortedTiers = [...tc.tiers].sort((a: any, b: any) => (b.minOrders || 0) - (a.minOrders || 0))
+              const matchedTier = sortedTiers.find((t: any) => 1 >= (t.minOrders || 0))
               if (matchedTier) initialTier = matchedTier.name.toLowerCase()
             }
           } catch {}
