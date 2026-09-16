@@ -356,9 +356,23 @@ export default function FidelidadePageContent() {
               <Button type="button" variant="outline" size="sm" onClick={addTier}>
                 <Plus className="mr-1 h-4 w-4" /> Adicionar nível
               </Button>
-              <p className="text-xs text-zinc-400">
-                Multiplicador: Prata ganha 1.5x mais cash, Ouro 2x, Diamante 3x
-              </p>
+              {tierConfig.enabled && loyaltyConfig.enabled && (
+                <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 mt-2">
+                  <p className="text-xs font-semibold text-zinc-600 mb-2">Exemplo com pedido de R$ 50,00</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-zinc-500">Base ({loyaltyConfig.cashbackPercent || 0}%): R$ {(50 * (loyaltyConfig.cashbackPercent || 0) / 100).toFixed(2)}</p>
+                    {tierConfig.tiers.map((tier) => {
+                      const base = 50 * (loyaltyConfig.cashbackPercent || 0) / 100
+                      const total = base * tier.multiplier
+                      return (
+                        <p key={tier.name} className="text-xs" style={{ color: tier.color }}>
+                          {tier.emoji} {tier.name} ({tier.multiplier}x): R$ {total.toFixed(2)}
+                        </p>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
