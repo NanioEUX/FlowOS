@@ -44,7 +44,7 @@ export default function FidelidadePageContent() {
     maxRedeemPercent: 25,
     minOrderToRedeem: 0,
     cashbackExpirationDays: 21,
-    reviewPromptMinutes: 30,
+    reviewPromptMinutes: 5,
   })
   const [tierConfig, setTierConfig] = useState<TierConfig>({
     enabled: false,
