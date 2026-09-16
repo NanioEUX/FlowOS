@@ -565,6 +565,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   // Flag de verificação de sessão: só é criado quando a verificação é
   // completada (código OU link). Fechar a página não desloga; só o logout
+  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
+
   // explícito apaga esse flag e exige nova verificação.
   const markSessionVerified = () => {
     setSessionVerified(true)
@@ -821,7 +823,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [reviewComment, setReviewComment] = useState("")
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [sessionVerified, setSessionVerified] = useState(false)
-  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
