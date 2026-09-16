@@ -568,7 +568,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // explícito apaga esse flag e exige nova verificação.
   const markSessionVerified = () => {
     setSessionVerified(true)
-    try { localStorage.setItem(SESSION_KEY, "1") } catch {}
+    try { sessionStorage.setItem(SESSION_KEY, "1") } catch {}
     // Show first purchase bonus screen if eligible
     if (isFirstPurchase && ((establishment.firstPurchaseDiscount || 0) > 0 || establishment.firstPurchaseBonus > 0)) {
       setShowFirstPurchaseBonus(true)
@@ -576,7 +576,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   }
   const clearSessionVerified = () => {
     setSessionVerified(false)
-    try { localStorage.removeItem(SESSION_KEY) } catch {}
+    try { sessionStorage.removeItem(SESSION_KEY) } catch {}
     verifyAppliedRef.current = false
     markVerifySessionStart()
   }
@@ -598,7 +598,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(SESSION_KEY) === "1") setSessionVerified(true)
+      if (sessionStorage.getItem(SESSION_KEY) === "1") setSessionVerified(true)
       else {
         // Só redefine o sessionStart se não existir ou for antigo (> 30 min).
         // Se a PWA recarregar no meio do fluxo de verificação (iOS mata a PWA
@@ -820,6 +820,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState("")
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [sessionVerified, setSessionVerified] = useState(false)
+  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
@@ -856,6 +858,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   useEffect(() => {
     if (!customer.phone) return
+    if (!sessionVerified) return
     const dismissedRaw = localStorage.getItem(`pedefacil-review-dismissed-${establishment.slug}`) || "{}"
     let dismissed: Record<string, number> = {}
     try { dismissed = JSON.parse(dismissedRaw) } catch {}
@@ -878,7 +881,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         }
       })
       .catch(() => {})
-  }, [customer.phone, establishment.id])
+  }, [customer.phone, establishment.id, sessionVerified])
 
   const dismissReview = useCallback((orderId: string) => {
     const key = `pedefacil-review-dismissed-${establishment.slug}`
@@ -1244,8 +1247,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [identifying, setIdentifying] = useState(false)
   const [customerData, setCustomerData] = useState<CustomerData | null>(null)
   const [phoneInput, setPhoneInput] = useState("")
-  const [sessionVerified, setSessionVerified] = useState(false)
-  const SESSION_KEY = `flowos-session-verified-${establishment.slug}`
 
   // First purchase discount
   const isFirstPurchase = useMemo(() => {
