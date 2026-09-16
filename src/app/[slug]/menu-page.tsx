@@ -893,11 +893,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setReviewRating(5)
     setReviewComment("")
     setReviewSubmitting(false)
-    if (pendingReviewRef.current) {
-      pendingReviewRef.current = false
-      setShowCheckout(true)
-      setCartStep("payment")
-    }
   }, [pendingReviewOrder, reviewRating, reviewComment, customer.phone, establishment.id, dismissReview])
 
   const pendingReviewRef = useRef(false)
@@ -1957,6 +1952,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         localStorage.setItem(`pedefacil-install-prompted-${establishment.slug}`, "1")
         setTimeout(() => setShowInstallPrompt(true), 2500)
       }
+
+      checkPendingReview().then(has => console.log("[checkPendingReview] result:", has))
 
       console.log("[submitOrder] setOrderResult chamado, paymentLink:", data.paymentLink ? "SIM" : "NAO")
 
@@ -4889,7 +4886,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
                   </div>
                 )}
-                <button onClick={async () => {
+                <button onClick={() => {
                   if (!customer.phone || !customer.name || !sessionVerified) {
                     if (!customer.phone || !customer.name) {
                       openIdentifyModal()
@@ -4901,8 +4898,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                     }
                     return
                   }
-                  const hasReview = await checkPendingReview()
-                  if (hasReview) return
                   setShowCheckout(true)
                   setCartStep("payment")
                 }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
@@ -5982,11 +5977,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (pendingReviewOrder) dismissReview(pendingReviewOrder.id)
                   setShowReviewModal(false)
                   setPendingReviewOrder(null)
-                  if (pendingReviewRef.current) {
-                    pendingReviewRef.current = false
-                    setShowCheckout(true)
-                    setCartStep("payment")
-                  }
                 }}
                 className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                 style={{ border: `1px solid ${theme.borderCard}`, color: theme.textMuted }}
