@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check, Settings } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
@@ -1528,7 +1528,7 @@ export default function CardapioPage() {
               <ExternalLink className="h-4 w-4" />
               Link cardápio
             </a>
-            <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium text-zinc-900">
+            <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium text-zinc-900 border border-zinc-300 bg-zinc-100 hover:bg-zinc-200">
               <Download className="h-4 w-4" />
               Importar do iFood
             </Button>
@@ -1539,10 +1539,19 @@ export default function CardapioPage() {
                   size="sm"
                   onClick={pushToIfood}
                   disabled={pushingToIfood}
-                  className="gap-1.5 text-sm font-medium text-blue-700"
+                  className="gap-1.5 text-sm font-medium text-zinc-900 border border-zinc-300 bg-zinc-100 hover:bg-zinc-200"
                 >
                   <Upload className="h-4 w-4" />
                   {pushingToIfood ? "Enviando..." : "Enviar para iFood"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {/* Fase 2: abrir config markup */}}
+                  className="p-2 text-zinc-600 hover:text-zinc-900 border border-zinc-300 bg-zinc-100 hover:bg-zinc-200"
+                  title="Configurações iFood"
+                >
+                  <Settings className="h-4 w-4" />
                 </Button>
                 <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer">
                   <input
@@ -1814,16 +1823,16 @@ export default function CardapioPage() {
                             <button
                               onClick={() => moveProduct(product.id, cat.id, "up")}
                               disabled={idx === 0}
-                              className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                              className="text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
                             >
-                              <GripVertical className="h-3 w-3 -rotate-90" />
+                              <ArrowUp className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => moveProduct(product.id, cat.id, "down")}
                               disabled={idx === sorted.length - 1}
-                              className="text-zinc-700 hover:text-zinc-400 disabled:opacity-30"
+                              className="text-zinc-500 hover:text-zinc-800 disabled:opacity-30"
                             >
-                              <GripVertical className="h-3 w-3 rotate-90" />
+                              <ArrowDown className="h-3.5 w-3.5" />
                             </button>
                           </div>
 
@@ -1902,63 +1911,78 @@ export default function CardapioPage() {
                             <span className="font-bold text-green-600 whitespace-nowrap">
                               {formatCurrency(product.price)}
                             </span>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                product.sendToPrep
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={product.sendToPrep ? "Entra no preparo (clique para desativar)" : "Não vai para preparo (clique para ativar)"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                product.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  product.sendToPrep ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
+                            <div className="flex flex-col items-center gap-0.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSendToPrep(product.id, product.sendToPrep) }}
+                                className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                                  product.sendToPrep
+                                    ? "bg-red-100"
+                                    : "bg-zinc-100"
+                                }`}
+                                title={product.sendToPrep ? "Entra no preparo (clique para desativar)" : "Não vai para preparo (clique para ativar)"}
+                                style={{ width: 32, height: 32 }}
+                              >
+                                <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                  product.sendToPrep ? "bg-red-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    product.sendToPrep ? "translate-x-3.5" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                              </button>
+                              <span className={`text-[9px] font-medium ${product.sendToPrep ? "text-red-600" : "text-zinc-400"}`}>
+                                {product.sendToPrep ? "Preparo" : "Sem preparo"}
                               </span>
-                              {product.sendToPrep ? "Preparo" : "Sem preparo"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                (product as any).onSale
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={(product as any).onSale ? "Em promoção (clique para editar)" : "Marcar como promoção"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  (product as any).onSale ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPromoModal(product) }}
+                                className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                                  (product as any).onSale
+                                    ? "bg-amber-100"
+                                    : "bg-zinc-100"
+                                }`}
+                                title={(product as any).onSale ? "Em promoção (clique para editar)" : "Marcar como promoção"}
+                                style={{ width: 32, height: 32 }}
+                              >
+                                <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                  (product as any).onSale ? "bg-amber-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    (product as any).onSale ? "translate-x-3.5" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                              </button>
+                              <span className={`text-[9px] font-medium ${(product as any).onSale ? "text-amber-600" : "text-zinc-400"}`}>
+                                {(product as any).onSale ? "Promoção" : "Sem promoção"}
                               </span>
-                              {(product as any).onSale ? "Promoção" : "Sem promoção"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFeaturedModal(product) }}
-                              className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
-                                (product as any).featured
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-zinc-100 text-zinc-400"
-                              }`}
-                              title={(product as any).featured ? "Em destaque (clique para editar)" : "Marcar como destaque"}
-                            >
-                              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
-                              }`}>
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFeaturedModal(product) }}
+                                className={`flex items-center justify-center rounded-full transition-colors shrink-0 ${
+                                  (product as any).featured
+                                    ? "bg-green-100"
+                                    : "bg-zinc-100"
+                                }`}
+                                title={(product as any).featured ? "Em destaque (clique para editar)" : "Marcar como destaque"}
+                                style={{ width: 32, height: 32 }}
+                              >
+                                <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                  (product as any).featured ? "bg-green-500" : "bg-zinc-300"
+                                }`}>
+                                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                                    (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
+                                  }`} />
+                                </span>
+                              </button>
+                              <span className={`text-[9px] font-medium ${(product as any).featured ? "text-green-600" : "text-zinc-400"}`}>
+                                {(product as any).featured ? "Destaque" : "Sem destaque"}
                               </span>
-                              {(product as any).featured ? "Destaque" : "Sem destaque"}
-                            </button>
+                            </div>
                             <button
                               onClick={() => editProduct(product)}
                               className="flex items-center gap-1 text-zinc-500 hover:text-green-600 transition-colors"
@@ -2065,12 +2089,12 @@ export default function CardapioPage() {
                         onClick={() => toggleSendToPrep(product.id, product.sendToPrep)}
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           product.sendToPrep
-                            ? "bg-orange-100 text-orange-700"
+                            ? "bg-red-100 text-red-600"
                             : "bg-zinc-100 text-zinc-400"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                          product.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
+                          product.sendToPrep ? "bg-red-500" : "bg-zinc-300"
                         }`}>
                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
                             product.sendToPrep ? "translate-x-3.5" : "translate-x-0.5"
@@ -2151,12 +2175,12 @@ export default function CardapioPage() {
                         onClick={() => openPromoModal(product)}
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           (product as any).onSale
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-amber-100 text-amber-600"
                             : "bg-zinc-100 text-zinc-400"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                          (product as any).onSale ? "bg-green-500" : "bg-zinc-300"
+                          (product as any).onSale ? "bg-amber-500" : "bg-zinc-300"
                         }`}>
                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
                             (product as any).onSale ? "translate-x-3.5" : "translate-x-0.5"
@@ -2241,12 +2265,12 @@ export default function CardapioPage() {
                         onClick={() => openFeaturedModal(product)}
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           (product as any).featured
-                            ? "bg-amber-100 text-amber-700"
+                            ? "bg-green-100 text-green-600"
                             : "bg-zinc-100 text-zinc-400"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                          (product as any).featured ? "bg-amber-500" : "bg-zinc-300"
+                          (product as any).featured ? "bg-green-500" : "bg-zinc-300"
                         }`}>
                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
                             (product as any).featured ? "translate-x-3.5" : "translate-x-0.5"
@@ -2994,7 +3018,7 @@ export default function CardapioPage() {
                         type="button"
                         onClick={() => setProductForm({ ...productForm, sendToPrep: !productForm.sendToPrep })}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          productForm.sendToPrep ? "bg-orange-500" : "bg-zinc-300"
+                          productForm.sendToPrep ? "bg-red-500" : "bg-zinc-300"
                         }`}
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
