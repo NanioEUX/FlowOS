@@ -772,7 +772,11 @@ export default function CardapioPage() {
       if (res.ok) {
         const msg = `Enviado: ${data.categoriesCreated + data.categoriesUpdated} categorias, ${data.itemsCreated + data.itemsUpdated} itens`
         if (data.errors && data.errors.length > 0) {
-          toast(`${msg} (${data.errors.length} erros)`, "warning")
+          console.error("[pushToIfood] errors:", data.errors)
+          const firstErr = data.errors[0]
+          const detail = `${firstErr.entity}: ${firstErr.name} — ${firstErr.error}`
+          const extra = data.errors.length > 1 ? ` (+${data.errors.length - 1} mais)` : ""
+          toast(`${msg} (${data.errors.length} erros) ${detail}${extra}`, "warning")
         } else {
           toast(msg, "success")
         }

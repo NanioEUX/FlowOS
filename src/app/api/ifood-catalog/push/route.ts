@@ -44,25 +44,31 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { categoryIds, dryRun } = body
 
-    // Fetch categories with sync enabled
+    // Fetch all categories (we'll filter syncToIfood in code for null = true legacy)
     const whereCategories: any = {
       establishmentId: auth.establishmentId,
-      syncToIfood: true,
     }
     if (categoryIds && categoryIds.length > 0) {
       whereCategories.id = { in: categoryIds }
     }
 
-    const categories = await prisma.category.findMany({
+    const allCategories = await prisma.category.findMany({
       where: whereCategories,
       include: {
         products: {
-          where: { syncToIfood: true },
           include: { additionalOptions: true },
         },
       },
       orderBy: { order: "asc" },
     })
+
+    // Filter: syncToIfood = true OR null (legacy records)
+    const categories = allCategories
+      .filter((c) => c.syncToIfood !== false)
+      .map((c) => ({
+        ...c,
+        products: c.products.filter((p: any) => p.syncToIfood !== false),
+      }))
 
     if (categories.length === 0) {
       return NextResponse.json({
@@ -87,6 +93,13 @@ export async function POST(req: NextRequest) {
 
     const token = ifoodAuth.accessToken
     const mid = establishment.ifoodMerchantId
+
+    console.log("[ifood-catalog-push] start:", {
+      establishmentId: auth.establishmentId,
+      merchantId: mid,
+      categoriesFound: categories.length,
+      categoryNames: categories.map((c) => c.name),
+    })
 
     const results = {
       categoriesCreated: 0,
@@ -117,10 +130,12 @@ export async function POST(req: NextRequest) {
     for (const category of categories) {
       try {
         let ifoodCategoryId = category.ifoodCategoryId
+        console.log("[ifood-catalog-push] processing category:", category.name, "ifoodCategoryId:", ifoodCategoryId, "products:", category.products.length)
 
         // Create category on iFood if it doesn't have an ID yet
         if (!ifoodCategoryId) {
           const catResult = await createCategory(token, mid, category.name)
+          console.log("[ifood-catalog-push] createCategory result:", catResult.status, catResult.data?.id || "no id")
           if (catResult.success && catResult.data?.id) {
             ifoodCategoryId = catResult.data.id
             await prisma.category.update({
@@ -129,10 +144,12 @@ export async function POST(req: NextRequest) {
             })
             results.categoriesCreated++
           } else {
+            const errMsg = `Falha ao criar: ${catResult.status} ${catResult.data?.message || ""}`
+            console.error("[ifood-catalog-push] category create failed:", category.name, errMsg, catResult)
             results.errors.push({
               entity: "category",
               name: category.name,
-              error: `Falha ao criar: ${catResult.status} ${catResult.data?.message || ""}`,
+              error: errMsg,
             })
             continue // Skip products of this category
           }
@@ -207,13 +224,16 @@ export async function POST(req: NextRequest) {
               }
               results.itemsUpdated++
             } else {
+              const errMsg = `Falha: ${itemResult.status} ${JSON.stringify(itemResult.data).slice(0, 100)}`
+              console.error("[ifood-catalog-push] product create/update failed:", product.name, errMsg, itemResult)
               results.errors.push({
                 entity: "product",
                 name: product.name,
-                error: `Falha: ${itemResult.status} ${JSON.stringify(itemResult.data).slice(0, 100)}`,
+                error: errMsg,
               })
             }
           } catch (e: any) {
+            console.error("[ifood-catalog-push] product exception:", product.name, e.message)
             results.errors.push({
               entity: "product",
               name: product.name,
@@ -222,6 +242,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (e: any) {
+        console.error("[ifood-catalog-push] category exception:", category.name, e.message)
         results.errors.push({
           entity: "category",
           name: category.name,
