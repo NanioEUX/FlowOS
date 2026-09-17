@@ -17,6 +17,7 @@ import {
   getInterruptions,
   createInterruption,
   deleteInterruption,
+  listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
 
 /**
@@ -150,7 +151,12 @@ export async function POST(req: NextRequest) {
         if (!name) {
           return NextResponse.json({ error: "name é obrigatório" }, { status: 400 })
         }
-        const result = await createCategory(token, mid, name)
+        const catalogsRes = await listCatalogs(token, mid)
+        if (!catalogsRes.success || !catalogsRes.data || catalogsRes.data.length === 0) {
+          return NextResponse.json({ error: "Nenhum catálogo encontrado no iFood" }, { status: 400 })
+        }
+        const catalogId = catalogsRes.data[0].catalogId || catalogsRes.data[0].id
+        const result = await createCategory(token, mid, catalogId, name)
         return NextResponse.json(result)
       }
 

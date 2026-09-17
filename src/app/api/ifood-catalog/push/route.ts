@@ -8,6 +8,7 @@ import {
   batchUpdatePrices,
   batchUpdateStatuses,
   getBatchStatus,
+  listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
 
 /**
@@ -94,6 +95,17 @@ export async function POST(req: NextRequest) {
     const token = ifoodAuth.accessToken
     const mid = establishment.ifoodMerchantId
 
+    // Get the default catalog ID (required for creating categories)
+    const catalogsResult = await listCatalogs(token, mid)
+    if (!catalogsResult.success || !catalogsResult.data || catalogsResult.data.length === 0) {
+      return NextResponse.json(
+        { error: "Nenhum catálogo encontrado no iFood. Crie um catálogo no iFood primeiro." },
+        { status: 400 }
+      )
+    }
+    const catalogId = catalogsResult.data[0].catalogId || catalogsResult.data[0].id
+    console.log("[ifood-catalog-push] using catalogId:", catalogId)
+
     console.log("[ifood-catalog-push] start:", {
       establishmentId: auth.establishmentId,
       merchantId: mid,
@@ -134,7 +146,7 @@ export async function POST(req: NextRequest) {
 
         // Create category on iFood if it doesn't have an ID yet
         if (!ifoodCategoryId) {
-          const catResult = await createCategory(token, mid, category.name)
+          const catResult = await createCategory(token, mid, catalogId, category.name)
           console.log("[ifood-catalog-push] createCategory result:", catResult.status, catResult.data?.id || "no id")
           if (catResult.success && catResult.data?.id) {
             ifoodCategoryId = catResult.data.id

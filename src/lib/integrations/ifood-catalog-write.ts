@@ -111,14 +111,15 @@ export async function listCategories(token: string, merchantId: string) {
 // CATALOG — Criar
 // ═══════════════════════════════════════════════════
 
-/** POST /catalog/v2.0/merchants/{mid}/categories — criar categoria */
+/** POST /catalog/v2.0/merchants/{mid}/catalogs/{catalogId}/categories — criar categoria */
 export async function createCategory(
   token: string,
   merchantId: string,
+  catalogId: string,
   name: string,
   template: string = "DEFAULT"
 ) {
-  const result = await httpsRequest("POST", `/catalog/v2.0/merchants/${merchantId}/categories`, token, {
+  const result = await httpsRequest("POST", `/catalog/v2.0/merchants/${merchantId}/catalogs/${catalogId}/categories`, token, {
     name,
     status: "AVAILABLE",
     template,
