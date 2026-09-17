@@ -193,8 +193,7 @@ export async function POST(req: NextRequest) {
             const itemId = product.ifoodItemId || cuidToUUIDv4(product.id)
             const productId = product.ifoodProductId || cuidToUUIDv4(`prod_${product.id}`)
 
-            // Build option groups and options from additionalOptions
-            const optionGroupsMap = new Map<string, Array<{ id: string; name: string; price: number }>>()
+            const optionGroupsMap = new Map<string, Array<{ id: string; name: string; price: number; required: boolean; maxSelection: number | null }>>()
             for (const opt of product.additionalOptions) {
               const groupName = opt.groupName || "Adicionais"
               if (!optionGroupsMap.has(groupName)) {
@@ -204,6 +203,8 @@ export async function POST(req: NextRequest) {
                 id: cuidToUUIDv4(opt.id),
                 name: opt.name,
                 price: opt.price || 0,
+                required: opt.selectionType === "required",
+                maxSelection: opt.maxSelection ?? null,
               })
             }
 
@@ -214,13 +215,14 @@ export async function POST(req: NextRequest) {
             const optionsList: any[] = []
             const extraProducts: any[] = []
 
-            // Main product with optionGroups reference (if has complements)
+            const hasRealImage = product.image && product.image.startsWith("http")
+
             const mainProduct: any = {
               id: productId,
               name: product.name,
               description: product.description || undefined,
               externalCode,
-              imagePath: product.image || undefined,
+              ...(hasRealImage ? { imagePath: product.image } : {}),
             }
 
             if (hasOptions) {
@@ -249,11 +251,13 @@ export async function POST(req: NextRequest) {
                   })
                 }
 
-                // Reference in main product
+                const isRequired = opts.some((o) => o.required)
+                const maxSelection = opts.find((o) => o.maxSelection !== null)?.maxSelection ?? opts.length
+
                 productOptionGroupRefs.push({
                   id: groupId,
-                  min: 0,
-                  max: opts.length,
+                  min: isRequired ? 1 : 0,
+                  max: maxSelection,
                 })
 
                 // Top-level optionGroup
