@@ -188,8 +188,12 @@ export async function createOrUpdateItem(
 
   console.log("[ifood-catalog-write] PUT items body:", JSON.stringify(body, null, 2))
   const result = await httpsRequest("PUT", `/catalog/v2.0/merchants/${merchantId}/items`, token, body)
+  const parsedBody = JSON.parse(result.body || "{}")
+  if (parsedBody?.error?.details) {
+    console.error("[ifood-catalog-write] VALIDATION DETAILS:", JSON.stringify(parsedBody.error.details, null, 2))
+  }
   console.log("[ifood-catalog-write] PUT items response:", result.status, result.body.slice(0, 500))
-  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: parsedBody }
 }
 
 // ═══════════════════════════════════════════════════
