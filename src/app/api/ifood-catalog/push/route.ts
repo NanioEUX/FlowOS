@@ -220,18 +220,26 @@ export async function POST(req: NextRequest) {
             if (product.image) {
               if (product.image.startsWith("http")) {
                 imagePath = product.image
+                console.log("[ifood-catalog-push] image HTTP direta:", product.name, imagePath?.slice(0, 80))
               } else if (product.image.startsWith("data:")) {
+                console.log("[ifood-catalog-push] image base64 detectada:", product.name, `tamanho: ${product.image.length} chars`)
                 const uploadResult = await uploadBase64Image(product.image)
+                console.log("[ifood-catalog-push] upload resultado:", product.name, uploadResult)
                 if (uploadResult.url) {
                   imagePath = uploadResult.url
                   await prisma.product.update({
                     where: { id: product.id },
                     data: { image: uploadResult.url },
                   })
+                  console.log("[ifood-catalog-push] image salva no banco:", product.name, imagePath)
                 } else {
-                  console.warn("[ifood-catalog-push] falha upload imagem:", product.name, uploadResult.error)
+                  console.error("[ifood-catalog-push] FALHA upload imagem:", product.name, uploadResult.error)
                 }
+              } else {
+                console.log("[ifood-catalog-push] image formato desconhecido:", product.name, product.image.slice(0, 50))
               }
+            } else {
+              console.log("[ifood-catalog-push] produto sem image:", product.name)
             }
 
             const mainProduct: any = {
@@ -241,6 +249,7 @@ export async function POST(req: NextRequest) {
               externalCode,
               ...(imagePath ? { imagePath } : {}),
             }
+            console.log("[ifood-catalog-push] mainProduct:", product.name, "imagePath:", mainProduct.imagePath || "SEM imagem")
 
             if (hasOptions) {
               const productOptionGroupRefs: any[] = []
