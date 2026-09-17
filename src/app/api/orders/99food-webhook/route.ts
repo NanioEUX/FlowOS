@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { map99FoodOrderToFlow } from "@/lib/integrations/nine-food"
 import { upsert99FoodCustomer } from "@/lib/integrations/nine-food-customer"
+
+function verifyHmac(body: string, signature: string, secret: string): boolean {
+  if (!signature || !secret) return false
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex")
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  )
+}
 
 /**
  * 99Food Webhook Handler
@@ -20,6 +33,34 @@ export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
     console.log("[99food webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
+
+    // --- HMAC-SHA256 signature validation ---
+    const signature =
+      req.headers.get("x-99food-signature") ||
+      req.headers.get("x-webhook-signature") ||
+      req.headers.get("authorization")?.replace("Bearer ", "") ||
+      ""
+
+    // Find any enabled 99Food establishment to get the API key (used as HMAC secret)
+    const sigEstablishment = await prisma.establishment.findFirst({
+      where: { nineFoodEnabled: true, nineFoodApiKey: { not: null } },
+      select: { nineFoodApiKey: true },
+    })
+    const hmacSecret = sigEstablishment?.nineFoodApiKey || ""
+
+    if (hmacSecret && signature && signature.length > 16) {
+      try {
+        const ok = verifyHmac(raw, signature, hmacSecret)
+        if (!ok) {
+          console.warn("[99food webhook] signature mismatch — rejecting")
+          return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
+        }
+      } catch {
+        return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
+      }
+    }
+    // If no signature header or no secret configured, skip validation (fallback for sandbox/testing)
+    // --- End HMAC validation ---
 
     const payload = JSON.parse(raw)
     console.log("[99food webhook] payload:", JSON.stringify(payload).slice(0, 500))

@@ -481,6 +481,7 @@ model Order {
   itemCosts          OrderItemCost[]
 
   @@unique([establishmentId, orderNumber])
+  @@unique([establishmentId, externalId])
   @@index([establishmentId, createdAt])
   @@index([establishmentId, status])
   @@index([establishmentId, tableNumber, orderType])

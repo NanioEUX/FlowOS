@@ -32,10 +32,11 @@ export async function POST(req: NextRequest) {
       try {
         const ok = verifySignature(raw, signature, secret)
         if (!ok) {
-          console.warn("[ifood webhook] signature mismatch")
+          console.warn("[ifood webhook] signature mismatch — rejecting")
+          return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
         }
       } catch {
-        // buffers may have different lengths; ignore
+        return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
     }
 
