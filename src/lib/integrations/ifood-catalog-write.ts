@@ -145,6 +145,7 @@ export async function createOrUpdateItem(
     description?: string
     externalCode?: string
     imagePath?: string
+    optionGroups?: Array<{ id: string; min?: number; max?: number }>
   }>,
   optionGroups: Array<{
     id?: string
@@ -177,6 +178,7 @@ export async function createOrUpdateItem(
       ...(p.description ? { description: p.description } : {}),
       ...(p.externalCode ? { externalCode: p.externalCode } : {}),
       ...(p.imagePath ? { imagePath: p.imagePath } : {}),
+      ...(p.optionGroups && p.optionGroups.length > 0 ? { optionGroups: p.optionGroups } : {}),
     })),
     optionGroups: optionGroups.map((og) => ({
       id: og.id,

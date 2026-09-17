@@ -220,6 +220,7 @@ export async function POST(req: NextRequest) {
               name: product.name,
               description: product.description || undefined,
               externalCode,
+              imagePath: product.image || undefined,
             }
 
             if (hasOptions) {
