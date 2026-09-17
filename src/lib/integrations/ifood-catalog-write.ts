@@ -148,29 +148,21 @@ export async function createOrUpdateItem(
   optionGroups: Array<{
     id?: string
     name: string
-    minQuantity?: number
-    maxQuantity?: number
+    status?: string
     optionGroupType?: string
     optionIds?: string[]
-    options?: Array<{
-      id?: string
-      name: string
-      price: number
-      externalCode?: string
-      status?: string
-    }>
   }> = [],
-  options?: Array<{
+  options: Array<{
     id: string
     productId: string
     status?: string
     price: { value: number }
     externalCode?: string
-  }>
+  }> = []
 ) {
-  const body: any = {
+  const body = {
     item: {
-      ...(item.id ? { id: item.id } : {}),
+      id: item.id,
       type: "DEFAULT",
       categoryId: item.categoryId,
       status: item.status || "AVAILABLE",
@@ -178,27 +170,23 @@ export async function createOrUpdateItem(
       ...(item.externalCode ? { externalCode: item.externalCode } : {}),
     },
     products: products.map((p) => ({
-      ...(p.id ? { id: p.id } : {}),
+      id: p.id,
       name: p.name,
       ...(p.description ? { description: p.description } : {}),
       ...(p.externalCode ? { externalCode: p.externalCode } : {}),
       ...(p.imagePath ? { imagePath: p.imagePath } : {}),
     })),
     optionGroups: optionGroups.map((og) => ({
-      ...(og.id ? { id: og.id } : {}),
+      id: og.id,
       name: og.name,
-      minQuantity: og.minQuantity ?? 0,
-      maxQuantity: og.maxQuantity ?? 0,
+      status: og.status || "AVAILABLE",
       ...(og.optionGroupType ? { optionGroupType: og.optionGroupType } : {}),
-      ...(og.optionIds ? { optionIds: og.optionIds } : {}),
+      optionIds: og.optionIds || [],
     })),
+    options,
   }
 
-  // If options are provided as separate top-level array (new format)
-  if (options && options.length > 0) {
-    body.options = options
-  }
-
+  console.log("[ifood-catalog-write] PUT items body:", JSON.stringify(body, null, 2))
   const result = await httpsRequest("PUT", `/catalog/v2.0/merchants/${merchantId}/items`, token, body)
   return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
 }

@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
             const productId = product.ifoodProductId || cuidToUUIDv4(`prod_${product.id}`)
 
             // Build option groups and options from additionalOptions
-            const optionGroupsMap = new Map<string, Array<{ id: string; name: string; price: number; externalCode: string }>>()
+            const optionGroupsMap = new Map<string, Array<{ id: string; name: string; price: number }>>()
             for (const opt of product.additionalOptions) {
               const groupName = opt.groupName || "Adicionais"
               if (!optionGroupsMap.has(groupName)) {
@@ -204,37 +204,71 @@ export async function POST(req: NextRequest) {
                 id: cuidToUUIDv4(opt.id),
                 name: opt.name,
                 price: opt.price || 0,
-                externalCode: `saas_opt_${opt.id.slice(0, 12)}`,
               })
             }
 
-            // Build options list (flat array of all options)
-            const optionsList: any[] = []
+            const hasOptions = optionGroupsMap.size > 0
+
+            // Build optionGroups, options, and extra products per iFood API spec
             const optionGroups: any[] = []
+            const optionsList: any[] = []
+            const extraProducts: any[] = []
 
-            for (const [groupName, options] of optionGroupsMap.entries()) {
-              const groupId = cuidToUUIDv4(`grp_${groupName}_${product.id}`)
-              const optionIds = options.map(o => o.id)
+            // Main product with optionGroups reference (if has complements)
+            const mainProduct: any = {
+              id: productId,
+              name: product.name,
+              description: product.description || undefined,
+              externalCode,
+            }
 
-              optionGroups.push({
-                id: groupId,
-                name: groupName,
-                minQuantity: 0,
-                maxQuantity: options.length,
-                optionGroupType: "OFFER_UNIT",
-                optionIds,
-              })
+            if (hasOptions) {
+              const productOptionGroupRefs: any[] = []
 
-              for (const opt of options) {
-                optionsList.push({
-                  id: opt.id,
-                  productId: productId,
+              for (const [groupName, opts] of optionGroupsMap.entries()) {
+                const groupId = cuidToUUIDv4(`grp_${groupName}_${product.id}`)
+                const optionIds: string[] = []
+
+                for (const opt of opts) {
+                  const optId = cuidToUUIDv4(opt.id)
+                  optionIds.push(optId)
+
+                  // Each option needs its own product
+                  const optProductId = cuidToUUIDv4(`optprod_${opt.id}`)
+                  extraProducts.push({
+                    id: optProductId,
+                    name: opt.name,
+                  })
+
+                  optionsList.push({
+                    id: optId,
+                    productId: optProductId,
+                    status: "AVAILABLE",
+                    price: { value: opt.price },
+                  })
+                }
+
+                // Reference in main product
+                productOptionGroupRefs.push({
+                  id: groupId,
+                  min: 0,
+                  max: opts.length,
+                })
+
+                // Top-level optionGroup
+                optionGroups.push({
+                  id: groupId,
+                  name: groupName,
                   status: "AVAILABLE",
-                  price: { value: opt.price },
-                  externalCode: opt.externalCode,
+                  optionGroupType: "OFFER_UNIT",
+                  optionIds,
                 })
               }
+
+              mainProduct.optionGroups = productOptionGroupRefs
             }
+
+            const allProducts = [mainProduct, ...extraProducts]
 
             const itemResult = await createOrUpdateItem(
               token,
@@ -246,14 +280,7 @@ export async function POST(req: NextRequest) {
                 price: product.promoPrice && product.onSale ? product.promoPrice : product.price,
                 externalCode,
               },
-              [
-                {
-                  id: productId,
-                  name: product.name,
-                  description: product.description || undefined,
-                  externalCode,
-                },
-              ],
+              allProducts,
               optionGroups,
               optionsList
             )

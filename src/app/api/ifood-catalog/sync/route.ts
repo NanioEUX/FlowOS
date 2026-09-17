@@ -161,11 +161,11 @@ export async function POST(req: NextRequest) {
       }
 
       case "create_item": {
-        const { item, products, optionGroups } = body
+        const { item, products, optionGroups, options } = body
         if (!item || !products || products.length === 0) {
           return NextResponse.json({ error: "item e products são obrigatórios" }, { status: 400 })
         }
-        const result = await createOrUpdateItem(token, mid, item, products, optionGroups || [])
+        const result = await createOrUpdateItem(token, mid, item, products, optionGroups || [], options || [])
         return NextResponse.json(result)
       }
 
