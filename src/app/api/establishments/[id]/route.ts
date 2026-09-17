@@ -46,7 +46,7 @@ const SAFE_FIELDS = ["name", "slug", "phone", "email", "address", "logo", "cover
   "whatsappAutomationEnabled", "whatsappAutomationActivatedAt", "whatsappAutomationPriceCents", "aiMessagesLimit",
   "verifyReminderEnabled", "verifyReminderDelayMin", "verifyReminderMessage",
   "minimumOrderEnabled", "minimumOrderValue", "minimumOrderApplyToDelivery", "minimumOrderApplyToPickup",
-  "ifoodEnabled", "ifoodMerchantId",
+  "ifoodEnabled", "ifoodMerchantId", "ifoodMarkupPercent",
   "tipoEntregaAtiva", "api99Key", "api99EmployeeId",
   "pagarmeApiKey", "pagarmeEnvironment", "pagarmeWebhookKey", "pagarmeSplitReceiverId", "saasCommissionPercentage",
   "flowChavePix", "flowModoAtivado",

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check, Settings } from "lucide-react"
+import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check, Settings, Lock, Unlock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
@@ -127,6 +127,9 @@ export default function CardapioPage() {
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
   const [pushingToIfood, setPushingToIfood] = useState(false)
   const [globalSyncIfood, setGlobalSyncIfood] = useState(true)
+  const [showIfoodSettings, setShowIfoodSettings] = useState(false)
+  const [ifoodMarkupGlobal, setIfoodMarkupGlobal] = useState<string>("")
+  const [ifoodMarkupByCategory, setIfoodMarkupByCategory] = useState<Record<string, string>>({})
 
   // Recommendation state
   const [recommendModal, setRecommendModal] = useState<{ open: boolean; type: "category" | "product"; targetId: string; targetName: string; currentIds: string[] }>({
@@ -188,6 +191,62 @@ export default function CardapioPage() {
       cost += converted * (item.unitCost || 0)
     }
     return cost
+  }
+
+  function computeIfoodPrice(product: any): number {
+    if (!(product as any).ifoodPriceLocked && (product as any).ifoodPrice != null) {
+      return (product as any).ifoodPrice
+    }
+    const catMarkup = ifoodMarkupByCategory[product.categoryId]
+    const markup = catMarkup ? parseFloat(catMarkup) : (ifoodMarkupGlobal ? parseFloat(ifoodMarkupGlobal) : 0)
+    if (markup > 0) {
+      return product.price * (1 + markup / 100)
+    }
+    return product.price
+  }
+
+  async function toggleIfoodPriceLock(product: any) {
+    if (!establishmentId) return
+    const newLocked = !(product as any).ifoodPriceLocked
+    try {
+      await fetchAuth(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ifoodPriceLocked: newLocked }),
+      })
+      setCategories((prev) =>
+        prev.map((c) => ({
+          ...c,
+          products: c.products.map((p) =>
+            p.id === product.id ? { ...p, ifoodPriceLocked: newLocked } as any : p
+          ),
+        }))
+      )
+    } catch (e) {
+      toast("Erro ao alterar cadeado", "error")
+    }
+  }
+
+  async function updateIfoodPrice(product: any, value: string) {
+    if (!establishmentId) return
+    const numVal = value ? parseFloat(value) : null
+    try {
+      await fetchAuth(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ifoodPrice: numVal }),
+      })
+      setCategories((prev) =>
+        prev.map((c) => ({
+          ...c,
+          products: c.products.map((p) =>
+            p.id === product.id ? { ...p, ifoodPrice: numVal } as any : p
+          ),
+        }))
+      )
+    } catch (e) {
+      toast("Erro ao atualizar preço iFood", "error")
+    }
   }
 
   // Aparência state
@@ -271,7 +330,17 @@ export default function CardapioPage() {
       fetchAuth(`/api/stock?establishmentId=${establishmentId}`),
       fetchAuth(`/api/establishments?id=${establishmentId}`),
     ])
-    if (catRes.ok) setCategories(await catRes.json())
+    if (catRes.ok) {
+      const cats = await catRes.json()
+      setCategories(cats)
+      const markupMap: Record<string, string> = {}
+      for (const c of cats) {
+        if (c.ifoodMarkupPercent != null) {
+          markupMap[c.id] = c.ifoodMarkupPercent.toString()
+        }
+      }
+      setIfoodMarkupByCategory(markupMap)
+    }
     if (stockRes.ok) {
       const data = await stockRes.json()
       setStockItems(data.items)
@@ -280,6 +349,7 @@ export default function CardapioPage() {
       const data = await estRes.json()
       setIfoodEnabled(data.ifoodEnabled || false)
       setIfoodMerchantId(data.ifoodMerchantId || null)
+      setIfoodMarkupGlobal(data.ifoodMarkupPercent?.toString() || "")
       setForm({
         name: data.name || "",
         phone: data.phone || "",
@@ -787,6 +857,30 @@ export default function CardapioPage() {
       toast("Erro ao enviar para iFood", "error")
     } finally {
       setPushingToIfood(false)
+    }
+  }
+
+  async function saveIfoodMarkup() {
+    if (!establishmentId) return
+    try {
+      const globalVal = ifoodMarkupGlobal ? parseFloat(ifoodMarkupGlobal) : null
+      await fetchAuth(`/api/establishments/${establishmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ifoodMarkupPercent: globalVal }),
+      })
+      for (const [catId, val] of Object.entries(ifoodMarkupByCategory)) {
+        const catVal = val ? parseFloat(val) : null
+        await fetchAuth(`/api/categories/${catId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ifoodMarkupPercent: catVal }),
+        })
+      }
+      toast("Configurações de markup salvas", "success")
+      setShowIfoodSettings(false)
+    } catch (e) {
+      toast("Erro ao salvar configurações", "error")
     }
   }
 
@@ -1547,7 +1641,7 @@ export default function CardapioPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => {/* Fase 2: abrir config markup */}}
+                  onClick={() => setShowIfoodSettings(true)}
                   className="p-2 text-zinc-600 hover:text-zinc-900 border border-zinc-300 bg-zinc-100 hover:bg-zinc-200"
                   title="Configurações iFood"
                 >
@@ -1908,9 +2002,42 @@ export default function CardapioPage() {
                             </div>
                           </button>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-bold text-green-600 whitespace-nowrap">
-                              {formatCurrency(product.price)}
-                            </span>
+                            <div className="flex flex-col items-end shrink-0">
+                              <span className="font-bold text-green-600 whitespace-nowrap">
+                                {formatCurrency(product.price)}
+                              </span>
+                              {ifoodEnabled && ifoodMerchantId && (
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleIfoodPriceLock(product) }}
+                                    className="text-zinc-400 hover:text-zinc-600"
+                                    title={(product as any).ifoodPriceLocked ? "Preço iFood automático (clique para editar)" : "Preço iFood manual (clique para travar)"}
+                                  >
+                                    {(product as any).ifoodPriceLocked ? (
+                                      <Lock className="h-3 w-3" />
+                                    ) : (
+                                      <Unlock className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                  {(product as any).ifoodPriceLocked ? (
+                                    <span className="text-[10px] text-zinc-500 whitespace-nowrap">
+                                      iFood {formatCurrency(computeIfoodPrice(product))}
+                                    </span>
+                                  ) : (
+                                    <input
+                                      type="number"
+                                      step="0.50"
+                                      min="0"
+                                      value={(product as any).ifoodPrice ?? ""}
+                                      onChange={(e) => updateIfoodPrice(product, e.target.value)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 text-[10px] text-right text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1 py-0.5"
+                                      placeholder={formatCurrency(product.price)}
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             <div className="flex flex-col items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
@@ -2773,6 +2900,84 @@ export default function CardapioPage() {
             loadData() // Reload products after import
           }}
         />
+      )}
+
+      {/* iFood Settings Modal */}
+      {showIfoodSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Configurações iFood
+                </h3>
+                <button onClick={() => setShowIfoodSettings(false)}>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">
+                    Markup global (%)
+                  </label>
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Percentual adicionado ao preço base para o iFood
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={ifoodMarkupGlobal}
+                      onChange={(e) => setIfoodMarkupGlobal(e.target.value)}
+                      placeholder="Ex: 15"
+                      className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                    />
+                    <span className="text-sm text-zinc-500">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">
+                    Markup por categoria
+                  </label>
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Sobrepõe o markup global para categorias específicas
+                  </p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="flex items-center gap-2">
+                        <span className="text-sm text-zinc-700 flex-1 truncate">{cat.name}</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            value={ifoodMarkupByCategory[cat.id] || ""}
+                            onChange={(e) => setIfoodMarkupByCategory({ ...ifoodMarkupByCategory, [cat.id]: e.target.value })}
+                            placeholder="Global"
+                            className="w-20 rounded-lg border border-zinc-300 px-2 py-1 text-sm text-right"
+                          />
+                          <span className="text-xs text-zinc-500">%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="secondary" size="sm" onClick={() => setShowIfoodSettings(false)}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={saveIfoodMarkup} className="bg-green-600 hover:bg-green-700 text-white">
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Product Modal */}

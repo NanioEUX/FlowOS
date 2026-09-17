@@ -41,14 +41,14 @@ export async function PATCH(
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData()
-      const booleanFields = ["sendToPrep", "onSale", "active", "available", "availableOnline", "availablePresencial", "availableWhatsapp", "featured", "zoomEnabled", "syncToIfood"]
+      const booleanFields = ["sendToPrep", "onSale", "active", "available", "availableOnline", "availablePresencial", "availableWhatsapp", "featured", "zoomEnabled", "syncToIfood", "ifoodPriceLocked"]
       for (const [key, value] of formData.entries()) {
         if (key === "file") {
           continue
         }
         if (value === "null" || value === "undefined") {
           data[key] = null
-        } else         if (key === "price" || key === "promoPrice" || key === "featuredDiscountPrice") {
+        } else if (key === "price" || key === "promoPrice" || key === "featuredDiscountPrice" || key === "ifoodPrice") {
           data[key] = value === "null" ? null : parseFloat(value as string)
         } else if (booleanFields.includes(key)) {
           data[key] = value === "true" || value === "1"

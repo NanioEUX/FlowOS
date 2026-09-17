@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       select: {
         ifoodMerchantId: true,
         ifoodEnabled: true,
+        ifoodMarkupPercent: true,
         name: true,
       },
     })
@@ -288,6 +289,18 @@ export async function POST(req: NextRequest) {
 
             const allProducts = [mainProduct, ...extraProducts]
 
+            // Calculate iFood price with markup
+            let ifoodPrice: number
+            if (!product.ifoodPriceLocked && product.ifoodPrice != null) {
+              ifoodPrice = product.ifoodPrice
+            } else {
+              const basePrice = product.promoPrice && product.onSale ? product.promoPrice : product.price
+              const catMarkup = category.ifoodMarkupPercent
+              const globalMarkup = establishment.ifoodMarkupPercent
+              const markup = catMarkup ?? globalMarkup ?? 0
+              ifoodPrice = markup > 0 ? basePrice * (1 + markup / 100) : basePrice
+            }
+
             const itemResult = await createOrUpdateItem(
               token,
               mid,
@@ -295,7 +308,7 @@ export async function POST(req: NextRequest) {
                 id: itemId,
                 categoryId: ifoodCategoryId!,
                 status: product.isAvailable ? "AVAILABLE" : "UNAVAILABLE",
-                price: product.promoPrice && product.onSale ? product.promoPrice : product.price,
+                price: ifoodPrice,
                 externalCode,
                 productId,
               },
