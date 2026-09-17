@@ -224,10 +224,6 @@ export async function POST(req: NextRequest) {
                 const uploadResult = await uploadItemImage(token, mid, product.image)
                 if (uploadResult.success && uploadResult.data?.imagePath) {
                   imagePath = uploadResult.data.imagePath
-                  await prisma.product.update({
-                    where: { id: product.id },
-                    data: { image: `https://merchant-api.ifood.com.br/catalog/v2.0/image/${imagePath}` },
-                  })
                 } else {
                   console.error("[ifood-catalog-push] falha upload imagem iFood:", product.name, uploadResult.status, uploadResult.data)
                 }
