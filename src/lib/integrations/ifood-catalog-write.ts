@@ -150,16 +150,25 @@ export async function createOrUpdateItem(
     name: string
     minQuantity?: number
     maxQuantity?: number
-    options: Array<{
+    optionGroupType?: string
+    optionIds?: string[]
+    options?: Array<{
       id?: string
       name: string
       price: number
       externalCode?: string
       status?: string
     }>
-  }> = []
+  }> = [],
+  options?: Array<{
+    id: string
+    productId: string
+    status?: string
+    price: { value: number }
+    externalCode?: string
+  }>
 ) {
-  const body = {
+  const body: any = {
     item: {
       ...(item.id ? { id: item.id } : {}),
       type: "DEFAULT",
@@ -179,15 +188,15 @@ export async function createOrUpdateItem(
       ...(og.id ? { id: og.id } : {}),
       name: og.name,
       minQuantity: og.minQuantity ?? 0,
-      maxQuantity: og.maxQuantity ?? og.options.length,
-      options: og.options.map((o) => ({
-        ...(o.id ? { id: o.id } : {}),
-        name: o.name,
-        price: { value: o.price },
-        ...(o.externalCode ? { externalCode: o.externalCode } : {}),
-        status: o.status || "AVAILABLE",
-      })),
+      maxQuantity: og.maxQuantity ?? 0,
+      ...(og.optionGroupType ? { optionGroupType: og.optionGroupType } : {}),
+      ...(og.optionIds ? { optionIds: og.optionIds } : {}),
     })),
+  }
+
+  // If options are provided as separate top-level array (new format)
+  if (options && options.length > 0) {
+    body.options = options
   }
 
   const result = await httpsRequest("PUT", `/catalog/v2.0/merchants/${merchantId}/items`, token, body)

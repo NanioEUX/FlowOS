@@ -10,6 +10,22 @@ import {
   getBatchStatus,
   listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
+import crypto from "crypto"
+
+/**
+ * Generate a deterministic UUID v4 from a cuid string.
+ * iFood API requires UUID v4 format for all IDs.
+ */
+function cuidToUUIDv4(cuid: string): string {
+  const hash = crypto.createHash("sha256").update(cuid).digest("hex")
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    "4" + hash.slice(13, 16),
+    ((parseInt(hash.slice(16, 18), 16) & 0x3f) | 0x80).toString(16) + hash.slice(18, 20),
+    hash.slice(20, 32),
+  ].join("-")
+}
 
 /**
  * POST /api/ifood-catalog/push
@@ -173,36 +189,58 @@ export async function POST(req: NextRequest) {
         for (const product of category.products) {
           try {
             const externalCode = `saas_${product.id.slice(0, 12)}`
+            // iFood requires UUID v4 for item/product IDs
+            const itemId = product.ifoodItemId || cuidToUUIDv4(product.id)
+            const productId = product.ifoodProductId || cuidToUUIDv4(`prod_${product.id}`)
 
-            // Build option groups from additionalOptions
-            const optionGroupsMap = new Map<string, any[]>()
+            // Build option groups and options from additionalOptions
+            const optionGroupsMap = new Map<string, Array<{ id: string; name: string; price: number; externalCode: string }>>()
             for (const opt of product.additionalOptions) {
               const groupName = opt.groupName || "Adicionais"
               if (!optionGroupsMap.has(groupName)) {
                 optionGroupsMap.set(groupName, [])
               }
               optionGroupsMap.get(groupName)!.push({
+                id: cuidToUUIDv4(opt.id),
                 name: opt.name,
                 price: opt.price || 0,
                 externalCode: `saas_opt_${opt.id.slice(0, 12)}`,
-                status: "AVAILABLE",
               })
             }
 
-            const optionGroups = Array.from(optionGroupsMap.entries()).map(
-              ([name, options]) => ({
-                name,
+            // Build options list (flat array of all options)
+            const optionsList: any[] = []
+            const optionGroups: any[] = []
+
+            for (const [groupName, options] of optionGroupsMap.entries()) {
+              const groupId = cuidToUUIDv4(`grp_${groupName}_${product.id}`)
+              const optionIds = options.map(o => o.id)
+
+              optionGroups.push({
+                id: groupId,
+                name: groupName,
                 minQuantity: 0,
                 maxQuantity: options.length,
-                options,
+                optionGroupType: "OFFER_UNIT",
+                optionIds,
               })
-            )
+
+              for (const opt of options) {
+                optionsList.push({
+                  id: opt.id,
+                  productId: productId,
+                  status: "AVAILABLE",
+                  price: { value: opt.price },
+                  externalCode: opt.externalCode,
+                })
+              }
+            }
 
             const itemResult = await createOrUpdateItem(
               token,
               mid,
               {
-                id: product.ifoodItemId || undefined,
+                id: itemId,
                 categoryId: ifoodCategoryId!,
                 status: product.isAvailable ? "AVAILABLE" : "UNAVAILABLE",
                 price: product.promoPrice && product.onSale ? product.promoPrice : product.price,
@@ -210,13 +248,14 @@ export async function POST(req: NextRequest) {
               },
               [
                 {
-                  id: product.ifoodProductId || undefined,
+                  id: productId,
                   name: product.name,
                   description: product.description || undefined,
                   externalCode,
                 },
               ],
-              optionGroups
+              optionGroups,
+              optionsList
             )
 
             if (itemResult.success) {
