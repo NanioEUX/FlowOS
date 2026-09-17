@@ -302,8 +302,9 @@ export async function POST(req: NextRequest) {
               }
               results.itemsUpdated++
             } else {
-              const errMsg = `Falha: ${itemResult.status} ${JSON.stringify(itemResult.data).slice(0, 100)}`
-              console.error("[ifood-catalog-push] product create/update failed:", product.name, errMsg, itemResult)
+              const errMsg = `Falha: ${itemResult.status} ${JSON.stringify(itemResult.data).slice(0, 300)}`
+              console.error("[ifood-catalog-push] product create/update failed:", product.name, errMsg)
+              console.error("[ifood-catalog-push] full iFood response:", JSON.stringify(itemResult))
               results.errors.push({
                 entity: "product",
                 name: product.name,
