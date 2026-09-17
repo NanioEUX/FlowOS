@@ -5,12 +5,12 @@ import { verifyAuth } from "@/lib/auth"
 import {
   createCategory,
   createOrUpdateItem,
+  uploadItemImage,
   batchUpdatePrices,
   batchUpdateStatuses,
   getBatchStatus,
   listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
-import { uploadBase64Image } from "@/lib/image-upload"
 import crypto from "crypto"
 
 /**
@@ -222,18 +222,18 @@ export async function POST(req: NextRequest) {
                 imagePath = product.image
                 console.log("[ifood-catalog-push] image HTTP direta:", product.name, imagePath?.slice(0, 80))
               } else if (product.image.startsWith("data:")) {
-                console.log("[ifood-catalog-push] image base64 detectada:", product.name, `tamanho: ${product.image.length} chars`)
-                const uploadResult = await uploadBase64Image(product.image)
+                console.log("[ifood-catalog-push] upload imagem para iFood:", product.name, `tamanho: ${product.image.length} chars`)
+                const uploadResult = await uploadItemImage(token, mid, product.image)
                 console.log("[ifood-catalog-push] upload resultado:", product.name, uploadResult)
-                if (uploadResult.url) {
-                  imagePath = uploadResult.url
+                if (uploadResult.success && uploadResult.data?.imagePath) {
+                  imagePath = uploadResult.data.imagePath
                   await prisma.product.update({
                     where: { id: product.id },
-                    data: { image: uploadResult.url },
+                    data: { image: `https://merchant-api.ifood.com.br/catalog/v2.0/image/${imagePath}` },
                   })
                   console.log("[ifood-catalog-push] image salva no banco:", product.name, imagePath)
                 } else {
-                  console.error("[ifood-catalog-push] FALHA upload imagem:", product.name, uploadResult.error)
+                  console.error("[ifood-catalog-push] FALHA upload imagem iFood:", product.name, uploadResult.status, uploadResult.data)
                 }
               } else {
                 console.log("[ifood-catalog-push] image formato desconhecido:", product.name, product.image.slice(0, 50))

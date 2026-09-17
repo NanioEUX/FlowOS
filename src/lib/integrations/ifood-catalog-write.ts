@@ -127,6 +127,25 @@ export async function createCategory(
   return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
 }
 
+/** POST /catalog/v2.0/merchants/{mid}/image/upload — upload imagem base64 */
+export async function uploadItemImage(
+  token: string,
+  merchantId: string,
+  base64DataUri: string
+): Promise<{ success: boolean; status: number; data: any }> {
+  const result = await httpsRequest(
+    "POST",
+    `/catalog/v2.0/merchants/${merchantId}/image/upload`,
+    token,
+    { image: base64DataUri }
+  )
+  return {
+    success: result.status >= 200 && result.status < 300,
+    status: result.status,
+    data: JSON.parse(result.body || "{}"),
+  }
+}
+
 /** PUT /catalog/v2.0/merchants/{mid}/items — criar ou atualizar item completo */
 export async function createOrUpdateItem(
   token: string,
