@@ -16,6 +16,16 @@ function verifyHmac(body: string, signature: string, secret: string): boolean {
   )
 }
 
+function calcCashbackEarned(total: number, establishment: any): number {
+  try {
+    const parsedLoyalty = establishment.loyaltyConfig ? JSON.parse(establishment.loyaltyConfig) : null
+    if (!parsedLoyalty?.enabled) return 0
+    const percent = parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0
+    if (!percent) return 0
+    return Math.floor(total * percent / 100)
+  } catch { return 0 }
+}
+
 /**
  * 99Food Webhook Handler
  *
@@ -142,6 +152,7 @@ export async function POST(req: NextRequest) {
             ...mapped,
             externalId: orderId,
             ...(customer?.id && { customerId: customer.id }),
+            cashbackEarned: calcCashbackEarned(mapped.total || 0, est),
           },
         })
         created++

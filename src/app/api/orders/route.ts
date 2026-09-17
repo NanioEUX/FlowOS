@@ -180,6 +180,7 @@ export async function POST(req: NextRequest) {
 
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
+    let customerTier: string | null = null
     if (customerPhone || customerCpf) {
       let customer: any = null
 
@@ -331,6 +332,7 @@ export async function POST(req: NextRequest) {
             tier: newTier,
           },
         })
+        customerTier = newTier
       } else {
         // Create new customer
         let initialPoints = 0
@@ -382,8 +384,25 @@ export async function POST(req: NextRequest) {
           },
         })
         customerId = customer.id
+        customerTier = initialTier
       }
     }
+
+    // Calculate cashbackEarned for this order
+    let cashbackEarnedValue = 0
+    try {
+      const parsedLoyalty = establishment.loyaltyConfig ? JSON.parse(establishment.loyaltyConfig) : null
+      const parsedTierConfig = establishment.tierConfig ? JSON.parse(establishment.tierConfig) : null
+      if (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)) {
+        const base = subtotal * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
+        let tierMultiplier = 1
+        if (parsedTierConfig?.enabled && parsedTierConfig?.tiers?.length && customerTier) {
+          const currentTier = parsedTierConfig.tiers.find((t: any) => t.name?.toLowerCase() === customerTier?.toLowerCase())
+          tierMultiplier = currentTier?.multiplier || 1
+        }
+        cashbackEarnedValue = Math.floor(base * tierMultiplier)
+      }
+    } catch {}
 
     // Create order with atomic orderNumber + stock decrement in a single transaction
     const lowStockItems: { name: string; quantity: number; minQuantity: number }[] = []
@@ -422,6 +441,7 @@ export async function POST(req: NextRequest) {
           ...(orderType === "delivery" && (method || "site") !== "ifood" && {
             deliveryCode: String(Math.floor(1000 + Math.random() * 9000)),
           }),
+          cashbackEarned: cashbackEarnedValue,
         },
       })
 

@@ -42,6 +42,8 @@ interface Order {
   createdAt: string | Date
   deliveredAt: string | Date | null
   updatedAt: number
+  cashbackEarned?: number
+  reviewRating?: number | null
   establishment?: { name: string; phone: string; logo: string | null; slug: string }
 }
 
@@ -600,9 +602,23 @@ export function OrdersScreen({
                               {statusLabels[order.status] || order.status}
                             </span>
                           </div>
-                          <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
-                            {new Date(order.createdAt).toLocaleDateString("pt-BR")}
-                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px]" style={{ color: theme.textMutedMore }}>
+                          <span>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</span>
+                          <span>•</span>
+                          <span>{new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                          {(order.cashbackEarned ?? 0) > 0 && (
+                            <>
+                              <span>•</span>
+                              <span style={{ color: theme.success }}>+{order.cashbackEarned} cash</span>
+                            </>
+                          )}
+                          {order.reviewRating != null && (
+                            <>
+                              <span>•</span>
+                              <span>{"⭐".repeat(order.reviewRating)}</span>
+                            </>
+                          )}
                         </div>
                         {/* Items with photos */}
                         <div className="mb-2 space-y-2">

@@ -462,6 +462,7 @@ model Order {
   cancellationDate   DateTime?
   cancelledBy        String? // "customer" | "merchant" | "system"
   cancellationCount  Int             @default(0)
+  cashbackEarned     Int             @default(0) // cashback ganho neste pedido (em centavos)
   // Agendamento de pedidos
   isScheduled        Boolean         @default(false)
   deliveryDate       DateTime? // data/hora agendada para entrega/retirada

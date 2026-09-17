@@ -16,6 +16,16 @@ function verifySignature(body: string, signature: string, secret: string): boole
   )
 }
 
+function calcCashbackEarned(total: number, establishment: any): number {
+  try {
+    const parsedLoyalty = establishment.loyaltyConfig ? JSON.parse(establishment.loyaltyConfig) : null
+    if (!parsedLoyalty?.enabled) return 0
+    const percent = parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0
+    if (!percent) return 0
+    return Math.floor(total * percent / 100)
+  } catch { return 0 }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
@@ -112,7 +122,7 @@ export async function POST(req: NextRequest) {
         if (!existing && event.fullOrder) {
           try {
             const mapped = mapIfoodOrderToFlow(event.fullOrder, est.id, code)
-            await prisma.order.create({ data: { ...mapped, externalId: orderId } })
+            await prisma.order.create({ data: { ...mapped, externalId: orderId, cashbackEarned: calcCashbackEarned(mapped.total || 0, est) } })
             created++
             results.push({ orderId, action: 'created' })
           } catch (e: any) {
@@ -136,7 +146,7 @@ export async function POST(req: NextRequest) {
               try {
                 const customer = await upsertIfoodCustomer(est.id, order.customer)
                 await prisma.order.create({
-                  data: { ...mapped, externalId: orderId, customerId: customer?.id }
+                  data: { ...mapped, externalId: orderId, customerId: customer?.id, cashbackEarned: calcCashbackEarned(mapped.total || 0, est) }
                 })
                 created++
                 results.push({ orderId, action: 'created' })

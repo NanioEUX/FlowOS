@@ -2768,7 +2768,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </span>
                   </button>
                   {/* Points */}
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center">
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-center">
+                    <span className="text-[8px] text-gray-400 leading-none">Saldo cash</span>
                     <span className="text-[12px] font-bold text-gray-800">
                       R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
                     </span>
@@ -2823,7 +2824,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div style={{ height: orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)) ? "calc(130px + env(safe-area-inset-top, 0px))" : "calc(92px + env(safe-area-inset-top, 0px))" }} />
+      <div style={{ height: orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))) ? "calc(160px + env(safe-area-inset-top, 0px))" : "calc(92px + env(safe-area-inset-top, 0px))" }} />
 
       {/* Closed banner — configurable */}
       {!isOpen && closedMessage && (
@@ -4943,9 +4944,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={orderResult?.cashEarned ?? Math.floor(subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
-                cashbackBase={subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
-                tierBonus={subtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
+                cashEarned={orderResult?.cashEarned ?? Math.floor(confirmationSubtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
+                cashbackBase={confirmationSubtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
+                tierBonus={confirmationSubtotal * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
                 tierName={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.name })()}
                 tierEmoji={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.emoji })()}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
