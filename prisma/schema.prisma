@@ -321,6 +321,8 @@ model Category {
   targetMarginPercent Float?
   priceRounding       String?       @default("none")
   recommendedProductIds String?     @default("[]")
+  syncToIfood         Boolean       @default(true)
+  ifoodCategoryId     String?
 }
 
 model Product {
@@ -346,6 +348,8 @@ model Product {
   zoomEnabled           Boolean          @default(false)
   ifoodItemId           String?
   ifoodGroupId          String?
+  ifoodProductId        String?
+  syncToIfood           Boolean          @default(true)
   categoryId            String
   establishmentId       String
   stockItemId           String?

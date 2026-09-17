@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
           establishmentId: body.establishmentId,
           targetMarginPercent: body.targetMarginPercent ?? null,
           priceRounding: body.priceRounding || "none",
+          syncToIfood: body.syncToIfood ?? true,
         },
       })
       return NextResponse.json(cat)

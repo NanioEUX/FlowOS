@@ -125,6 +125,8 @@ export default function CardapioPage() {
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
   const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
+  const [pushingToIfood, setPushingToIfood] = useState(false)
+  const [globalSyncIfood, setGlobalSyncIfood] = useState(true)
 
   // Recommendation state
   const [recommendModal, setRecommendModal] = useState<{ open: boolean; type: "category" | "product"; targetId: string; targetName: string; currentIds: string[] }>({
@@ -337,6 +339,7 @@ export default function CardapioPage() {
         name: newCategoryName,
         establishmentId,
         order: maxOrder + 1,
+        syncToIfood: true,
       }),
     })
     setNewCategoryName("")
@@ -356,7 +359,15 @@ export default function CardapioPage() {
     setEditingCategoryName("")
     toast("Categoria renomeada", "success")
     loadData()
-    refreshPreview()
+  }
+
+  async function toggleCategorySync(categoryId: string, currentValue: boolean) {
+    await fetchAuth(`/api/categories/${categoryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ syncToIfood: !currentValue }),
+    })
+    loadData()
   }
 
   async function saveMarginCategory() {
@@ -721,14 +732,13 @@ export default function CardapioPage() {
       toast(newValue ? "Item disponível" : "Item pausado", "success")
 
       // Sync to iFood if enabled and product has iFood mapping
-      if (ifoodEnabled && ifoodMerchantId && (product as any).ifoodItemId && (product as any).ifoodGroupId) {
+      if (ifoodEnabled && ifoodMerchantId && (product as any).ifoodItemId) {
         try {
           const syncRes = await fetchAuth("/api/ifood-catalog/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "update_status",
-              groupId: (product as any).ifoodGroupId,
               itemId: (product as any).ifoodItemId,
               status: newValue ? "AVAILABLE" : "UNAVAILABLE",
             }),
@@ -743,6 +753,36 @@ export default function CardapioPage() {
     } catch (err) {
       console.error("[toggleAvailable] error:", err)
       toast("Erro ao atualizar produto", "error")
+    }
+  }
+
+  async function pushToIfood() {
+    if (!ifoodEnabled || !ifoodMerchantId) {
+      toast("iFood não configurado", "error")
+      return
+    }
+    setPushingToIfood(true)
+    try {
+      const res = await fetchAuth("/api/ifood-catalog/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const msg = `Enviado: ${data.categoriesCreated + data.categoriesUpdated} categorias, ${data.itemsCreated + data.itemsUpdated} itens`
+        if (data.errors && data.errors.length > 0) {
+          toast(`${msg} (${data.errors.length} erros)`, "warning")
+        } else {
+          toast(msg, "success")
+        }
+      } else {
+        toast(data.error || "Erro ao enviar para iFood", "error")
+      }
+    } catch (e) {
+      toast("Erro ao enviar para iFood", "error")
+    } finally {
+      setPushingToIfood(false)
     }
   }
 
@@ -1486,8 +1526,31 @@ export default function CardapioPage() {
             </a>
             <Button variant="secondary" size="sm" onClick={() => setShowIfoodWizard(true)} className="gap-1.5 text-sm font-medium text-zinc-900">
               <Download className="h-4 w-4" />
-              Importar cardápio do iFood
+              Importar do iFood
             </Button>
+            {ifoodEnabled && ifoodMerchantId && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={pushToIfood}
+                  disabled={pushingToIfood}
+                  className="gap-1.5 text-sm font-medium text-blue-700"
+                >
+                  <Upload className="h-4 w-4" />
+                  {pushingToIfood ? "Enviando..." : "Enviar para iFood"}
+                </Button>
+                <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={globalSyncIfood}
+                    onChange={(e) => setGlobalSyncIfood(e.target.checked)}
+                    className="rounded"
+                  />
+                  Sync iFood
+                </label>
+              </>
+            )}
             <button
               onClick={() => {
                 const next = !showPreview

@@ -2,160 +2,330 @@ import https from "https"
 
 const IFOOD_API = "merchant-api.ifood.com.br"
 
-function httpsRequest(method: string, path: string, token: string, body?: any): Promise<{ status: number; body: string }> {
-  return new Promise((resolve, reject) => {
-    const bodyStr = body ? JSON.stringify(body) : undefined
-    const options: any = {
-      hostname: IFOOD_API,
-      path,
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "Accept-Encoding": "identity",
-      },
-    }
-    if (bodyStr) {
-      options.headers["Content-Length"] = Buffer.byteLength(bodyStr)
-    }
-
-    const req = https.request(options, (res) => {
-      let data = ""
-      res.on("data", (chunk) => (data += chunk))
-      res.on("end", () => resolve({ status: res.statusCode || 0, body: data }))
+// --- HTTP helper with retry + exponential backoff ---
+async function httpsRequest(
+  method: string,
+  path: string,
+  token: string,
+  body?: any,
+  retries = 2
+): Promise<{ status: number; body: string }> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const result = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const bodyStr = body ? JSON.stringify(body) : undefined
+      const options: any = {
+        hostname: IFOOD_API,
+        path,
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Accept-Encoding": "identity",
+        },
+      }
+      if (bodyStr) {
+        options.headers["Content-Length"] = Buffer.byteLength(bodyStr)
+      }
+      const req = https.request(options, (res) => {
+        let data = ""
+        res.on("data", (chunk) => (data += chunk))
+        res.on("end", () => resolve({ status: res.statusCode || 0, body: data }))
+      })
+      req.on("error", reject)
+      req.setTimeout(15000, () => { req.destroy(); reject(new Error("timeout")) })
+      if (bodyStr) req.write(bodyStr)
+      req.end()
     })
-    req.on("error", reject)
-    if (bodyStr) req.write(bodyStr)
-    req.end()
-  })
+
+    if (result.status === 429 && attempt < retries) {
+      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500
+      await new Promise((r) => setTimeout(r, delay))
+      continue
+    }
+    return result
+  }
+  return { status: 429, body: "max retries exceeded" }
 }
 
-/**
- * Update item price on iFood catalog.
- * PATCH /catalog/v2.0/merchants/{merchantId}/catalogs/{groupId}/items/{itemId}
- */
+// ═══════════════════════════════════════════════════
+// MERCHANT — Status e Interrupções
+// ═══════════════════════════════════════════════════
+
+/** GET /merchant/v1.0/merchants — listar lojas do token */
+export async function listMerchants(token: string) {
+  const result = await httpsRequest("GET", "/merchant/v1.0/merchants", token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "[]") }
+}
+
+/** GET /merchant/v1.0/merchants/{mid}/status — status da loja */
+export async function getMerchantStatus(token: string, merchantId: string) {
+  const result = await httpsRequest("GET", `/merchant/v1.0/merchants/${merchantId}/status`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+}
+
+/** GET /merchant/v1.0/merchants/{mid}/interruptions — listar pausas */
+export async function getInterruptions(token: string, merchantId: string) {
+  const result = await httpsRequest("GET", `/merchant/v1.0/merchants/${merchantId}/interruptions`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "[]") }
+}
+
+/** POST /merchant/v1.0/merchants/{mid}/interruptions — criar pausa */
+export async function createInterruption(
+  token: string,
+  merchantId: string,
+  startDateTime: string,
+  endDateTime: string,
+  description: string
+) {
+  const result = await httpsRequest("POST", `/merchant/v1.0/merchants/${merchantId}/interruptions`, token, {
+    startDateTime,
+    endDateTime,
+    description,
+  })
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+}
+
+/** DELETE /merchant/v1.0/merchants/{mid}/interruptions/{iid} — remover pausa */
+export async function deleteInterruption(token: string, merchantId: string, interruptionId: string) {
+  const result = await httpsRequest("DELETE", `/merchant/v1.0/merchants/${merchantId}/interruptions/${interruptionId}`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
+}
+
+// ═══════════════════════════════════════════════════
+// CATALOG — Leitura
+// ═══════════════════════════════════════════════════
+
+/** GET /catalog/v2.0/merchants/{mid}/catalogs — listar catálogos */
+export async function listCatalogs(token: string, merchantId: string) {
+  const result = await httpsRequest("GET", `/catalog/v2.0/merchants/${merchantId}/catalogs`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "[]") }
+}
+
+/** GET /catalog/v2.0/merchants/{mid}/categories?include_items=true — listar categorias com itens */
+export async function listCategories(token: string, merchantId: string) {
+  const result = await httpsRequest("GET", `/catalog/v2.0/merchants/${merchantId}/categories?include_items=true`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "[]") }
+}
+
+// ═══════════════════════════════════════════════════
+// CATALOG — Criar
+// ═══════════════════════════════════════════════════
+
+/** POST /catalog/v2.0/merchants/{mid}/categories — criar categoria */
+export async function createCategory(
+  token: string,
+  merchantId: string,
+  name: string,
+  template: string = "DEFAULT"
+) {
+  const result = await httpsRequest("POST", `/catalog/v2.0/merchants/${merchantId}/categories`, token, {
+    name,
+    status: "AVAILABLE",
+    template,
+  })
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+}
+
+/** PUT /catalog/v2.0/merchants/{mid}/items — criar ou atualizar item completo */
+export async function createOrUpdateItem(
+  token: string,
+  merchantId: string,
+  item: {
+    id?: string
+    categoryId: string
+    status?: string
+    price: number
+    externalCode?: string
+  },
+  products: Array<{
+    id?: string
+    name: string
+    description?: string
+    externalCode?: string
+    imagePath?: string
+  }>,
+  optionGroups: Array<{
+    id?: string
+    name: string
+    minQuantity?: number
+    maxQuantity?: number
+    options: Array<{
+      id?: string
+      name: string
+      price: number
+      externalCode?: string
+      status?: string
+    }>
+  }> = []
+) {
+  const body = {
+    item: {
+      ...(item.id ? { id: item.id } : {}),
+      type: "DEFAULT",
+      categoryId: item.categoryId,
+      status: item.status || "AVAILABLE",
+      price: { value: item.price },
+      ...(item.externalCode ? { externalCode: item.externalCode } : {}),
+    },
+    products: products.map((p) => ({
+      ...(p.id ? { id: p.id } : {}),
+      name: p.name,
+      ...(p.description ? { description: p.description } : {}),
+      ...(p.externalCode ? { externalCode: p.externalCode } : {}),
+      ...(p.imagePath ? { imagePath: p.imagePath } : {}),
+    })),
+    optionGroups: optionGroups.map((og) => ({
+      ...(og.id ? { id: og.id } : {}),
+      name: og.name,
+      minQuantity: og.minQuantity ?? 0,
+      maxQuantity: og.maxQuantity ?? og.options.length,
+      options: og.options.map((o) => ({
+        ...(o.id ? { id: o.id } : {}),
+        name: o.name,
+        price: { value: o.price },
+        ...(o.externalCode ? { externalCode: o.externalCode } : {}),
+        status: o.status || "AVAILABLE",
+      })),
+    })),
+  }
+
+  const result = await httpsRequest("PUT", `/catalog/v2.0/merchants/${merchantId}/items`, token, body)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+}
+
+// ═══════════════════════════════════════════════════
+// CATALOG — Atualizar (endpoints oficiais)
+// ═══════════════════════════════════════════════════
+
+/** PATCH /catalog/v2.0/merchants/{mid}/items/price — atualizar preço */
 export async function updateItemPrice(
   token: string,
   merchantId: string,
-  groupId: string,
   itemId: string,
   newPrice: number
 ): Promise<{ success: boolean; status: number; body: string }> {
-  const path = `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/items/${itemId}`
+  const path = `/catalog/v2.0/merchants/${merchantId}/items/price`
   const result = await httpsRequest("PATCH", path, token, {
-    itemPrice: { value: newPrice },
-  })
-  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
-}
-
-/**
- * Update item status (AVAILABLE / UNAVAILABLE) on iFood catalog.
- * PATCH /catalog/v2.0/merchants/{merchantId}/catalogs/{groupId}/items/{itemId}
- */
-export async function updateItemStatus(
-  token: string,
-  merchantId: string,
-  groupId: string,
-  itemId: string,
-  status: "AVAILABLE" | "UNAVAILABLE"
-): Promise<{ success: boolean; status: number; body: string }> {
-  const path = `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/items/${itemId}`
-  const result = await httpsRequest("PATCH", path, token, { status })
-  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
-}
-
-/**
- * Update item description on iFood catalog.
- * PATCH /catalog/v2.0/merchants/{merchantId}/catalogs/{groupId}/items/{itemId}
- */
-export async function updateItemDescription(
-  token: string,
-  merchantId: string,
-  groupId: string,
-  itemId: string,
-  description: string
-): Promise<{ success: boolean; status: number; body: string }> {
-  const path = `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/items/${itemId}`
-  const result = await httpsRequest("PATCH", path, token, {
-    itemDescription: description,
-  })
-  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
-}
-
-/**
- * Update option (add-on) price on iFood catalog.
- * PATCH /catalog/v2.0/merchants/{merchantId}/catalogs/{groupId}/items/{itemId}/options/{optionId}
- */
-export async function updateOptionPrice(
-  token: string,
-  merchantId: string,
-  groupId: string,
-  itemId: string,
-  optionId: string,
-  newPrice: number
-): Promise<{ success: boolean; status: number; body: string }> {
-  const path = `/catalog/v2.0/merchants/${merchantId}/catalogs/${groupId}/items/${itemId}/options/${optionId}`
-  const result = await httpsRequest("PATCH", path, token, {
+    itemId,
     price: { value: newPrice },
   })
   return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
 }
 
-/**
- * Update merchant operating hours on iFood.
- * PATCH /merchant/v1.0/merchants/{merchantId}
- */
+/** PATCH /catalog/v2.0/merchants/{mid}/items/status — atualizar status */
+export async function updateItemStatus(
+  token: string,
+  merchantId: string,
+  itemId: string,
+  status: "AVAILABLE" | "UNAVAILABLE"
+): Promise<{ success: boolean; status: number; body: string }> {
+  const path = `/catalog/v2.0/merchants/${merchantId}/items/status`
+  const result = await httpsRequest("PATCH", path, token, {
+    itemId,
+    status,
+  })
+  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
+}
+
+/** PATCH /catalog/v2.0/merchants/{mid}/options/price — atualizar preço de opção */
+export async function updateOptionPrice(
+  token: string,
+  merchantId: string,
+  optionId: string,
+  newPrice: number
+): Promise<{ success: boolean; status: number; body: string }> {
+  const path = `/catalog/v2.0/merchants/${merchantId}/options/price`
+  const result = await httpsRequest("PATCH", path, token, {
+    optionId,
+    price: { value: newPrice },
+  })
+  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
+}
+
+/** PATCH /catalog/v2.0/merchants/{mid}/options/status — atualizar status de opção */
+export async function updateOptionStatus(
+  token: string,
+  merchantId: string,
+  optionId: string,
+  status: "AVAILABLE" | "UNAVAILABLE"
+): Promise<{ success: boolean; status: number; body: string }> {
+  const path = `/catalog/v2.0/merchants/${merchantId}/options/status`
+  const result = await httpsRequest("PATCH", path, token, {
+    optionId,
+    status,
+  })
+  return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
+}
+
+// ═══════════════════════════════════════════════════
+// CATALOG — Batch (endpoints oficiais)
+// ═══════════════════════════════════════════════════
+
+/** PATCH /catalog/v2.0/merchants/{mid}/products/price — batch preço */
+export async function batchUpdatePrices(
+  token: string,
+  merchantId: string,
+  updates: Array<{ externalCode: string; price: number }>
+): Promise<{ success: boolean; batchId?: string; status: number; body: string }> {
+  const path = `/catalog/v2.0/merchants/${merchantId}/products/price`
+  const body = updates.map((u) => ({
+    externalCode: u.externalCode,
+    price: { value: u.price },
+    resources: ["ITEM"],
+  }))
+  const result = await httpsRequest("PATCH", path, token, body)
+  const data = JSON.parse(result.body || "{}")
+  return {
+    success: result.status >= 200 && result.status < 300,
+    batchId: data.batchId,
+    status: result.status,
+    body: result.body,
+  }
+}
+
+/** PATCH /catalog/v2.0/merchants/{mid}/products/status — batch status */
+export async function batchUpdateStatuses(
+  token: string,
+  merchantId: string,
+  updates: Array<{ externalCode: string; status: "AVAILABLE" | "UNAVAILABLE" }>
+): Promise<{ success: boolean; batchId?: string; status: number; body: string }> {
+  const path = `/catalog/v2.0/merchants/${merchantId}/products/status`
+  const body = updates.map((u) => ({
+    externalCode: u.externalCode,
+    status: u.status,
+    resources: ["ITEM"],
+  }))
+  const result = await httpsRequest("PATCH", path, token, body)
+  const data = JSON.parse(result.body || "{}")
+  return {
+    success: result.status >= 200 && result.status < 300,
+    batchId: data.batchId,
+    status: result.status,
+    body: result.body,
+  }
+}
+
+/** GET /catalog/v2.0/merchants/{mid}/batch/{batchId} — checar status do batch */
+export async function getBatchStatus(
+  token: string,
+  merchantId: string,
+  batchId: string
+): Promise<{ success: boolean; status: number; data: any }> {
+  const result = await httpsRequest("GET", `/catalog/v2.0/merchants/${merchantId}/batch/${batchId}`, token)
+  return { success: result.status >= 200 && result.status < 300, status: result.status, data: JSON.parse(result.body || "{}") }
+}
+
+// ═══════════════════════════════════════════════════
+// MERCHANT — Horários
+// ═══════════════════════════════════════════════════
+
+/** PUT /merchant/v1.0/merchants/{mid}/opening-hours — configurar horários */
 export async function updateMerchantHours(
   token: string,
   merchantId: string,
   operatingHours: any[]
 ): Promise<{ success: boolean; status: number; body: string }> {
-  const path = `/merchant/v1.0/merchants/${merchantId}`
-  const result = await httpsRequest("PATCH", path, token, {
-    operatingHours,
-  })
+  const path = `/merchant/v1.0/merchants/${merchantId}/opening-hours`
+  const result = await httpsRequest("PUT", path, token, operatingHours)
   return { success: result.status >= 200 && result.status < 300, status: result.status, body: result.body }
-}
-
-/**
- * Batch update: sync multiple item prices/statuses at once.
- * Returns results per item.
- */
-export async function batchUpdateItems(
-  token: string,
-  merchantId: string,
-  updates: Array<{
-    groupId: string
-    itemId: string
-    price?: number
-    status?: "AVAILABLE" | "UNAVAILABLE"
-  }>
-): Promise<Array<{ itemId: string; success: boolean; status: number; error?: string }>> {
-  const results: Array<{ itemId: string; success: boolean; status: number; error?: string }> = []
-
-  for (const update of updates) {
-    try {
-      const body: any = {}
-      if (update.price !== undefined) body.itemPrice = { value: update.price }
-      if (update.status) body.status = update.status
-
-      if (Object.keys(body).length === 0) {
-        results.push({ itemId: update.itemId, success: false, status: 0, error: "no fields to update" })
-        continue
-      }
-
-      const path = `/catalog/v2.0/merchants/${merchantId}/catalogs/${update.groupId}/items/${update.itemId}`
-      const result = await httpsRequest("PATCH", path, token, body)
-      results.push({
-        itemId: update.itemId,
-        success: result.status >= 200 && result.status < 300,
-        status: result.status,
-        error: result.status >= 400 ? result.body.slice(0, 200) : undefined,
-      })
-    } catch (e: any) {
-      results.push({ itemId: update.itemId, success: false, status: 0, error: e.message })
-    }
-  }
-
-  return results
 }
