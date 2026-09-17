@@ -5,6 +5,44 @@ const MAX_SIZE_BYTES = 2 * 1024 * 1024 // 2MB
 const MAX_WIDTH = 1200
 const WEBP_QUALITY = 80
 
+export async function uploadBase64Image(dataUri: string): Promise<{ url: string; error?: string }> {
+  if (!supabase) {
+    return { url: "", error: "Supabase Storage não configurado" }
+  }
+
+  try {
+    const base64Data = dataUri.split(",")[1]
+    if (!base64Data) {
+      return { url: "", error: "Formato base64 inválido" }
+    }
+
+    const buffer = Buffer.from(base64Data, "base64")
+
+    const compressed = await sharp(buffer)
+      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer()
+
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`
+
+    const { data, error } = await supabase.storage
+      .from("images")
+      .upload(fileName, compressed, {
+        contentType: "image/webp",
+        cacheControl: "31536000",
+      })
+
+    if (error) {
+      return { url: "", error: error.message }
+    }
+
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(data.path)
+    return { url: urlData.publicUrl }
+  } catch (err: any) {
+    return { url: "", error: err.message || "Erro ao processar imagem base64" }
+  }
+}
+
 export async function compressAndUploadImage(file: File): Promise<{ url: string; error?: string }> {
   if (!supabase) {
     return { url: "", error: "Supabase Storage não configurado" }

@@ -10,6 +10,7 @@ import {
   getBatchStatus,
   listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
+import { uploadBase64Image } from "@/lib/image-upload"
 import crypto from "crypto"
 
 /**
@@ -215,14 +216,30 @@ export async function POST(req: NextRequest) {
             const optionsList: any[] = []
             const extraProducts: any[] = []
 
-            const hasRealImage = product.image && product.image.startsWith("http")
+            let imagePath: string | undefined
+            if (product.image) {
+              if (product.image.startsWith("http")) {
+                imagePath = product.image
+              } else if (product.image.startsWith("data:")) {
+                const uploadResult = await uploadBase64Image(product.image)
+                if (uploadResult.url) {
+                  imagePath = uploadResult.url
+                  await prisma.product.update({
+                    where: { id: product.id },
+                    data: { image: uploadResult.url },
+                  })
+                } else {
+                  console.warn("[ifood-catalog-push] falha upload imagem:", product.name, uploadResult.error)
+                }
+              }
+            }
 
             const mainProduct: any = {
               id: productId,
               name: product.name,
               description: product.description || undefined,
               externalCode,
-              ...(hasRealImage ? { imagePath: product.image } : {}),
+              ...(imagePath ? { imagePath } : {}),
             }
 
             if (hasOptions) {
