@@ -137,6 +137,7 @@ export async function createOrUpdateItem(
     status?: string
     price: number
     externalCode?: string
+    productId?: string
   },
   products: Array<{
     id?: string
@@ -167,6 +168,7 @@ export async function createOrUpdateItem(
       categoryId: item.categoryId,
       status: item.status || "AVAILABLE",
       price: { value: item.price },
+      ...(item.productId ? { productId: item.productId } : {}),
       ...(item.externalCode ? { externalCode: item.externalCode } : {}),
     },
     products: products.map((p) => ({

@@ -279,6 +279,7 @@ export async function POST(req: NextRequest) {
                 status: product.isAvailable ? "AVAILABLE" : "UNAVAILABLE",
                 price: product.promoPrice && product.onSale ? product.promoPrice : product.price,
                 externalCode,
+                productId,
               },
               allProducts,
               optionGroups,
