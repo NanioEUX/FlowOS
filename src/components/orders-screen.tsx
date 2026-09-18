@@ -646,6 +646,7 @@ export function OrdersScreen({
                           const hasDelivery = order.deliveryFee > 0
                           const totalBeforeDiscount = subtotal + order.deliveryFee
                           const discount = Math.max(0, totalBeforeDiscount - order.total)
+                          const hasCashUsed = (order.loyaltyPointsUsed ?? 0) > 0
                           const hasDetails = discount > 0 || hasDelivery
                           const isDetailsOpen = expandedDetails === order.id
 
@@ -668,7 +669,7 @@ export function OrdersScreen({
                                 <>
                                   {discount > 0 && (
                                     <div className="flex justify-between text-[12px]" style={{ color: "#ef4444" }}>
-                                      <span>Desconto</span>
+                                      <span>{hasCashUsed ? "Cash Utilizado" : "Desconto"}</span>
                                       <span>-{formatCurrency(discount)}</span>
                                     </div>
                                   )}
