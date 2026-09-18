@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronRight, MessageCircle, Send, Loader2, Package, CheckCircle2, Copy, Check } from "lucide-react"
+import { X, ChevronRight, MessageCircle, Send, Loader2, Package, CheckCircle2, Copy, Check, ShoppingCart } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface OrderItem {
@@ -574,14 +574,16 @@ export function OrdersScreen({
                       }}
                     >
                       <div className="p-4">
-                        {/* Row 1: Pedido # + Status + Date + Cashback — all inline */}
+                        {/* Row 1: Status + Payment + Date + Cashback — all inline */}
                         <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-3">
-                          <span className="text-[15px] font-bold" style={{ color: theme.text }}>
-                            Pedido #{order.orderNumber || order.id.slice(0, 8)}
-                          </span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: statusBg, color: statusColor }}>
                             {isDelivered ? "ENTREGUE ✓" : isCancelled ? "CANCELADO" : isAbandoned ? "EXPIRADO" : statusLabels[order.status]?.toUpperCase() || order.status.toUpperCase()}
                           </span>
+                          {order.paymentMethod && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
+                              {paymentLabels[order.paymentMethod] || order.paymentMethod}
+                            </span>
+                          )}
                           <span className="text-[11px]" style={{ color: theme.textMutedMore }}>
                             {dateStr}, {timeStr}
                           </span>
@@ -652,9 +654,10 @@ export function OrdersScreen({
                         {onReorder && !isCancelled && !isAbandoned && (
                           <button
                             onClick={() => onReorder(order)}
-                            className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white transition-all active:scale-[0.98]"
+                            className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                             style={{ backgroundColor: theme.primary }}
                           >
+                            <ShoppingCart className="h-4 w-4" />
                             Pedir Novamente
                           </button>
                         )}
