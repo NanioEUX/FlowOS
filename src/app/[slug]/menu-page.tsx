@@ -4630,19 +4630,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
                       const multiplier = currentTierData?.multiplier || 1
                       const tierBonus = cashbackBase * (multiplier - 1)
+                      const totalCashback = cashbackBase + tierBonus
                       return (
                         <div className="pt-1 space-y-0.5">
                           <div className="flex items-center gap-1.5">
                             <Gift className="h-3.5 w-3.5" style={{ color: theme.success }} />
                             <span className="text-xs font-medium" style={{ color: theme.success }}>
-                              Você ganhará +R$ {cashbackBase.toFixed(2)} de cashback
+                              Você ganhará +R$ {totalCashback.toFixed(2)} de cashback
                             </span>
                           </div>
                           {multiplier > 1 && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs">{currentTierData?.emoji || "⭐"}</span>
-                              <span className="text-xs font-medium" style={{ color: theme.success }}>
-                                +R$ {tierBonus.toFixed(2)} pela sua categoria ({currentTierData?.name})
+                            <div className="flex items-center gap-1.5 ml-5">
+                              <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                                Base: R$ {cashbackBase.toFixed(2)} + {currentTierData?.emoji || "⭐"} {currentTierData?.name}: +R$ {tierBonus.toFixed(2)}
                               </span>
                             </div>
                           )}
@@ -4908,19 +4908,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
                       const multiplier = currentTierData?.multiplier || 1
                       const tierBonus = cashbackBase * (multiplier - 1)
+                      const totalCashback = cashbackBase + tierBonus
                       return (
                         <div className="pt-1 space-y-0.5">
                           <div className="flex items-center gap-1.5">
                             <Star className="h-3.5 w-3.5" style={{ color: theme.success }} />
                             <span className="text-xs font-medium" style={{ color: theme.success }}>
-                              Você ganhará +R$ {cashbackBase.toFixed(2)} de cashback
+                              Você ganhará +R$ {totalCashback.toFixed(2)} de cashback
                             </span>
                           </div>
                           {multiplier > 1 && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs">{currentTierData?.emoji || "⭐"}</span>
-                              <span className="text-xs font-medium" style={{ color: theme.success }}>
-                                +R$ {tierBonus.toFixed(2)} pela sua categoria ({currentTierData?.name})
+                            <div className="flex items-center gap-1.5 ml-5">
+                              <span className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                                Base: R$ {cashbackBase.toFixed(2)} + {currentTierData?.emoji || "⭐"} {currentTierData?.name}: +R$ {tierBonus.toFixed(2)}
                               </span>
                             </div>
                           )}
@@ -4933,11 +4933,11 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             {cartStep === "confirmation" && orderResult?.success && (() => {
-              const _earned = orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) * tierMultiplier)
               const _pct = parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0
               const _net = confirmationSubtotal - confirmationLoyaltyDiscount
               const _base = Math.round(_net * _pct)
               const _tierBonus = Math.round(_base * (tierMultiplier - 1))
+              const _earned = _base + _tierBonus
               const _cbBase = _base
               const _tier = _tierBonus
               return (
