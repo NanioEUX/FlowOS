@@ -138,6 +138,7 @@ export function OrdersScreen({
   loyaltyConfig,
 }: OrdersScreenProps) {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [expandedDetails, setExpandedDetails] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState("")
   const [chatSending, setChatSending] = useState(false)
@@ -617,14 +618,9 @@ export function OrdersScreen({
                                 <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <p className="text-[14px] font-bold" style={{ color: theme.text }}>{item.name}</p>
-                                  <span className="text-[12px]" style={{ color: theme.textMutedMore }}>{formatCurrency(unitWithAddOns)}</span>
-                                  <span className="text-[12px]" style={{ color: theme.textMutedMore }}>{item.quantity}x</span>
-                                  <span className="text-[13px] font-bold" style={{ color: theme.text }}>{formatCurrency(unitWithAddOns * item.quantity)}</span>
-                                </div>
+                                <p className="text-[14px] font-bold mb-0.5" style={{ color: theme.text }}>{item.name}</p>
                                 {item.additionalOptions && item.additionalOptions.length > 0 && (
-                                  <div className="space-y-0.5 mt-1">
+                                  <div className="space-y-0.5 mb-1.5">
                                     {item.additionalOptions.map((opt: any, i: number) => (
                                       <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
                                         • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
@@ -632,6 +628,14 @@ export function OrdersScreen({
                                     ))}
                                   </div>
                                 )}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[12px]" style={{ color: theme.textMutedMore }}>
+                                    {formatCurrency(unitWithAddOns)}  {item.quantity}x
+                                  </span>
+                                  <span className="text-[13px] font-bold" style={{ color: theme.text }}>
+                                    {formatCurrency(unitWithAddOns * item.quantity)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           )
@@ -642,6 +646,7 @@ export function OrdersScreen({
                           const hasCash = (order.loyaltyPointsUsed ?? 0) > 0
                           const hasDelivery = order.deliveryFee > 0
                           const hasDetails = hasCash || hasDelivery
+                          const isDetailsOpen = expandedDetails === order.id
 
                           return (
                             <div className="space-y-1 mb-3">
@@ -649,16 +654,16 @@ export function OrdersScreen({
                                 <span>Itens Subtotal</span>
                                 <span>{formatCurrency(subtotal)}</span>
                               </div>
-                              {hasDetails && expandedOrder !== `details-${order.id}` && (
+                              {hasDetails && !isDetailsOpen && (
                                 <button
-                                  onClick={() => setExpandedOrder(`details-${order.id}`)}
+                                  onClick={() => setExpandedDetails(order.id)}
                                   className="text-[11px] font-semibold flex items-center gap-0.5"
                                   style={{ color: theme.primary }}
                                 >
                                   Detalhes <ChevronRight className="h-3 w-3" />
                                 </button>
                               )}
-                              {expandedOrder === `details-${order.id}` && (
+                              {isDetailsOpen && (
                                 <>
                                   {hasCash && (
                                     <div className="flex justify-between text-[12px]" style={{ color: "#ef4444" }}>
@@ -673,7 +678,7 @@ export function OrdersScreen({
                                     </div>
                                   )}
                                   <button
-                                    onClick={() => setExpandedOrder(null)}
+                                    onClick={() => setExpandedDetails(null)}
                                     className="text-[11px] font-semibold flex items-center gap-0.5"
                                     style={{ color: theme.primary }}
                                   >
