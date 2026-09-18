@@ -130,6 +130,7 @@ export default function CardapioPage() {
   const [showIfoodSettings, setShowIfoodSettings] = useState(false)
   const [ifoodMarkupGlobal, setIfoodMarkupGlobal] = useState<string>("")
   const [ifoodMarkupByCategory, setIfoodMarkupByCategory] = useState<Record<string, string>>({})
+  const [showPushConfirm, setShowPushConfirm] = useState(false)
 
   // Recommendation state
   const [recommendModal, setRecommendModal] = useState<{ open: boolean; type: "category" | "product"; targetId: string; targetName: string; currentIds: string[] }>({
@@ -1631,7 +1632,7 @@ export default function CardapioPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={pushToIfood}
+                  onClick={() => setShowPushConfirm(true)}
                   disabled={pushingToIfood}
                   className="gap-1.5 text-sm font-medium text-zinc-900 border border-zinc-300 bg-zinc-100 hover:bg-zinc-200"
                 >
@@ -2901,6 +2902,17 @@ export default function CardapioPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={showPushConfirm}
+        title="Enviar cardápio para iFood?"
+        message="Isso vai criar ou atualizar categorias e itens no iFood. Deseja continuar?"
+        confirmLabel="Enviar"
+        cancelLabel="Cancelar"
+        variant="warning"
+        onConfirm={() => { setShowPushConfirm(false); pushToIfood() }}
+        onCancel={() => setShowPushConfirm(false)}
+      />
 
       {/* iFood Settings Modal */}
       {showIfoodSettings && (
