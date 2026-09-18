@@ -562,7 +562,10 @@ export function OrdersScreen({
                   const statusColor = isCancelled ? "#ef4444" : isAbandoned ? "#f97316" : "#22c55e"
                   const statusBg = isCancelled ? "rgba(239,68,68,0.08)" : isAbandoned ? "rgba(249,115,22,0.08)" : "rgba(34,197,94,0.08)"
 
-                  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+                  const subtotal = items.reduce((sum, item) => {
+                    const addOns = (item.additionalOptions || []).reduce((s: number, opt: any) => s + (opt.price || 0), 0)
+                    return sum + (item.price + addOns) * item.quantity
+                  }, 0)
 
                   return (
                     <div
@@ -574,16 +577,11 @@ export function OrdersScreen({
                       }}
                     >
                       <div className="p-4">
-                        {/* Row 1: Status + Payment + Date + Cashback — all inline */}
+                        {/* Row 1: Status + Date + Cashback — all inline */}
                         <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-3">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: statusBg, color: statusColor }}>
                             {isDelivered ? "ENTREGUE ✓" : isCancelled ? "CANCELADO" : isAbandoned ? "EXPIRADO" : statusLabels[order.status]?.toUpperCase() || order.status.toUpperCase()}
                           </span>
-                          {order.paymentMethod && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
-                              {paymentLabels[order.paymentMethod] || order.paymentMethod}
-                            </span>
-                          )}
                           <span className="text-[11px]" style={{ color: theme.textMutedMore }}>
                             {dateStr}, {timeStr}
                           </span>
@@ -605,32 +603,40 @@ export function OrdersScreen({
                               ))}
                             </div>
                             <span className="text-[12px] font-semibold" style={{ color: theme.text }}>{order.reviewRating}.0</span>
-                            <span className="text-[11px]" style={{ color: theme.textMutedMore }}>(Votos: 1)</span>
                           </div>
                         )}
 
-                        {/* Product: large image + name + bullet options */}
-                        {items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3 mb-3">
-                            {item.image && (
-                              <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[14px] font-bold mb-1" style={{ color: theme.text }}>
-                                {item.quantity}x {item.name}
-                              </p>
-                              {item.additionalOptions && item.additionalOptions.length > 0 && (
-                                <div className="space-y-0.5">
-                                  {item.additionalOptions.map((opt: any, i: number) => (
-                                    <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
-                                      • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
-                                    </p>
-                                  ))}
-                                </div>
+                        {/* Product: large image + name + bullet options + unit price */}
+                        {items.map((item, idx) => {
+                          const addOnsTotal = (item.additionalOptions || []).reduce((sum: number, opt: any) => sum + (opt.price || 0), 0)
+                          const unitWithAddOns = item.price + addOnsTotal
+                          return (
+                            <div key={idx} className="flex gap-3 mb-3">
+                              {item.image && (
+                                <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
                               )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-[14px] font-bold" style={{ color: theme.text }}>
+                                    {item.quantity}x {item.name}
+                                  </p>
+                                  <span className="text-[13px] font-bold shrink-0" style={{ color: theme.text }}>
+                                    {formatCurrency(unitWithAddOns * item.quantity)}
+                                  </span>
+                                </div>
+                                {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                  <div className="space-y-0.5 mt-1">
+                                    {item.additionalOptions.map((opt: any, i: number) => (
+                                      <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
+                                        • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
 
                         {/* Price breakdown */}
                         <div className="space-y-1 mb-3">
@@ -645,7 +651,7 @@ export function OrdersScreen({
                             </div>
                           )}
                           <div className="flex justify-between text-[14px] font-bold pt-1 border-t" style={{ borderColor: theme.borderSubtle, color: theme.text }}>
-                            <span>TOTAL DO PEDIDO</span>
+                            <span>TOTAL DO PEDIDO{order.paymentMethod ? ` (${paymentLabels[order.paymentMethod] || order.paymentMethod})` : ""}</span>
                             <span>{formatCurrency(order.total)}</span>
                           </div>
                         </div>
