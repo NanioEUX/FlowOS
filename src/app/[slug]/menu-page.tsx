@@ -390,6 +390,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // Saved cart data for confirmation screen (cart is cleared after order)
   const [confirmationItems, setConfirmationItems] = useState<CartItem[]>([])
   const [confirmationSubtotal, setConfirmationSubtotal] = useState(0)
+  const [confirmationLoyaltyDiscount, setConfirmationLoyaltyDiscount] = useState(0)
 
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
@@ -1940,6 +1941,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       // orders leave the cart dirty and the customer sees stale items.
       setConfirmationItems([...cart])
       setConfirmationSubtotal(subtotal)
+      setConfirmationLoyaltyDiscount(useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0)
       setCart([])
       localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
       setChangeFor("")
@@ -4941,12 +4943,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                 couponDiscount={couponDiscount}
                 firstPurchaseDiscount={firstPurchaseDiscountValue}
                 firstPurchaseBonus={isFirstPurchase ? (establishment.firstPurchaseBonus || 0) : 0}
-                loyaltyDiscount={useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0}
+                loyaltyDiscount={confirmationLoyaltyDiscount}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - (useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0)) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
-                cashbackBase={(confirmationSubtotal - (useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0)) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
-                tierBonus={(confirmationSubtotal - (useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0)) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
+                cashEarned={orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
+                cashbackBase={(confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
+                tierBonus={(confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
                 tierName={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.name })()}
                 tierEmoji={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.emoji })()}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
@@ -4958,8 +4960,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 estimatedDeliveryMin={establishment.estimatedDeliveryMin}
                 estimatedDeliveryMax={establishment.estimatedDeliveryMax}
                 whatsappPhone={establishment.whatsappNumber || establishment.phone}
-                onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
-                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
+                onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setConfirmationLoyaltyDiscount(0); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
+                onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setConfirmationLoyaltyDiscount(0); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
             )}
           </div>
