@@ -115,14 +115,19 @@ export function OrderConfirmationScreen({
             {orderType === "delivery" && estimatedDeliveryMin && estimatedDeliveryMax && (
               <p className="text-sm mt-2 flex items-center justify-center gap-1.5" style={{ color: theme.textMuted }}>
                 <Clock className="h-3.5 w-3.5" />
-                Previsão de entrega: {estimatedDeliveryMin} a {estimatedDeliveryMax} min
+                Previsão: {estimatedDeliveryMin} a {estimatedDeliveryMax} min
+              </p>
+            )}
+            {deliveryCode && (
+              <p className="text-sm mt-1.5 font-semibold tracking-wider" style={{ color: theme.text }}>
+                Código {deliveryCode}
               </p>
             )}
           </div>
 
           {/* Order summary - RECEIPT STYLE */}
           <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-            <h3 className="font-semibold text-sm mb-3" style={{ color: theme.text }}>Seu pedido</h3>
+            <h3 className="font-semibold text-sm mb-3" style={{ color: theme.text }}>Descrição</h3>
 
             {/* Items list */}
             <div className="space-y-2 mb-3">
@@ -217,15 +222,7 @@ export function OrderConfirmationScreen({
             </div>
           )}
 
-          {/* Delivery Code */}
-          {deliveryCode && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-3 mb-3 text-center">
-              <p className="text-xs font-medium text-amber-600">
-                Código entrega: <span className="font-bold tracking-wider">{deliveryCode}</span>
-              </p>
-              <p className="text-[10px] text-amber-500 mt-1">Informe este código ao entregador ao receber</p>
-            </div>
-          )}
+          {/* Delivery Code — moved to header */}
 
           {/* Cashback earned */}
           {showLoyalty && cashEarned > 0 && (
