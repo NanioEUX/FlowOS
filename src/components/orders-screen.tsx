@@ -618,17 +618,8 @@ export function OrdersScreen({
                                 <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-[14px] font-bold mb-0.5" style={{ color: theme.text }}>{item.name}</p>
-                                {item.additionalOptions && item.additionalOptions.length > 0 && (
-                                  <div className="space-y-0.5 mb-1.5">
-                                    {item.additionalOptions.map((opt: any, i: number) => (
-                                      <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
-                                        • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
-                                      </p>
-                                    ))}
-                                  </div>
-                                )}
-                                <div className="flex items-center justify-between">
+                                <p className="text-[14px] font-bold" style={{ color: theme.text }}>{item.name}</p>
+                                <div className="flex items-center justify-between mt-0.5 mb-1">
                                   <span className="text-[12px]" style={{ color: theme.textMutedMore }}>
                                     {formatCurrency(unitWithAddOns)}  {item.quantity}x
                                   </span>
@@ -636,6 +627,15 @@ export function OrdersScreen({
                                     {formatCurrency(unitWithAddOns * item.quantity)}
                                   </span>
                                 </div>
+                                {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                  <div className="space-y-0.5">
+                                    {item.additionalOptions.map((opt: any, i: number) => (
+                                      <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
+                                        • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )
@@ -643,9 +643,10 @@ export function OrdersScreen({
 
                         {/* Price breakdown */}
                         {(() => {
-                          const hasCash = (order.loyaltyPointsUsed ?? 0) > 0
                           const hasDelivery = order.deliveryFee > 0
-                          const hasDetails = hasCash || hasDelivery
+                          const totalBeforeDiscount = subtotal + order.deliveryFee
+                          const discount = Math.max(0, totalBeforeDiscount - order.total)
+                          const hasDetails = discount > 0 || hasDelivery
                           const isDetailsOpen = expandedDetails === order.id
 
                           return (
@@ -665,10 +666,10 @@ export function OrdersScreen({
                               )}
                               {isDetailsOpen && (
                                 <>
-                                  {hasCash && (
+                                  {discount > 0 && (
                                     <div className="flex justify-between text-[12px]" style={{ color: "#ef4444" }}>
-                                      <span>Cash Utilizado</span>
-                                      <span>-{formatCurrency((order.loyaltyPointsUsed ?? 0) / 100)}</span>
+                                      <span>Desconto</span>
+                                      <span>-{formatCurrency(discount)}</span>
                                     </div>
                                   )}
                                   {hasDelivery && (
@@ -687,7 +688,7 @@ export function OrdersScreen({
                                 </>
                               )}
                               <div className="flex justify-between text-[14px] font-bold pt-1 border-t" style={{ borderColor: theme.borderSubtle, color: theme.text }}>
-                                <span>TOTAL DO PEDIDO{order.paymentMethod ? ` (${paymentLabels[order.paymentMethod] || order.paymentMethod})` : ""}</span>
+                                <span>Total{order.paymentMethod ? ` (${paymentLabels[order.paymentMethod] || order.paymentMethod})` : ""}</span>
                                 <span>{formatCurrency(order.total)}</span>
                               </div>
                             </div>
