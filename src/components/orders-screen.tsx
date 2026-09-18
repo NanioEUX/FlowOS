@@ -551,153 +551,111 @@ export function OrdersScreen({
               <div className="space-y-4">
                 {historyOrders.map(order => {
                   const items = parseItems(order.items)
-                  const isExpanded = expandedOrder === order.id
                   const isCancelled = order.status === "cancelled"
                   const isAbandoned = order.status === "abandoned"
                   const isDelivered = order.status === "delivered"
 
                   const createdAt = new Date(order.createdAt)
-                  const isToday = new Date().toDateString() === createdAt.toDateString()
-                  const isYesterday = new Date(Date.now() - 86400000).toDateString() === createdAt.toDateString()
-                  const dateLabel = isToday ? "Hoje" : isYesterday ? "Ontem" : createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
-                  const timeLabel = createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                  const dateStr = createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                  const timeStr = createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
 
                   const statusColor = isCancelled ? "#ef4444" : isAbandoned ? "#f97316" : "#22c55e"
                   const statusBg = isCancelled ? "rgba(239,68,68,0.08)" : isAbandoned ? "rgba(249,115,22,0.08)" : "rgba(34,197,94,0.08)"
 
+                  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
                   return (
                     <div
                       key={order.id}
-                      className="rounded-2xl overflow-hidden transition-all"
+                      className="rounded-2xl overflow-hidden"
                       style={{
                         backgroundColor: theme.bgCard,
-                        boxShadow: isExpanded ? `0 2px 12px ${theme.overlay}` : `0 1px 3px ${theme.overlay}`,
+                        boxShadow: `0 1px 3px ${theme.overlay}`,
                       }}
                     >
                       <div className="p-4">
-                        {/* Row 1: Pedido # + Status badge */}
-                        <div className="flex items-center justify-between mb-2">
+                        {/* Row 1: Pedido # + Status + Date + Cashback — all inline */}
+                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-3">
                           <span className="text-[15px] font-bold" style={{ color: theme.text }}>
                             Pedido #{order.orderNumber || order.id.slice(0, 8)}
                           </span>
-                          <span className="text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: statusBg, color: statusColor }}>
-                            {isDelivered ? "Entregue" : isCancelled ? "Cancelado" : isAbandoned ? "Expirado" : statusLabels[order.status] || order.status}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: statusBg, color: statusColor }}>
+                            {isDelivered ? "ENTREGUE ✓" : isCancelled ? "CANCELADO" : isAbandoned ? "EXPIRADO" : statusLabels[order.status]?.toUpperCase() || order.status.toUpperCase()}
                           </span>
-                        </div>
-
-                        {/* Row 2: Date • Time • Cashback • Stars */}
-                        <div className="flex items-center gap-1.5 text-[11px] mb-3" style={{ color: theme.textMutedMore }}>
-                          <span>{dateLabel}</span>
-                          <span>•</span>
-                          <span>{timeLabel}</span>
+                          <span className="text-[11px]" style={{ color: theme.textMutedMore }}>
+                            {dateStr}, {timeStr}
+                          </span>
                           {(order.cashbackEarned ?? 0) > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="font-semibold" style={{ color: theme.success }}>+{formatCurrency((order.cashbackEarned ?? 0) / 100)} cash</span>
-                            </>
-                          )}
-                          {order.reviewRating != null && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                  <svg key={star} className="w-3 h-3" viewBox="0 0 20 20" fill={star <= (order.reviewRating ?? 0) ? "#facc15" : "none"} stroke={star <= (order.reviewRating ?? 0) ? "#facc15" : theme.textMutedMore} strokeWidth="1.5">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
-                              </span>
-                            </>
+                            <span className="text-[11px] font-semibold" style={{ color: theme.success }}>
+                              +{formatCurrency((order.cashbackEarned ?? 0) / 100)} Cash
+                            </span>
                           )}
                         </div>
 
-                        {/* Items — image-first layout */}
-                        <div className="mb-3 space-y-3">
-                          {items.slice(0, isExpanded ? items.length : 2).map((item, idx) => (
-                            <div key={idx} className="flex gap-3">
-                              {item.image && (
-                                <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold truncate" style={{ color: theme.text }}>
-                                  {item.name}
-                                </p>
-                                {item.additionalOptions && item.additionalOptions.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1.5">
-                                    {item.additionalOptions.map((opt: any, i: number) => (
-                                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${theme.primary}12`, color: theme.primary }}>
-                                        {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-60">+{formatCurrency(opt.price)}</span>}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                <div className="flex items-center justify-between mt-1.5">
-                                  <span className="text-[11px]" style={{ color: theme.textMutedMore }}>{item.quantity}x</span>
-                                  <span className="text-[13px] font-bold" style={{ color: theme.text }}>{formatCurrency(item.price * item.quantity)}</span>
-                                </div>
-                              </div>
+                        {/* Stars */}
+                        {order.reviewRating != null && (
+                          <div className="flex items-center gap-1.5 mb-3">
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <svg key={star} className="w-4 h-4" viewBox="0 0 20 20" fill={star <= (order.reviewRating ?? 0) ? "#facc15" : "none"} stroke={star <= (order.reviewRating ?? 0) ? "#facc15" : theme.textMutedMore} strokeWidth="1.5">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
                             </div>
-                          ))}
-                          {!isExpanded && items.length > 2 && (
-                            <button
-                              onClick={() => setExpandedOrder(order.id)}
-                              className="flex items-center gap-1 text-[11px] font-semibold"
-                              style={{ color: theme.primary }}
-                            >
-                              +{items.length - 2} {items.length - 2 === 1 ? "outro item" : "outros itens"}
-                              <ChevronRight className="h-3 w-3" />
-                            </button>
-                          )}
-                          {isExpanded && items.length > 2 && (
-                            <button
-                              onClick={() => setExpandedOrder(null)}
-                              className="flex items-center gap-1 text-[11px] font-semibold"
-                              style={{ color: theme.textMutedMore }}
-                            >
-                              <ChevronRight className="h-3 w-3 rotate-90" /> Menos detalhes
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Expanded details */}
-                        {isExpanded && (
-                          <div className="mb-3 pt-3 border-t space-y-1.5" style={{ borderColor: theme.borderSubtle }}>
-                            {order.deliveryFee > 0 && (
-                              <div className="flex justify-between text-xs" style={{ color: theme.textMutedMore }}>
-                                <span>Taxa de entrega</span>
-                                <span className="font-medium">{formatCurrency(order.deliveryFee)}</span>
-                              </div>
-                            )}
-                            {order.notes && (
-                              <p className="text-[11px] italic" style={{ color: theme.textMutedMore }}>Obs: {order.notes}</p>
-                            )}
-                            {order.customerAddress && (
-                              <p className="text-[11px]" style={{ color: theme.textMutedMore }}>{order.customerAddress}</p>
-                            )}
+                            <span className="text-[12px] font-semibold" style={{ color: theme.text }}>{order.reviewRating}.0</span>
+                            <span className="text-[11px]" style={{ color: theme.textMutedMore }}>(Votos: 1)</span>
                           </div>
                         )}
 
-                        {/* Total + Delivered info */}
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5">
-                            {order.deliveredAt && (
-                              <p className="text-[11px]" style={{ color: theme.textMutedMore }}>
-                                Entregue em {new Date(order.deliveredAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                              </p>
+                        {/* Product: large image + name + bullet options */}
+                        {items.map((item, idx) => (
+                          <div key={idx} className="flex gap-3 mb-3">
+                            {item.image && (
+                              <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
                             )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] font-bold mb-1" style={{ color: theme.text }}>
+                                {item.quantity}x {item.name}
+                              </p>
+                              {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                <div className="space-y-0.5">
+                                  {item.additionalOptions.map((opt: any, i: number) => (
+                                    <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
+                                      • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-sm font-bold" style={{ color: theme.text }}>
-                            {formatCurrency(order.total)}
-                          </span>
+                        ))}
+
+                        {/* Price breakdown */}
+                        <div className="space-y-1 mb-3">
+                          <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
+                            <span>Itens Subtotal</span>
+                            <span>{formatCurrency(subtotal)}</span>
+                          </div>
+                          {order.deliveryFee > 0 && (
+                            <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
+                              <span>Taxa de Entrega</span>
+                              <span>{formatCurrency(order.deliveryFee)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-[14px] font-bold pt-1 border-t" style={{ borderColor: theme.borderSubtle, color: theme.text }}>
+                            <span>TOTAL DO PEDIDO</span>
+                            <span>{formatCurrency(order.total)}</span>
+                          </div>
                         </div>
 
-                        {/* CTA: Pedir novamente */}
+                        {/* CTA */}
                         {onReorder && !isCancelled && !isAbandoned && (
                           <button
                             onClick={() => onReorder(order)}
-                            className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-[0.98]"
+                            className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white transition-all active:scale-[0.98]"
                             style={{ backgroundColor: theme.primary }}
                           >
-                            Pedir novamente
+                            Pedir Novamente
                           </button>
                         )}
                       </div>
