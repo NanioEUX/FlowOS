@@ -320,11 +320,13 @@ export async function POST(req: NextRequest) {
             if (itemResult.success) {
               // Save iFood IDs back to local DB
               const updateData: any = {}
-              if (itemResult.data?.itemId && !product.ifoodItemId) {
-                updateData.ifoodItemId = itemResult.data.itemId
+              const returnedItemId = itemResult.data?.item?.id || itemResult.data?.itemId
+              const returnedProductId = itemResult.data?.products?.[0]?.id || itemResult.data?.productId
+              if (returnedItemId && !product.ifoodItemId) {
+                updateData.ifoodItemId = returnedItemId
               }
-              if (itemResult.data?.productId && !product.ifoodProductId) {
-                updateData.ifoodProductId = itemResult.data.productId
+              if (returnedProductId && !product.ifoodProductId) {
+                updateData.ifoodProductId = returnedProductId
               }
               if (Object.keys(updateData).length > 0) {
                 await prisma.product.update({
