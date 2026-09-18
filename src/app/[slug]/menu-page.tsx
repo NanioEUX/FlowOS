@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2 } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -375,6 +375,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const prevMsgCountRef = useRef(0)
   const trackingTokenRef = useRef<string>("")
   const [showOrdersList, setShowOrdersList] = useState(false)
+  const [showLoyaltyRules, setShowLoyaltyRules] = useState(false)
   const [customerOrders, setCustomerOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [pushNotification, setPushNotification] = useState<{ title: string; body: string; url: string } | null>(null)
@@ -4205,6 +4206,50 @@ onPaymentConfirmed={handlePaymentSuccess}
         </div>
       )}
 
+      {/* Loyalty Rules Modal */}
+      {showLoyaltyRules && parsedLoyalty && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                <Star className="h-5 w-5" style={{ color: "#f59e0b" }} />
+                Regras do Cashback
+              </h3>
+              <button onClick={() => setShowLoyaltyRules(false)} className="p-1 rounded-full hover:opacity-70 text-zinc-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-zinc-600">
+              <div className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                <p>Ganhe <strong>{parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0}%</strong> de cashback em cada pedido</p>
+              </div>
+              {parsedLoyalty.maxRedeemPercent && (
+                <div className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <p>Use até <strong>{parsedLoyalty.maxRedeemPercent}%</strong> do saldo por pedido</p>
+                </div>
+              )}
+              {parsedLoyalty.minOrderToRedeem > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-0.5">!</span>
+                  <p>Pedido mínimo de <strong>R$ {parsedLoyalty.minOrderToRedeem.toFixed(2)}</strong> para usar o saldo</p>
+                </div>
+              )}
+              {parsedLoyalty.cashbackExpirationDays && (
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-0.5">!</span>
+                  <p>Saldo expira em <strong>{parsedLoyalty.cashbackExpirationDays} dias</strong> sem uso</p>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setShowLoyaltyRules(false)} className="w-full py-2.5 rounded-xl text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800">
+              Entendi
+            </button>
+          </div>
+        </div>
+      )}
+
       <PushHeal establishmentId={establishment.id} customerKey={customer.phone || customerData?.phone || "anonymous"} />
 
       {/* Unified Cart/Checkout Full-Screen Flow */}
@@ -4279,9 +4324,12 @@ onPaymentConfirmed={handlePaymentSuccess}
 
                 {/* Delivery fee / free */}
                 {orderType === "delivery" && deliveryFee > 0 && (
-                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, color: theme.primary }}>
+                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.primary}10`, borderLeft: `4px solid ${theme.primary}` }}>
                     <div className="flex items-center justify-between">
-                      <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" style={{ color: theme.primary }} />
+                        <p className="font-medium">Taxa de entrega: {formatCurrency(deliveryFee)}</p>
+                      </div>
                       <span className="flex items-center gap-1 text-xs opacity-80">
                         <Clock className="h-3 w-3" />
                         {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
@@ -4327,10 +4375,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )}
                 {orderType === "delivery" && deliveryFee === 0 && (
-                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
+                  <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: `rgba(34,197,94,0.08)`, borderLeft: `4px solid #22c55e` }}>
                     <div className="flex items-center justify-between">
-                      <p className="font-medium">Entrega grátis! 🎉</p>
-                      <span className="flex items-center gap-1 text-xs opacity-80">
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" style={{ color: "#22c55e" }} />
+                        <p className="font-medium" style={{ color: "#22c55e" }}>Entrega grátis! 🎉</p>
+                      </div>
+                      <span className="flex items-center gap-1 text-xs opacity-80" style={{ color: "#22c55e" }}>
                         <Clock className="h-3 w-3" />
                         {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                       </span>
@@ -4574,25 +4625,40 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
 
                 {/* Loyalty/cashback */}
-                {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (
-                  <div className="rounded-xl p-3 flex items-center justify-between" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20` }}>
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4" style={{ color: theme.primary }} />
-                      <div>
-                        <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</div>
-                        <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
-                          Saldo: R$ {(customerLoyaltyPoints * 0.01).toFixed(2)}
+                {parsedLoyalty?.enabled && customerLoyaltyPoints > 0 && (() => {
+                  const balance = customerLoyaltyPoints * 0.01
+                  const minOrder = parsedLoyalty.minOrderToRedeem || 0
+                  const belowMin = minOrder > 0 && subtotal < minOrder
+                  const canUse = balance > 0 && !belowMin
+                  return (
+                    <div className="rounded-xl p-3 flex items-center justify-between" style={{ backgroundColor: `${theme.primary}10`, border: `1px solid ${theme.primary}20`, opacity: canUse ? 1 : 0.6 }}>
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4" style={{ color: theme.primary }} />
+                        <div>
+                          <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</div>
+                          <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
+                            Saldo: R$ {balance.toFixed(2)}
+                          </div>
+                          {belowMin ? (
+                            <div className="text-[10px] font-medium" style={{ color: "#ef4444" }}>Pedido mínimo: R$ {minOrder.toFixed(2)}</div>
+                          ) : (
+                            <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Use até {parsedLoyalty?.maxRedeemPercent || 25}% do pedido</div>
+                          )}
                         </div>
-                        <div className="text-[10px]" style={{ color: theme.textMutedMore }}>Use até {parsedLoyalty?.maxRedeemPercent || 25}% do pedido</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setShowLoyaltyRules(true)} className="p-1 rounded-full" style={{ color: theme.textMutedMore }}>
+                          <Info className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => { if (!canUse) return; const next = !useLoyalty; setUseLoyalty(next); }}
+                          className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                          style={{ borderColor: useLoyalty && canUse ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty && canUse ? theme.primary : "transparent", cursor: canUse ? "pointer" : "not-allowed" }}>
+                          {useLoyalty && canUse && <Check className="h-3 w-3 text-white" />}
+                        </button>
                       </div>
                     </div>
-                    <button onClick={() => { const next = !useLoyalty; console.log("[loyalty] toggle clicked:", { next, customerLoyaltyPoints, parsedLoyalty, subtotal }); setUseLoyalty(next); }}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${useLoyalty ? "" : ""}`}
-                      style={{ borderColor: useLoyalty ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty ? theme.primary : "transparent" }}>
-                      {useLoyalty && <Check className="h-3 w-3 text-white" />}
-                    </button>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Price summary */}
                 {cart.length > 0 && (
@@ -4980,11 +5046,6 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="flex-shrink-0 max-w-lg mx-auto w-full px-4 pb-2 pt-3 space-y-2" style={{ borderTop: `1px solid ${theme.borderCard}`, paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
             {cartStep === "cart" && (
               <>
-                {isBelowMinimum && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-center">
-                    <p className="text-xs font-medium text-red-600">Pedido mínimo: {formatCurrency(minimumOrder.value)}</p>
-                  </div>
-                )}
                 <button onClick={() => {
                   if (!customer.phone || !customer.name || !sessionVerified) {
                     if (!customer.phone || !customer.name) {
