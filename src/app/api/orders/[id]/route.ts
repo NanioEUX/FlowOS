@@ -87,10 +87,15 @@ export async function PATCH(
         })
 
         if (order.customerId) {
+          // Estorno de loyalty: devolver pontos usados, remover cashback e bônus
+          const reversalDelta = (order.loyaltyPointsUsed || 0) - (order.cashbackEarned || 0) - (order.firstPurchaseBonus || 0)
           const updatedCustomer = await tx.customer.update({
             where: { id: order.customerId },
             data: {
               cancellationCount: { increment: 1 },
+              totalOrders: { decrement: 1 },
+              totalSpent: { decrement: order.total || 0 },
+              ...(reversalDelta !== 0 ? { loyaltyPoints: { increment: reversalDelta } } : {}),
             },
           })
 

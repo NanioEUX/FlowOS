@@ -181,6 +181,7 @@ export async function POST(req: NextRequest) {
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
     let customerTier: string | null = null
+    let firstPurchaseBonusValue = 0
     if (customerPhone || customerCpf) {
       let customer: any = null
 
@@ -242,10 +243,7 @@ export async function POST(req: NextRequest) {
         // NOTA: O desconto de primeira compra já é subtraído pelo client via
         // firstPurchaseDiscount no body (linha 39). Não aplicar novamente aqui
         // para evitar double-subtract.
-        let firstPurchaseBonusValue = 0
-        if (isFirstOrder && establishment.firstPurchaseEnabled && customer.whatsappVerified) {
-          firstPurchaseBonusValue = establishment.firstPurchaseBonus || 0
-        }
+        firstPurchaseBonusValue = isFirstOrder && establishment.firstPurchaseEnabled && customer.whatsappVerified ? (establishment.firstPurchaseBonus || 0) : 0
 
         let pointsDelta = 0
         if (useLoyalty && loyaltyPointsUsed > 0) {
@@ -442,6 +440,8 @@ export async function POST(req: NextRequest) {
             deliveryCode: String(Math.floor(1000 + Math.random() * 9000)),
           }),
           cashbackEarned: cashbackEarnedValue,
+          loyaltyPointsUsed: (useLoyalty && loyaltyPointsUsed > 0) ? loyaltyPointsUsed : 0,
+          firstPurchaseBonus: firstPurchaseBonusValue,
         },
       })
 

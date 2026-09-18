@@ -471,6 +471,8 @@ model Order {
   cancelledBy        String? // "customer" | "merchant" | "system"
   cancellationCount  Int             @default(0)
   cashbackEarned     Int             @default(0) // cashback ganho neste pedido (em centavos)
+  loyaltyPointsUsed  Int             @default(0) // pontos de cash resgatados neste pedido (em centavos)
+  firstPurchaseBonus Int             @default(0) // bônus 1ª compra creditado neste pedido (em centavos)
   // Agendamento de pedidos
   isScheduled        Boolean         @default(false)
   deliveryDate       DateTime? // data/hora agendada para entrega/retirada
