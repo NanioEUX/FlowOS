@@ -4635,7 +4635,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <div className="flex items-center gap-2">
                         <Star className="h-4 w-4" style={{ color: theme.primary }} />
                         <div>
-                          <div className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold" style={{ color: theme.primary }}>Usar meu cashback</span>
+                            <button onClick={() => setShowLoyaltyRules(true)} className="rounded-full" style={{ color: theme.primary, opacity: 0.5 }}>
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           <div className="text-[12px] font-semibold" style={{ color: theme.text }}>
                             Saldo: R$ {balance.toFixed(2)}
                           </div>
@@ -4646,16 +4651,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setShowLoyaltyRules(true)} className="p-1 rounded-full" style={{ color: theme.textMutedMore }}>
-                          <Info className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => { if (!canUse) return; const next = !useLoyalty; setUseLoyalty(next); }}
-                          className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
-                          style={{ borderColor: useLoyalty && canUse ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty && canUse ? theme.primary : "transparent", cursor: canUse ? "pointer" : "not-allowed" }}>
-                          {useLoyalty && canUse && <Check className="h-3 w-3 text-white" />}
-                        </button>
-                      </div>
+                      <button onClick={() => { if (!canUse) return; const next = !useLoyalty; setUseLoyalty(next); }}
+                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
+                        style={{ borderColor: useLoyalty && canUse ? theme.primary : theme.borderInputColor, backgroundColor: useLoyalty && canUse ? theme.primary : "transparent", cursor: canUse ? "pointer" : "not-allowed" }}>
+                        {useLoyalty && canUse && <Check className="h-3 w-3 text-white" />}
+                      </button>
                     </div>
                   )
                 })()}
