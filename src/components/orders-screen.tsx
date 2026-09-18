@@ -43,6 +43,7 @@ interface Order {
   deliveredAt: string | Date | null
   updatedAt: number
   cashbackEarned?: number
+  loyaltyPointsUsed?: number
   reviewRating?: number | null
   establishment?: { name: string; phone: string; logo: string | null; slug: string }
 }
@@ -606,7 +607,7 @@ export function OrdersScreen({
                           </div>
                         )}
 
-                        {/* Product: large image + name + bullet options + unit price */}
+                        {/* Product: image + name + unit price + qty + total */}
                         {items.map((item, idx) => {
                           const addOnsTotal = (item.additionalOptions || []).reduce((sum: number, opt: any) => sum + (opt.price || 0), 0)
                           const unitWithAddOns = item.price + addOnsTotal
@@ -616,13 +617,11 @@ export function OrdersScreen({
                                 <img src={item.image} alt={item.name} className="w-[72px] h-[72px] rounded-xl object-cover shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-[14px] font-bold" style={{ color: theme.text }}>
-                                    {item.quantity}x {item.name}
-                                  </p>
-                                  <span className="text-[13px] font-bold shrink-0" style={{ color: theme.text }}>
-                                    {formatCurrency(unitWithAddOns * item.quantity)}
-                                  </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-[14px] font-bold" style={{ color: theme.text }}>{item.name}</p>
+                                  <span className="text-[12px]" style={{ color: theme.textMutedMore }}>{formatCurrency(unitWithAddOns)}</span>
+                                  <span className="text-[12px]" style={{ color: theme.textMutedMore }}>{item.quantity}x</span>
+                                  <span className="text-[13px] font-bold" style={{ color: theme.text }}>{formatCurrency(unitWithAddOns * item.quantity)}</span>
                                 </div>
                                 {item.additionalOptions && item.additionalOptions.length > 0 && (
                                   <div className="space-y-0.5 mt-1">
@@ -639,22 +638,56 @@ export function OrdersScreen({
                         })}
 
                         {/* Price breakdown */}
-                        <div className="space-y-1 mb-3">
-                          <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
-                            <span>Itens Subtotal</span>
-                            <span>{formatCurrency(subtotal)}</span>
-                          </div>
-                          {order.deliveryFee > 0 && (
-                            <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
-                              <span>Taxa de Entrega</span>
-                              <span>{formatCurrency(order.deliveryFee)}</span>
+                        {(() => {
+                          const hasCash = (order.loyaltyPointsUsed ?? 0) > 0
+                          const hasDelivery = order.deliveryFee > 0
+                          const hasDetails = hasCash || hasDelivery
+
+                          return (
+                            <div className="space-y-1 mb-3">
+                              <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
+                                <span>Itens Subtotal</span>
+                                <span>{formatCurrency(subtotal)}</span>
+                              </div>
+                              {hasDetails && expandedOrder !== `details-${order.id}` && (
+                                <button
+                                  onClick={() => setExpandedOrder(`details-${order.id}`)}
+                                  className="text-[11px] font-semibold flex items-center gap-0.5"
+                                  style={{ color: theme.primary }}
+                                >
+                                  Detalhes <ChevronRight className="h-3 w-3" />
+                                </button>
+                              )}
+                              {expandedOrder === `details-${order.id}` && (
+                                <>
+                                  {hasCash && (
+                                    <div className="flex justify-between text-[12px]" style={{ color: "#ef4444" }}>
+                                      <span>Cash Utilizado</span>
+                                      <span>-{formatCurrency((order.loyaltyPointsUsed ?? 0) / 100)}</span>
+                                    </div>
+                                  )}
+                                  {hasDelivery && (
+                                    <div className="flex justify-between text-[12px]" style={{ color: theme.textMutedMore }}>
+                                      <span>Taxa de Entrega</span>
+                                      <span>{formatCurrency(order.deliveryFee)}</span>
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => setExpandedOrder(null)}
+                                    className="text-[11px] font-semibold flex items-center gap-0.5"
+                                    style={{ color: theme.primary }}
+                                  >
+                                    <ChevronRight className="h-3 w-3 rotate-90" /> Detalhes
+                                  </button>
+                                </>
+                              )}
+                              <div className="flex justify-between text-[14px] font-bold pt-1 border-t" style={{ borderColor: theme.borderSubtle, color: theme.text }}>
+                                <span>TOTAL DO PEDIDO{order.paymentMethod ? ` (${paymentLabels[order.paymentMethod] || order.paymentMethod})` : ""}</span>
+                                <span>{formatCurrency(order.total)}</span>
+                              </div>
                             </div>
-                          )}
-                          <div className="flex justify-between text-[14px] font-bold pt-1 border-t" style={{ borderColor: theme.borderSubtle, color: theme.text }}>
-                            <span>TOTAL DO PEDIDO{order.paymentMethod ? ` (${paymentLabels[order.paymentMethod] || order.paymentMethod})` : ""}</span>
-                            <span>{formatCurrency(order.total)}</span>
-                          </div>
-                        </div>
+                          )
+                        })()}
 
                         {/* CTA */}
                         {onReorder && !isCancelled && !isAbandoned && (

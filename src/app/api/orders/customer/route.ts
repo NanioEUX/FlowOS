@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
       deliveryCode: true,
       updatedAt: true,
       cashbackEarned: true,
+      loyaltyPointsUsed: true,
     },
   })
 
