@@ -233,13 +233,13 @@ export function OrderConfirmationScreen({
               </div>
               <div className="ml-7 space-y-0.5">
                 {cashbackBase != null && (
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Base: +R$ {cashbackBase.toFixed(2)}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Base: +R$ {(cashbackBase / 100).toFixed(2)}</p>
                 )}
                 {tierBonus != null && tierBonus > 0 && tierName && (
-                  <p className="text-xs" style={{ color: theme.textMuted }}>{tierEmoji} {tierName}: +R$ {tierBonus.toFixed(2)}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>{tierEmoji} {tierName}: +R$ {(tierBonus / 100).toFixed(2)}</p>
                 )}
-                <p className="text-xs font-bold" style={{ color: theme.success }}>Total: +R$ {cashEarned.toFixed(2)}</p>
-                <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance / 100) - loyaltyDiscount + cashEarned).toFixed(2)}</p>
+                <p className="text-xs font-bold" style={{ color: theme.success }}>Total: +R$ {(cashEarned / 100).toFixed(2)}</p>
+                <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance / 100) - loyaltyDiscount + (cashEarned / 100)).toFixed(2)}</p>
               </div>
             </div>
           )}

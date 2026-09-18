@@ -257,7 +257,7 @@ export async function POST(req: NextRequest) {
           try {
             const lc = JSON.parse(establishment.loyaltyConfig)
             if (lc.enabled) {
-              let basePoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
+              let basePoints = Math.floor((subtotal - loyaltyDiscountValue) * (lc.cashbackPercent || lc.pointsPerReal || 1))
               // Apply tier multiplier based on order count within period
               let tierMultiplier = 1
               let ordersInPeriod = customer.totalOrders || 0
@@ -392,7 +392,7 @@ export async function POST(req: NextRequest) {
       const parsedLoyalty = establishment.loyaltyConfig ? JSON.parse(establishment.loyaltyConfig) : null
       const parsedTierConfig = establishment.tierConfig ? JSON.parse(establishment.tierConfig) : null
       if (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)) {
-        const base = (subtotal - loyaltyDiscountValue) * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
+        const base = (subtotal - loyaltyDiscountValue) * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0)
         let tierMultiplier = 1
         if (parsedTierConfig?.enabled && parsedTierConfig?.tiers?.length && customerTier) {
           const currentTier = parsedTierConfig.tiers.find((t: any) => t.name?.toLowerCase() === customerTier?.toLowerCase())

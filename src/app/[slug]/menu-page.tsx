@@ -1977,7 +1977,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         orderTotal: total,
         deliveryCode: data.order?.deliveryCode,
         deliveryFee: deliveryFee,
-        cashEarned: Math.floor((subtotal - loyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier),
+        cashEarned: Math.floor((subtotal - loyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) * tierMultiplier),
       })
 
       const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
@@ -4933,12 +4933,13 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             {cartStep === "confirmation" && orderResult?.success && (() => {
-              const _earned = orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)
+              const _earned = orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) * tierMultiplier)
               const _pct = parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0
               const _net = confirmationSubtotal - confirmationLoyaltyDiscount
-              const _base = Math.round(_net * _pct / 100 * 100) / 100
-              const _cbBase = Math.round(Math.min(_base, _earned) * 100) / 100
-              const _tier = Math.round(Math.max(_earned - _cbBase, 0) * 100) / 100
+              const _base = Math.round(_net * _pct)
+              const _tierBonus = Math.round(_base * (tierMultiplier - 1))
+              const _cbBase = _base
+              const _tier = _tierBonus
               return (
               <OrderConfirmationScreen
                 theme={theme}
