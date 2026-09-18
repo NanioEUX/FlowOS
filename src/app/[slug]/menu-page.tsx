@@ -4930,7 +4930,14 @@ onPaymentConfirmed={handlePaymentSuccess}
               </div>
             )}
 
-            {cartStep === "confirmation" && orderResult?.success && (
+            {cartStep === "confirmation" && orderResult?.success && (() => {
+              const _earned = orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)
+              const _pct = parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0
+              const _net = confirmationSubtotal - confirmationLoyaltyDiscount
+              const _base = Math.round(_net * _pct / 100 * 100) / 100
+              const _cbBase = Math.round(Math.min(_base, _earned) * 100) / 100
+              const _tier = Math.round(Math.max(_earned - _cbBase, 0) * 100) / 100
+              return (
               <OrderConfirmationScreen
                 theme={theme}
                 title={establishment.confirmationTitle || "Pedido enviado!"}
@@ -4946,9 +4953,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 loyaltyDiscount={confirmationLoyaltyDiscount}
                 total={orderResult?.orderTotal ?? total}
                 showLoyalty={parsedLoyalty?.enabled}
-                cashEarned={orderResult?.cashEarned ?? Math.floor((confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * tierMultiplier)}
-                cashbackBase={(confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100}
-                tierBonus={(confirmationSubtotal - confirmationLoyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) / 100 * (tierMultiplier - 1)}
+                cashEarned={_earned}
+                cashbackBase={_cbBase}
+                tierBonus={_tier}
                 tierName={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.name })()}
                 tierEmoji={(() => { const t = (parsedTierConfig?.tiers || []).find((t: any) => t.name?.toLowerCase() === customerTier); return t?.emoji })()}
                 loyaltyBalance={customerData?.loyaltyPoints || customerLoyaltyPoints}
@@ -4963,7 +4970,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 onTrack={() => { setShowOrdersList(true); setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setConfirmationLoyaltyDiscount(0); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
                 onContinue={() => { setShowCart(false); setCartStep("cart"); setConfirmationItems([]); setConfirmationLoyaltyDiscount(0); setOrderResult(null); setUseLoyalty(false); setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated }) }}
               />
-            )}
+              )})()}
           </div>
 
           {/* Fixed bottom buttons — always in same position */}
