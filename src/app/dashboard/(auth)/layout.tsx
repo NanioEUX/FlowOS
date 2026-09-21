@@ -7,6 +7,7 @@ import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut,
 import { cn } from "@/lib/utils"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import { fetchAuth } from "@/lib/fetch-auth"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard/home", perm: "dashboard" },
@@ -65,6 +66,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<UserData | null>(null)
   const [expenseAlert, setExpenseAlert] = useState<"none" | "warning" | "danger">("none")
   const [stockAlert, setStockAlert] = useState<"none" | "warning" | "danger">("none")
+  const [toggleOpenConfirm, setToggleOpenConfirm] = useState(false)
   const [unreadChatCount, setUnreadChatCount] = useState(0)
 
   useEffect(() => {
@@ -132,6 +134,17 @@ export default function DashboardLayout({
   function handleLogout() {
     localStorage.removeItem("pedefacil-user")
     router.push("/login")
+  }
+
+  async function handleToggleOpen() {
+    try {
+      const res = await fetchAuth(`/api/establishments/${user!.establishmentId}/toggle-open`, { method: "PATCH" })
+      const data = await res.json()
+      if (!data.error) {
+        setEstablishment((prev: any) => ({ ...prev, isOpenOverride: data.isOpenOverride }))
+      }
+    } catch {}
+    setToggleOpenConfirm(false)
   }
 
   if (loading) {
@@ -350,7 +363,7 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5 text-zinc-600" />
           </button>
           <div className="flex-1" />
-          <IntegrationStatusBadges establishment={establishment} />
+          <IntegrationStatusBadges establishment={establishment} onToggleOpen={() => setToggleOpenConfirm(true)} />
           <div className="hidden items-center gap-3 text-sm text-zinc-500 lg:flex">
             <div className="flex items-center gap-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">
@@ -399,6 +412,18 @@ export default function DashboardLayout({
           )}
         </div>
       </nav>
+
+      <ConfirmDialog
+        open={toggleOpenConfirm}
+        title={establishment?.isOpenOverride === true ? "Fechar estabelecimento?" : "Abrir estabelecimento?"}
+        message={establishment?.isOpenOverride === true
+          ? "Tem certeza que deseja fechar o estabelecimento agora? Pedidos novos não serão aceitos até reabrir."
+          : "Tem certeza que deseja abrir o estabelecimento? Pedidos novos começarão a ser aceitos."}
+        confirmLabel={establishment?.isOpenOverride === true ? "Fechar" : "Abrir"}
+        variant="warning"
+        onConfirm={handleToggleOpen}
+        onCancel={() => setToggleOpenConfirm(false)}
+      />
     </div>
   )
 }
@@ -426,40 +451,57 @@ function isOpenNow(businessHours: string | null): boolean {
   }
 }
 
-function IntegrationStatusBadges({ establishment }: { establishment: any }) {
+function IntegrationStatusBadges({ establishment, onToggleOpen }: { establishment: any; onToggleOpen: () => void }) {
   const ifoodOk = !!establishment?.ifoodEnabled && !!establishment?.ifoodMerchantId
   const whatsappOk = !!establishment?.whatsappProvider && (!!establishment?.evolutionApiKey || !!establishment?.metaAccessToken)
   const nine9Ok = !!establishment?.api99Key
-  const isOpen = isOpenNow(establishment?.businessHours)
+  const isOpenOverride = establishment?.isOpenOverride
+  const isOpen = isOpenOverride === true || (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
 
-  const badges = [
-    { label: "iFood", ok: ifoodOk },
-    { label: "WhatsApp", ok: whatsappOk },
-    { label: "99", ok: nine9Ok },
-    { label: isOpen ? "Aberto" : "Fechado", ok: isOpen },
+  const integrationBadges = [
+    { label: "iFood", ok: ifoodOk, href: "/dashboard/config#ifood" },
+    { label: "WhatsApp", ok: whatsappOk, href: "/dashboard/config#whatsapp" },
+    { label: "99", ok: nine9Ok, href: "/dashboard/config#99" },
   ]
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className="flex items-center gap-1 lg:hidden" title={badges.map((b) => `${b.label}: ${b.ok ? "Ativo" : "Inativo"}`).join(" | ")}>
-        {badges.map((b) => (
-          <span key={b.label} className={cn("h-2 w-2 rounded-full", b.ok ? "bg-green-500" : "bg-red-400")} title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`} />
+      <div className="flex items-center gap-1 lg:hidden">
+        {integrationBadges.map((b) => (
+          <Link key={b.label} href={b.href} className={cn("h-2 w-2 rounded-full transition-colors", b.ok ? "bg-green-500" : "bg-red-400")} title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`} />
         ))}
+        <button
+          onClick={onToggleOpen}
+          className={cn("h-2 w-2 rounded-full transition-colors", isOpen ? "bg-green-500" : "bg-red-400")}
+          title={`Estabelecimento: ${isOpen ? "Aberto" : "Fechado"}`}
+        />
       </div>
       <div className="hidden items-center gap-2 lg:flex">
-        {badges.map((b) => (
-          <div
+        {integrationBadges.map((b) => (
+          <Link
             key={b.label}
+            href={b.href}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-80",
               b.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
             )}
-            title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`}
+            title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"} — Clique para configurar`}
           >
             <span className={cn("h-1.5 w-1.5 rounded-full", b.ok ? "bg-green-500" : "bg-red-400")} />
             {b.label}
-          </div>
+          </Link>
         ))}
+        <button
+          onClick={onToggleOpen}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-80",
+            isOpen ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
+          )}
+          title={`Estabelecimento: ${isOpen ? "Aberto" : "Fechado"} — Clique para alterar`}
+        >
+          <span className={cn("h-1.5 w-1.5 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
+          {isOpen ? "Aberto" : "Fechado"}
+        </button>
       </div>
     </div>
   )
