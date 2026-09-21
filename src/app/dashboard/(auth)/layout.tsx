@@ -350,6 +350,7 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5 text-zinc-600" />
           </button>
           <div className="flex-1" />
+          <IntegrationStatusBadges establishment={establishment} />
           <div className="hidden items-center gap-3 text-sm text-zinc-500 lg:flex">
             <div className="flex items-center gap-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">
@@ -398,6 +399,68 @@ export default function DashboardLayout({
           )}
         </div>
       </nav>
+    </div>
+  )
+}
+
+function isOpenNow(businessHours: string | null): boolean {
+  if (!businessHours) return false
+  try {
+    const hours = JSON.parse(businessHours)
+    const now = new Date()
+    const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+    const today = dayNames[now.getDay()]
+    const todayEntry = hours.find((h: any) => h.day === today)
+    if (!todayEntry || !todayEntry.active) return false
+    const [oh, om] = todayEntry.open.split(":").map(Number)
+    const [ch, cm] = todayEntry.close.split(":").map(Number)
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const openMinutes = oh * 60 + om
+    const closeMinutes = ch * 60 + cm
+    if (closeMinutes < openMinutes) {
+      return currentMinutes >= openMinutes || currentMinutes < closeMinutes
+    }
+    return currentMinutes >= openMinutes && currentMinutes < closeMinutes
+  } catch {
+    return false
+  }
+}
+
+function IntegrationStatusBadges({ establishment }: { establishment: any }) {
+  const ifoodOk = !!establishment?.ifoodEnabled && !!establishment?.ifoodMerchantId
+  const whatsappOk = !!establishment?.whatsappProvider && (!!establishment?.evolutionApiKey || !!establishment?.metaAccessToken)
+  const nine9Ok = !!establishment?.api99Key
+  const isOpen = isOpenNow(establishment?.businessHours)
+
+  const badges = [
+    { label: "iFood", ok: ifoodOk },
+    { label: "WhatsApp", ok: whatsappOk },
+    { label: "99", ok: nine9Ok },
+    { label: isOpen ? "Aberto" : "Fechado", ok: isOpen },
+  ]
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 lg:hidden" title={badges.map((b) => `${b.label}: ${b.ok ? "Ativo" : "Inativo"}`).join(" | ")}>
+        {badges.map((b) => (
+          <span key={b.label} className={cn("h-2 w-2 rounded-full", b.ok ? "bg-green-500" : "bg-red-400")} title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`} />
+        ))}
+      </div>
+      <div className="hidden items-center gap-2 lg:flex">
+        {badges.map((b) => (
+          <div
+            key={b.label}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              b.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
+            )}
+            title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", b.ok ? "bg-green-500" : "bg-red-400")} />
+            {b.label}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
