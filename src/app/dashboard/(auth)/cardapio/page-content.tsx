@@ -2007,7 +2007,8 @@ export default function CardapioPage() {
                               <span className="font-bold text-green-600 whitespace-nowrap">
                                 {formatCurrency(product.price)}
                               </span>
-                              {ifoodEnabled && ifoodMerchantId && (
+                               {ifoodEnabled && ifoodMerchantId && (
+                                <>
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleIfoodPriceLock(product) }}
@@ -2037,6 +2038,20 @@ export default function CardapioPage() {
                                     />
                                   )}
                                 </div>
+                                {(() => {
+                                  const cmv = computeProductCMV(product)
+                                  if (cmv <= 0) return null
+                                  const ifoodPrice = computeIfoodPrice(product)
+                                  const lucro = ifoodPrice - cmv
+                                  const margem = ifoodPrice > 0 ? ((lucro / ifoodPrice) * 100) : 0
+                                  const colorClass = (product as any).ifoodPriceLocked ? "text-zinc-500" : "text-amber-600"
+                                  return (
+                                    <span className={`text-[10px] whitespace-nowrap mt-0.5 ${colorClass}`}>
+                                      CMV iFood {formatCurrency(cmv)} • {margem.toFixed(0)}% lucro
+                                    </span>
+                                  )
+                                })()}
+                                </>
                               )}
                             </div>
                             <div className="flex flex-col items-center gap-0.5 shrink-0">
