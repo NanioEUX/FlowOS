@@ -3968,9 +3968,25 @@ onPaymentConfirmed={handlePaymentSuccess}
               <div className="flex-1">
                 <label className="text-xs" style={{ color: theme.textMuted }}>CEP</label>
                 <input
-                  value={addressForm.cep}
-                  onChange={(e) => setAddressForm(prev => ({ ...prev, cep: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                  value={addressForm.cep.replace(/^(\d{5})(\d)/, "$1-$2")}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "").slice(0, 8)
+                    setAddressForm(prev => ({ ...prev, cep: raw }))
+                    if (raw.length === 8) {
+                      ;(async () => {
+                        setAddressFormLoading(true)
+                        try {
+                          const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`)
+                          const data = await res.json()
+                          if (!data.erro) {
+                            setAddressForm(prev => ({ ...prev, street: data.logradouro || "", neighborhood: data.bairro || "", city: data.localidade || "", state: data.uf || "" }))
+                          }
+                        } catch {} finally { setAddressFormLoading(false) }
+                      })()
+                    }
+                  }}
                   placeholder="00000-000"
+                  inputMode="numeric"
                   className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
                   style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
                 />
