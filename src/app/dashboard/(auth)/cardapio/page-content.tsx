@@ -3696,9 +3696,9 @@ export default function CardapioPage() {
                               const isRequired = firstItem?.selectionType === "required"
                               const groupIdx = productAdditionalOptions.indexOf(firstItem)
                               return (
-                                <div key={gIdx} className="rounded-lg border border-zinc-200 bg-white overflow-hidden">
+                                <div key={gIdx} className="rounded-lg border border-zinc-200 bg-white">
                                   {/* Cabeçalho do grupo */}
-                                  <div className="flex items-center gap-2 bg-zinc-50 px-3 py-2 border-b border-zinc-200">
+                                  <div className="flex items-center flex-wrap gap-2 bg-zinc-50 px-3 py-2 border-b border-zinc-200">
                                     <input
                                       type="text"
                                       value={groupName === "default" ? "" : groupName}
