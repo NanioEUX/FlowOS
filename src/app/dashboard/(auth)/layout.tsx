@@ -506,10 +506,10 @@ function isOpenNow(businessHours: string | null): boolean {
     const now = new Date()
     const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
     const today = dayNames[now.getDay()]
-    const todayEntry = hours.find((h: any) => h.day === today)
+    const todayEntry = hours.find((h: any) => h.day.trim() === today)
     if (!todayEntry || !todayEntry.active) return false
-    const [oh, om] = todayEntry.open.split(":").map(Number)
-    const [ch, cm] = todayEntry.close.split(":").map(Number)
+    const [oh, om] = todayEntry.open.trim().split(":").map(Number)
+    const [ch, cm] = todayEntry.close.trim().split(":").map(Number)
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
     const openMinutes = oh * 60 + om
     const closeMinutes = ch * 60 + cm
