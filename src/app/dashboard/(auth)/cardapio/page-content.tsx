@@ -123,7 +123,7 @@ export default function CardapioPage() {
     open: false, productId: "", productName: "", currentPrice: 0, currentFeatured: false, currentBadge: "", currentDiscountPrice: null, currentZoomEnabled: false
   })
   const [featuredForm, setFeaturedForm] = useState({ badge: "", adjustPrice: false, discountPrice: "" })
-  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
+  const [productAdditionalOptions, setProductAdditionalOptions] = useState<{ id?: string; name: string; price: string; selectionType: string; inputType: string; groupName: string; headerText: string; maxSelection: string; minSelection: string; consumesStock: boolean; stockProductId: string; stockQuantity: string; stockUnit: string }[]>([])
   const [showIfoodWizard, setShowIfoodWizard] = useState(false)
   const [pushingToIfood, setPushingToIfood] = useState(false)
   const [globalSyncIfood, setGlobalSyncIfood] = useState(true)
@@ -712,6 +712,7 @@ export default function CardapioPage() {
               groupName: opt.groupName || null,
               headerText: opt.headerText || null,
               maxSelection: opt.maxSelection ? parseInt(opt.maxSelection) : null,
+              minSelection: opt.selectionType === "required" ? (parseInt(opt.minSelection) || 1) : null,
               consumesStock: opt.consumesStock || false,
               stockProductId: opt.stockProductId || null,
               stockQuantity: parseFloat(opt.stockQuantity) || 1,
@@ -1393,6 +1394,7 @@ export default function CardapioPage() {
               stockProductId: opt.stockProductId || "",
               stockQuantity: opt.stockQuantity ? String(opt.stockQuantity) : "1",
               stockUnit: opt.stockUnit || "un",
+              minSelection: opt.minSelection ? String(opt.minSelection) : "1",
             })))
           })
           .catch(() => {})
@@ -3745,6 +3747,26 @@ export default function CardapioPage() {
                                     {isRequired && (
                                       <span className="rounded bg-green-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OBRIGATÓRIO</span>
                                     )}
+                                    {isRequired && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-zinc-500">Mín:</span>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max={firstItem?.maxSelection || "99"}
+                                          value={firstItem?.minSelection || "1"}
+                                          onChange={(e) => {
+                                            const updated = [...productAdditionalOptions]
+                                            items.forEach((item) => {
+                                              const i = updated.indexOf(item)
+                                              updated[i] = { ...item, minSelection: e.target.value }
+                                            })
+                                            setProductAdditionalOptions(updated)
+                                          }}
+                                          className="h-7 w-12 rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
+                                        />
+                                      </div>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -3883,19 +3905,20 @@ export default function CardapioPage() {
                                    <button
                                      type="button"
                                      onClick={() => {
-                                       setProductAdditionalOptions([...productAdditionalOptions, {
-                                         name: "",
-                                         price: "0",
-                                         selectionType: firstItem?.selectionType || "single",
-                                         inputType: firstItem?.inputType || "radio",
-                                         groupName: groupName === "default" ? "" : groupName,
-                                         headerText: firstItem?.headerText || "",
-                                         maxSelection: firstItem?.maxSelection || "",
-                                         consumesStock: false,
-                                         stockProductId: "",
-                                         stockQuantity: "1",
-                                         stockUnit: "un",
-                                       }])
+                                        setProductAdditionalOptions([...productAdditionalOptions, {
+                                          name: "",
+                                          price: "0",
+                                          selectionType: firstItem?.selectionType || "single",
+                                          inputType: firstItem?.inputType || "radio",
+                                          groupName: groupName === "default" ? "" : groupName,
+                                          headerText: firstItem?.headerText || "",
+                                          maxSelection: firstItem?.maxSelection || "",
+                                          minSelection: firstItem?.minSelection || "1",
+                                          consumesStock: false,
+                                          stockProductId: "",
+                                          stockQuantity: "1",
+                                          stockUnit: "un",
+                                        }])
                                      }}
                                      className="flex w-full items-center justify-center gap-1 border-t border-zinc-200 bg-zinc-50 py-2 text-xs text-green-600 hover:bg-zinc-100 hover:text-green-700"
                                    >
@@ -3910,7 +3933,7 @@ export default function CardapioPage() {
                       })()}
                       <button
                         type="button"
-                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "", consumesStock: false, stockProductId: "", stockQuantity: "1", stockUnit: "un" }])}
+                        onClick={() => setProductAdditionalOptions([...productAdditionalOptions, { name: "", price: "0", selectionType: "single", inputType: "radio", groupName: "", headerText: "", maxSelection: "", minSelection: "1", consumesStock: false, stockProductId: "", stockQuantity: "1", stockUnit: "un" }])}
                         className="mt-2 flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
                       >
                         <Plus className="h-3 w-3" />

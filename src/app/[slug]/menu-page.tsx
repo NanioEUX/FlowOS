@@ -5771,8 +5771,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
                       const firstOpt = groupOptions[0]
                       const isRequired = firstOpt?.selectionType === "required"
-                      const hasSelection = isRequired && selectedProductOptions.some((s) => s.name && groupOptions.some((g) => g.name === s.name))
-                      const showError = isRequired && !hasSelection
+                      const isSingle = firstOpt?.selectionType === "single"
+                      const minSelection = firstOpt?.minSelection || 1
+                      const selectedCount = selectedProductOptions.filter((s) => s.name && groupOptions.some((g) => g.name === s.name)).length
+                      const showError = isRequired && selectedCount < minSelection
                       return (
                         <div key={groupIdx} className="mb-4" data-required-group={showError ? "true" : undefined}>
                           <div className="flex items-center justify-between mb-2">
@@ -5820,8 +5822,14 @@ onPaymentConfirmed={handlePaymentSuccess}
                               }
                               return (
                                 <label key={optIdx} onClick={() => {
-                                  if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
-                                  else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                                  if (isSingle) {
+                                    // Single: exclusive radio — select only this one
+                                    if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => !groupOptions.some((g) => g.name === o.name)))
+                                    else setSelectedProductOptions([...selectedProductOptions.filter((o) => !groupOptions.some((g) => g.name === o.name)), { name: opt.name, price: opt.price, quantity: 1 }])
+                                  } else {
+                                    if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
+                                    else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                                  }
                                 }} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors" style={{ borderColor: theme.borderInputColor, backgroundColor: isSelected ? `${theme.primary}10` : "transparent" }}>
                                   <div className="flex items-center gap-3">
                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-green-500 bg-green-500" : ""}`} style={!isSelected ? { borderColor: theme.borderInputColor } : {}}>
@@ -5913,7 +5921,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 const selectedProductMissingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
                   const firstOpt = groupOptions[0]
                   if (firstOpt?.selectionType === "required") {
-                    return !selectedProductOptions.some((s) => s.name && groupOptions.some((g) => g.name === s.name))
+                    const minSel = firstOpt?.minSelection || 1
+                    const count = selectedProductOptions.filter((s) => s.name && groupOptions.some((g) => g.name === s.name)).length
+                    return count < minSel
                   }
                   return false
                 })
@@ -6021,17 +6031,18 @@ onPaymentConfirmed={handlePaymentSuccess}
                 return Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
                   const firstOpt = groupOptions[0]
                   const isRequired = firstOpt?.selectionType === "required"
+                  const isSingle = firstOpt?.selectionType === "single"
+                  const minSel = firstOpt?.minSelection || 1
                   const selected = bottomSheetSelections[groupName] || []
-                  const hasSelection = selected.length > 0
-                  const showError = isRequired && !hasSelection
+                  const showError = isRequired && selected.length < minSel
                   return (
                     <div key={groupIdx} className="mb-5">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-sm" style={{ color: theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
+                          <h3 className="font-semibold text-sm" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
                           {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                         </div>
-                        {isRequired && <span className="text-white text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
+                        {isRequired && <span className={`text-white text-[9px] font-bold px-2 py-0.5 rounded-full ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                       </div>
                       <div className="border rounded-xl overflow-hidden" style={{ borderColor: showError ? "#ef4444" : theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
@@ -6074,6 +6085,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <label key={optIdx} onClick={() => {
                               setBottomSheetSelections(prev => {
                                 const group = prev[groupName] || []
+                                if (isSingle) {
+                                  // Single: exclusive radio — select only this one
+                                  if (isSelected) return { ...prev, [groupName]: [] }
+                                  return { ...prev, [groupName]: [{ name: opt.name, price: opt.price, quantity: 1 }] }
+                                }
                                 if (isSelected) {
                                   return { ...prev, [groupName]: group.filter((s: any) => s.name !== opt.name) }
                                 }
@@ -6108,7 +6124,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                 const missingRequired = Object.entries(groups).some(([groupName, groupOptions]) => {
                   const firstOpt = groupOptions[0]
                   if (firstOpt?.selectionType === "required") {
-                    return !(bottomSheetSelections[groupName]?.length > 0)
+                    const minSel = firstOpt?.minSelection || 1
+                    const count = bottomSheetSelections[groupName]?.length || 0
+                    return count < minSel
                   }
                   return false
                 })

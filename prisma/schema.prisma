@@ -421,6 +421,7 @@ model AdditionalOption {
   groupName       String? // "Qual o ponto do seu hambúrguer?"
   headerText      String? // "Escolha 1 opção"
   maxSelection    Int? // limite de seleções (null = sem limite)
+  minSelection    Int? @default(1) // mínimo de seleções obrigatórias (1 = padrão)
   order           Int           @default(0)
   groupOrder      Int           @default(0) // ordem do grupo
   consumesStock   Boolean       @default(false)
