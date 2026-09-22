@@ -5777,12 +5777,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const showError = isRequired && selectedCount < minSelection
                       return (
                         <div key={groupIdx} className="mb-4" data-required-group={showError ? "true" : undefined}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-semibold" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
-                              {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold truncate" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
+                              {firstOpt?.headerText && <p className="text-[10px] truncate" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                             </div>
-                            {isRequired && <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
+                            {isRequired && <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                           </div>
                           <div className="border rounded-xl overflow-hidden transition-colors" style={{ borderColor: showError ? "#EF4444" : theme.borderInputColor }}>
                             {groupOptions.map((opt: any, optIdx: number) => {
@@ -6037,12 +6037,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                   const showError = isRequired && selected.length < minSel
                   return (
                     <div key={groupIdx} className="mb-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-sm" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
-                          {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm truncate" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
+                          {firstOpt?.headerText && <p className="text-[10px] truncate" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                         </div>
-                        {isRequired && <span className={`text-white text-[9px] font-bold px-2 py-0.5 rounded-full ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
+                        {isRequired && <span className={`shrink-0 text-white text-[9px] font-bold px-2 py-0.5 rounded-full ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                       </div>
                       <div className="border rounded-xl overflow-hidden" style={{ borderColor: showError ? "#ef4444" : theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
