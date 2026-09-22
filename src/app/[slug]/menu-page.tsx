@@ -1205,6 +1205,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           const defaultAddr = data.addresses.find((a: any) => a.isDefault) || data.addresses[0]
           if (defaultAddr) {
             setSelectedAddressId(defaultAddr.id)
+            setCustomer((prev) => ({ ...prev, address: defaultAddr.number }))
+            setCep(defaultAddr.cep)
+            setAddressSaved(true)
           }
         }
       }
@@ -5060,11 +5063,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                   }
                   setShowCheckout(true)
                   setCartStep("payment")
-                }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !selectedAddressId && addresses.length > 0)}
+                }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !addressSaved)}
                   className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !selectedAddressId && addresses.length > 0) ? "Selecione um endereço" : "Finalizar pedido"}
+                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !addressSaved) ? "Cadastre um endereço" : "Finalizar pedido"}
                 </button>
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
