@@ -19,9 +19,10 @@ export async function PATCH(
 
     const body = await req.json().catch(() => ({}))
     const channel = body.channel as "direto" | "ifood"
+    const reason = body.reason as string | undefined
 
     if (channel === "ifood") {
-      return await toggleIfood(params.id)
+      return await toggleIfood(params.id, reason)
     }
 
       return await toggleDireto(params.id)
@@ -52,7 +53,7 @@ async function toggleDireto(establishmentId: string) {
   return NextResponse.json({ isOpenOverride: updated.isOpenOverride, ifoodPaused: updated.ifoodPaused })
 }
 
-async function toggleIfood(establishmentId: string) {
+async function toggleIfood(establishmentId: string, reason?: string) {
   const establishment = await prisma.establishment.findUnique({
     where: { id: establishmentId },
     select: {
@@ -114,7 +115,7 @@ async function toggleIfood(establishmentId: string) {
       establishment.ifoodMerchantId,
       startIso,
       endIso,
-      "Ajuste operacional interno"
+      reason || "Ajuste operacional interno"
     )
 
     const interruptionId = result?.data?.id || null

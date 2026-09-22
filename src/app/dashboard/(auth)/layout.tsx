@@ -68,6 +68,7 @@ export default function DashboardLayout({
   const [stockAlert, setStockAlert] = useState<"none" | "warning" | "danger">("none")
   const [toggleOpenConfirm, setToggleOpenConfirm] = useState(false)
   const [toggleChannel, setToggleChannel] = useState<"direto" | "ifood">("direto")
+  const [pauseReason, setPauseReason] = useState("Ajuste operacional interno")
   const [unreadChatCount, setUnreadChatCount] = useState(0)
 
   useEffect(() => {
@@ -139,10 +140,14 @@ export default function DashboardLayout({
 
   async function handleToggleOpen() {
     try {
+      const body: any = { channel: toggleChannel }
+      if (toggleChannel === "ifood" && !establishment?.ifoodPaused) {
+        body.reason = pauseReason
+      }
       const res = await fetchAuth(`/api/establishments/${user!.establishmentId}/toggle-open`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: toggleChannel }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!data.error) {
@@ -154,6 +159,7 @@ export default function DashboardLayout({
       }
     } catch {}
     setToggleOpenConfirm(false)
+    setPauseReason("Ajuste operacional interno")
   }
 
   if (loading) {
@@ -426,25 +432,69 @@ export default function DashboardLayout({
         </div>
       </nav>
 
+      {/* Direto confirm */}
       <ConfirmDialog
-        open={toggleOpenConfirm}
-        title={toggleChannel === "ifood"
-          ? (establishment?.ifoodPaused ? "Reabrir iFood?" : "Pausar iFood?")
-          : (establishment?.isOpenOverride === true ? "Fechar Canal Direto?" : "Abrir Canal Direto?")}
-        message={toggleChannel === "ifood"
-          ? (establishment?.ifoodPaused
-            ? "A loja voltará a aparecer aberta no iFood imediatamente."
-            : "A loja será pausada no iFood. Ela reabre automaticamente no próximo horário de funcionamento.")
-          : (establishment?.isOpenOverride === true
-            ? "Pedidos novos pelo cardápio próprio e WhatsApp não serão aceitos até reabrir."
-            : "Pedidos novos pelo cardápio próprio e WhatsApp voltarão a ser aceitos.")}
-        confirmLabel={toggleChannel === "ifood"
-          ? (establishment?.ifoodPaused ? "Reabrir" : "Pausar")
-          : (establishment?.isOpenOverride === true ? "Fechar" : "Abrir")}
+        open={toggleOpenConfirm && toggleChannel === "direto"}
+        title={establishment?.isOpenOverride === true ? "Fechar Canal Direto?" : "Abrir Canal Direto?"}
+        message={establishment?.isOpenOverride === true
+          ? "Pedidos novos pelo cardápio próprio e WhatsApp não serão aceitos até reabrir."
+          : "Pedidos novos pelo cardápio próprio e WhatsApp voltarão a ser aceitos."}
+        confirmLabel={establishment?.isOpenOverride === true ? "Fechar" : "Abrir"}
         variant="warning"
         onConfirm={handleToggleOpen}
         onCancel={() => setToggleOpenConfirm(false)}
       />
+
+      {/* iFood pause modal with reasons */}
+      {toggleOpenConfirm && toggleChannel === "ifood" && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50" onClick={() => setToggleOpenConfirm(false)}>
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {establishment?.ifoodPaused ? (
+              <>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                    <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-zinc-900">Reabrir iFood?</h3>
+                </div>
+                <p className="mb-6 text-sm text-zinc-600">A loja voltará a aparecer aberta no iFood imediatamente.</p>
+                <div className="flex gap-2">
+                  <button className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50" onClick={() => setToggleOpenConfirm(false)}>Cancelar</button>
+                  <button className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700" onClick={handleToggleOpen}>Reabrir</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                    <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-zinc-900">Pausar iFood</h3>
+                </div>
+                <p className="mb-4 text-sm text-zinc-600">A loja será pausada no iFood. Ela reabre automaticamente no próximo horário de funcionamento.</p>
+                <div className="mb-4">
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700">Motivo da pausa</label>
+                  <select
+                    value={pauseReason}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  >
+                    <option value="Ajuste operacional interno">Ajuste operacional interno</option>
+                    <option value="Excesso de pedidos">Excesso de pedidos</option>
+                    <option value="Falta de funcionários">Falta de funcionários</option>
+                    <option value="Problema técnico">Problema técnico</option>
+                    <option value="Fechado por motivo pessoal">Fechado por motivo pessoal</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50" onClick={() => setToggleOpenConfirm(false)}>Cancelar</button>
+                  <button className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700" onClick={handleToggleOpen}>Pausar</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -479,10 +529,8 @@ function IntegrationStatusBadges({ establishment, onToggleDireto, onToggleIfood 
   const isOpenOverride = establishment?.isOpenOverride
   const diretoOpen = isOpenOverride === true || (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
   const ifoodPaused = establishment?.ifoodPaused === true
-  const ifoodOpen = !ifoodPaused && (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
 
   const integrationBadges = [
-    { label: "iFood", ok: ifoodOk, href: "/dashboard/config#ifood" },
     { label: "WhatsApp", ok: whatsappOk, href: "/dashboard/config#whatsapp" },
     { label: "99", ok: nine9Ok, href: "/dashboard/config#99" },
   ]
@@ -501,8 +549,8 @@ function IntegrationStatusBadges({ establishment, onToggleDireto, onToggleIfood 
         {ifoodOk && (
           <button
             onClick={onToggleIfood}
-            className={cn("h-2 w-2 rounded-full transition-colors", ifoodOpen ? "bg-green-500" : "bg-red-400")}
-            title={`iFood: ${ifoodOpen ? "Aberto" : "Pausado"}`}
+            className={cn("h-2 w-2 rounded-full transition-colors", ifoodPaused ? "bg-red-400" : "bg-green-500")}
+            title={`iFood: ${ifoodPaused ? "Pausado" : "Aberto"} — Clique para alterar`}
           />
         )}
       </div>
@@ -537,12 +585,12 @@ function IntegrationStatusBadges({ establishment, onToggleDireto, onToggleIfood 
             onClick={onToggleIfood}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-80",
-              ifoodOpen ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
+              ifoodPaused ? "bg-red-50 text-red-500" : "bg-green-50 text-green-700"
             )}
-            title={`iFood: ${ifoodOpen ? "Aberto" : "Pausado"} — Clique para alterar`}
+            title={`iFood: ${ifoodPaused ? "Pausado" : "Aberto"} — Clique para alterar`}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", ifoodOpen ? "bg-green-500" : "bg-red-400")} />
-            iFood {ifoodOpen ? "Aberto" : "Pausado"}
+            <span className={cn("h-1.5 w-1.5 rounded-full", ifoodPaused ? "bg-red-400" : "bg-green-500")} />
+            iFood {ifoodPaused ? "Pausado" : "Aberto"}
           </button>
         )}
       </div>
