@@ -3942,7 +3942,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           <div className="w-full max-w-lg rounded-t-2xl p-4 space-y-3 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: theme.bgCard }}>
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold" style={{ color: theme.text }}>Novo endereço</h3>
-              <button onClick={() => { setShowAddressForm(false); setAddressFormError("") }} className="p-1">
+              <button onClick={() => { setShowAddressForm(false); setAddressForm({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" }); setAddressFormError("") }} className="p-1">
                 <X className="h-5 w-5" style={{ color: theme.textMuted }} />
               </button>
             </div>
