@@ -5777,12 +5777,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const showError = isRequired && selectedCount < minSelection
                       return (
                         <div key={groupIdx} className="mb-4" data-required-group={showError ? "true" : undefined}>
-                          <div className="flex items-center justify-between mb-2 gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold truncate" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
-                              {firstOpt?.headerText && <p className="text-[10px] truncate" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
-                            </div>
-                            {isRequired && <span key={showError ? "error" : "ok"} className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
+                          <div className="mb-2">
+                            <p className="text-sm font-semibold" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
+                            {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
+                            {isRequired && <span key={showError ? "error" : "ok"} className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                           </div>
                           <div className="border rounded-xl overflow-hidden transition-colors" style={{ borderColor: showError ? "#EF4444" : theme.borderInputColor }}>
                             {groupOptions.map((opt: any, optIdx: number) => {
@@ -5822,7 +5820,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                               }
                               return (
                                 <label key={optIdx} onClick={() => {
-                                  const maxSel = firstOpt?.maxSelection || 99
+                                  const maxSel = firstOpt?.maxSelection || (isRequired ? (firstOpt?.minSelection || 1) : 99)
                                   const currentCount = selectedProductOptions.filter((s) => s.name && groupOptions.some((g) => g.name === s.name)).length
                                   if (isSingle) {
                                     // Single: exclusive radio — select only this one
@@ -6039,12 +6037,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   const showError = isRequired && selected.length < minSel
                   return (
                     <div key={groupIdx} className="mb-5">
-                      <div className="flex items-center justify-between mb-2 gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-sm truncate" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
-                          {firstOpt?.headerText && <p className="text-[10px] truncate" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
-                        </div>
-                        {isRequired && <span className={`shrink-0 text-white text-[9px] font-bold px-2 py-0.5 rounded-full ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
+                      <div className="mb-2">
+                        <h3 className="font-semibold text-sm" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</h3>
+                        {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
+                        {isRequired && <span key={showError ? "error" : "ok"} className={`inline-block mt-1 text-white text-[9px] font-bold px-2 py-0.5 rounded-full ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                       </div>
                       <div className="border rounded-xl overflow-hidden" style={{ borderColor: showError ? "#ef4444" : theme.borderInputColor }}>
                         {groupOptions.map((opt: any, optIdx: number) => {
@@ -6085,7 +6081,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                           const isSelected = selected.some((s: any) => s.name === opt.name)
                           return (
                             <label key={optIdx} onClick={() => {
-                              const maxSel = firstOpt?.maxSelection || 99
+                              const maxSel = firstOpt?.maxSelection || (isRequired ? (firstOpt?.minSelection || 1) : 99)
                               setBottomSheetSelections(prev => {
                                 const group = prev[groupName] || []
                                 if (isSingle) {
