@@ -67,6 +67,7 @@ export default function DashboardLayout({
   const [expenseAlert, setExpenseAlert] = useState<"none" | "warning" | "danger">("none")
   const [stockAlert, setStockAlert] = useState<"none" | "warning" | "danger">("none")
   const [toggleOpenConfirm, setToggleOpenConfirm] = useState(false)
+  const [toggleChannel, setToggleChannel] = useState<"direto" | "ifood">("direto")
   const [unreadChatCount, setUnreadChatCount] = useState(0)
 
   useEffect(() => {
@@ -138,10 +139,18 @@ export default function DashboardLayout({
 
   async function handleToggleOpen() {
     try {
-      const res = await fetchAuth(`/api/establishments/${user!.establishmentId}/toggle-open`, { method: "PATCH" })
+      const res = await fetchAuth(`/api/establishments/${user!.establishmentId}/toggle-open`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: toggleChannel }),
+      })
       const data = await res.json()
       if (!data.error) {
-        setEstablishment((prev: any) => ({ ...prev, isOpenOverride: data.isOpenOverride }))
+        setEstablishment((prev: any) => ({
+          ...prev,
+          isOpenOverride: data.isOpenOverride,
+          ifoodPaused: data.ifoodPaused,
+        }))
       }
     } catch {}
     setToggleOpenConfirm(false)
@@ -363,7 +372,11 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5 text-zinc-600" />
           </button>
           <div className="flex-1" />
-          <IntegrationStatusBadges establishment={establishment} onToggleOpen={() => setToggleOpenConfirm(true)} />
+          <IntegrationStatusBadges
+            establishment={establishment}
+            onToggleDireto={() => { setToggleChannel("direto"); setToggleOpenConfirm(true) }}
+            onToggleIfood={() => { setToggleChannel("ifood"); setToggleOpenConfirm(true) }}
+          />
           <div className="hidden items-center gap-3 text-sm text-zinc-500 lg:flex">
             <div className="flex items-center gap-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">
@@ -415,11 +428,19 @@ export default function DashboardLayout({
 
       <ConfirmDialog
         open={toggleOpenConfirm}
-        title={establishment?.isOpenOverride === true ? "Fechar estabelecimento?" : "Abrir estabelecimento?"}
-        message={establishment?.isOpenOverride === true
-          ? "Tem certeza que deseja fechar o estabelecimento agora? Pedidos novos não serão aceitos até reabrir."
-          : "Tem certeza que deseja abrir o estabelecimento? Pedidos novos começarão a ser aceitos."}
-        confirmLabel={establishment?.isOpenOverride === true ? "Fechar" : "Abrir"}
+        title={toggleChannel === "ifood"
+          ? (establishment?.ifoodPaused ? "Reabrir iFood?" : "Pausar iFood?")
+          : (establishment?.isOpenOverride === true ? "Fechar Canal Direto?" : "Abrir Canal Direto?")}
+        message={toggleChannel === "ifood"
+          ? (establishment?.ifoodPaused
+            ? "A loja voltará a aparecer aberta no iFood imediatamente."
+            : "A loja será pausada no iFood. Ela reabre automaticamente no próximo horário de funcionamento.")
+          : (establishment?.isOpenOverride === true
+            ? "Pedidos novos pelo cardápio próprio e WhatsApp não serão aceitos até reabrir."
+            : "Pedidos novos pelo cardápio próprio e WhatsApp voltarão a ser aceitos.")}
+        confirmLabel={toggleChannel === "ifood"
+          ? (establishment?.ifoodPaused ? "Reabrir" : "Pausar")
+          : (establishment?.isOpenOverride === true ? "Fechar" : "Abrir")}
         variant="warning"
         onConfirm={handleToggleOpen}
         onCancel={() => setToggleOpenConfirm(false)}
@@ -451,12 +472,14 @@ function isOpenNow(businessHours: string | null): boolean {
   }
 }
 
-function IntegrationStatusBadges({ establishment, onToggleOpen }: { establishment: any; onToggleOpen: () => void }) {
+function IntegrationStatusBadges({ establishment, onToggleDireto, onToggleIfood }: { establishment: any; onToggleDireto: () => void; onToggleIfood: () => void }) {
   const ifoodOk = !!establishment?.ifoodEnabled && !!establishment?.ifoodMerchantId
   const whatsappOk = !!establishment?.whatsappProvider && (!!establishment?.evolutionApiKey || !!establishment?.metaAccessToken)
   const nine9Ok = !!establishment?.api99Key
   const isOpenOverride = establishment?.isOpenOverride
-  const isOpen = isOpenOverride === true || (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
+  const diretoOpen = isOpenOverride === true || (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
+  const ifoodPaused = establishment?.ifoodPaused === true
+  const ifoodOpen = !ifoodPaused && (isOpenOverride !== false && isOpenNow(establishment?.businessHours))
 
   const integrationBadges = [
     { label: "iFood", ok: ifoodOk, href: "/dashboard/config#ifood" },
@@ -471,10 +494,17 @@ function IntegrationStatusBadges({ establishment, onToggleOpen }: { establishmen
           <Link key={b.label} href={b.href} className={cn("h-2 w-2 rounded-full transition-colors", b.ok ? "bg-green-500" : "bg-red-400")} title={`${b.label}: ${b.ok ? "Ativo" : "Inativo"}`} />
         ))}
         <button
-          onClick={onToggleOpen}
-          className={cn("h-2 w-2 rounded-full transition-colors", isOpen ? "bg-green-500" : "bg-red-400")}
-          title={`Estabelecimento: ${isOpen ? "Aberto" : "Fechado"}`}
+          onClick={onToggleDireto}
+          className={cn("h-2 w-2 rounded-full transition-colors", diretoOpen ? "bg-green-500" : "bg-red-400")}
+          title={`Canal Direto: ${diretoOpen ? "Aberto" : "Fechado"}`}
         />
+        {ifoodOk && (
+          <button
+            onClick={onToggleIfood}
+            className={cn("h-2 w-2 rounded-full transition-colors", ifoodOpen ? "bg-green-500" : "bg-red-400")}
+            title={`iFood: ${ifoodOpen ? "Aberto" : "Pausado"}`}
+          />
+        )}
       </div>
       <div className="hidden items-center gap-2 lg:flex">
         {integrationBadges.map((b) => (
@@ -492,16 +522,29 @@ function IntegrationStatusBadges({ establishment, onToggleOpen }: { establishmen
           </Link>
         ))}
         <button
-          onClick={onToggleOpen}
+          onClick={onToggleDireto}
           className={cn(
             "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-80",
-            isOpen ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
+            diretoOpen ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
           )}
-          title={`Estabelecimento: ${isOpen ? "Aberto" : "Fechado"} — Clique para alterar`}
+          title={`Canal Direto: ${diretoOpen ? "Aberto" : "Fechado"} — Clique para alterar`}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
-          {isOpen ? "Aberto" : "Fechado"}
+          <span className={cn("h-1.5 w-1.5 rounded-full", diretoOpen ? "bg-green-500" : "bg-red-400")} />
+          Direto {diretoOpen ? "Aberto" : "Fechado"}
         </button>
+        {ifoodOk && (
+          <button
+            onClick={onToggleIfood}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-80",
+              ifoodOpen ? "bg-green-50 text-green-700" : "bg-red-50 text-red-500"
+            )}
+            title={`iFood: ${ifoodOpen ? "Aberto" : "Pausado"} — Clique para alterar`}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", ifoodOpen ? "bg-green-500" : "bg-red-400")} />
+            iFood {ifoodOpen ? "Aberto" : "Pausado"}
+          </button>
+        )}
       </div>
     </div>
   )
