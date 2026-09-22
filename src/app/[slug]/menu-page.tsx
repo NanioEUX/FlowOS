@@ -3321,6 +3321,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </div>
                         <button
                           onClick={() => {
+                            const hasRequired = ((product as any).additionalOptions || []).some((o: any) => o.selectionType === "required")
+                            if (hasRequired) {
+                              setSelectedProduct(product)
+                              setSelectedProductQty(1)
+                              setSelectedProductOptions([])
+                              return
+                            }
                             addToCart({
                               id: product.id,
                               name: product.name,

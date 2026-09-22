@@ -159,6 +159,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
     })
 
   function addToCart(product: Product) {
+    const productOpts = (product as any).additionalOptions || []
+    const hasRequired = productOpts.some((o: any) => o.selectionType === "required")
+    if (hasRequired) {
+      // TODO: open options modal for mesa if needed
+      return
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id)
       if (existing) return prev.map((i) => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
