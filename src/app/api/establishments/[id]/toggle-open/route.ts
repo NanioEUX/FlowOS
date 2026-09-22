@@ -138,7 +138,7 @@ async function toggleIfood(establishmentId: string, reason?: string) {
 
     const updated = await prisma.establishment.update({
       where: { id: establishmentId },
-      data: { ifoodPaused: false, ifoodInterruptionId: null },
+      data: { ifoodPaused: false, ifoodAutoPaused: false, ifoodInterruptionId: null },
       select: { isOpenOverride: true, ifoodPaused: true },
     })
 
@@ -171,7 +171,7 @@ async function toggleIfood(establishmentId: string, reason?: string) {
 
     const updated = await prisma.establishment.update({
       where: { id: establishmentId },
-      data: { ifoodPaused: true, ifoodInterruptionId: interruptionId },
+      data: { ifoodPaused: true, ifoodAutoPaused: false, ifoodInterruptionId: interruptionId },
       select: { isOpenOverride: true, ifoodPaused: true },
     })
 
