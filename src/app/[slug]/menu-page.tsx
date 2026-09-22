@@ -394,6 +394,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [confirmationLoyaltyDiscount, setConfirmationLoyaltyDiscount] = useState(0)
   const [confirmationBalanceBefore, setConfirmationBalanceBefore] = useState(0)
 
+  // Auto-scroll to first missing required group when item detail modal opens
+  useEffect(() => {
+    if (!selectedProduct) return
+    const timer = setTimeout(() => {
+      const el = document.querySelector('[data-required-group="true"]')
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [selectedProduct])
+
   useEffect(() => {
     const saved = localStorage.getItem(`pedefacil-customer-${establishment.slug}`)
     if (saved) {
@@ -5754,16 +5764,18 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {Object.entries(groups).map(([groupName, groupOptions], groupIdx) => {
                       const firstOpt = groupOptions[0]
                       const isRequired = firstOpt?.selectionType === "required"
+                      const hasSelection = isRequired && selectedProductOptions.some((s) => s.name && groupOptions.some((g) => g.name === s.name))
+                      const showError = isRequired && !hasSelection
                       return (
-                        <div key={groupIdx} className="mb-4">
+                        <div key={groupIdx} className="mb-4" data-required-group={showError ? "true" : undefined}>
                           <div className="flex items-center justify-between mb-2">
                             <div>
-                              <p className="text-sm font-semibold" style={{ color: theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
+                              <p className="text-sm font-semibold" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
                               {firstOpt?.headerText && <p className="text-[10px]" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                             </div>
-                            {isRequired && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: theme.primary }}>OBRIGATÓRIO</span>}
+                            {isRequired && <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                           </div>
-                          <div className="border rounded-xl overflow-hidden" style={{ borderColor: theme.borderInputColor }}>
+                          <div className="border rounded-xl overflow-hidden transition-colors" style={{ borderColor: showError ? "#EF4444" : theme.borderInputColor }}>
                             {groupOptions.map((opt: any, optIdx: number) => {
                               const selectedOpt = selectedProductOptions.find((o) => o.name === opt.name)
                               const isSelected = !!selectedOpt
