@@ -5826,9 +5826,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                                     // Single: exclusive radio — select only this one
                                     if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => !groupOptions.some((g) => g.name === o.name)))
                                     else setSelectedProductOptions([...selectedProductOptions.filter((o) => !groupOptions.some((g) => g.name === o.name)), { name: opt.name, price: opt.price, quantity: 1 }])
-                                  } else {
+                                  } else if (isRequired) {
+                                    // Required: radio-like — when at max, remove oldest and add new
                                     if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
                                     else if (currentCount < maxSel) setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
+                                    else {
+                                      // At max: remove first selected from this group, add new
+                                      const groupSelected = selectedProductOptions.filter((o) => groupOptions.some((g) => g.name === o.name))
+                                      const firstSelected = groupSelected[0]
+                                      setSelectedProductOptions([...selectedProductOptions.filter((o) => o.name !== firstSelected.name), { name: opt.name, price: opt.price, quantity: 1 }])
+                                    }
+                                  } else {
+                                    if (isSelected) setSelectedProductOptions(selectedProductOptions.filter((o) => o.name !== opt.name))
+                                    else setSelectedProductOptions([...selectedProductOptions, { name: opt.name, price: opt.price, quantity: 1 }])
                                   }
                                 }} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 cursor-pointer transition-colors" style={{ borderColor: theme.borderInputColor, backgroundColor: isSelected ? `${theme.primary}10` : "transparent" }}>
                                   <div className="flex items-center gap-3">
@@ -6091,6 +6101,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 }
                                 if (isSelected) {
                                   return { ...prev, [groupName]: group.filter((s: any) => s.name !== opt.name) }
+                                }
+                                if (isRequired && group.length >= maxSel) {
+                                  // Required at max: remove oldest, add new
+                                  return { ...prev, [groupName]: [...group.slice(1), { name: opt.name, price: opt.price, quantity: 1 }] }
                                 }
                                 if (group.length >= maxSel) return prev
                                 return { ...prev, [groupName]: [...group, { name: opt.name, price: opt.price, quantity: 1 }] }
