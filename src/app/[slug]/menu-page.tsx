@@ -5820,7 +5820,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                               }
                               return (
                                 <label key={optIdx} onClick={() => {
-                                  const maxSel = firstOpt?.maxSelection || (isRequired ? (firstOpt?.minSelection || 1) : 99)
+                                  const maxSel = isRequired ? (firstOpt?.minSelection || 1) : (firstOpt?.maxSelection || 99)
                                   const currentCount = selectedProductOptions.filter((s) => s.name && groupOptions.some((g) => g.name === s.name)).length
                                   if (isSingle) {
                                     // Single: exclusive radio — select only this one
@@ -6081,7 +6081,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                           const isSelected = selected.some((s: any) => s.name === opt.name)
                           return (
                             <label key={optIdx} onClick={() => {
-                              const maxSel = firstOpt?.maxSelection || (isRequired ? (firstOpt?.minSelection || 1) : 99)
+                              const maxSel = isRequired ? (firstOpt?.minSelection || 1) : (firstOpt?.maxSelection || 99)
                               setBottomSheetSelections(prev => {
                                 const group = prev[groupName] || []
                                 if (isSingle) {
