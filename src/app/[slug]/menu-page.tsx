@@ -5782,7 +5782,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                               <p className="text-sm font-semibold truncate" style={{ color: showError ? "#EF4444" : theme.text }}>{groupName !== "default" ? groupName : "Opções"}</p>
                               {firstOpt?.headerText && <p className="text-[10px] truncate" style={{ color: theme.textMuted }}>{firstOpt.headerText}</p>}
                             </div>
-                            {isRequired && <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
+                            {isRequired && <span key={showError ? "error" : "ok"} className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full text-white ${showError ? "animate-pulse" : ""}`} style={{ backgroundColor: showError ? "#EF4444" : theme.primary }}>{showError ? "SELECIONE" : "OBRIGATÓRIO"}</span>}
                           </div>
                           <div className="border rounded-xl overflow-hidden transition-colors" style={{ borderColor: showError ? "#EF4444" : theme.borderInputColor }}>
                             {groupOptions.map((opt: any, optIdx: number) => {
