@@ -2869,7 +2869,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           if (!showInfoCard) return null
           return (
             <div className="mx-auto max-w-3xl px-4 pb-2">
-              <div className="flex items-center justify-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+              <div className="flex items-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                 {hasMinOrder && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
                     📦 Mín. <span className="font-bold" style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
