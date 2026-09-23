@@ -6015,6 +6015,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                       })
                       setEditingCartItemId(null)
                       setSelectedProduct(null)
+                      setShowCart(true)
+                      setCartStep("cart")
                       setAddedItemId(selectedProduct.id)
                       setTimeout(() => setAddedItemId(null), 800)
                       setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
