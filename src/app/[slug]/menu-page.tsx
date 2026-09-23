@@ -5653,7 +5653,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Product Detail Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedProduct(null); setEditingCartItemId(null) }} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { const wasEditing = editingCartItemId; setSelectedProduct(null); setEditingCartItemId(null); if (wasEditing) { setShowCart(true); setCartStep("cart"); } }} />
           <div className="absolute inset-x-0 bottom-0 top-12 flex justify-center">
           <div className="w-full max-w-lg rounded-t-3xl flex flex-col overflow-hidden" style={{ animation: "slideUp 0.3s ease-out", backgroundColor: theme.bgPage }}>
             {/* Handle */}
@@ -5662,7 +5662,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             {/* Close button */}
-            <button onClick={() => { setSelectedProduct(null); setEditingCartItemId(null) }} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
+            <button onClick={() => { const wasEditing = editingCartItemId; setSelectedProduct(null); setEditingCartItemId(null); if (wasEditing) { setShowCart(true); setCartStep("cart"); } }} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
               <X className="h-4 w-4" />
             </button>
 
