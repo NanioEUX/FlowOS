@@ -437,7 +437,7 @@ export async function POST(req: NextRequest) {
           isScheduled: !!isScheduled,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
           ...(orderType === "delivery" && (method || "site") !== "ifood" && {
-            deliveryCode: String(Math.floor(1000 + Math.random() * 9000)),
+            deliveryCode: customerPhone ? customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)),
           }),
           cashbackEarned: cashbackEarnedValue,
           loyaltyPointsUsed: (useLoyalty && loyaltyPointsUsed > 0) ? loyaltyPointsUsed : 0,
