@@ -6971,7 +6971,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
               {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLike?.(product.id); }}
               className="flex items-center gap-0.5 transition-transform active:scale-125"
@@ -6989,7 +6989,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
             <button
               onClick={(e) => { e.stopPropagation(); onAdd(product); }}
               aria-label={`Adicionar ${product.name} ao carrinho`}
-              className={`flex h-9 w-9 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
               style={{
                 backgroundColor: isAdded ? "#22c55e" : theme.primary,
                 boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
@@ -6997,9 +6997,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
               disabled={disabled}
             >
               {isAdded ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               ) : (
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
               )}
             </button>
           </div>
