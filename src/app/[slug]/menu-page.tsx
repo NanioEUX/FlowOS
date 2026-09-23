@@ -2878,7 +2878,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {hasMinOrder && hasFreeDelivery && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
                 {hasFreeDelivery && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
-                    🛵 Frete grátis acima de <span className="font-bold" style={{ color: theme.success }}>{formatCurrency(freeAbove)}</span>
+                    🛵 Grátis acima de <span className="font-bold" style={{ color: theme.success }}>{formatCurrency(freeAbove)}</span>
                   </span>
                 )}
                 {(hasMinOrder || hasFreeDelivery) && hasLoyalty && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
