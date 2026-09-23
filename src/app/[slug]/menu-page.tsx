@@ -263,6 +263,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const isPulling = useRef(false)
   const [cartStep, setCartStep] = useState<"cart" | "payment" | "confirmation">("cart")
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [verifyStep, setVerifyStep] = useState<1 | 2>(1)
@@ -1390,6 +1395,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     (orderType === "pickup" && minimumOrder.applyToPickup && subtotal < minimumOrder.value) ||
     (orderType === "dineIn" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
+
+  const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))
+  const headerHeight = showInfoCard ? 160 : 92
 
 
 
@@ -2737,8 +2745,44 @@ onPaymentConfirmed={handlePaymentSuccess}
 
 
   return (
-    <div className="min-h-screen pb-24 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, color: theme.text }}>
+    <div
+      className="min-h-screen pb-24 transition-colors duration-300"
+      style={{ backgroundColor: theme.bgPage, color: theme.text }}
+      onTouchStart={(e) => {
+        if (isRefreshing) return
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+        if (scrollTop <= 0) {
+          touchStartY.current = e.touches[0].clientY
+          isPulling.current = true
+        }
+      }}
+      onTouchMove={(e) => {
+        if (!isPulling.current || isRefreshing) return
+        const diff = e.touches[0].clientY - touchStartY.current
+        if (diff > 0) setPullDistance(Math.min(diff * 0.5, 100))
+      }}
+      onTouchEnd={() => {
+        if (!isPulling.current) return
+        isPulling.current = false
+        if (pullDistance >= 60) {
+          setIsRefreshing(true)
+          setPullDistance(60)
+          window.location.reload()
+        } else {
+          setPullDistance(0)
+        }
+      }}
+    >
       <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
+      {/* Pull-to-refresh indicator */}
+      {pullDistance > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-2" style={{ transform: `translateY(${pullDistance - 40}px)` }}>
+          <div className="flex items-center gap-2 rounded-full px-4 py-2 shadow-lg" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} style={{ color: theme.primary, transform: `rotate(${pullDistance * 3}deg)` }} />
+            <span className="text-xs font-medium" style={{ color: theme.text }}>{isRefreshing ? "Atualizando..." : pullDistance >= 60 ? "Solte para atualizar" : "Puxe para atualizar"}</span>
+          </div>
+        </div>
+      )}
       {/* Background orb */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full blur-[150px] opacity-20" style={{ backgroundColor: theme.primary }} />
@@ -2838,7 +2882,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Spacer for fixed header */}
-      <div style={{ height: orderType === "delivery" && (minimumOrder.enabled && minimumOrder.value > 0 || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))) ? "calc(160px + env(safe-area-inset-top, 0px))" : "calc(92px + env(safe-area-inset-top, 0px))" }} />
+      <div style={{ height: `calc(${headerHeight}px + env(safe-area-inset-top, 0px))` }} />
 
       {/* Closed banner — configurable */}
       {!isOpen && closedMessage && (
@@ -3091,7 +3135,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Sticky Category Filters - sticks below header when scrolling past destaques/promo */}
-      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: "calc(92px + env(safe-area-inset-top, 0px))", backgroundColor: theme.bgPage }}>
+      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: `calc(${headerHeight}px + env(safe-area-inset-top, 0px))`, backgroundColor: theme.bgPage }}>
         <div className="mx-auto max-w-3xl px-4 py-3">
           {searchMode ? (
             <div className="relative">
