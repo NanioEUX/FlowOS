@@ -6962,10 +6962,10 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
         {product.description && (
           <p className="mt-1 text-xs line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
-        <div className="flex items-end justify-between mt-2">
-          <div className="flex flex-col">
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-baseline gap-1.5">
             {hasDiscount && (
-              <span className="text-xs line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+              <span className="text-[10px] line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
             )}
             <p className="font-extrabold text-base" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
               {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
