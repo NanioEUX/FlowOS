@@ -6962,23 +6962,21 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
         {product.description && (
           <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
-        <div className="flex items-center justify-between mt-1.5">
-          <div className="flex items-baseline gap-1 min-w-0">
-            {hasDiscount && (
-              <span className="text-[9px] line-through shrink-0" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
-            )}
-            <p className="font-extrabold text-sm truncate" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
-              {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+        {hasDiscount && (
+          <span className="text-[10px] line-through block mt-1" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+        )}
+        <div className="flex items-center justify-between mt-0.5">
+          <p className="font-extrabold text-base" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
+            {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLike?.(product.id); }}
               className="transition-transform active:scale-125"
               aria-label={liked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
               <Heart
-                className="h-3.5 w-3.5 transition-colors"
+                className="h-4 w-4 transition-colors"
                 fill={liked ? "#ef4444" : "none"}
                 stroke={liked ? "#ef4444" : theme.textMuted}
               />
