@@ -2869,7 +2869,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           if (!showInfoCard) return null
           return (
             <div className="mx-auto max-w-3xl px-4 pb-2">
-              <div className="flex items-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
+              <div className="flex items-center justify-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                 {hasMinOrder && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
                     📦 Mín. <span className="font-bold" style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
@@ -6957,39 +6957,36 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
           </span>
         )}
       </div>
-      <div className="p-3">
-        <h3 className="font-bold text-sm leading-tight" style={{ color: theme.text }}>{product.name}</h3>
+      <div className="p-2.5">
+        <h3 className="font-bold text-[13px] leading-tight truncate" style={{ color: theme.text }}>{product.name}</h3>
         {product.description && (
-          <p className="mt-1 text-xs line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
+          <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-baseline gap-1.5">
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-baseline gap-1 min-w-0">
             {hasDiscount && (
-              <span className="text-[10px] line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+              <span className="text-[9px] line-through shrink-0" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
             )}
-            <p className="font-extrabold text-base" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
+            <p className="font-extrabold text-sm truncate" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
               {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLike?.(product.id); }}
-              className="flex items-center gap-0.5 transition-transform active:scale-125"
+              className="transition-transform active:scale-125"
               aria-label={liked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
               <Heart
-                className="h-4 w-4 transition-colors"
+                className="h-3.5 w-3.5 transition-colors"
                 fill={liked ? "#ef4444" : "none"}
                 stroke={liked ? "#ef4444" : theme.textMuted}
               />
-              {(likes || 0) > 0 && (
-                <span className="text-[10px] font-medium" style={{ color: liked ? "#ef4444" : theme.textMuted }}>{likes}</span>
-              )}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onAdd(product); }}
               aria-label={`Adicionar ${product.name} ao carrinho`}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
               style={{
                 backgroundColor: isAdded ? "#22c55e" : theme.primary,
                 boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
@@ -6997,9 +6994,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
               disabled={disabled}
             >
               {isAdded ? (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               ) : (
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
               )}
             </button>
           </div>
