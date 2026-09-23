@@ -1415,8 +1415,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   )
 
   const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))
-  const hasFreeDeliveryProgress = showInfoCard && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && orderType === "delivery" && subtotal > 0
-  const headerHeight = showInfoCard ? (hasFreeDeliveryProgress ? 180 : 145) : 92
+  const headerHeight = showInfoCard ? 145 : 92
 
 
 
@@ -2860,20 +2859,16 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* Info card + Progress bar — inside fixed header */}
+        {/* Info card — inside fixed header */}
         {(() => {
           const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
           const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
           const hasLoyalty = parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)
           const showInfoCard = hasMinOrder || hasFreeDelivery || hasLoyalty
           const freeAbove = establishment.deliveryFreeAbove || 0
-          const showProgressBar = hasFreeDelivery && freeAbove > 0 && orderType === "delivery"
-          const progressPct = showProgressBar ? Math.min(100, (subtotal / freeAbove) * 100) : 0
-          const missingForFree = showProgressBar ? Math.max(0, freeAbove - subtotal) : 0
           if (!showInfoCard) return null
           return (
             <div className="mx-auto max-w-3xl px-4 pb-2">
-              {/* Single-line info */}
               <div className="flex items-center justify-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                 {hasMinOrder && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
@@ -2889,24 +2884,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {(hasMinOrder || hasFreeDelivery) && hasLoyalty && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
                 {hasLoyalty && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
-                    ⭐ <span className="font-bold" style={{ color: theme.accent }}>{parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}%</span> cashback
+                    ⭐ <span className="font-bold" style={{ color: theme.accent }}>{parsedLoyalty.cashbackPercent || parsedLoyalty?.pointsPerReal}%</span> cashback
                   </span>
                 )}
               </div>
-              {/* Progress bar — free delivery */}
-              {showProgressBar && subtotal > 0 && (
-                <div className="mt-2 rounded-xl px-3 py-2" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}30` }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-semibold" style={{ color: theme.success }}>
-                      {missingForFree > 0 ? `Faltam ${formatCurrency(missingForFree)} para frete grátis` : "🎉 Frete grátis desbloqueado!"}
-                    </span>
-                    <span className="text-[10px] font-bold" style={{ color: theme.textMuted }}>{Math.round(progressPct)}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.success}20` }}>
-                    <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${progressPct}%`, backgroundColor: progressPct >= 100 ? "#22c55e" : theme.success, boxShadow: progressPct >= 100 ? "0 0 10px rgba(34,197,94,0.5)" : "none" }} />
-                  </div>
-                </div>
-              )}
             </div>
           )
         })()}
