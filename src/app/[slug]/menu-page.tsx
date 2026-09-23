@@ -3089,8 +3089,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
-                      if (product) addToCart(product)
+                      if (!lastOrder?.items) return
+                      const allItems: CartItem[] = lastOrder.items.map((li: any) => {
+                        const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === (li.productId || li.id))
+                        const currentPrice = product?.price ?? li.price
+                        const hasDiscount = product && (product as any).promoPrice && (product as any).onSale
+                        const unitPrice = hasDiscount ? (product as any).promoPrice : currentPrice
+                        return {
+                          id: li.productId || li.id || `reorder-${Date.now()}-${Math.random()}`,
+                          name: li.name,
+                          price: unitPrice,
+                          originalPrice: hasDiscount ? currentPrice : (li.originalPrice || undefined),
+                          basePrice: unitPrice,
+                          image: li.image || product?.image || null,
+                          quantity: li.quantity,
+                          additionalOptions: li.additionalOptions || [],
+                        } as CartItem
+                      })
+                      setCart(allItems)
+                      setShowCart(true)
+                      setCartStep("cart")
                     }}
                     className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all active:scale-95"
                     style={{ backgroundColor: theme.primary, boxShadow: `0 2px 8px ${theme.shadowPrimary}` }}
