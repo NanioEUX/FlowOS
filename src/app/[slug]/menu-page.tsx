@@ -6971,10 +6971,10 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
           <p className="font-extrabold text-base" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
             {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
           </p>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLike?.(product.id); }}
-              className="transition-transform active:scale-125"
+              className="flex items-center gap-0.5 transition-transform active:scale-125"
               aria-label={liked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
               <Heart
@@ -6982,6 +6982,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
                 fill={liked ? "#ef4444" : "none"}
                 stroke={liked ? "#ef4444" : theme.textMuted}
               />
+              {(likes || 0) > 0 && (
+                <span className="text-[10px] font-medium" style={{ color: liked ? "#ef4444" : theme.textMuted }}>{likes}</span>
+              )}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onAdd(product); }}
