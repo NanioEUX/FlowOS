@@ -1415,7 +1415,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   )
 
   const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))
-  const headerHeight = showInfoCard ? 160 : 92
+  const hasFreeDeliveryProgress = showInfoCard && establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove && orderType === "delivery" && subtotal > 0
+  const headerHeight = showInfoCard ? (hasFreeDeliveryProgress ? 180 : 145) : 92
 
 
 
@@ -2859,41 +2860,53 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-        {/* Info card — sticky inside fixed header */}
+        {/* Info card + Progress bar — inside fixed header */}
         {(() => {
           const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
           const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
           const hasLoyalty = parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)
           const showInfoCard = hasMinOrder || hasFreeDelivery || hasLoyalty
+          const freeAbove = establishment.deliveryFreeAbove || 0
+          const showProgressBar = hasFreeDelivery && freeAbove > 0 && orderType === "delivery"
+          const progressPct = showProgressBar ? Math.min(100, (subtotal / freeAbove) * 100) : 0
+          const missingForFree = showProgressBar ? Math.max(0, freeAbove - subtotal) : 0
           if (!showInfoCard) return null
           return (
             <div className="mx-auto max-w-3xl px-4 pb-2">
-              <div className="flex items-center gap-3 flex-wrap rounded-xl px-3 py-2.5" style={{ backgroundColor: theme.bgCard, borderLeft: `3px solid ${theme.success}`, border: `1px solid ${theme.borderCard}`, borderLeftWidth: "3px", borderLeftColor: theme.success }}>
+              {/* Single-line info */}
+              <div className="flex items-center justify-center gap-2 flex-wrap rounded-xl px-3 py-2" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
                 {hasMinOrder && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.primary}15` }}>📦</span>
-                    Mín. <span style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                    📦 Mín. <span className="font-bold" style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
                   </span>
                 )}
-                {hasMinOrder && hasFreeDelivery && (
-                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
-                )}
+                {hasMinOrder && hasFreeDelivery && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
                 {hasFreeDelivery && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.success}15` }}>🛵</span>
-                    Frete grátis acima de <span style={{ color: theme.success }}>{formatCurrency(establishment.deliveryFreeAbove || 0)}</span>
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                    🛵 Frete grátis acima de <span className="font-bold" style={{ color: theme.success }}>{formatCurrency(freeAbove)}</span>
                   </span>
                 )}
-                {(hasMinOrder || hasFreeDelivery) && hasLoyalty && (
-                  <span className="h-4 w-px" style={{ backgroundColor: theme.borderCard }} />
-                )}
+                {(hasMinOrder || hasFreeDelivery) && hasLoyalty && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
                 {hasLoyalty && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: theme.text }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]" style={{ backgroundColor: `${theme.accent}15` }}>⭐</span>
-                    {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}% cashback
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                    ⭐ <span className="font-bold" style={{ color: theme.accent }}>{parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}%</span> cashback
                   </span>
                 )}
               </div>
+              {/* Progress bar — free delivery */}
+              {showProgressBar && subtotal > 0 && (
+                <div className="mt-2 rounded-xl px-3 py-2" style={{ backgroundColor: `${theme.success}10`, border: `1px solid ${theme.success}30` }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold" style={{ color: theme.success }}>
+                      {missingForFree > 0 ? `Faltam ${formatCurrency(missingForFree)} para frete grátis` : "🎉 Frete grátis desbloqueado!"}
+                    </span>
+                    <span className="text-[10px] font-bold" style={{ color: theme.textMuted }}>{Math.round(progressPct)}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.success}20` }}>
+                    <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${progressPct}%`, backgroundColor: progressPct >= 100 ? "#22c55e" : theme.success, boxShadow: progressPct >= 100 ? "0 0 10px rgba(34,197,94,0.5)" : "none" }} />
+                  </div>
+                </div>
+              )}
             </div>
           )
         })()}
@@ -3088,15 +3101,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 </div>
                 <div className="p-2.5">
-                  <h3 className="font-semibold text-xs truncate" style={{ color: theme.text }}>{item.name}</h3>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-sm font-bold" style={{ color: theme.text }}>
-                      {formatCurrency(item.price)}
-                    </span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}20`, color: theme.primary }}>
-                      Pedir novamente
-                    </span>
-                  </div>
+                  <h3 className="font-bold text-sm truncate" style={{ color: theme.text }}>{item.name}</h3>
+                  <span className="text-base font-extrabold mt-1 block" style={{ color: theme.primary }}>
+                    {formatCurrency(item.price)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === item.id)
+                      if (product) addToCart(product)
+                    }}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all active:scale-95"
+                    style={{ backgroundColor: theme.primary, boxShadow: `0 2px 8px ${theme.shadowPrimary}` }}
+                  >
+                    <Repeat className="h-3.5 w-3.5" /> Pedir novamente
+                  </button>
                 </div>
               </button>
             ))}
@@ -6925,12 +6944,12 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className={`w-full h-32 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
+            className={`w-full h-36 object-cover transition-transform duration-300 ${isAdded ? "scale-105" : ""}`}
             onMouseEnter={(e) => ((product as any).zoomEnabled ? e.currentTarget.style.transform = "scale(1.1)" : null)}
             onMouseLeave={(e) => (e.currentTarget.style.transform = isAdded ? "scale(1.05)" : "scale(1)")}
           />
         ) : (
-          <div className={`w-full h-32 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
+          <div className={`w-full h-36 flex items-center justify-center transition-transform duration-300 ${isAdded ? "scale-105" : ""}`} style={{ backgroundColor: theme.bgCardHover }}>
             <svg className="h-8 w-8" style={{ color: theme.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
           </div>
         )}
@@ -6950,24 +6969,22 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
           </span>
         )}
         {hasDiscount && discountPct > 0 && (
-          <span className="absolute top-2 right-2 text-[11px] font-bold text-white px-2 py-1 rounded-lg shadow-md bg-green-500">
+          <span className="absolute top-2 right-2 text-[12px] font-extrabold text-white px-2.5 py-1 rounded-lg shadow-lg bg-green-500">
             {discountPct}% OFF
           </span>
         )}
       </div>
-      <div className="p-2.5">
-        <div className="flex items-start justify-between">
-          <h3 className="font-semibold text-xs leading-tight flex-1" style={{ color: theme.text }}>{product.name}</h3>
-        </div>
+      <div className="p-3">
+        <h3 className="font-bold text-sm leading-tight" style={{ color: theme.text }}>{product.name}</h3>
         {product.description && (
-          <p className="mt-0.5 text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
+          <p className="mt-1 text-xs line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
         <div className="flex items-end justify-between mt-2">
           <div className="flex flex-col">
             {hasDiscount && (
               <span className="text-xs line-through" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
             )}
-            <p className="font-bold text-sm" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
+            <p className="font-extrabold text-base" style={{ color: hasDiscount ? "#22c55e" : theme.primary }}>
               {hasDiscount ? formatCurrency(discountPrice) : formatCurrency(product.price)}
             </p>
           </div>
@@ -6989,7 +7006,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
             <button
               onClick={(e) => { e.stopPropagation(); onAdd(product); }}
               aria-label={`Adicionar ${product.name} ao carrinho`}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-white transition-all duration-200 active:scale-90 ${isAdded ? "animate-bounce-once" : ""}`}
               style={{
                 backgroundColor: isAdded ? "#22c55e" : theme.primary,
                 boxShadow: isAdded ? "0 0 20px rgba(34,197,94,0.5)" : `0 2px 8px ${theme.shadowPrimary}`,
@@ -6997,9 +7014,9 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
               disabled={disabled}
             >
               {isAdded ? (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               ) : (
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
               )}
             </button>
           </div>
