@@ -6960,10 +6960,10 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
       <div className="p-2.5">
         <h3 className="font-bold text-[13px] leading-tight truncate" style={{ color: theme.text }}>{product.name}</h3>
         {product.description && (
-          <p className="text-[10px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
+          <p className="text-[11px] line-clamp-1" style={{ color: theme.textMuted }}>{product.description}</p>
         )}
         {hasDiscount ? (
-          <span className="text-[10px] line-through block mt-2" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
+          <span className="text-[11px] line-through block mt-2" style={{ color: theme.textMuted }}>{formatCurrency(product.price)}</span>
         ) : (
           <div className="mt-1" />
         )}
