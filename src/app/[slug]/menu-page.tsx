@@ -1039,19 +1039,28 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     let ticking = false
 
     const updateVisibleCategory = () => {
-      const headerOffset = 100
-      let currentId = sortedCategories[0]?.id
+      const headerBottom = 100
+      const scrollY = window.scrollY
+      const viewportHeight = window.innerHeight
+      const scrollMid = scrollY + headerBottom + (viewportHeight - headerBottom) / 2
+
+      let bestId = sortedCategories[0]?.id
+      let bestDist = Infinity
 
       for (const cat of sortedCategories) {
         const el = document.getElementById(`cat-${cat.id}`)
         if (!el) continue
-        const rect = el.getBoundingClientRect()
-        if (rect.top <= headerOffset + 20) {
-          currentId = cat.id
+        const sectionTop = scrollY + el.getBoundingClientRect().top
+        const sectionHeight = el.offsetHeight
+        const sectionMid = sectionTop + sectionHeight / 2
+        const dist = Math.abs(scrollMid - sectionMid)
+        if (dist < bestDist) {
+          bestDist = dist
+          bestId = cat.id
         }
       }
 
-      if (currentId) setVisibleCategoryId(currentId)
+      if (bestId) setVisibleCategoryId(bestId)
       ticking = false
     }
 
