@@ -1036,26 +1036,35 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // Scroll spy: observa qual categoria está visível e atualiza o highlight
   useEffect(() => {
     if (typeof window === "undefined") return
-    const sections = sortedCategories
-      .map((cat) => document.getElementById(`cat-${cat.id}`))
-      .filter(Boolean) as HTMLElement[]
-    if (sections.length === 0) return
+    let ticking = false
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (visible.length > 0) {
-          const id = visible[0].target.id.replace("cat-", "")
-          setVisibleCategoryId(id)
+    const updateVisibleCategory = () => {
+      const headerOffset = 100
+      let currentId = sortedCategories[0]?.id
+
+      for (const cat of sortedCategories) {
+        const el = document.getElementById(`cat-${cat.id}`)
+        if (!el) continue
+        const rect = el.getBoundingClientRect()
+        if (rect.top <= headerOffset + 20) {
+          currentId = cat.id
         }
-      },
-      { rootMargin: "-92px 0px -40% 0px", threshold: [0, 0.3] }
-    )
+      }
 
-    sections.forEach((s) => observer.observe(s))
-    return () => observer.disconnect()
+      if (currentId) setVisibleCategoryId(currentId)
+      ticking = false
+    }
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateVisibleCategory)
+        ticking = true
+      }
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true })
+    updateVisibleCategory()
+    return () => window.removeEventListener("scroll", onScroll)
   }, [sortedCategories])
 
   // Fetch stories + featured data
