@@ -2778,21 +2778,17 @@ onPaymentConfirmed={handlePaymentSuccess}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
-                <div className="flex items-center shrink-0 rounded-full border px-2 py-1.5 gap-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                  {/* Crown */}
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center gap-1">
-                    <span className="text-base leading-none">
-                      {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
-                    </span>
-                  </button>
-                  {/* Points */}
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-center">
-                    <span className="text-[8px] text-gray-400 leading-none">Saldo cash</span>
-                    <span className="text-[12px] font-bold text-gray-800">
+                <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                  <span className="text-base leading-none">
+                    {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
+                  </span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
+                    <span className="text-sm font-bold text-gray-900 leading-tight">
                       R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
                     </span>
-                  </button>
-                </div>
+                  </div>
+                </button>
               ) : (
                 <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
                   <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
