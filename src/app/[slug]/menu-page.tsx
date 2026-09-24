@@ -2816,13 +2816,13 @@ onPaymentConfirmed={handlePaymentSuccess}
               ) : (
                 <FlowOSLogo size={72} variant="icon" className="h-[72px] w-[72px] shrink-0" />
               )}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex flex-col justify-end">
                 {sessionVerified && (customer.name || customerData?.name) ? (
-                  <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
+                  <h1 className="text-[15px] font-bold truncate mb-0.5" style={{ color: theme.text }}>
                     {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
                   </h1>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-0.5">
                     <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
                     {reviewStats.total > 0 && (
                       <span className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
@@ -2832,7 +2832,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
