@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
               const catMarkup = category.ifoodMarkupPercent
               const globalMarkup = establishment.ifoodMarkupPercent
               const markup = catMarkup ?? globalMarkup ?? 0
-              ifoodPrice = markup > 0 ? basePrice * (1 + markup / 100) : basePrice
+              ifoodPrice = markup > 0 ? basePrice / (1 - markup / 100) : basePrice
             }
 
             const itemResult = await createOrUpdateItem(

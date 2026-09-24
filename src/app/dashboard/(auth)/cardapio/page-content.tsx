@@ -201,7 +201,7 @@ export default function CardapioPage() {
     const catMarkup = ifoodMarkupByCategory[product.categoryId]
     const markup = catMarkup ? parseFloat(catMarkup) : (ifoodMarkupGlobal ? parseFloat(ifoodMarkupGlobal) : 0)
     if (markup > 0) {
-      return product.price * (1 + markup / 100)
+      return product.price / (1 - markup / 100)
     }
     return product.price
   }
@@ -879,7 +879,7 @@ export default function CardapioPage() {
           body: JSON.stringify({ ifoodMarkupPercent: catVal }),
         })
       }
-      toast("Configurações de markup salvas", "success")
+      toast("Configurações de comissão salvas", "success")
       setShowIfoodSettings(false)
     } catch (e) {
       toast("Erro ao salvar configurações", "error")
@@ -2948,10 +2948,10 @@ export default function CardapioPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-1">
-                    Markup global (%)
+                    Comissão do iFood (%)
                   </label>
                   <p className="text-xs text-zinc-500 mb-2">
-                    Percentual adicionado ao preço base para o iFood
+                    Taxa cobrada pelo iFood sobre o preço final (margem reversa)
                   </p>
                   <div className="flex items-center gap-2">
                     <input
@@ -2969,10 +2969,10 @@ export default function CardapioPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-1">
-                    Markup por categoria
+                    Comissão por categoria
                   </label>
                   <p className="text-xs text-zinc-500 mb-2">
-                    Sobrepõe o markup global para categorias específicas
+                    Sobrepõe a comissão global para categorias específicas
                   </p>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {categories.map((cat) => (
