@@ -2844,7 +2844,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </span>
                   {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) ? (
                     <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
-                      ⭐ {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}%
+                      ⭐ {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}% Cashback
                     </span>
                   ) : null}
                   {sessionVerified && (customer.phone || customerData?.phone) ? (
