@@ -131,21 +131,6 @@ export class EvolutionProvider implements WhatsAppProvider {
   async sendText(phone: string, text: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const normalizedPhone = this.normalizePhone(phone)
-
-      // Check connection state before sending
-      const connState = await this.getConnectionState()
-      console.log(`[Evolution] Connection state: ${connState.state}`)
-      if (connState.state !== "open") {
-        console.log(`[Evolution] Instance not connected, attempting to reconnect...`)
-        const reconnect = await this.connectInstance()
-        if (!reconnect.success) {
-          console.error(`[Evolution] Reconnect failed:`, reconnect.error)
-          return { success: false, error: `Instance not connected and reconnect failed: ${reconnect.error}` }
-        }
-        // Wait 3s for connection to establish
-        await new Promise(resolve => setTimeout(resolve, 3000))
-      }
-
       const url = `${this.config.baseUrl}/message/sendText/${this.config.instanceName}`
 
       console.log(`[Evolution] Sending to ${normalizedPhone} via ${this.config.baseUrl}`)

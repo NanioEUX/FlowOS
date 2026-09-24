@@ -70,6 +70,53 @@ export class MetaCloudProvider implements WhatsAppProvider {
     }
   }
 
+  async sendTemplate(phone: string, templateName: string, languageCode: string = "pt_BR", variables: string[] = []): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const phoneDigits = this.formatPhone(phone)
+      console.log(`[MetaCloud] Sending template "${templateName}" to: ${phoneDigits}`)
+
+      const components: any[] = []
+      if (variables.length > 0) {
+        components.push({
+          type: "body",
+          parameters: variables.map((v) => ({ type: "text", text: v })),
+        })
+      }
+
+      const body: any = {
+        messaging_product: "whatsapp",
+        to: phoneDigits,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: languageCode },
+          ...(components.length > 0 && { components }),
+        },
+      }
+
+      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        console.error("[MetaCloud] sendTemplate error:", data)
+        return { success: false, error: data.error?.message || "Failed to send template" }
+      }
+
+      return { success: true, messageId: data.messages?.[0]?.id }
+    } catch (err: any) {
+      console.error("[MetaCloud] sendTemplate exception:", err)
+      return { success: false, error: err.message }
+    }
+  }
+
   async sendVerificationCode(phone: string, options: SendVerificationOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)

@@ -156,17 +156,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure provider para envio real." })
     }
 
-    // Use sendText to send verification code (with retry for connection issues)
+    // Use sendText to send verification code
     const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
     let result = await provider.sendText(phoneDigits, message, { delay: 1000 })
-    console.log(`[VERIFICATION] sendText result (attempt 1):`, JSON.stringify(result))
+    console.log(`[VERIFICATION] sendText result:`, JSON.stringify(result))
 
-    // Retry once after 5s if first attempt failed (connection issues)
-    if (!result.success) {
-      console.log(`[VERIFICATION] Retrying in 5s...`)
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      result = await provider.sendText(phoneDigits, message, { delay: 1000 })
-      console.log(`[VERIFICATION] sendText result (attempt 2):`, JSON.stringify(result))
+    // If text failed (e.g. new number without messaging window), try template message
+    if (!result.success && 'sendTemplate' in provider) {
+      console.log(`[VERIFICATION] Text failed, trying template "verifique" as fallback...`)
+      const templateResult = await (provider as any).sendTemplate(phoneDigits, "verifique", "pt_BR", [code, establishment.name, code])
+      console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
+      if (templateResult.success) {
+        result = templateResult
+      }
     }
 
     const showDevCode =
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
       req.nextUrl.searchParams.get("debug") === "1"
 
     if (!result.success) {
-      console.error("[Verification] WhatsApp send failed after retry:", result.error)
+      console.error("[Verification] WhatsApp send failed:", result.error)
       return NextResponse.json({
         success: true,
         devCode: code,
