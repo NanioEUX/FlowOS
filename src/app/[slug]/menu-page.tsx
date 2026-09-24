@@ -2818,9 +2818,14 @@ onPaymentConfirmed={handlePaymentSuccess}
               )}
               <div className="flex-1 min-w-0">
                 {sessionVerified && (customer.name || customerData?.name) ? (
-                  <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
-                    {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
+                      {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                    </h1>
+                    <button onClick={() => {}} className="shrink-0 p-1 rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                      <Bell className="h-4 w-4" />
+                    </button>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
@@ -2846,7 +2851,6 @@ onPaymentConfirmed={handlePaymentSuccess}
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
                 <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                  <Bell className="h-4 w-4" style={{ color: theme.primary }} />
                   <div className="flex flex-col items-start">
                     <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
                     <span className="text-sm font-bold text-gray-900 leading-tight">
