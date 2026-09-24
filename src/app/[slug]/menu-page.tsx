@@ -2837,7 +2837,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     )}
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
@@ -2847,22 +2847,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                       ⭐ {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}%
                     </span>
                   ) : null}
+                  {sessionVerified && (customer.phone || customerData?.phone) ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
+                      💰 R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
+                    </span>
+                  ) : null}
                 </div>
               </div>
-              {sessionVerified && (customer.phone || customerData?.phone) ? (
-                <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                  <div className="flex flex-col items-start">
-                    <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
-                    <span className="text-sm font-bold text-gray-900 leading-tight">
-                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
-                    </span>
-                  </div>
-                </button>
-              ) : (
-                <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                  <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-                </button>
-              )}
             </div>
           </div>
         </div>
