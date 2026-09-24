@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
+import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 
 function verifySignature(body: string, signature: string, secret: string): boolean {
   if (!signature || !secret) return false
@@ -122,7 +123,16 @@ export async function POST(req: NextRequest) {
         if (!existing && event.fullOrder) {
           try {
             const mapped = mapIfoodOrderToFlow(event.fullOrder, est.id, code)
-            await prisma.order.create({ data: { ...mapped, externalId: orderId, cashbackEarned: calcCashbackEarned(mapped.total || 0, est) } })
+            const createdOrder = await prisma.order.create({ data: { ...mapped, externalId: orderId, cashbackEarned: calcCashbackEarned(mapped.total || 0, est) } })
+            // Deduct stock for iFood order items
+            try {
+              const items = JSON.parse(mapped.items || "[]")
+              await prisma.$transaction(async (tx) => {
+                await deductOrderStock(tx, items, createdOrder.id, est.id, true)
+              })
+            } catch (stockErr: any) {
+              console.error("[ifood webhook] stock deduction error:", stockErr.message)
+            }
             created++
             results.push({ orderId, action: 'created' })
           } catch (e: any) {
@@ -145,9 +155,18 @@ export async function POST(req: NextRequest) {
               const mapped = mapIfoodOrderToFlow(order, est.id, code)
               try {
                 const customer = await upsertIfoodCustomer(est.id, order.customer)
-                await prisma.order.create({
+                const createdOrder = await prisma.order.create({
                   data: { ...mapped, externalId: orderId, customerId: customer?.id, cashbackEarned: calcCashbackEarned(mapped.total || 0, est) }
                 })
+                // Deduct stock for iFood order items
+                try {
+                  const items = JSON.parse(mapped.items || "[]")
+                  await prisma.$transaction(async (tx) => {
+                    await deductOrderStock(tx, items, createdOrder.id, est.id, true)
+                  })
+                } catch (stockErr: any) {
+                  console.error("[ifood webhook] stock deduction error:", stockErr.message)
+                }
                 created++
                 results.push({ orderId, action: 'created' })
                 console.log("[ifood webhook] SAVED order", orderId, "id=", mapped.establishmentId)
@@ -218,6 +237,8 @@ export async function POST(req: NextRequest) {
                 externalId: existing.externalId,
               },
             })
+            // Restore stock for cancelled iFood order
+            await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
             await tx.order.delete({ where: { id: existing.id } })
           })
           updated++

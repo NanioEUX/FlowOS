@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodEvents, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
+import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 
 export async function POST(req: Request) {
   try {
@@ -133,6 +134,8 @@ export async function POST(req: Request) {
                     externalId: existing.externalId,
                   },
                 })
+                // Restore stock for cancelled iFood order
+                await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
                 await tx.order.delete({ where: { id: existing.id } })
               })
               updated++
@@ -180,9 +183,18 @@ export async function POST(req: Request) {
           if (order && order.items && order.items.length > 0) {
             const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
             const customer = await upsertIfoodCustomer(est.id, order.customer)
-            await prisma.order.create({
+            const createdOrder = await prisma.order.create({
               data: { ...mapped, externalId: event.orderId, customerId: customer?.id }
             })
+            // Deduct stock for iFood order items
+            try {
+              const items = JSON.parse(mapped.items || "[]")
+              await prisma.$transaction(async (tx) => {
+                await deductOrderStock(tx, items, createdOrder.id, est.id, true)
+              })
+            } catch (stockErr: any) {
+              console.error("[ifood poll] stock deduction error:", stockErr.message)
+            }
             created++
           } else {
             // PLC may not have items yet; save placeholder so the merchant sees it.

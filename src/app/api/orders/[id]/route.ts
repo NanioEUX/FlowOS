@@ -5,6 +5,7 @@ import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
 import { verifyAuth } from "@/lib/auth"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
 import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
+import { restoreOrderStock } from "@/lib/stock"
 
 export async function PATCH(
   req: NextRequest,
@@ -141,6 +142,9 @@ export async function PATCH(
             }
           }
         }
+
+        // Restore stock for cancelled order items
+        await restoreOrderStock(tx, order.items, order.id, order.establishmentId)
 
         // Mantém o CancellationLog como snapshot adicional de auditoria
         await tx.cancellationLog.create({

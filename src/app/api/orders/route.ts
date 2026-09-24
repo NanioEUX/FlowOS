@@ -4,6 +4,7 @@ import { createPaymentLink } from "@/lib/integrations/asaas"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 import { computeOrderItemCosts } from "@/lib/cmv"
 import { convertQuantity } from "@/lib/units"
+import { deductOrderStock } from "@/lib/stock"
 
 import crypto from "crypto"
 
@@ -446,61 +447,9 @@ export async function POST(req: NextRequest) {
       })
 
       // Decrement stock atomically — if this fails, the entire order rolls back
-      for (const item of parsedItems) {
-        if (item.productId && item.productId !== "custom") {
-          const product = await tx.product.findUnique({ where: { id: item.productId } })
-
-          // Direct sale: product linked to a stock item
-          if (product?.stockItemId) {
-            const stockItem = await tx.stockItem.findUnique({ where: { id: product.stockItemId } })
-            if (stockItem) {
-              const newQty = stockItem.quantity - item.quantity
-              await tx.stockItem.update({
-                where: { id: product.stockItemId },
-                data: { quantity: newQty },
-              })
-              await tx.stockMovement.create({
-                data: {
-                  type: "exit",
-                  quantity: item.quantity,
-                  notes: `Pedido ${createdOrder.id} - ${product.name}`,
-                  itemId: product.stockItemId,
-                },
-              })
-              if (stockItem.minQuantity > 0 && newQty <= stockItem.minQuantity) {
-                lowStockItems.push({ name: stockItem.name, quantity: newQty, minQuantity: stockItem.minQuantity })
-              }
-            }
-          }
-
-          // BOM links: product made of multiple stock items
-          const links = await tx.productStockLink.findMany({ where: { productId: item.productId } })
-          for (const link of links) {
-            const stockItem = await tx.stockItem.findUnique({ where: { id: link.stockItemId } })
-            if (stockItem) {
-              const linkUnit = link.unit || "un"
-              const deductionInLinkUnit = link.quantity * item.quantity
-              const deductionInStockUnit = convertQuantity(deductionInLinkUnit, linkUnit, stockItem.unit) ?? deductionInLinkUnit
-              const newQty = stockItem.quantity - deductionInStockUnit
-              await tx.stockItem.update({
-                where: { id: link.stockItemId },
-                data: { quantity: newQty },
-              })
-              await tx.stockMovement.create({
-                data: {
-                  type: "exit",
-                  quantity: deductionInStockUnit,
-                  notes: `Pedido ${createdOrder.id} - ${deductionInLinkUnit}${linkUnit}`,
-                  itemId: link.stockItemId,
-                },
-              })
-              if (stockItem.minQuantity > 0 && newQty <= stockItem.minQuantity && !lowStockItems.find((l) => l.name === stockItem.name)) {
-                lowStockItems.push({ name: stockItem.name, quantity: newQty, minQuantity: stockItem.minQuantity })
-              }
-            }
-          }
-        }
-      }
+      // Now includes additional options with consumesStock=true
+      const stockResult = await deductOrderStock(tx, parsedItems, createdOrder.id, establishmentId, false)
+      lowStockItems.push(...stockResult)
 
       return createdOrder
     })

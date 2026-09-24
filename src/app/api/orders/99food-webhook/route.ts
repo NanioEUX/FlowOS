@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { map99FoodOrderToFlow } from "@/lib/integrations/nine-food"
 import { upsert99FoodCustomer } from "@/lib/integrations/nine-food-customer"
+import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 
 function verifyHmac(body: string, signature: string, secret: string): boolean {
   if (!signature || !secret) return false
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
           ? await upsert99FoodCustomer(est.id, customerData)
           : null
 
-        await prisma.order.create({
+        const createdOrder = await prisma.order.create({
           data: {
             ...mapped,
             externalId: orderId,
@@ -155,6 +156,15 @@ export async function POST(req: NextRequest) {
             cashbackEarned: calcCashbackEarned(mapped.total || 0, est),
           },
         })
+        // Deduct stock for 99Food order items
+        try {
+          const items = JSON.parse(mapped.items || "[]")
+          await prisma.$transaction(async (tx) => {
+            await deductOrderStock(tx, items, createdOrder.id, est.id, true)
+          })
+        } catch (stockErr: any) {
+          console.error("[99food webhook] stock deduction error:", stockErr.message)
+        }
         created++
         console.log("[99food webhook] CREATED order", orderId)
       } catch (e: any) {
@@ -189,6 +199,8 @@ export async function POST(req: NextRequest) {
               externalId: existing.externalId,
             },
           })
+          // Restore stock for cancelled 99Food order
+          await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
           await tx.order.delete({ where: { id: existing.id } })
         })
         updated++
