@@ -2956,10 +2956,24 @@ onPaymentConfirmed={handlePaymentSuccess}
                             >
                               Comprar Agora
                             </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              </div>
+              {sessionVerified && (customer.phone || customerData?.phone) ? (
+                <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                  <div className="flex flex-col items-start">
+                    <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
+                    <span className="text-sm font-bold text-gray-900 leading-tight">
+                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
+                    </span>
+                  </div>
+                </button>
+              ) : (
+                <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
+                  <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
                   ))}
                 </div>
               </div>
