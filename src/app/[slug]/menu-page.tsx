@@ -1414,7 +1414,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     (orderType === "dineIn" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
 
-  const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove) || (parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal))
+  const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)
   const headerHeight = showInfoCard ? 145 : 92
 
 
@@ -2837,13 +2837,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <Clock className="w-2.5 h-2.5" />
                     {establishment.estimatedDeliveryMin || 30}-{establishment.estimatedDeliveryMax || 45} min
                   </span>
+                  {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.accent}15`, color: theme.accent }}>
+                      ⭐ {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}%
+                    </span>
+                  ) : null}
                 </div>
               </div>
               {sessionVerified && (customer.phone || customerData?.phone) ? (
                 <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                  <span className="text-base leading-none">
-                    {customerTier === "ouro" ? "👑" : customerTier === "prata" ? "🥈" : "🥉"}
-                  </span>
+                  <Bell className="h-4 w-4" style={{ color: theme.primary }} />
                   <div className="flex flex-col items-start">
                     <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
                     <span className="text-sm font-bold text-gray-900 leading-tight">
@@ -2864,7 +2867,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
           const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
           const hasLoyalty = parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)
-          const showInfoCard = hasMinOrder || hasFreeDelivery || hasLoyalty
+          const showInfoCard = hasMinOrder || hasFreeDelivery
           const freeAbove = establishment.deliveryFreeAbove || 0
           if (!showInfoCard) return null
           return (
@@ -2879,12 +2882,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {hasFreeDelivery && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
                     🛵 Grátis acima de <span className="font-bold" style={{ color: theme.success }}>{formatCurrency(freeAbove)}</span>
-                  </span>
-                )}
-                {(hasMinOrder || hasFreeDelivery) && hasLoyalty && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
-                {hasLoyalty && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
-                    ⭐ <span className="font-bold" style={{ color: theme.accent }}>{parsedLoyalty.cashbackPercent || parsedLoyalty?.pointsPerReal}%</span> cashback
                   </span>
                 )}
               </div>
