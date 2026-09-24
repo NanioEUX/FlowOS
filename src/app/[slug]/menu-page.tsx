@@ -2817,26 +2817,21 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <FlowOSLogo size={72} variant="icon" className="h-[72px] w-[72px] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  {sessionVerified && (customer.name || customerData?.name) ? (
-                    <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
-                      {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
-                    </h1>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
-                      {reviewStats.total > 0 && (
-                        <span className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
-                          <Star className="h-2.5 w-2.5" fill="#f59e0b" stroke="#f59e0b" />
-                          {reviewStats.average.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <button onClick={() => {}} className="p-1.5 rounded-full transition-colors shrink-0" style={{ color: theme.textMuted }}>
-                    <Bell className="h-5 w-5" />
-                  </button>
-                </div>
+                {sessionVerified && (customer.name || customerData?.name) ? (
+                  <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
+                    {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                  </h1>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
+                    {reviewStats.total > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
+                        <Star className="h-2.5 w-2.5" fill="#f59e0b" stroke="#f59e0b" />
+                        {reviewStats.average.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${theme.primary}15`, color: theme.textMuted }}>
                     <Clock className="w-2.5 h-2.5" />
@@ -2848,10 +2843,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </span>
                   ) : null}
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <button onClick={() => {}} className="p-1.5 rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                  <Bell className="h-5 w-5" />
+                </button>
                 {sessionVerified && (customer.phone || customerData?.phone) ? (
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex items-center gap-1.5 mt-1.5 rounded-full border px-2.5 py-1" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-end rounded-xl border px-3 py-1.5" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
                     <span className="text-[9px] font-medium text-gray-500 leading-none">Saldo cash</span>
-                    <span className="text-[11px] font-bold text-gray-900 leading-none">
+                    <span className="text-[11px] font-bold text-gray-900 leading-none mt-0.5">
                       R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
                     </span>
                   </button>
@@ -2960,20 +2960,6 @@ onPaymentConfirmed={handlePaymentSuccess}
                               Comprar Agora
                             </button>
               </div>
-              {sessionVerified && (customer.phone || customerData?.phone) ? (
-                <button onClick={() => setShowCustomerProfile(true)} className="flex items-center shrink-0 gap-2 rounded-full border px-3 py-2" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                  <div className="flex flex-col items-start">
-                    <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
-                    <span className="text-sm font-bold text-gray-900 leading-tight">
-                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
-                    </span>
-                  </div>
-                </button>
-              ) : (
-                <button onClick={() => openIdentifyModal()} className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 animate-pulse" style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
-                  <User className="h-4 w-4" style={{ color: theme.textMutedMore }} />
-                </button>
-              )}
             </div>
           </div>
         </div>
