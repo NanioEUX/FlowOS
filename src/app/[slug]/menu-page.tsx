@@ -2860,9 +2860,6 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
           </div>
         </div>
-            </div>
-          </div>
-        </div>
         {/* Info card — inside fixed header */}
         {(() => {
           const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
