@@ -1415,7 +1415,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   )
 
   const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)
-  const headerHeight = showInfoCard ? 145 : 92
+  const headerHeight = showInfoCard ? 155 : 100
 
 
 
@@ -2810,22 +2810,17 @@ onPaymentConfirmed={handlePaymentSuccess}
       <div className="fixed top-0 left-0 right-0 z-30 transition-colors duration-300" style={{ backgroundColor: theme.bgPage, paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="border-b backdrop-blur-xl" style={{ borderColor: theme.borderSubtle, backgroundColor: theme.bgHeader }}>
           <div className="mx-auto max-w-3xl px-4 py-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               {establishment.logo ? (
-                <img src={establishment.logo} alt={establishment.name} className="h-[60px] w-[60px] rounded-xl object-cover shadow-sm shrink-0" />
+                <img src={establishment.logo} alt={establishment.name} className="h-[72px] w-[72px] rounded-xl object-cover shadow-sm shrink-0" />
               ) : (
-                <FlowOSLogo size={60} variant="icon" className="h-[60px] w-[60px] shrink-0" />
+                <FlowOSLogo size={72} variant="icon" className="h-[72px] w-[72px] shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 {sessionVerified && (customer.name || customerData?.name) ? (
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
-                      {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
-                    </h1>
-                    <button onClick={() => {}} className="shrink-0 p-1 rounded-full transition-colors" style={{ color: theme.textMuted }}>
-                      <Bell className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <h1 className="text-[15px] font-bold truncate" style={{ color: theme.text }}>
+                    {greeting}, {getFirstName(customer.name || customerData?.name || "")}! 👋
+                  </h1>
                 ) : (
                   <div className="flex items-center gap-2">
                     <h1 className="text-[17px] font-extrabold truncate" style={{ color: theme.text }}>{establishment.name}</h1>
@@ -2847,12 +2842,20 @@ onPaymentConfirmed={handlePaymentSuccess}
                       ⭐ {parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal}% Cashback
                     </span>
                   ) : null}
-                  {sessionVerified && (customer.phone || customerData?.phone) ? (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${theme.success}15`, color: theme.success }}>
-                      💰 R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
-                    </span>
-                  ) : null}
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <button onClick={() => {}} className="p-1.5 rounded-full transition-colors" style={{ color: theme.textMuted }}>
+                  <Bell className="h-5 w-5" />
+                </button>
+                {sessionVerified && (customer.phone || customerData?.phone) ? (
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-end rounded-full border px-3 py-1.5" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                    <span className="text-[9px] font-medium text-gray-500 leading-none">Saldo cash</span>
+                    <span className="text-sm font-bold text-gray-900 leading-tight">
+                      R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
+                    </span>
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
