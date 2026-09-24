@@ -2849,9 +2849,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <Bell className="h-5 w-5" />
                 </button>
                 {sessionVerified && (customer.phone || customerData?.phone) ? (
-                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-end rounded-xl border px-3 py-1.5" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
-                    <span className="text-[9px] font-medium text-gray-500 leading-none">Saldo cash</span>
-                    <span className="text-[11px] font-bold text-gray-900 leading-none mt-0.5">
+                  <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-end justify-center rounded-xl border px-3 py-1.5" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
+                    <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
+                    <span className="text-[14px] font-extrabold text-gray-900 leading-none mt-0.5">
                       R$ {((customerData?.loyaltyPoints || customerLoyaltyPoints) * 0.01).toFixed(2)}
                     </span>
                   </button>
