@@ -314,12 +314,26 @@ export async function createDefaultVerificationTemplate(
 
     const body = {
       name: "codigo_verificacao_v2",
-      category: "UTILITY",
+      category: "AUTHENTICATION",
       language: "pt_BR",
       components: [
         {
           type: "BODY",
-          text: "Olá! Seu código de verificação para acessar o sistema é: {{1}}. Por segurança, não o compartilhe.",
+          add_security_recommendation: true,
+        },
+        {
+          type: "FOOTER",
+          code_expiration_minutes: 5,
+        },
+        {
+          type: "BUTTONS",
+          buttons: [
+            {
+              type: "OTP",
+              otp_type: "COPY_CODE",
+              text: "Copiar Código",
+            },
+          ],
         },
       ],
     }
