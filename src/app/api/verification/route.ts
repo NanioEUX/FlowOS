@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     // 1) Try template message first (works even without prior interaction)
     if ('sendTemplate' in provider) {
       console.log(`[VERIFICATION] Trying template "verificacao_codigo" first...`)
-      const templateResult = await (provider as any).sendTemplate(
+      let templateResult = await (provider as any).sendTemplate(
         phoneDigits,
         "verificacao_codigo",
         "pt_BR",
@@ -170,6 +170,41 @@ export async function POST(req: NextRequest) {
         { copyCode: true }
       )
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
+
+      // If template doesn't exist, create it and retry
+      if (!templateResult.success && templateResult.error?.includes("does not exist")) {
+        console.log(`[VERIFICATION] Template not found, creating automatically...`)
+        try {
+          const { createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
+          const est = await prisma.establishment.findUnique({
+            where: { id: establishmentId },
+            select: { metaBusinessAccountId: true, metaAccessToken: true },
+          })
+          if (est?.metaBusinessAccountId && est?.metaAccessToken) {
+            const createResult = await createDefaultVerificationTemplate(
+              est.metaBusinessAccountId,
+              est.metaAccessToken
+            )
+            console.log(`[VERIFICATION] Template created:`, JSON.stringify(createResult))
+
+            if (createResult.success) {
+              // Wait for Meta to process, then retry
+              await new Promise(resolve => setTimeout(resolve, 3000))
+              templateResult = await (provider as any).sendTemplate(
+                phoneDigits,
+                "verificacao_codigo",
+                "pt_BR",
+                [code],
+                { copyCode: true }
+              )
+              console.log(`[VERIFICATION] Retry sendTemplate result:`, JSON.stringify(templateResult))
+            }
+          }
+        } catch (createErr: any) {
+          console.error(`[VERIFICATION] Auto-create template failed:`, createErr.message)
+        }
+      }
+
       if (templateResult.success) {
         result = templateResult
       }
