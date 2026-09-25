@@ -89,12 +89,12 @@ export class MetaCloudProvider implements WhatsAppProvider {
       if (options?.copyCode && variables.length > 0) {
         components.push({
           type: "button",
-          sub_type: "copy_code",
+          sub_type: "url",
           index: "0",
           parameters: [
             {
-              type: "payload",
-              payload: variables[0], // The code to copy
+              type: "text",
+              text: variables[0], // The code to copy
             },
           ],
         })
@@ -319,7 +319,11 @@ export async function createDefaultVerificationTemplate(
       components: [
         {
           type: "BODY",
-          text: "Seu código de verificação é {{1}}. Por segurança, não o compartilhe.",
+          add_security_recommendation: true,
+        },
+        {
+          type: "FOOTER",
+          code_expiration_minutes: 5,
         },
         {
           type: "BUTTONS",
