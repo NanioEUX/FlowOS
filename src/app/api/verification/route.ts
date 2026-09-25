@@ -161,10 +161,10 @@ export async function POST(req: NextRequest) {
 
     // 1) Try template message first (works even without prior interaction)
     if ('sendTemplate' in provider) {
-      console.log(`[VERIFICATION] Trying template "codigo_verificacao_v2" first...`)
+      console.log(`[VERIFICATION] Trying template "auth_codigo_v3" first...`)
       let templateResult = await (provider as any).sendTemplate(
         phoneDigits,
-        "codigo_verificacao_v2",
+        "auth_codigo_v3",
         "pt_BR",
         [code],
         { copyCode: true }
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
               await new Promise(resolve => setTimeout(resolve, 3000))
               templateResult = await (provider as any).sendTemplate(
                 phoneDigits,
-                "codigo_verificacao_v2",
+                "auth_codigo_v3",
                 "pt_BR",
                 [code],
                 { copyCode: true }
