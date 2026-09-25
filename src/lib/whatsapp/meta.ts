@@ -297,7 +297,7 @@ export async function createDefaultVerificationTemplate(
   try {
     console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
 
-    const templateName = "notificacao_verificar_v1"
+    const templateName = "atualizacao_suporte_v1"
     const body = {
       name: templateName,
       category: "UTILITY",
@@ -305,7 +305,7 @@ export async function createDefaultVerificationTemplate(
       components: [
         {
           type: "BODY",
-          text: "Prezado usuário, identificamos uma solicitação de acesso ao seu painel. O seu código de confirmação de identidade é: {{1}}. Se você não solicitou este código, por favor ignore esta mensagem.",
+          text: "Olá! O status do seu atendimento na plataforma foi atualizado. O número do seu protocolo de acompanhamento para esta solicitação é: {{1}}. Obrigado pelo contato.",
         },
       ],
     }
