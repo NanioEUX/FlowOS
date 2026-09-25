@@ -188,7 +188,8 @@ export async function POST(req: NextRequest) {
         phoneDigits,
         templateName,
         "pt_BR",
-        [code]
+        [code],
+        { copyCode: true }
       )
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
 
@@ -214,7 +215,8 @@ export async function POST(req: NextRequest) {
                 phoneDigits,
                 templateName,
                 "pt_BR",
-                [code]
+                [code],
+                { copyCode: true }
               )
               console.log(`[VERIFICATION] Retry sendTemplate result:`, JSON.stringify(templateResult))
             }
