@@ -70,12 +70,14 @@ export class MetaCloudProvider implements WhatsAppProvider {
     }
   }
 
-  async sendTemplate(phone: string, templateName: string, languageCode: string = "pt_BR", variables: string[] = []): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendTemplate(phone: string, templateName: string, languageCode: string = "pt_BR", variables: string[] = [], options?: { copyCode?: boolean }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)
       console.log(`[MetaCloud] Sending template "${templateName}" to: ${phoneDigits}`)
 
       const components: any[] = []
+
+      // Body component with variables
       if (variables.length > 0) {
         components.push({
           type: "body",
@@ -83,8 +85,24 @@ export class MetaCloudProvider implements WhatsAppProvider {
         })
       }
 
+      // Copy code button component (for Authentication templates)
+      if (options?.copyCode && variables.length > 0) {
+        components.push({
+          type: "button",
+          sub_type: "copy_code",
+          index: "0",
+          parameters: [
+            {
+              type: "payload",
+              payload: variables[0], // The code to copy
+            },
+          ],
+        })
+      }
+
       const body: any = {
         messaging_product: "whatsapp",
+        recipient_type: "individual",
         to: phoneDigits,
         type: "template",
         template: {
@@ -93,6 +111,8 @@ export class MetaCloudProvider implements WhatsAppProvider {
           ...(components.length > 0 && { components }),
         },
       }
+
+      console.log(`[MetaCloud] Template payload:`, JSON.stringify(body, null, 2))
 
       const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
@@ -276,5 +296,116 @@ export class MetaCloudProvider implements WhatsAppProvider {
       return challenge
     }
     return null
+  }
+}
+
+/**
+ * Create the default verification template in the client's WABA account.
+ * Called automatically after Embedded Signup completes.
+ * Authentication templates are auto-approved by Meta (~2 minutes).
+ */
+export async function createDefaultVerificationTemplate(
+  wabaId: string,
+  accessToken: string,
+  apiVersion: string = "v21.0"
+): Promise<{ success: boolean; templateId?: string; status?: string; error?: string }> {
+  try {
+    console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
+
+    const body = {
+      name: "verificacao_codigo",
+      category: "AUTHENTICATION",
+      language: "pt_BR",
+      components: [
+        {
+          type: "BODY",
+          text: "Seu código de verificação é {{1}}. Por segurança, não o compartilhe.",
+        },
+        {
+          type: "BUTTONS",
+          buttons: [
+            {
+              type: "OTP",
+              otp_type: "COPY_CODE",
+              text: "Copiar Código",
+            },
+          ],
+        },
+      ],
+    }
+
+    const res = await fetch(
+      `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    )
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      console.error("[MetaTemplate] Create error:", data)
+      // If template already exists, that's OK
+      if (data.error?.message?.includes("already exists")) {
+        console.log("[MetaTemplate] Template already exists, checking status...")
+        return { success: true, status: "already_exists" }
+      }
+      return { success: false, error: data.error?.message || "Failed to create template" }
+    }
+
+    console.log("[MetaTemplate] Template created:", data)
+    return {
+      success: true,
+      templateId: data.id,
+      status: data.status || "PENDING",
+    }
+  } catch (err: any) {
+    console.error("[MetaTemplate] Exception:", err)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Check template status in the client's WABA account.
+ */
+export async function getTemplateStatus(
+  wabaId: string,
+  accessToken: string,
+  templateName: string = "verificacao_codigo",
+  apiVersion: string = "v21.0"
+): Promise<{ found: boolean; status?: string; error?: string }> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?name=${templateName}`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      return { found: false, error: data.error?.message }
+    }
+
+    const templates = data.data || []
+    if (templates.length === 0) {
+      return { found: false }
+    }
+
+    return {
+      found: true,
+      status: templates[0].status,
+    }
+  } catch (err: any) {
+    return { found: false, error: err.message }
   }
 }

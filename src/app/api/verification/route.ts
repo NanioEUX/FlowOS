@@ -163,8 +163,14 @@ export async function POST(req: NextRequest) {
 
     // If text failed (e.g. new number without messaging window), try template message
     if (!result.success && 'sendTemplate' in provider) {
-      console.log(`[VERIFICATION] Text failed, trying template "verifique" as fallback...`)
-      const templateResult = await (provider as any).sendTemplate(phoneDigits, "verifique", "pt_BR", [code, establishment.name, code])
+      console.log(`[VERIFICATION] Text failed, trying template "verificacao_codigo" as fallback...`)
+      const templateResult = await (provider as any).sendTemplate(
+        phoneDigits,
+        "verificacao_codigo",
+        "pt_BR",
+        [code],
+        { copyCode: true }
+      )
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
       if (templateResult.success) {
         result = templateResult

@@ -206,6 +206,17 @@ export async function POST(
       } catch {}
     }
 
+    // Create default verification template (Authentication category, auto-approved)
+    if (accessToken && wabaId) {
+      try {
+        const { createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
+        const templateResult = await createDefaultVerificationTemplate(wabaId, accessToken)
+        console.log(`[Meta Embedded Signup] Template creation result:`, templateResult)
+      } catch (templateErr: any) {
+        console.error(`[Meta Embedded Signup] Template creation failed (non-blocking):`, templateErr.message)
+      }
+    }
+
     console.log(`[Meta Embedded Signup] SUCCESS - source: ${tokenSource} phone: ${displayPhone}`)
 
     return NextResponse.json({
