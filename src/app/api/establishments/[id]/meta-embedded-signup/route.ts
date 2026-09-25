@@ -206,15 +206,25 @@ export async function POST(
       } catch {}
     }
 
-    // Create default verification template (Authentication category, auto-approved)
+    // Create default verification template (only if none approved exists)
     if (accessToken && wabaId) {
       try {
-        const { createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
-        const templateResult = await createDefaultVerificationTemplate(wabaId, accessToken)
-        console.log(`[Meta Embedded Signup] Template creation result:`, templateResult)
+        console.log(`[Meta Embedded Signup] Checking for existing approved templates in WABA: ${wabaId}`)
+        const { findApprovedTemplate, createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
+
+        const existing = await findApprovedTemplate(wabaId, accessToken)
+        if (existing.found) {
+          console.log(`[Meta Embedded Signup] Template already exists: ${existing.templateName} (${existing.status})`)
+        } else {
+          console.log(`[Meta Embedded Signup] No approved template found, creating...`)
+          const templateResult = await createDefaultVerificationTemplate(wabaId, accessToken)
+          console.log(`[Meta Embedded Signup] Template creation result:`, JSON.stringify(templateResult))
+        }
       } catch (templateErr: any) {
         console.error(`[Meta Embedded Signup] Template creation failed (non-blocking):`, templateErr.message)
       }
+    } else {
+      console.log(`[Meta Embedded Signup] Skipping template creation - accessToken: ${!!accessToken}, wabaId: ${!!wabaId}`)
     }
 
     console.log(`[Meta Embedded Signup] SUCCESS - source: ${tokenSource} phone: ${displayPhone}`)
