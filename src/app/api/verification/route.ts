@@ -156,14 +156,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure provider para envio real." })
     }
 
-    // Use sendText to send verification code
-    const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
-    let result = await provider.sendText(phoneDigits, message, { delay: 1000 })
-    console.log(`[VERIFICATION] sendText result:`, JSON.stringify(result))
+    // Use template FIRST (works for new numbers), text as fallback
+    let result: any = { success: false }
 
-    // If text failed (e.g. new number without messaging window), try template message
-    if (!result.success && 'sendTemplate' in provider) {
-      console.log(`[VERIFICATION] Text failed, trying template "verificacao_codigo" as fallback...`)
+    // 1) Try template message first (works even without prior interaction)
+    if ('sendTemplate' in provider) {
+      console.log(`[VERIFICATION] Trying template "verificacao_codigo" first...`)
       const templateResult = await (provider as any).sendTemplate(
         phoneDigits,
         "verificacao_codigo",
@@ -174,6 +172,17 @@ export async function POST(req: NextRequest) {
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
       if (templateResult.success) {
         result = templateResult
+      }
+    }
+
+    // 2) If template failed, try text (only works if customer has messaged before)
+    if (!result.success) {
+      console.log(`[VERIFICATION] Template failed, trying text...`)
+      const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
+      const textResult = await provider.sendText(phoneDigits, message, { delay: 1000 })
+      console.log(`[VERIFICATION] sendText result:`, JSON.stringify(textResult))
+      if (textResult.success) {
+        result = textResult
       }
     }
 
