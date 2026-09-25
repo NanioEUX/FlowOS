@@ -85,21 +85,6 @@ export class MetaCloudProvider implements WhatsAppProvider {
         })
       }
 
-      // Copy code button component (for Authentication templates)
-      if (options?.copyCode && variables.length > 0) {
-        components.push({
-          type: "button",
-          sub_type: "url",
-          index: "0",
-          parameters: [
-            {
-              type: "text",
-              text: variables[0], // The code to copy
-            },
-          ],
-        })
-      }
-
       const body: any = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -313,27 +298,13 @@ export async function createDefaultVerificationTemplate(
     console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
 
     const body = {
-      name: "auth_codigo_v3",
-      category: "AUTHENTICATION",
+      name: "auth_codigo_v4",
+      category: "UTILITY",
       language: "pt_BR",
       components: [
         {
           type: "BODY",
-          add_security_recommendation: true,
-        },
-        {
-          type: "FOOTER",
-          code_expiration_minutes: 5,
-        },
-        {
-          type: "BUTTONS",
-          buttons: [
-            {
-              type: "OTP",
-              otp_type: "COPY_CODE",
-              text: "Copiar Código",
-            },
-          ],
+          text: "Seu código de verificação para o sistema é: {{1}}. Por segurança, não compartilhe este código.",
         },
       ],
     }
