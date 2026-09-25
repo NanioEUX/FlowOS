@@ -313,7 +313,7 @@ export async function createDefaultVerificationTemplate(
     console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
 
     const body = {
-      name: "verificacao_codigo",
+      name: "codigo_verificacao_v2",
       category: "UTILITY",
       language: "pt_BR",
       components: [

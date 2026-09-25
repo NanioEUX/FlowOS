@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const existing = await getTemplateStatus(
       establishment.metaBusinessAccountId,
       establishment.metaAccessToken,
-      "verificacao_codigo"
+      "codigo_verificacao_v2"
     )
     console.log(`[META TEMPLATE] Existing template status:`, existing)
 
