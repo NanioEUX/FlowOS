@@ -297,28 +297,15 @@ export async function createDefaultVerificationTemplate(
   try {
     console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
 
+    const templateName = "notificacao_acesso_sistema"
     const body = {
-      name: "confirmacao_otp_" + Date.now().toString(36),
-      category: "AUTHENTICATION",
+      name: templateName,
+      category: "UTILITY",
       language: "pt_BR",
       components: [
         {
           type: "BODY",
-          add_security_recommendation: true,
-        },
-        {
-          type: "FOOTER",
-          code_expiration_minutes: 5,
-        },
-        {
-          type: "BUTTONS",
-          buttons: [
-            {
-              type: "OTP",
-              otp_type: "COPY_CODE",
-              text: "Copiar Código",
-            },
-          ],
+          text: "Prezado usuário, identificamos uma solicitação de acesso ao seu painel. O seu código de confirmação de identidade é: {{1}}. Se você não solicitou este código, por favor ignore esta mensagem.",
         },
       ],
     }
