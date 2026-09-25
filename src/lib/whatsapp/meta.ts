@@ -297,7 +297,7 @@ export async function createDefaultVerificationTemplate(
   try {
     console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
 
-    const templateName = "notificacao_acesso_sistema"
+    const templateName = "notificacao_verificar_v1"
     const body = {
       name: templateName,
       category: "UTILITY",

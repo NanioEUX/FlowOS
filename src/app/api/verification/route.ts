@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     // 1) Try template message first (works even without prior interaction)
     if ('sendTemplate' in provider) {
       // Find an approved template in the WABA
-      let templateName = "otp_codigo_acesso" // default fallback
+      let templateName = "notificacao_verificar_v1" // default fallback
 
       try {
         const { findApprovedTemplate } = await import("@/lib/whatsapp/meta")
