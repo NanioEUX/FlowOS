@@ -161,16 +161,38 @@ export async function POST(req: NextRequest) {
 
     // 1) Try template message first (works even without prior interaction)
     if ('sendTemplate' in provider) {
-      console.log(`[VERIFICATION] Trying template "otp_codigo_acesso" first...`)
+      // Find an approved template in the WABA
+      let templateName = "otp_codigo_acesso" // default fallback
+
+      try {
+        const { findApprovedTemplate } = await import("@/lib/whatsapp/meta")
+        const est = await prisma.establishment.findUnique({
+          where: { id: establishmentId },
+          select: { metaBusinessAccountId: true, metaAccessToken: true },
+        })
+        if (est?.metaBusinessAccountId && est?.metaAccessToken) {
+          const found = await findApprovedTemplate(est.metaBusinessAccountId, est.metaAccessToken)
+          if (found.found && found.templateName) {
+            templateName = found.templateName
+            console.log(`[VERIFICATION] Using approved template: ${templateName}`)
+          } else {
+            console.log(`[VERIFICATION] No approved template found, trying default: ${templateName}`)
+          }
+        }
+      } catch (findErr: any) {
+        console.error(`[VERIFICATION] findApprovedTemplate failed:`, findErr.message)
+      }
+
+      console.log(`[VERIFICATION] Trying template "${templateName}" first...`)
       let templateResult = await (provider as any).sendTemplate(
         phoneDigits,
-        "otp_codigo_acesso",
+        templateName,
         "pt_BR",
         [code]
       )
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
 
-      // If template doesn't exist, create it and retry
+      // If template not found, create and retry
       if (!templateResult.success && templateResult.error?.includes("does not exist")) {
         console.log(`[VERIFICATION] Template not found, creating automatically...`)
         try {
@@ -187,11 +209,10 @@ export async function POST(req: NextRequest) {
             console.log(`[VERIFICATION] Template created:`, JSON.stringify(createResult))
 
             if (createResult.success) {
-              // Wait for Meta to process, then retry
               await new Promise(resolve => setTimeout(resolve, 3000))
               templateResult = await (provider as any).sendTemplate(
                 phoneDigits,
-                "otp_codigo_acesso",
+                templateName,
                 "pt_BR",
                 [code]
               )

@@ -384,3 +384,46 @@ export async function getTemplateStatus(
     return { found: false, error: err.message }
   }
 }
+
+/**
+ * List all templates and find an approved one for verification.
+ */
+export async function findApprovedTemplate(
+  wabaId: string,
+  accessToken: string,
+  apiVersion: string = "v21.0"
+): Promise<{ found: boolean; templateName?: string; status?: string; error?: string }> {
+  try {
+    console.log(`[MetaTemplate] Listing templates in WABA: ${wabaId}`)
+    const res = await fetch(
+      `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?fields=name,status,category,language`,
+      {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${accessToken}` },
+      }
+    )
+
+    const data = await res.json()
+    if (!res.ok) {
+      return { found: false, error: data.error?.message }
+    }
+
+    const templates = data.data || []
+    console.log(`[MetaTemplate] Found ${templates.length} templates:`,
+      templates.map((t: any) => `${t.name}(${t.status}/${t.category})`).join(", "))
+
+    // Find any approved template in pt_BR
+    const approved = templates.find((t: any) =>
+      t.status === "APPROVED" && t.language === "pt_BR"
+    )
+
+    if (approved) {
+      console.log(`[MetaTemplate] Using approved template: ${approved.name}`)
+      return { found: true, templateName: approved.name, status: approved.status }
+    }
+
+    return { found: false }
+  } catch (err: any) {
+    return { found: false, error: err.message }
+  }
+}
