@@ -166,8 +166,7 @@ export async function POST(req: NextRequest) {
         phoneDigits,
         "verificacao_codigo",
         "pt_BR",
-        [code],
-        { copyCode: true }
+        [code]
       )
       console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
 
@@ -194,8 +193,7 @@ export async function POST(req: NextRequest) {
                 phoneDigits,
                 "verificacao_codigo",
                 "pt_BR",
-                [code],
-                { copyCode: true }
+                [code]
               )
               console.log(`[VERIFICATION] Retry sendTemplate result:`, JSON.stringify(templateResult))
             }
