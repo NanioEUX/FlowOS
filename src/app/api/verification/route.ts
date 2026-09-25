@@ -11,7 +11,7 @@ const MAX_REQUESTS_PER_DAY = 10
 const MAX_VERIFICATIONS_PER_DAY = 5
 
 // Números com limite diário dispensado (testes internos)
-const BYPASS_PHONES = new Set(["47984118220"])
+const BYPASS_PHONES = new Set(["47984118220", "47984891149"])
 
 /**
  * POST /api/verification
