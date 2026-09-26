@@ -2905,7 +2905,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       {/* Destaques - full-width carousel, 1 card at a time */}
       {featuredSections.trending.length > 0 && (() => {
         return (
-          <div className="mx-auto max-w-3xl px-4 pb-4">
+          <div className="mx-auto max-w-3xl px-4 pb-1">
             <div className="relative">
               <div className="overflow-hidden rounded-2xl">
                 <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${destaqueSlide * 100}%)` }}>
@@ -3167,8 +3167,8 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Sticky Category Filters - sticks below header when scrolling past destaques/promo */}
-      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: `calc(${headerHeight}px + env(safe-area-inset-top, 0px))`, backgroundColor: theme.bgPage }}>
-        <div className="mx-auto max-w-3xl px-4 py-3">
+      <div className="z-20 transition-colors duration-300" style={{ position: "sticky", top: `calc(${headerHeight}px + env(safe-area-inset-top, 0px))`, backgroundColor: theme.bgPage, paddingTop: 0, paddingBottom: 4 }}>
+        <div className="mx-auto max-w-3xl px-4 py-1">
           {searchMode ? (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
@@ -3197,7 +3197,7 @@ onPaymentConfirmed={handlePaymentSuccess}
       </div>
 
       {/* Categories & Products */}
-      <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
+      <div className="mx-auto max-w-3xl px-4 pt-2 pb-24">
         {searchQuery ? (
           <div>
             <p className="mb-4 text-sm" style={{ color: theme.textMuted }}>
