@@ -1415,7 +1415,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   )
 
   const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)
-  const headerHeight = showInfoCard ? 155 : 100
+  const headerHeight = showInfoCard ? 120 : 100
 
 
 
