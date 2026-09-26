@@ -5181,10 +5181,19 @@ onPaymentConfirmed={handlePaymentSuccess}
                   setShowCheckout(true)
                   setCartStep("payment")
                 }} disabled={!isOpen || cart.length === 0 || isBelowMinimum || (orderType === "delivery" && !addressSaved)}
-                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-opacity whitespace-nowrap"
+                  className="w-full py-3.5 rounded-2xl text-white font-bold text-sm flex flex-col items-center justify-center gap-0.5 shadow-lg disabled:opacity-50 transition-opacity"
                   style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent || theme.primary})` }}>
-                  <ShoppingBag className="h-4 w-4 shrink-0" />
-                  {!isOpen ? "Estabelecimento fechado" : isBelowMinimum ? `Pedido mínimo: ${formatCurrency(minimumOrder.value)}` : (orderType === "delivery" && !addressSaved) ? "Cadastre um endereço" : "Finalizar pedido"}
+                  {isBelowMinimum ? (
+                    <>
+                      <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 shrink-0" /> Pedido mínimo: {formatCurrency(minimumOrder.value)}</span>
+                      <span className="text-[10px] font-normal opacity-80">Frete não soma ao pedido</span>
+                    </>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 shrink-0" />
+                      {!isOpen ? "Estabelecimento fechado" : (orderType === "delivery" && !addressSaved) ? "Cadastre um endereço" : "Finalizar pedido"}
+                    </span>
+                  )}
                 </button>
                 {!pendingOrderNumber && (
                   <button onClick={() => { setShowCart(false); setCartStep("cart") }}
