@@ -58,6 +58,16 @@ export function getWhatsAppProvider(config: EstablishmentWhatsAppConfig): WhatsA
     })
   }
 
+  // Priority 3: SaaS-level Meta fallback (for verification codes)
+  const saasMetaPhoneId = process.env.SAAS_META_PHONE_NUMBER_ID
+  const saasMetaToken = process.env.SAAS_META_ACCESS_TOKEN
+  if (saasMetaPhoneId && saasMetaToken) {
+    return new MetaCloudProvider({
+      phoneNumberId: saasMetaPhoneId,
+      accessToken: saasMetaToken,
+    })
+  }
+
   return null
 }
 

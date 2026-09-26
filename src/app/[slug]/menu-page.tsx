@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2, Info } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2, Info, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -286,7 +286,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const verifyAppliedRef = useRef(false)
   const [showFirstPurchaseBonus, setShowFirstPurchaseBonus] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
-  const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | null>(null)
+  const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | "pix" | null>(null)
   const [changeFor, setChangeFor] = useState<string>("")
   const [orderType, setOrderType] = useState<"delivery" | "pickup" | "dineIn">("delivery")
   const [geoDeliveryInfo, setGeoDeliveryInfo] = useState<DeliveryInfo | null>(null)
@@ -1911,10 +1911,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       let resolvedMethod: any = effectivePaymentMethod
       if (resolvedMethod === "delivery" || resolvedMethod === "pickup") {
         if (!cashSubMethod) {
-          setOrderError("Escolha Dinheiro ou Cartão para pagar na entrega")
+          setOrderError("Escolha o meio de pagamento")
           return
         }
-        resolvedMethod = cashSubMethod === "card" ? "card_delivery" : cashSubMethod || resolvedMethod
+        resolvedMethod = cashSubMethod === "card" ? "card_delivery" : cashSubMethod === "pix" ? "pix" : cashSubMethod || resolvedMethod
       }
       const isOnlinePaymentMethod =
         resolvedMethod === "pix" ||
@@ -4242,8 +4242,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                   // Payment
                   setOrderType("delivery")
                   setPaymentMethod("pix")
-                  setCashSubMethod(null)
-                  setChangeFor("")
+                   setCashSubMethod(null)
+                   setChangeFor("")
+                   setOrderError("")
                   // Session
                   clearSessionVerified()
                   // localStorage
@@ -4975,6 +4976,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             setPaymentMethod(p.key as any)
                             setCashSubMethod(null)
                             setChangeFor("")
+                            setOrderError("")
                           }}
                           className="flex flex-col items-center gap-1 rounded-xl border p-3 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                           style={paymentMethod === p.key ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
@@ -4985,17 +4987,23 @@ onPaymentConfirmed={handlePaymentSuccess}
                     })}
                   </div>
                   {(paymentMethod === "delivery" || paymentMethod === "pickup") && (
-                    <div className="mt-2 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => { setCashSubMethod("cash"); setChangeFor("") }}
+                    <div className="mt-2 space-y-2 rounded-xl border-2 p-3" style={{ borderColor: `${theme.primary}40`, backgroundColor: `${theme.primary}08` }}>
+                      <p className="text-xs font-semibold" style={{ color: theme.text }}>Escolha o meio de pagamento</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button type="button" onClick={() => { setCashSubMethod("cash"); setChangeFor(""); setOrderError("") }}
                           className="flex items-center gap-2 rounded-xl border p-2.5 text-sm"
                           style={cashSubMethod === "cash" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
                           <Banknote className="h-4 w-4" /> Dinheiro
                         </button>
-                        <button type="button" onClick={() => { setCashSubMethod("card"); setChangeFor("") }}
+                        <button type="button" onClick={() => { setCashSubMethod("card"); setChangeFor(""); setOrderError("") }}
                           className="flex items-center gap-2 rounded-xl border p-2.5 text-sm"
                           style={cashSubMethod === "card" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
                           <CreditCard className="h-4 w-4" /> Cartão
+                        </button>
+                        <button type="button" onClick={() => { setCashSubMethod("pix"); setChangeFor(""); setOrderError("") }}
+                          className="flex items-center gap-2 rounded-xl border p-2.5 text-sm"
+                          style={cashSubMethod === "pix" ? { borderColor: theme.primary, backgroundColor: `${theme.primary}14`, color: theme.primary } : { borderColor: theme.borderCard, color: theme.textSubtle }}>
+                          <Smartphone className="h-4 w-4" /> Pix
                         </button>
                       </div>
                       {cashSubMethod === "cash" && (
@@ -6032,6 +6040,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 })
                 const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
                 const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
+                const hasDiscount = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale
                 const unitPrice = basePrice + optionsPrice
                 return (
                   <>
@@ -6040,13 +6049,13 @@ onPaymentConfirmed={handlePaymentSuccess}
                       if (selectedProductMissingRequired) return
                       setCart((prev) => {
                         if (editingCartItemId) {
-                          return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice } : item)
+                          return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice, basePrice: basePrice } : item)
                         }
                         const existing = prev.find((item) => item.id === selectedProduct.id)
                         if (existing) {
                           return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
                         }
-                        return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
+                        return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, originalPrice: hasDiscount ? selectedProduct.price : undefined, basePrice: basePrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
                       })
                       setEditingCartItemId(null)
                       setSelectedProduct(null)
@@ -6072,7 +6081,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                           if (existing) {
                             return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
                           }
-                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
+                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, originalPrice: hasDiscount ? selectedProduct.price : undefined, basePrice: basePrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
                         })
                         setSelectedProduct(null)
                         setShowCart(true)
@@ -6241,6 +6250,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                 })
                 const basePrice = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price
                 const hasDiscount = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
+                const bsOptionsPrice = Object.values(bottomSheetSelections).flat().reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
+                const bsTotal = basePrice + bsOptionsPrice
                 return (
                   <button
                     onClick={() => {
@@ -6249,7 +6260,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                       setCart((prev) => {
                         const existing = prev.find((item) => item.id === bottomSheetProduct.id)
                         if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: basePrice, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, basePrice: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
+                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: bsTotal, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, basePrice: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
                       })
                       setBottomSheetProduct(null)
                       setAddedItemId(bottomSheetProduct.id)
@@ -6262,7 +6273,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     style={{ backgroundColor: theme.primary }}
                   >
                     <Plus className="w-5 h-5" />
-                    {missingRequired ? "Selecione os itens obrigatórios" : `Adicionar ao pedido — ${formatCurrency(basePrice)}`}
+                    {missingRequired ? "Selecione os itens obrigatórios" : `Adicionar ao pedido — ${formatCurrency(bsTotal)}`}
                   </button>
                 )
               })()}
