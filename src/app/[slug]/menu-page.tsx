@@ -5186,7 +5186,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {isBelowMinimum ? (
                     <>
                       <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 shrink-0" /> Pedido mínimo: {formatCurrency(minimumOrder.value)}</span>
-                      <span className="text-[10px] font-normal opacity-80">Frete não soma ao pedido</span>
+                      <span className="text-sm font-bold" style={{ color: "#4ade80" }}>( Frete não soma ao pedido )</span>
                     </>
                   ) : (
                     <span className="flex items-center gap-2">
