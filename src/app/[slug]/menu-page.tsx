@@ -2017,7 +2017,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         orderTotal: total,
         deliveryCode: data.order?.deliveryCode,
         deliveryFee: deliveryFee,
-        cashEarned: Math.floor((subtotal - loyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) * tierMultiplier),
+        cashEarned: parsedLoyalty?.enabled ? Math.floor((subtotal - loyaltyDiscount) * (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) * tierMultiplier) : 0,
       })
 
       const installPromptShown = localStorage.getItem(`pedefacil-install-prompted-${establishment.slug}`) === "1"
@@ -2849,7 +2849,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 <button onClick={() => {}} className="p-1.5 rounded-full transition-colors" style={{ color: theme.textMuted }}>
                   <Bell className="h-5 w-5" />
                 </button>
-                {sessionVerified && (customer.phone || customerData?.phone) ? (
+                {parsedLoyalty?.enabled && sessionVerified && (customer.phone || customerData?.phone) ? (
                   <button onClick={() => setShowCustomerProfile(true)} className="flex flex-col items-end justify-center rounded-xl border px-3 py-1.5" style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}>
                     <span className="text-[10px] font-medium text-gray-500 leading-none">Saldo cash</span>
                     <span className="text-[14px] font-extrabold text-gray-900 leading-none mt-0.5">
@@ -3708,7 +3708,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 })()}
 
                 {/* Stats Row */}
-                {customerData && (
+                {customerData && parsedLoyalty?.enabled && (
                   <div className="mx-4 mb-4 flex items-center gap-4 rounded-xl px-4 py-3" style={{ backgroundColor: theme.bgCard }}>
                     <div className="flex items-center gap-2.5 flex-1">
                       <span className="text-2xl">📦</span>
@@ -4812,9 +4812,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (() => {
                       const cashbackBase = (subtotal - loyaltyDiscount) * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
-                      const tiers = parsedTierConfig?.tiers || []
+                      const tiers = parsedTierConfig?.enabled ? (parsedTierConfig?.tiers || []) : []
                       const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
-                      const multiplier = currentTierData?.multiplier || 1
+                      const multiplier = parsedTierConfig?.enabled ? (currentTierData?.multiplier || 1) : 1
                       const tierBonus = cashbackBase * (multiplier - 1)
                       const totalCashback = cashbackBase + tierBonus
                       return (
@@ -5090,9 +5090,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
                     {parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal) && (() => {
                       const cashbackBase = (subtotal - loyaltyDiscount) * (parsedLoyalty.cashbackPercent || parsedLoyalty.pointsPerReal || 0) / 100
-                      const tiers = parsedTierConfig?.tiers || []
+                      const tiers = parsedTierConfig?.enabled ? (parsedTierConfig?.tiers || []) : []
                       const currentTierData = tiers.find((t: any) => t.name?.toLowerCase() === customerTier)
-                      const multiplier = currentTierData?.multiplier || 1
+                      const multiplier = parsedTierConfig?.enabled ? (currentTierData?.multiplier || 1) : 1
                       const tierBonus = cashbackBase * (multiplier - 1)
                       const totalCashback = cashbackBase + tierBonus
                       return (
@@ -5119,7 +5119,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             )}
 
             {cartStep === "confirmation" && orderResult?.success && (() => {
-              const _pct = parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0
+              const _pct = parsedLoyalty?.enabled ? (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal || 0) : 0
               const _net = confirmationSubtotal - confirmationLoyaltyDiscount
               const _base = Math.round(_net * _pct)
               const _tierBonus = Math.round(_base * (tierMultiplier - 1))
