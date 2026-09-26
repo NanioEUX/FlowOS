@@ -1414,7 +1414,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     (orderType === "dineIn" && minimumOrder.applyToPickup && subtotal < minimumOrder.value)
   )
 
-  const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)
+  const showInfoCard = (minimumOrder.enabled && minimumOrder.value > 0) || establishment.deliveryFeeType === "free" || establishment.deliveryFeeType === "fixed" || (establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove)
   const headerHeight = showInfoCard ? 145 : 100
 
 
@@ -2864,9 +2864,11 @@ onPaymentConfirmed={handlePaymentSuccess}
         {/* Info card — inside fixed header */}
         {(() => {
           const hasMinOrder = minimumOrder.enabled && minimumOrder.value > 0
-          const hasFreeDelivery = establishment.deliveryFeeType === "free_above" && establishment.deliveryFreeAbove
-          const hasLoyalty = parsedLoyalty?.enabled && (parsedLoyalty?.cashbackPercent || parsedLoyalty?.pointsPerReal)
-          const showInfoCard = hasMinOrder || hasFreeDelivery
+          const deliveryType = establishment.deliveryFeeType
+          const hasFreeDeliveryAbove = deliveryType === "free_above" && establishment.deliveryFreeAbove
+          const hasFreeDelivery = deliveryType === "free"
+          const hasFixedDelivery = deliveryType === "fixed" && establishment.deliveryFeeAmount
+          const showInfoCard = hasMinOrder || hasFreeDeliveryAbove || hasFreeDelivery || hasFixedDelivery
           const freeAbove = establishment.deliveryFreeAbove || 0
           if (!showInfoCard) return null
           return (
@@ -2877,10 +2879,20 @@ onPaymentConfirmed={handlePaymentSuccess}
                     📦 Mín. <span className="font-bold" style={{ color: theme.primary }}>{formatCurrency(minimumOrder.value)}</span>
                   </span>
                 )}
-                {hasMinOrder && hasFreeDelivery && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
-                {hasFreeDelivery && (
+                {hasMinOrder && (hasFreeDeliveryAbove || hasFreeDelivery || hasFixedDelivery) && <span className="text-[8px]" style={{ color: theme.borderCard }}>•</span>}
+                {hasFreeDeliveryAbove && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
                     🛵 Grátis acima de <span className="font-bold" style={{ color: theme.success }}>{formatCurrency(freeAbove)}</span>
+                  </span>
+                )}
+                {hasFreeDelivery && (
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                    🛵 Entrega <span className="font-bold" style={{ color: theme.success }}>grátis</span>
+                  </span>
+                )}
+                {hasFixedDelivery && (
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: theme.textMuted }}>
+                    🛵 Taxa fixa <span className="font-bold" style={{ color: theme.primary }}>{formatCurrency(establishment.deliveryFeeAmount!)}</span>
                   </span>
                 )}
               </div>
