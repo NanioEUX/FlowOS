@@ -4647,7 +4647,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 const totalUnit = unitBase + optsPrice
                                 return origPrice ? (
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice + optsPrice)}</span>
+                                    <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice)}</span>
                                     <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency(totalUnit)}</span>
                                   </div>
                                 ) : (
