@@ -1657,8 +1657,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      const hasDiscount = (product as any).promoPrice && (product as any).onSale
-      const unitPrice = hasDiscount ? (product as any).promoPrice : product.price
+      const hasPromo = (product as any).promoPrice && (product as any).onSale
+      const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+      const hasDiscount = hasPromo || hasFeaturedDiscount
+      const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : product.price
       return [...prev, { id: product.id, name: product.name, price: unitPrice, originalPrice: hasDiscount ? product.price : undefined, basePrice: unitPrice, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
@@ -3101,8 +3103,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                       const allItems: CartItem[] = lastOrder.items.map((li: any) => {
                         const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === (li.productId || li.id))
                         const currentPrice = product?.price ?? li.price
-                        const hasDiscount = product && (product as any).promoPrice && (product as any).onSale
-                        const unitPrice = hasDiscount ? (product as any).promoPrice : currentPrice
+                        const hasPromo = product && (product as any).promoPrice && (product as any).onSale
+                        const hasFeaturedDiscount = product && (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+                        const hasDiscount = hasPromo || hasFeaturedDiscount
+                        const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : currentPrice
                         return {
                           id: li.productId || li.id || `reorder-${Date.now()}-${Math.random()}`,
                           name: li.name,
@@ -3415,7 +3419,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             addToCart({
                               id: product.id,
                               name: product.name,
-                              price: (product as any).promoPrice && (product as any).onSale ? (product as any).promoPrice : product.price,
+                              price: ((product as any).promoPrice && (product as any).onSale) ? (product as any).promoPrice : ((product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale) ? (product as any).featuredDiscountPrice : product.price,
                               image: product.image,
                             } as any)
                           }}
@@ -4637,7 +4641,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                               </button>
                               {(() => {
                                 const product = sortedCategories.flatMap(c => c.products).find((p: any) => p.id === item.id) as any
-                                const origPrice = (item as any).originalPrice || (product?.onSale && product?.promoPrice ? product.price : undefined)
+                                const origPrice = (item as any).originalPrice || (product?.onSale && product?.promoPrice ? product.price : (product?.featured && product?.featuredDiscountPrice && !product?.onSale ? product.price : undefined))
                                 const unitBase = (item as any).basePrice ?? item.price
                                 const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
                                 const totalUnit = unitBase + optsPrice
@@ -5263,8 +5267,10 @@ onPaymentConfirmed={handlePaymentSuccess}
             const cartItems: CartItem[] = items.map((item: any) => {
               const product = establishment.categories.flatMap(c => c.products).find((p: any) => p.id === (item.productId || item.id))
               const currentPrice = product?.price ?? item.price
-              const hasDiscount = product && (product as any).promoPrice && (product as any).onSale
-              const unitPrice = hasDiscount ? (product as any).promoPrice : currentPrice
+              const hasPromo = product && (product as any).promoPrice && (product as any).onSale
+              const hasFeaturedDiscount = product && (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+              const hasDiscount = hasPromo || hasFeaturedDiscount
+              const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : currentPrice
               return {
                 id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
                 name: item.name,
@@ -5827,6 +5833,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <span className="text-sm line-through text-zinc-400">{formatCurrency(selectedProduct.price)}</span>
                       <p className="font-bold text-xl" style={{ color: "#16a34a" }}>{formatCurrency((selectedProduct as any).promoPrice)}</p>
                     </>
+                  ) : (selectedProduct as any).featured && (selectedProduct as any).featuredDiscountPrice && !(selectedProduct as any).onSale ? (
+                    <>
+                      <span className="text-sm line-through text-zinc-400">{formatCurrency(selectedProduct.price)}</span>
+                      <p className="font-bold text-xl" style={{ color: "#16a34a" }}>{formatCurrency((selectedProduct as any).featuredDiscountPrice)}</p>
+                    </>
                   ) : (
                     <p className="font-bold text-xl" style={{ color: theme.primary }}>{formatCurrency(selectedProduct.price)}</p>
                   )}
@@ -5983,8 +5994,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                             key={rec.id}
                             onClick={() => {
                               setCart((prev) => {
-                                const hasDiscount = rec.onSale && rec.promoPrice
-                                const unitPrice = hasDiscount ? rec.promoPrice : rec.price
+                                const hasPromo = rec.onSale && rec.promoPrice
+                                const hasFeaturedDiscount = rec.featured && rec.featuredDiscountPrice && !rec.onSale
+                                const hasDiscount = hasPromo || hasFeaturedDiscount
+                                const unitPrice = hasPromo ? rec.promoPrice : hasFeaturedDiscount ? rec.featuredDiscountPrice : rec.price
                                 const existing = prev.find((item) => item.id === rec.id)
                                 if (existing) {
                                   return prev.map((item) => item.id === rec.id ? { ...item, quantity: item.quantity + 1 } : item)
@@ -6039,8 +6052,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   return false
                 })
                 const optionsPrice = selectedProductOptions.reduce((sum, o) => sum + (o.price * o.quantity), 0)
-                const basePrice = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale ? (selectedProduct as any).promoPrice : selectedProduct.price
-                const hasDiscount = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale
+                const hasPromo = (selectedProduct as any).promoPrice && (selectedProduct as any).onSale
+                const hasFeaturedDiscount = (selectedProduct as any).featured && (selectedProduct as any).featuredDiscountPrice && !(selectedProduct as any).onSale
+                const hasDiscount = hasPromo || hasFeaturedDiscount
+                const basePrice = hasPromo ? (selectedProduct as any).promoPrice : hasFeaturedDiscount ? (selectedProduct as any).featuredDiscountPrice : selectedProduct.price
                 const unitPrice = basePrice + optionsPrice
                 return (
                   <>
@@ -6125,6 +6140,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                       <>
                         <span className="text-sm text-zinc-400 line-through">{formatCurrency(bottomSheetProduct.price)}</span>
                         <p className="font-bold text-sm text-green-600">{formatCurrency((bottomSheetProduct as any).promoPrice)}</p>
+                      </>
+                    ) : (bottomSheetProduct as any).featured && (bottomSheetProduct as any).featuredDiscountPrice && !(bottomSheetProduct as any).onSale ? (
+                      <>
+                        <span className="text-sm text-zinc-400 line-through">{formatCurrency(bottomSheetProduct.price)}</span>
+                        <p className="font-bold text-sm text-green-600">{formatCurrency((bottomSheetProduct as any).featuredDiscountPrice)}</p>
                       </>
                     ) : (
                       <p className="font-bold text-sm" style={{ color: theme.primary }}>{formatCurrency(bottomSheetProduct.price)}</p>
@@ -6248,8 +6268,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                   }
                   return false
                 })
-                const basePrice = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale ? (bottomSheetProduct as any).promoPrice : bottomSheetProduct.price
-                const hasDiscount = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
+                const hasPromo = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
+                const hasFeaturedDiscount = (bottomSheetProduct as any).featured && (bottomSheetProduct as any).featuredDiscountPrice && !(bottomSheetProduct as any).onSale
+                const hasDiscount = hasPromo || hasFeaturedDiscount
+                const basePrice = hasPromo ? (bottomSheetProduct as any).promoPrice : hasFeaturedDiscount ? (bottomSheetProduct as any).featuredDiscountPrice : bottomSheetProduct.price
                 const bsOptionsPrice = Object.values(bottomSheetSelections).flat().reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
                 const bsTotal = basePrice + bsOptionsPrice
                 return (
