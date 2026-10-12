@@ -70,6 +70,7 @@ const statusLabels: Record<string, string> = {
   pending: "Pedido Recebido",
   payment_pending: "Aguardando Pagamento",
   confirmed: "Confirmado",
+  accepted: "Aceito",
   preparing: "Preparando",
   ready: "Pronto",
   out_for_delivery: "Saiu para Entrega",
@@ -101,6 +102,7 @@ function parseItems(items: string | OrderItem[]): OrderItem[] {
 
 function getEstimatedTime(order: Order): string | null {
   if (order.status === "delivered" || order.status === "cancelled") return null
+  if (order.status === "ready" && order.orderType !== "delivery") return "Pronto!"
   const created = new Date(order.createdAt).getTime()
   const elapsed = (Date.now() - created) / 60000
   const base = order.orderType === "delivery" ? 45 : 25
@@ -205,11 +207,11 @@ export function OrdersScreen({
   }
 
   function getActiveTimelineSteps(order: Order) {
-    if (order.orderType === "pickup") {
+    if (order.orderType === "pickup" || order.orderType === "dineIn") {
       return [
         { key: "confirmed", label: "Aceito" },
         { key: "preparing", label: "Preparando" },
-        { key: "ready", label: "Pronto para Retirada" },
+        { key: "ready", label: order.orderType === "dineIn" ? "Pronto" : "Pronto para Retirada" },
       ]
     }
     return [
@@ -221,11 +223,15 @@ export function OrdersScreen({
   }
 
   function getTimelineIdx(order: Order) {
-    const isPickup = order.orderType === "pickup"
-    const statusOrder = isPickup
-      ? ["confirmed", "preparing", "ready"]
-      : ["confirmed", "preparing", "ready", "out_for_delivery", "delivered"]
-    return statusOrder.indexOf(order.status)
+    const s = order.status
+    if (s === "pending" || s === "payment_pending") return -1
+    if (s === "confirmed" || s === "accepted") return 0
+    if (s === "preparing") return 1
+    if (s === "ready") return 2
+    if (order.orderType === "pickup" || order.orderType === "dineIn") return ["delivered", "out_for_delivery", "dispatched"].includes(s) ? 2 : -1
+    if (s === "out_for_delivery") return 3
+    if (s === "delivered") return 4
+    return -1
   }
 
   const paymentLabels: Record<string, string> = {
@@ -330,39 +336,52 @@ export function OrdersScreen({
                         {/* Previsão */}
                         {elapsed && (
                           <p className="text-sm mb-3 font-semibold" style={{ color: theme.success }}>
-                            {elapsed === "Pronto!" ? "Pronto!" : `Chega em ${elapsed}`}
+                            {elapsed === "Pronto!" || elapsed === "A qualquer momento"
+                              ? elapsed
+                              : order.orderType === "delivery"
+                                ? `Chega em ${elapsed}`
+                                : `Pronto em ${elapsed}`}
                           </p>
                         )}
 
                         {/* Timeline — progresso horizontal */}
                         <div className="my-3">
-                          <div className="flex items-center justify-between mb-1.5">
-                            {getActiveTimelineSteps(order).map((step, i) => {
-                              const stepIdx = ["confirmed", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
-                              const isDone = flowIdx >= stepIdx
-                              const isCurrent = flowIdx === stepIdx
-                              return (
-                                <span key={step.key} className="text-[10px] text-center flex-1 flex flex-col items-center gap-1.5" style={{ color: isDone ? theme.primary : theme.textMutedMore, fontWeight: isCurrent ? 700 : 500 }}>
-                                  <span className={`w-2.5 h-2.5 rounded-full ${isDone ? "" : "border"}`} style={{ backgroundColor: isDone ? theme.primary : "transparent", borderColor: isDone ? theme.primary : theme.textMutedMore }} />
-                                  {step.label}
-                                </span>
-                              )
-                            })}
-                          </div>
-                          <div className="relative h-1.5 w-full rounded-full" style={{ backgroundColor: theme.borderCard }}>
-                            <div
-                              className="absolute h-1.5 rounded-full transition-all duration-700"
-                              style={{
-                                backgroundColor: theme.primary,
-                                width: `${(() => {
-                                  const steps = getActiveTimelineSteps(order)
-                                  if (steps.length <= 1) return flowIdx >= 0 ? 100 : 0
-                                  const pctPerStep = 100 / (steps.length - 1)
-                                  return Math.min(100, flowIdx * pctPerStep)
-                                })()}`
-                              }}
-                            />
-                          </div>
+                          {(() => {
+                            const steps = getActiveTimelineSteps(order)
+                            const n = steps.length
+                            const progress = n <= 1 ? (flowIdx >= 0 ? 1 : 0) : Math.min(1, Math.max(0, flowIdx) / (n - 1))
+                            const lineInsetPct = 50 / n
+                            return (
+                              <div className="relative flex items-center justify-between">
+                                {/* Linha de fundo ligando os pontos */}
+                                <div className="absolute" style={{ left: `${lineInsetPct}%`, right: `${lineInsetPct}%`, top: 8, height: 2, borderRadius: 999, backgroundColor: theme.borderCard }} />
+                                {/* Linha de progresso (avança com o status) */}
+                                <div className="absolute" style={{ left: `${lineInsetPct}%`, top: 8, height: 2, borderRadius: 999, backgroundColor: theme.primary, width: `calc((100% - ${100 / n}%) * ${progress})`, transition: "width 700ms ease" }} />
+                                {steps.map((step) => {
+                                  const stepIdx = ["confirmed", "preparing", "ready", "out_for_delivery"].indexOf(step.key)
+                                  const isDone = flowIdx >= stepIdx
+                                  const isCurrent = flowIdx === stepIdx
+                                  return (
+                                    <span key={step.key} className="text-[10px] text-center flex-1 flex flex-col items-center gap-1.5" style={{ color: isDone ? theme.primary : theme.textMutedMore, fontWeight: isCurrent ? 700 : 500 }}>
+                                      <span className="relative flex h-[18px] w-[18px] items-center justify-center">
+                                        {isCurrent && (
+                                          <>
+                                            <span className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: `${theme.primary}55` }} />
+                                            <span className="absolute inset-0 rounded-full border-2" style={{ borderColor: theme.primary }} />
+                                          </>
+                                        )}
+                                        <span
+                                          className="w-2.5 h-2.5 rounded-full"
+                                          style={{ backgroundColor: isDone ? theme.primary : theme.bgCard, border: isDone ? "none" : `1.5px solid ${theme.textMutedMore}` }}
+                                        />
+                                      </span>
+                                      {step.label}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })()}
                         </div>
 
                         {/* Items */}
@@ -424,6 +443,12 @@ export function OrdersScreen({
 
                         {/* Total */}
                         <div className="mb-3">
+                          {order.deliveryFee > 0 && (
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[12px]" style={{ color: theme.textMutedMore }}>Taxa de entrega</span>
+                              <span className="text-[12px]" style={{ color: theme.textMutedMore }}>{formatCurrency(order.deliveryFee)}</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between">
                             <span className="text-[13px]" style={{ color: theme.textMutedMore }}>Total</span>
                             <span className="text-[15px] font-bold" style={{ color: theme.text }}>{formatCurrency(order.total)}</span>
@@ -565,8 +590,7 @@ export function OrdersScreen({
                   const statusBg = isCancelled ? "rgba(239,68,68,0.08)" : isAbandoned ? "rgba(249,115,22,0.08)" : "rgba(34,197,94,0.08)"
 
                   const subtotal = items.reduce((sum, item) => {
-                    const addOns = (item.additionalOptions || []).reduce((s: number, opt: any) => s + (opt.price || 0), 0)
-                    return sum + (item.price + addOns) * item.quantity
+                    return sum + item.price * item.quantity
                   }, 0)
 
                   return (
@@ -610,8 +634,7 @@ export function OrdersScreen({
 
                         {/* Product: image + name + unit price + qty + total */}
                         {items.map((item, idx) => {
-                          const addOnsTotal = (item.additionalOptions || []).reduce((sum: number, opt: any) => sum + (opt.price || 0), 0)
-                          const unitWithAddOns = item.price + addOnsTotal
+                          const unitPrice = item.price
                           return (
                             <div key={idx} className="flex gap-3 mb-3">
                               {item.image && (
@@ -621,17 +644,17 @@ export function OrdersScreen({
                                 <p className="text-[14px] font-bold" style={{ color: theme.text }}>{item.name}</p>
                                 <div className="flex items-center justify-between mt-0.5 mb-1">
                                   <span className="text-[12px]" style={{ color: theme.textMutedMore }}>
-                                    {formatCurrency(unitWithAddOns)}  {item.quantity}x
+                                    {formatCurrency(unitPrice)}  {item.quantity}x
                                   </span>
                                   <span className="text-[13px] font-bold" style={{ color: theme.text }}>
-                                    {formatCurrency(unitWithAddOns * item.quantity)}
+                                    {formatCurrency(unitPrice * item.quantity)}
                                   </span>
                                 </div>
                                 {item.additionalOptions && item.additionalOptions.length > 0 && (
                                   <div className="space-y-0.5">
                                     {item.additionalOptions.map((opt: any, i: number) => (
                                       <p key={i} className="text-[12px]" style={{ color: theme.textMuted }}>
-                                        • {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}
+                                        • {opt.name}
                                       </p>
                                     ))}
                                   </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 import { createPaymentLink } from "@/lib/integrations/asaas"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 import { computeOrderItemCosts } from "@/lib/cmv"
@@ -66,9 +67,6 @@ function buildSplitRules(
   ]
 }
 
-// Orders GET: 5s cache (frequent updates but reduces DB load)
-export const revalidate = 5
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -88,8 +86,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
     }
 
+    if (establishment.subscriptionStatus === "cancelled" || establishment.subscriptionStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento inativo" }, { status: 403 })
+    }
+
     // Parse items and calculate totals server-side (never trust client-sent total)
     const parsedItems = typeof items === "string" ? JSON.parse(items) : items
+
+    // Validate items structure
+    if (!Array.isArray(parsedItems) || parsedItems.length === 0) {
+      return NextResponse.json({ error: "Pedido deve conter ao menos um item" }, { status: 400 })
+    }
+    for (const item of parsedItems) {
+      if (!item.id || typeof item.price !== "number" || item.price <= 0 || !Number.isInteger(item.quantity) || item.quantity < 1) {
+        return NextResponse.json({ error: "Item inválido" }, { status: 400 })
+      }
+    }
+
     const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
     const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
     const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
@@ -437,7 +450,7 @@ export async function POST(req: NextRequest) {
           tableNumber: tableNumber || null,
           isScheduled: !!isScheduled,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-          ...(orderType === "delivery" && (method || "site") !== "ifood" && {
+          ...((orderType === "delivery" || orderType === "pickup") && (method || "site") !== "ifood" && {
             deliveryCode: customerPhone ? customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)),
           }),
           cashbackEarned: cashbackEarnedValue,
@@ -689,12 +702,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const establishmentId = searchParams.get("establishmentId")
+  const establishmentIdParam = searchParams.get("establishmentId")
   const status = searchParams.get("status")
 
-  if (!establishmentId) {
-    return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
-  }
+  const { user, error } = requireEstablishment(req, establishmentIdParam)
+  if (error) return error
+  const establishmentId = user.establishmentId
 
   // Expire old pending orders on each dashboard poll
   const estConfig = await prisma.establishment.findUnique({
@@ -747,7 +760,57 @@ export async function GET(req: NextRequest) {
 
   const orders = await prisma.order.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      orderNumber: true,
+      externalId: true,
+      externalDisplayId: true,
+      ifoodDeliveryBy: true,
+      changeFor: true,
+      establishmentId: true,
+      customerId: true,
+      customerName: true,
+      customerPhone: true,
+      customerAddress: true,
+      customerLat: true,
+      customerLng: true,
+      orderType: true,
+      paymentMethod: true,
+      items: true,
+      total: true,
+      deliveryFee: true,
+      status: true,
+      paymentId: true,
+      paymentLink: true,
+      pixPayload: true,
+      paymentStatus: true,
+      notes: true,
+      method: true,
+      tableNumber: true,
+      deliveryPerson: true,
+      deliveryPersonId: true,
+      deliveryCode: true,
+      couponId: true,
+      trackingToken: true,
+      assignedAt: true,
+      deliveredAt: true,
+      cancellationReason: true,
+      cancellationDate: true,
+      cancelledBy: true,
+      cancellationCount: true,
+      cashbackEarned: true,
+      loyaltyPointsUsed: true,
+      firstPurchaseBonus: true,
+      isScheduled: true,
+      deliveryDate: true,
+      entregaProvedor: true,
+      entrega99RideId: true,
+      entregaStatusProvedor: true,
+      entregaPrecoCusto: true,
+      entregaLinkRastreamento: true,
+      entregaPinCode: true,
+      createdAt: true,
+      updatedAt: true,
       establishment: { select: { name: true, phone: true, slug: true } },
       customer: { select: { id: true, name: true, phone: true, cancellationCount: true, blockedUntil: true, needsHuman: true, needsHumanAt: true } },
     },

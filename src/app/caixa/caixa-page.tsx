@@ -2870,7 +2870,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                         darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
                       }`}>
-                        {isPickup ? "Retirada" : "Entrega"}
+                        {order.orderType === "dineIn" ? "No local" : isPickup ? "Retirada" : "Entrega"}
                       </span>
                     </div>
                     <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-white/40"}`}>
@@ -2896,7 +2896,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                     )}
                   </div>
 
-                  {filter === "ready" && order.status === "ready" && isPickup && (
+                  {filter === "ready" && order.status === "ready" && (isPickup || order.orderType === "dineIn") && (
                     <div className="flex flex-col gap-2">
                       {(order.paymentMethod === "online" || order.paymentMethod === "asaas") ? (
                         <button

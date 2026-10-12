@@ -258,7 +258,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="hidden mt-8 text-center text-[14px] text-flow-muted">
+              <div className="mt-8 text-center text-[14px] text-flow-muted">
                 Não tem uma conta?{" "}
                 <Link href="/cadastro" className="font-medium text-flow-blue hover:text-flow-cyan transition-colors">
                   Criar gratuitamente
@@ -337,7 +337,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="hidden mt-6 text-center text-[13px] text-flow-muted/50">
+        <p className="mt-6 text-center text-[13px] text-flow-muted/50">
           <Link href="/" className="hover:text-flow-gray transition-colors">
             ← Voltar para o início
           </Link>

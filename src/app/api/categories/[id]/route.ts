@@ -19,7 +19,7 @@ export async function PATCH(
 
     const body = await req.json()
     const filtered: Record<string, any> = {}
-    for (const key of ["name", "order", "targetMarginPercent", "priceRounding", "recommendedProductIds", "syncToIfood", "ifoodCategoryId", "ifoodMarkupPercent"]) {
+    for (const key of ["name", "emoji", "order", "targetMarginPercent", "priceRounding", "recommendedProductIds", "syncToIfood", "ifoodCategoryId", "ifoodMarkupPercent"]) {
       if (key in body) filtered[key] = body[key]
     }
 

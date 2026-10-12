@@ -845,6 +845,8 @@ export default function ConfigPage() {
         serviceTaxType: "percent" as "percent" | "fixed",
         serviceTaxValue: 10,
         serviceTaxPresencial: true,
+        discountAppliesTo: "all" as "all" | "first_only",
+        discountExclusive: false,
     })
     const [businessHours, setBusinessHours] = useState([
         { day: "Segunda", open: "09:00", close: "22:00", active: true },
@@ -1979,6 +1981,80 @@ export default function ConfigPage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Descontos e Promoções */}
+        <Card id="section-descontos" className={activeGroup !== "pedidos" ? "hidden" : ""}>
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-semibold text-zinc-900">Descontos e Promoções</h3>
+            <p className="text-sm text-zinc-500">Controle como os descontos de produtos em promoção se comportam no pedido.</p>
+
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
+                <input
+                  type="checkbox"
+                  checked={orderConfig.discountExclusive}
+                  onChange={(e) => setOrderConfig({ ...orderConfig, discountExclusive: e.target.checked })}
+                  className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500"
+                />
+                <div>
+                  <span className="font-medium text-zinc-900">Limitar a 1 item com desconto por pedido</span>
+                  <p className="text-xs text-zinc-500">Apenas 1 produto do pedido pode ter desconto. Os demais itens em promoção entram com preço normal.</p>
+                </div>
+              </label>
+            </div>
+
+            {!orderConfig.discountExclusive && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700">Desconto em unidades do mesmo produto</label>
+                <p className="text-xs text-zinc-500">Controla quantas unidades do MESMO produto ganham desconto.</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrderConfig({ ...orderConfig, discountAppliesTo: "all" })}
+                    className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition-all ${
+                      orderConfig.discountAppliesTo === "all"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                    }`}
+                  >
+                    Todas as unidades
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderConfig({ ...orderConfig, discountAppliesTo: "first_only" })}
+                    className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition-all ${
+                      orderConfig.discountAppliesTo === "first_only"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                    }`}
+                  >
+                    Apenas 1ª unidade
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-700">Exemplo:</p>
+              {orderConfig.discountExclusive ? (
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>• 3x Pretinho Basico (R$10 c/ desc) = <strong>R$30,00</strong> — ✅ com desconto</p>
+                  <p>• 1x X-Bacon (R$25 c/ desc) = <strong>R$25,00</strong> — ❌ sem desconto (já tem 1 item c/ desc)</p>
+                </div>
+              ) : orderConfig.discountAppliesTo === "all" ? (
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>• 3x Pretinho Basico (R$10 c/ desc) = <strong>R$30,00</strong> — ✅ todos com desconto</p>
+                  <p>• 1x X-Bacon (R$25 c/ desc) = <strong>R$25,00</strong> — ✅ com desconto</p>
+                </div>
+              ) : (
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>• 3x Pretinho Basico = R$10 + R$15 + R$15 = <strong>R$40,00</strong> — ✅ só o 1º c/ desc</p>
+                  <p>• 1x X-Bacon (R$25 c/ desc) = <strong>R$25,00</strong> — ✅ com desconto</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

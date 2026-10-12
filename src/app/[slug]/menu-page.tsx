@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
+import { getCategoryEmoji } from "@/lib/category-emoji"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
@@ -36,6 +37,7 @@ interface Product {
 interface Category {
   id: string
   name: string
+  emoji?: string | null
   products: Product[]
   recommendedProductIds?: string | null
 }
@@ -97,7 +99,7 @@ interface CustomerData {
 interface Props {
   establishment: Establishment & { categories: Category[] }
   paymentConfig: { online: boolean; delivery: boolean; pickup: boolean }
-  orderConfig: { delivery: boolean; pickup: boolean; dineIn: boolean }
+  orderConfig: { delivery: boolean; pickup: boolean; dineIn: boolean; discountAppliesTo?: "all" | "first_only"; discountExclusive?: boolean }
   minimumOrder: { enabled: boolean; value: number; applyToDelivery: boolean; applyToPickup: boolean }
 }
 
@@ -258,9 +260,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [showCart, setShowCart] = useState(false)
   const [bottomSheetProduct, setBottomSheetProduct] = useState<Product | null>(null)
   const [bottomSheetSelections, setBottomSheetSelections] = useState<Record<string, any[]>>({})
+  const [bottomSheetObservation, setBottomSheetObservation] = useState("")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [selectedProductQty, setSelectedProductQty] = useState(1)
   const [selectedProductOptions, setSelectedProductOptions] = useState<{ name: string; price: number; quantity: number }[]>([])
+  const [selectedProductObservation, setSelectedProductObservation] = useState("")
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
 
@@ -284,6 +288,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // vez por verificação, mesmo com múltiplos handlers (storage/BroadcastChannel,
   // focus, polling) detectando a mesma validação ao mesmo tempo.
   const verifyAppliedRef = useRef(false)
+  // Intenção de abrir o carrinho quando o cliente ainda não está logado:
+  // setada no openCart() e consumida após a verificação de sessão.
+  const pendingCartOpenRef = useRef(false)
   const [showFirstPurchaseBonus, setShowFirstPurchaseBonus] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<"online" | "delivery" | "pickup" | "pix" | "card">("pix")
   const [cashSubMethod, setCashSubMethod] = useState<"cash" | "card" | "pix" | null>(null)
@@ -295,6 +302,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [showTracking, setShowTracking] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const userClosedPaymentModalRef = useRef(false)
+  const [discountConfirm, setDiscountConfirm] = useState<{ type: "increment" | "new_item"; product: any; action: () => void } | null>(null)
+  const skipDiscountExclusiveRef = useRef(false)
 
   // Stories data
   const [storiesData, setStoriesData] = useState<{ stories: any[]; combos: any[] }>({ stories: [], combos: [] })
@@ -995,27 +1004,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       return aProdMatch === bProdMatch ? 0 : aProdMatch ? -1 : 1
     })
 
-  const getCategoryEmoji = (name: string): string => {
-    const lower = name.toLowerCase()
-    if (lower.includes("pizza")) return "🍕"
-    if (lower.includes("hambúrguer") || lower.includes("burger") || lower.includes("lanches")) return "🍔"
-    if (lower.includes("bebida") || lower.includes("drink")) return "🥤"
-    if (lower.includes("sobremesa") || lower.includes("doce")) return "🍰"
-    if (lower.includes("acompanhamento") || lower.includes("batata")) return "🍟"
-    if (lower.includes("combo")) return "🎁"
-    if (lower.includes("promoção") || lower.includes("oferta")) return "💰"
-    if (lower.includes("porção")) return "🍽️"
-    if (lower.includes("massa")) return "🍝"
-    if (lower.includes("salada")) return "🥗"
-    if (lower.includes("sorvete") || lower.includes("gelado")) return "🍦"
-    if (lower.includes("café")) return "☕"
-    if (lower.includes("suco")) return "🧃"
-    if (lower.includes("cerveja") || lower.includes("álcool")) return "🍺"
-    if (lower.includes("molho")) return "🫙"
-    if (lower.includes("ingrediente") || lower.includes("insumo")) return "📦"
-    return "🍽️"
-  }
-
   const filteredProducts = (cat: Category) => {
     if (!searchQuery) return cat.products
     const q = searchQuery.toLowerCase()
@@ -1331,7 +1319,76 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   // Quando há pedido pendente (Pix), usa os items do pedido salvo em
   // pendingOrderItems. Caso contrário, usa o cart normal.
   const displayItems = pendingOrderNumber ? pendingOrderItems : cart
-  const subtotal = displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  function optionsKey(opts: any[] | undefined): string {
+    if (!opts || opts.length === 0) return ""
+    return opts.slice().sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((o: any) => `${o.name}:${o.price}:${o.quantity || 1}`).join("|")
+  }
+
+  function findCartItemIndex(productId: string, options: any[] | undefined, cartArr: any[]): number {
+    const key = optionsKey(options)
+    for (let i = cartArr.length - 1; i >= 0; i--) {
+      if (cartArr[i].id === productId && optionsKey(cartArr[i].additionalOptions) === key) return i
+    }
+    return -1
+  }
+
+  function mergeObservation(existing?: string, incoming?: string): string | undefined {
+    if (!incoming) return existing || undefined
+    if (!existing) return incoming
+    if (existing === incoming) return existing
+    return `${existing} | ${incoming}`
+  }
+
+  // Reordena um pedido antigo aplicando as regras vigentes NO MOMENTO do clique
+  // (desconto exclusivo, promoções ativas, produtos ainda no cardápio).
+  // Retorna false se nenhum item do pedido estiver mais disponível.
+  function reorderToCart(items: any[]): boolean {
+    let discountUsed = false
+    const cartItems: CartItem[] = []
+    for (const item of items) {
+      const product = sortedCategories.flatMap((c: any) => c.products).find((p: any) => p.id === (item.productId || item.id)) as any
+      if (!product) continue
+      const hasPromo = product.promoPrice && product.onSale
+      const hasFeaturedDiscount = product.featured && product.featuredDiscountPrice && !product.onSale
+      let hasDiscount = !!(hasPromo || hasFeaturedDiscount)
+      if (hasDiscount && orderConfig.discountExclusive && discountUsed) hasDiscount = false
+      if (hasDiscount) discountUsed = true
+      const base = hasDiscount ? (hasPromo ? product.promoPrice : product.featuredDiscountPrice) : product.price
+      const additionalOptions = item.additionalOptions || []
+      const optsPrice = additionalOptions.reduce((s: number, o: any) => s + (o.price || 0) * (o.quantity ?? 0), 0)
+      cartItems.push({
+        id: product.id,
+        name: product.name,
+        price: base + optsPrice,
+        originalPrice: hasDiscount ? product.price : undefined,
+        basePrice: base,
+        image: item.image || product.image || null,
+        quantity: item.quantity || 1,
+        additionalOptions,
+        observation: item.observation || undefined,
+      })
+    }
+    if (cartItems.length === 0) return false
+    setCart(cartItems)
+    setShowCart(true)
+    setCartStep("cart")
+    return true
+  }
+
+  function calcItemTotal(item: any): number {
+    const product = sortedCategories.flatMap((c: any) => c.products).find((p: any) => p.id === item.id) as any
+    const origPrice = item.originalPrice
+    const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
+    if (orderConfig.discountAppliesTo === "first_only" && origPrice && item.quantity > 1) {
+      const discountedUnit = item.basePrice + optsPrice
+      const fullUnit = origPrice + optsPrice
+      return discountedUnit + fullUnit * (item.quantity - 1)
+    }
+    return item.price * item.quantity
+  }
+
+  const subtotal = displayItems.reduce((sum, item) => sum + calcItemTotal(item), 0)
   const totalItems = displayItems.reduce((sum, item) => sum + item.quantity, 0)
 
   const loyaltyDiscount = useMemo(() => {
@@ -1374,7 +1431,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     return sameOrder?.status || "pending"
   })()
   const canCancelPending = canCancelByCustomer(pendingOrderLiveStatus) || pendingOrderLiveStatus === null
-  const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
+  const activeOrdersCount = customerOrders.filter((o: any) => ["pending", "payment_pending", "confirmed", "accepted", "preparing", "ready", "out_for_delivery"].includes(o.status)).length
 
   // Load customer orders on mount when phone is available
   useEffect(() => {
@@ -1492,6 +1549,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   function openCart() {
     if (!customer.phone || !customer.name || !sessionVerified) {
+      pendingCartOpenRef.current = true
       if (!customer.phone || !customer.name) {
         openIdentifyModal()
       } else {
@@ -1572,6 +1630,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setCartStep("cart")
   }
 
+  // Retoma a abertura do carrinho quando o login/verificação termina com
+  // sucesso (cliente tocou em "Ir para carrinho" ou no ícone da barra
+  // inferior sem estar logado).
+  useEffect(() => {
+    if (!pendingCartOpenRef.current) return
+    if (showIdentifyModal || showVerifyModal) return
+    if (!sessionVerified || !customer.phone || !customer.name) return
+    pendingCartOpenRef.current = false
+    openCart()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionVerified, showIdentifyModal, showVerifyModal, customer.phone, customer.name])
+
   async function checkAndOpenPayment(orderId: string, trackingToken: string) {
     try {
       const res = await fetch(`/api/orders/${orderId}/payment-status?token=${trackingToken}`)
@@ -1644,23 +1714,57 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     // If product has required options, open bottom sheet (must select before adding)
     const productOpts = (product as any).additionalOptions || []
     const hasRequired = productOpts.some((o: any) => o.selectionType === "required")
+
+    const hasPromo = (product as any).promoPrice && (product as any).onSale
+    const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
+    const productHasDiscount = hasPromo || hasFeaturedDiscount
+
+    if (productHasDiscount && orderConfig.discountExclusive) {
+      const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+      if (alreadyHasDiscounted) {
+        const doAdd = () => {
+          if (hasRequired) {
+            skipDiscountExclusiveRef.current = true
+            setBottomSheetProduct(product)
+            setBottomSheetSelections({}); setBottomSheetObservation("")
+            return
+          }
+          setCart((prev) => {
+            const idx = findCartItemIndex(product.id, [], prev)
+            if (idx >= 0) {
+              return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item)
+            }
+            return [...prev, { id: product.id, name: product.name, price: product.price, originalPrice: undefined, basePrice: product.price, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
+          })
+          setAddedItemId(product.id)
+          setTimeout(() => setAddedItemId(null), 800)
+          setCartToast({ name: product.name, image: product.image || undefined })
+          setTimeout(() => setCartToast(null), 3000)
+        }
+        setDiscountConfirm({ type: "new_item", product, action: doAdd })
+        return
+      }
+    }
+
     if (hasRequired) {
       setBottomSheetProduct(product)
-      setBottomSheetSelections({})
+      setBottomSheetSelections({}); setBottomSheetObservation("")
       return
     }
 
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id)
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        )
+      const idx = findCartItemIndex(product.id, [], prev)
+      if (idx >= 0) {
+        return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item)
       }
       const hasPromo = (product as any).promoPrice && (product as any).onSale
       const hasFeaturedDiscount = (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
-      const hasDiscount = hasPromo || hasFeaturedDiscount
-      const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : product.price
+      let hasDiscount = hasPromo || hasFeaturedDiscount
+      if (hasDiscount && orderConfig.discountExclusive) {
+        const alreadyHasDiscounted = prev.some((item) => (item as any).originalPrice)
+        if (alreadyHasDiscounted) hasDiscount = false
+      }
+      const unitPrice = hasDiscount ? (hasPromo ? (product as any).promoPrice : (product as any).featuredDiscountPrice) : product.price
       return [...prev, { id: product.id, name: product.name, price: unitPrice, originalPrice: hasDiscount ? product.price : undefined, basePrice: unitPrice, image: product.image, quantity: 1, additionalOptions: [] } as CartItem]
     })
     setAddedItemId(product.id)
@@ -2121,7 +2225,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
               confirmed: "Pedido confirmado!",
               accepted: "Pedido aceito pela loja!",
               preparing: "Seu pedido está sendo preparado!",
-              ready: "Pedido pronto para retirada!",
+              ready: orderData.orderType === "dineIn" ? "Pedido pronto!" : "Pedido pronto para retirada!",
               out_for_delivery: "Saiu para entrega!",
               delivered: "Pedido entregue!",
             }
@@ -2619,6 +2723,7 @@ const handlePaymentSuccess = useCallback(() => {
   const statusIcons: Record<string, string> = {
     pending: "📥",
     confirmed: "✅",
+    accepted: "👍",
     preparing: "👨‍🍳",
     ready: "📦",
     out_for_delivery: "🛵",
@@ -2967,7 +3072,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 if (!product) return
                                 setSelectedProduct(product)
                                 setSelectedProductQty(1)
-                                setSelectedProductOptions([])
+                                setSelectedProductOptions([]); setSelectedProductObservation("")
                               }}
                               className="px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg pointer-events-auto active:scale-95 transition-transform animate-float"
                               style={{ backgroundColor: theme.primary }}
@@ -3033,7 +3138,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (!product) return
                   setSelectedProduct(product)
                   setSelectedProductQty(1)
-                  setSelectedProductOptions([])
+                  setSelectedProductOptions([]); setSelectedProductObservation("")
                 }}
                 className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-promo animate-slide-in"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard, animationDelay: `${idx * 80}ms` }}
@@ -3076,7 +3181,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (!product) return
                   setSelectedProduct(product)
                   setSelectedProductQty(1)
-                  setSelectedProductOptions([])
+                  setSelectedProductOptions([]); setSelectedProductObservation("")
                 }}
                 className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}
@@ -3100,27 +3205,9 @@ onPaymentConfirmed={handlePaymentSuccess}
                     onClick={(e) => {
                       e.stopPropagation()
                       if (!lastOrder?.items) return
-                      const allItems: CartItem[] = lastOrder.items.map((li: any) => {
-                        const product = sortedCategories.flatMap((c) => c.products).find((p) => p.id === (li.productId || li.id))
-                        const currentPrice = product?.price ?? li.price
-                        const hasPromo = product && (product as any).promoPrice && (product as any).onSale
-                        const hasFeaturedDiscount = product && (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
-                        const hasDiscount = hasPromo || hasFeaturedDiscount
-                        const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : currentPrice
-                        return {
-                          id: li.productId || li.id || `reorder-${Date.now()}-${Math.random()}`,
-                          name: li.name,
-                          price: unitPrice,
-                          originalPrice: hasDiscount ? currentPrice : (li.originalPrice || undefined),
-                          basePrice: unitPrice,
-                          image: li.image || product?.image || null,
-                          quantity: li.quantity,
-                          additionalOptions: li.additionalOptions || [],
-                        } as CartItem
-                      })
-                      setCart(allItems)
-                      setShowCart(true)
-                      setCartStep("cart")
+                      if (!reorderToCart(lastOrder.items)) {
+                        toast("Os itens do pedido não estão mais disponíveis no cardápio", "warning")
+                      }
                     }}
                     className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-white transition-all active:scale-95"
                     style={{ backgroundColor: theme.primary, boxShadow: `0 2px 8px ${theme.shadowPrimary}` }}
@@ -3140,7 +3227,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   if (!product) return
                   setSelectedProduct(product)
                   setSelectedProductQty(1)
-                  setSelectedProductOptions([])
+                  setSelectedProductOptions([]); setSelectedProductObservation("")
                 }}
                 className="flex-shrink-0 active:scale-95 transition-transform snap-start rounded-xl overflow-hidden text-left animate-glow-featured animate-slide-in"
                 style={{ width: "220px", backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard, animationDelay: `${idx * 80}ms` }}
@@ -3196,7 +3283,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           ) : (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
               {sortedCategories.map((cat) => {
-                const emoji = getCategoryEmoji(cat.name)
+                const emoji = cat.emoji || getCategoryEmoji(cat.name)
                 const isHighlighted = visibleCategoryId === cat.id
                 return (
                   <button key={cat.id} onClick={() => {
@@ -3224,10 +3311,10 @@ onPaymentConfirmed={handlePaymentSuccess}
               if (filtered.length === 0) return null
               return (
                 <div key={cat.id} className="mb-6">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.name}</p>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: theme.textMutedMore }}>{cat.emoji || getCategoryEmoji(cat.name)} {cat.name}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {filtered.map((product) => (
-                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
+                      <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]); setSelectedProductObservation("") }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
                     ))}
                   </div>
                 </div>
@@ -3243,10 +3330,16 @@ onPaymentConfirmed={handlePaymentSuccess}
                 key={cat.id}
                 id={`cat-${cat.id}`}
                 className="mb-8"
+                style={{ scrollMarginTop: `calc(${headerHeight}px + 56px + env(safe-area-inset-top, 0px))` }}
               >
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-xl leading-none">{cat.emoji || getCategoryEmoji(cat.name)}</span>
+                  <h2 className="text-base font-bold" style={{ color: theme.text }}>{cat.name}</h2>
+                  <span className="h-px flex-1" style={{ backgroundColor: theme.borderCard }} />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]) }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} theme={theme} disabled={!isOpen} isAdded={addedItemId === product.id} onSelect={(p) => { setSelectedProduct(p); setSelectedProductQty(1); setSelectedProductOptions([]); setSelectedProductObservation("") }} likes={productLikes[product.id]?.likes} liked={productLikes[product.id]?.liked} onToggleLike={toggleLike} />
                   ))}
                 </div>
               </div>
@@ -3283,7 +3376,17 @@ onPaymentConfirmed={handlePaymentSuccess}
       )}
 
       {/* Bottom Navigation Bar - always visible */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t transition-colors duration-300 rounded-b-2xl" style={{ backgroundColor: theme.bgPage, borderColor: theme.borderCard, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 border-t transition-colors duration-300 rounded-b-2xl"
+        style={{
+          position: "fixed",
+          transform: "translateZ(0)",
+          willChange: "transform",
+          backgroundColor: theme.bgPage,
+          borderColor: theme.borderCard,
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
           <div className="mx-auto max-w-3xl flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setSearchMode(true)}
@@ -3413,7 +3516,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             if (hasRequired) {
                               setSelectedProduct(product)
                               setSelectedProductQty(1)
-                              setSelectedProductOptions([])
+                              setSelectedProductOptions([]); setSelectedProductObservation("")
                               return
                             }
                             addToCart({
@@ -3454,7 +3557,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   Confirmar WhatsApp
                 </h2>
               </div>
-              <button onClick={() => { setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => { pendingCartOpenRef.current = false; setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4434,16 +4537,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Pickup address */}
                 {(orderType === "pickup" || orderType === "dineIn") && establishment.address && (
                   <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
-                        <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
-                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
-                          Abrir no Maps
-                        </a>
-                      </div>
-                    </div>
+                    <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
+                    <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs hover:underline" style={{ color: theme.accent }}>
+                      <MapPin className="h-3.5 w-3.5" /> Abrir no Maps
+                    </a>
                   </div>
                 )}
 
@@ -4593,98 +4691,131 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="space-y-2">
                     {(pendingOrderNumber ? pendingOrderItems : cart).map((item) => {
                       const isFromPendingOrder = !!pendingOrderNumber
-                      const productOptions = getProductOptions(item.id)
-                      const hasOptions = productOptions.length > 0
                       const selectedOpts = (item.additionalOptions || [])
                       return (
                         <div key={item.id} className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                          <div className="flex items-center gap-3">
-                            {item.image && (
-                              <button
-                                onClick={() => {
-                                  if (!hasOptions || isFromPendingOrder) return
-                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
-                                  if (!product) return
-                                  setSelectedProduct(product)
-                                  setSelectedProductQty(item.quantity)
-                                  setSelectedProductOptions(item.additionalOptions || [])
-                                  setEditingCartItemId(item.id)
-                                  setShowCart(false)
-                                }}
-                                className={`flex-shrink-0 rounded-xl overflow-hidden relative ${hasOptions && !isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
-                                disabled={!hasOptions || isFromPendingOrder}
-                              >
-                                <img src={item.image} alt="" loading="lazy" className="w-14 h-14 object-cover" />
-                                {hasOptions && !isFromPendingOrder && (
-                                  <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                                    <Pencil className="h-2.5 w-2.5 text-white" />
-                                  </span>
-                                )}
-                              </button>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <button
-                                onClick={() => {
-                                  if (!hasOptions || isFromPendingOrder) return
-                                  const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
-                                  if (!product) return
-                                  setSelectedProduct(product)
-                                  setSelectedProductQty(item.quantity)
-                                  setSelectedProductOptions(item.additionalOptions || [])
-                                  setEditingCartItemId(item.id)
-                                  setShowCart(false)
-                                }}
-                                className={`text-left w-full ${hasOptions && !isFromPendingOrder ? "active:opacity-70 transition-opacity" : ""}`}
-                                disabled={!hasOptions || isFromPendingOrder}
-                              >
-                                <p className="font-medium truncate text-sm" style={{ color: theme.text }}>{item.name}</p>
-                              </button>
-                              {(() => {
-                                const product = sortedCategories.flatMap(c => c.products).find((p: any) => p.id === item.id) as any
-                                const origPrice = (item as any).originalPrice || (product?.onSale && product?.promoPrice ? product.price : (product?.featured && product?.featuredDiscountPrice && !product?.onSale ? product.price : undefined))
-                                const unitBase = (item as any).basePrice ?? item.price
-                                const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
-                                const totalUnit = unitBase + optsPrice
-                                return origPrice ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice)}</span>
-                                    <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{formatCurrency(totalUnit)}</span>
+                          {(() => {
+                            const product = sortedCategories.flatMap(c => c.products).find((p: any) => p.id === item.id) as any
+                             const origPrice = (item as any).originalPrice
+                            const unitBase = (item as any).basePrice ?? item.price
+                            const optsPrice = (item.additionalOptions || []).reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
+                            const unitPrice = unitBase + optsPrice
+                            const isDiscountFirstOnly = orderConfig.discountAppliesTo === "first_only" && origPrice
+                            let totalPrice: number
+                            if (isDiscountFirstOnly && item.quantity > 1) {
+                              const fullUnit = (origPrice + optsPrice)
+                              totalPrice = unitPrice + fullUnit * (item.quantity - 1)
+                            } else {
+                              totalPrice = unitPrice * item.quantity
+                            }
+                            return (
+                              <>
+                                <div className="flex items-start gap-3">
+                                  {item.image && (
+                                    <button
+                                      onClick={() => {
+                                        if (isFromPendingOrder) return
+                                        const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                                        if (!product) return
+                                        setSelectedProduct(product)
+                                        setSelectedProductQty(item.quantity)
+                                        setSelectedProductOptions(item.additionalOptions || [])
+                                        setSelectedProductObservation((item as any).observation || "")
+                                        setEditingCartItemId(item.id)
+                                        setShowCart(false)
+                                      }}
+                                      className={`flex-shrink-0 rounded-xl overflow-hidden relative ${!isFromPendingOrder ? "active:scale-95 transition-transform" : ""}`}
+                                      disabled={isFromPendingOrder}
+                                    >
+                                      <img src={item.image} alt="" loading="lazy" className="w-14 h-14 object-cover" />
+                                      {!isFromPendingOrder && (
+                                        <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                                          <Pencil className="h-2.5 w-2.5 text-white" />
+                                        </span>
+                                      )}
+                                    </button>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <button
+                                        onClick={() => {
+                                          if (isFromPendingOrder) return
+                                          const product = sortedCategories.flatMap(c => c.products).find(p => p.id === item.id)
+                                          if (!product) return
+                                          setSelectedProduct(product)
+                                          setSelectedProductQty(item.quantity)
+                                          setSelectedProductOptions(item.additionalOptions || [])
+                                          setSelectedProductObservation((item as any).observation || "")
+                                          setEditingCartItemId(item.id)
+                                          setShowCart(false)
+                                        }}
+                                        className={`text-left flex-1 min-w-0 font-bold text-sm ${!isFromPendingOrder ? "active:opacity-70 transition-opacity" : ""}`}
+                                        disabled={isFromPendingOrder}
+                                        style={{ color: theme.text }}
+                                      >
+                                        {item.name}
+                                      </button>
+                                      {!isFromPendingOrder && (
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                          {item.quantity === 1 ? (
+                                            <button onClick={() => setCart(prev => prev.filter(ci => ci.id !== item.id))}
+                                              className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: "#ef444440" }} aria-label="Excluir item">
+                                              <Trash2 className="h-3.5 w-3.5" style={{ color: "#ef4444" }} />
+                                            </button>
+                                          ) : (
+                                            <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: ci.quantity - 1 } : ci))}
+                                              className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor }}>
+                                              <Minus className="h-3 w-3" style={{ color: theme.text }} />
+                                            </button>
+                                          )}
+                                          <span className="w-5 text-center text-xs font-medium" style={{ color: theme.text }}>{item.quantity}</span>
+                                          <button onClick={() => {
+                                            const hasOrigPrice = !!(item as any).originalPrice
+                                            if (hasOrigPrice && orderConfig.discountAppliesTo === "first_only") {
+                                              setDiscountConfirm({
+                                                type: "increment",
+                                                product: item,
+                                                action: () => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci))
+                                              })
+                                              return
+                                            }
+                                            setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci))
+                                          }}
+                                            className="w-7 h-7 rounded-full border flex items-center justify-center text-white" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}>
+                                            <Plus className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                      <div className="flex items-center gap-1.5">
+                                        {origPrice && (
+                                          <span className="text-[11px] line-through" style={{ color: theme.textMutedMore }}>{formatCurrency(origPrice)}</span>
+                                        )}
+                                        <span className="text-[11px] font-semibold" style={{ color: origPrice ? "#22c55e" : theme.textMuted }}>{formatCurrency(unitBase)}</span>
+                                        {item.quantity > 1 && (
+                                          <span className="text-[11px]" style={{ color: theme.textMuted }}>× {item.quantity}</span>
+                                        )}
+                                      </div>
+                                      <span className="text-sm font-bold flex-shrink-0" style={{ color: theme.text }}>{formatCurrency(totalPrice)}</span>
+                                    </div>
                                   </div>
-                                ) : (
-                                  <p className="text-xs" style={{ color: theme.textMuted }}>{formatCurrency(totalUnit)}</p>
-                                )
-                              })()}
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {!isFromPendingOrder && (
-                                <>
-                                  <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: Math.max(1, ci.quantity - 1) } : ci))}
-                                    className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: theme.borderInputColor }}>
-                                    <Minus className="h-3 w-3" style={{ color: theme.text }} />
-                                  </button>
-                                  <span className="w-5 text-center text-xs font-medium" style={{ color: theme.text }}>{item.quantity}</span>
-                                  <button onClick={() => setCart(prev => prev.map(ci => ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci))}
-                                    className="w-7 h-7 rounded-full border flex items-center justify-center text-white" style={{ borderColor: theme.primary, backgroundColor: theme.primary }}>
-                                    <Plus className="h-3 w-3" />
-                                  </button>
-                                </>
-                              )}
-                              {!isFromPendingOrder && (
-                                <button onClick={() => setCart(prev => prev.filter(ci => ci.id !== item.id))} className="p-1 ml-1" style={{ color: theme.textMutedMore }}>
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          {selectedOpts.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {selectedOpts.map((opt: any, i: number) => (
-                                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${theme.primary}15`, color: theme.primary }}>
-                                  {opt.name}{opt.price > 0 && <span className="ml-0.5 opacity-70">+{formatCurrency(opt.price)}</span>}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                                </div>
+                                {selectedOpts.length > 0 && (
+                                  <div className="flex flex-col gap-0.5 mt-2 ml-[62px]">
+                                    {selectedOpts.map((opt: any, i: number) => (
+                                      <span key={i} className="text-[11px]" style={{ color: theme.textMuted }}>
+                                        • {opt.name}{opt.price > 0 && <span className="ml-0.5">+{formatCurrency(opt.price)}</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                {(item as any).observation && (
+                                  <p className="text-[11px] mt-1 ml-[62px] italic" style={{ color: theme.textMutedMore }}>Obs: {(item as any).observation}</p>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                       )
                     })}
@@ -4924,16 +5055,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                 {/* Pickup address — compact display */}
                                         {(orderType === "pickup" || orderType === "dineIn") && establishment.address && (
                                           <div className="rounded-xl border p-3" style={{ backgroundColor: theme.accentLight, borderColor: theme.accentLight }}>
-                                            <div className="flex items-start gap-2">
-                                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: theme.accent }} />
-                                              <div className="flex-1">
-                                                <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
-                                                <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
-                                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.accent }}>
-                                                  Abrir no Maps
-                                                </a>
-                                              </div>
-                                            </div>
+                                            <p className="text-sm font-medium" style={{ color: theme.accent }}>{orderType === "dineIn" ? "Nosso endereço" : "Retirada em:"}</p>
+                                            <p className="text-semibold" style={{ color: theme.text }}>{establishment.address}</p>
+                                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs hover:underline" style={{ color: theme.accent }}>
+                                              <MapPin className="h-3.5 w-3.5" /> Abrir no Maps
+                                            </a>
                                           </div>
                 )}
 
@@ -5059,7 +5185,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div key={item.id} className="mb-2">
                       <div className="flex justify-between text-sm" style={{ color: theme.textSubtle }}>
                         <span>{item.name} x{item.quantity}</span>
-                        <span>{formatCurrency(item.price * item.quantity)}</span>
+                        <span>{formatCurrency(calcItemTotal(item))}</span>
                       </div>
                       {item.additionalOptions && item.additionalOptions.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -5264,28 +5390,11 @@ onPaymentConfirmed={handlePaymentSuccess}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
           onReorder={(order) => {
             const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
-            const cartItems: CartItem[] = items.map((item: any) => {
-              const product = establishment.categories.flatMap(c => c.products).find((p: any) => p.id === (item.productId || item.id))
-              const currentPrice = product?.price ?? item.price
-              const hasPromo = product && (product as any).promoPrice && (product as any).onSale
-              const hasFeaturedDiscount = product && (product as any).featured && (product as any).featuredDiscountPrice && !(product as any).onSale
-              const hasDiscount = hasPromo || hasFeaturedDiscount
-              const unitPrice = hasPromo ? (product as any).promoPrice : hasFeaturedDiscount ? (product as any).featuredDiscountPrice : currentPrice
-              return {
-                id: item.productId || item.id || `reorder-${Date.now()}-${Math.random()}`,
-                name: item.name,
-                price: unitPrice,
-                originalPrice: hasDiscount ? currentPrice : (item.originalPrice || undefined),
-                basePrice: unitPrice,
-                image: item.image || product?.image || null,
-                quantity: item.quantity,
-                additionalOptions: item.additionalOptions || [],
-              }
-            })
-            setCart(cartItems)
+            if (!reorderToCart(items)) {
+              toast("Os itens do pedido não estão mais disponíveis no cardápio", "warning")
+              return
+            }
             setShowOrdersList(false)
-            setShowCart(true)
-            setCartStep("cart")
           }}
           hasPhone={!!(customer.phone || customerData?.phone)}
           establishmentSlug={establishment.slug}
@@ -5329,7 +5438,15 @@ onPaymentConfirmed={handlePaymentSuccess}
                 const flowSteps = isPickup
                   ? ["accepted", "preparing", "ready"]
                   : allSteps
-                const flowIdx = flowSteps.indexOf(trackingOrder.status)
+                const stepLabels = trackingOrder.orderType === "dineIn"
+                  ? { ...statusLabels, ready: "Pronto", out_for_delivery: "Pronto" }
+                  : isPickup ? statusLabels : statusLabelsDelivery
+                let flowIdx = flowSteps.indexOf(trackingOrder.status)
+                // Retirada não passa por "out_for_delivery": delivered (e statuses
+                // legados de rota) concluem a timeline na etapa "ready".
+                if (isPickup && flowIdx === -1 && ["out_for_delivery", "delivered"].includes(trackingOrder.status)) {
+                  flowIdx = flowSteps.length - 1
+                }
                 const cancelled = trackingOrder.status === "cancelled"
                 const createdAt = trackingOrder.createdAt ? new Date(trackingOrder.createdAt) : null
                 const elapsedMin = createdAt ? (Date.now() - createdAt.getTime()) / 60000 : 0
@@ -5346,7 +5463,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {/* Status header */}
                     <div className="text-center">
                       <p className="text-3xl mb-1">{statusIcons[trackingOrder.status] || "📋"}</p>
-                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{(isPickup ? statusLabels : statusLabelsDelivery)[trackingOrder.status] || trackingOrder.status}</h3>
+                      <h3 className="text-lg font-bold" style={{ color: theme.text }}>{stepLabels[trackingOrder.status] || trackingOrder.status}</h3>
                       <p className="text-xs" style={{ color: theme.textMutedMore }}>Pedido Nº {trackingOrder.orderNumber || trackingOrder.id?.slice(0, 8)}</p>
                     </div>
 
@@ -5393,10 +5510,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </div>
 
                     {/* Delivery Code */}
-                    {trackingOrder.deliveryCode && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
+                    {trackingOrder.deliveryCode && trackingOrder.orderType !== "dineIn" && trackingOrder.status !== "delivered" && trackingOrder.status !== "cancelled" && (
                       <div className="rounded-lg px-3 py-2 text-center" style={{ backgroundColor: `${theme.primary}10` }}>
                         <p className="text-xs font-medium" style={{ color: theme.primary }}>
-                          Código entrega: <span className="font-bold tracking-wider">{trackingOrder.deliveryCode}</span>
+                          {isPickup ? "Código retirada:" : "Código entrega:"} <span className="font-bold tracking-wider">{trackingOrder.deliveryCode}</span>
                         </p>
                       </div>
                     )}
@@ -5404,13 +5521,10 @@ onPaymentConfirmed={handlePaymentSuccess}
                     {/* Pickup address with Maps link */}
                     {isPickup && establishment.address && (
                       <div className="rounded-xl p-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
-                          <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Local de retirada</span>
-                        </div>
+                        <p className="mb-1 text-xs font-medium" style={{ color: theme.textSubtle }}>{trackingOrder.orderType === "dineIn" ? "Consumo no local" : "Local de retirada"}</p>
                         <p className="text-sm" style={{ color: theme.text }}>{establishment.address}</p>
-                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.primary }}>
-                          Abrir no Maps
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.address || "")}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs hover:underline" style={{ color: theme.primary }}>
+                          <MapPin className="h-3.5 w-3.5" /> Abrir no Maps
                         </a>
                       </div>
                     )}
@@ -5464,7 +5578,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                             {/* Label */}
                             <div className="pt-0.5 pb-4 min-w-0 flex-1">
                               <span className="text-sm font-medium" style={{ color: isCompleted ? theme.text : theme.textMutedMore }}>
-                                {(isPickup ? statusLabels : statusLabelsDelivery)[step]}
+                                {stepLabels[step]}
                               </span>
                               {isCurrent && estimatedTime && (
                                 <span className="ml-2 text-[11px] font-medium" style={{ color: theme.primary }}>{estimatedTime}</span>
@@ -5993,23 +6107,56 @@ onPaymentConfirmed={handlePaymentSuccess}
                           <button
                             key={rec.id}
                             onClick={() => {
-                              setCart((prev) => {
-                                const hasPromo = rec.onSale && rec.promoPrice
-                                const hasFeaturedDiscount = rec.featured && rec.featuredDiscountPrice && !rec.onSale
-                                const hasDiscount = hasPromo || hasFeaturedDiscount
-                                const unitPrice = hasPromo ? rec.promoPrice : hasFeaturedDiscount ? rec.featuredDiscountPrice : rec.price
-                                const existing = prev.find((item) => item.id === rec.id)
-                                if (existing) {
-                                  return prev.map((item) => item.id === rec.id ? { ...item, quantity: item.quantity + 1 } : item)
+                              const hasPromo = rec.onSale && rec.promoPrice
+                              const hasFeaturedDiscount = rec.featured && rec.featuredDiscountPrice && !rec.onSale
+                              const recHasDiscount = hasPromo || hasFeaturedDiscount
+                              if (recHasDiscount && orderConfig.discountExclusive) {
+                                const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+                                if (alreadyHasDiscounted) {
+                                  setDiscountConfirm({
+                                    type: "new_item",
+                                    product: rec,
+                                    action: () => {
+                                      setCart((prev) => {
+                                        const idx = findCartItemIndex(rec.id, [], prev)
+                                        if (idx >= 0) return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item)
+                                        return [...prev, { id: rec.id, name: rec.name, price: rec.price, originalPrice: undefined, basePrice: rec.price, image: rec.image, quantity: 1, additionalOptions: [] } as CartItem]
+                                      })
+                                      toast(`${rec.name} adicionado!`, "success")
+                                    }
+                                  })
+                                  return
                                 }
-                                return [...prev, {
-                                  id: rec.id, name: rec.name, price: unitPrice,
-                                  originalPrice: hasDiscount ? rec.price : undefined,
-                                  basePrice: unitPrice, image: rec.image, quantity: 1,
-                                  additionalOptions: []
-                                } as CartItem]
-                              })
-                              toast(`${rec.name} adicionado!`, "success")
+                              }
+                              const doAddRec = () => {
+                                setCart((prev) => {
+                                  let hasDiscount = hasPromo || hasFeaturedDiscount
+                                  if (hasDiscount && orderConfig.discountExclusive) {
+                                    const alreadyHasDiscounted = prev.some((item: any) => item.originalPrice)
+                                    if (alreadyHasDiscounted) hasDiscount = false
+                                  }
+                                  const unitPrice = hasDiscount ? (hasPromo ? rec.promoPrice : hasFeaturedDiscount ? rec.featuredDiscountPrice : rec.price) : rec.price
+                                  const idx = findCartItemIndex(rec.id, [], prev)
+                                  if (idx >= 0) {
+                                    return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item)
+                                  }
+                                  return [...prev, {
+                                    id: rec.id, name: rec.name, price: unitPrice,
+                                    originalPrice: hasDiscount ? rec.price : undefined,
+                                    basePrice: hasDiscount ? unitPrice : rec.price, image: rec.image, quantity: 1,
+                                    additionalOptions: []
+                                  } as CartItem]
+                                })
+                                toast(`${rec.name} adicionado!`, "success")
+                              }
+                              if ((hasPromo || hasFeaturedDiscount) && orderConfig.discountExclusive) {
+                                const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+                                if (alreadyHasDiscounted) {
+                                  setDiscountConfirm({ type: "new_item", product: rec, action: doAddRec })
+                                  return
+                                }
+                              }
+                              doAddRec()
                             }}
                             className="flex-shrink-0 p-2 rounded-lg flex items-center gap-2"
                             style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.primary}15` }}
@@ -6030,6 +6177,26 @@ onPaymentConfirmed={handlePaymentSuccess}
                   </div>
                 )
               })()}
+            </div>
+
+            {/* Item observation */}
+            <div className="px-5 pb-2 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" style={{ color: theme.text }} />
+                  <span className="text-sm font-bold" style={{ color: theme.text }}>Observações?</span>
+                </div>
+                <span className="text-xs font-medium" style={{ color: theme.textMutedMore }}>{selectedProductObservation.length}/140</span>
+              </div>
+              <textarea
+                placeholder="Ex: tirar a cebola, maionese à parte etc."
+                value={selectedProductObservation}
+                onChange={(e) => setSelectedProductObservation(e.target.value)}
+                maxLength={140}
+                rows={2}
+                className="w-full text-sm px-3 py-2.5 rounded-xl border bg-transparent resize-none placeholder:opacity-40 focus:outline-none"
+                style={{ borderColor: theme.borderInputColor, color: theme.text }}
+              />
             </div>
 
             {/* Fixed bottom button */}
@@ -6062,24 +6229,44 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <button
                     onClick={() => {
                       if (selectedProductMissingRequired) return
-                      setCart((prev) => {
-                        if (editingCartItemId) {
-                          return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice, basePrice: basePrice } : item)
+                      const doAdd = () => {
+                        const wasEditing = editingCartItemId
+                        setCart((prev) => {
+                          if (editingCartItemId) {
+                            return prev.map((item) => item.id === editingCartItemId ? { ...item, quantity: selectedProductQty, additionalOptions: selectedProductOptions, price: unitPrice, basePrice: basePrice, observation: selectedProductObservation || undefined } : item)
+                          }
+                          const idx = findCartItemIndex(selectedProduct.id, selectedProductOptions, prev)
+                          if (idx >= 0) {
+                            return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + selectedProductQty, observation: mergeObservation(item.observation, selectedProductObservation || undefined) } : item)
+                          }
+                          let itemDiscount = hasDiscount
+                          if (itemDiscount && orderConfig.discountExclusive) {
+                            const alreadyHasDiscounted = prev.some((item: any) => item.originalPrice)
+                            if (alreadyHasDiscounted) itemDiscount = false
+                          }
+                          const itemPrice = itemDiscount ? unitPrice : selectedProduct.price + optionsPrice
+                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: itemPrice, originalPrice: itemDiscount ? selectedProduct.price : undefined, basePrice: itemDiscount ? basePrice : selectedProduct.price, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions, observation: selectedProductObservation || undefined } as CartItem]
+                        })
+                        setEditingCartItemId(null)
+                        setSelectedProduct(null)
+                        if (wasEditing) {
+                          setShowCart(true)
+                          setCartStep("cart")
+                          return
                         }
-                        const existing = prev.find((item) => item.id === selectedProduct.id)
-                        if (existing) {
-                          return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
+                        setAddedItemId(selectedProduct.id)
+                        setTimeout(() => setAddedItemId(null), 800)
+                        setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
+                        setTimeout(() => setCartToast(null), 3000)
+                      }
+                      if (hasDiscount && orderConfig.discountExclusive && !editingCartItemId) {
+                        const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+                        if (alreadyHasDiscounted) {
+                          setDiscountConfirm({ type: "new_item", product: selectedProduct, action: doAdd })
+                          return
                         }
-                        return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, originalPrice: hasDiscount ? selectedProduct.price : undefined, basePrice: basePrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
-                      })
-                      setEditingCartItemId(null)
-                      setSelectedProduct(null)
-                      setShowCart(true)
-                      setCartStep("cart")
-                      setAddedItemId(selectedProduct.id)
-                      setTimeout(() => setAddedItemId(null), 800)
-                      setCartToast({ name: selectedProduct.name, image: selectedProduct.image || undefined })
-                      setTimeout(() => setCartToast(null), 3000)
+                      }
+                      doAdd()
                     }}
                     disabled={selectedProductMissingRequired}
                     className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -6091,15 +6278,31 @@ onPaymentConfirmed={handlePaymentSuccess}
                   {!editingCartItemId && !selectedProductMissingRequired && (
                     <button
                       onClick={() => {
-                        setCart((prev) => {
-                          const existing = prev.find((item) => item.id === selectedProduct.id)
-                          if (existing) {
-                            return prev.map((item) => item.id === selectedProduct.id ? { ...item, quantity: item.quantity + selectedProductQty, additionalOptions: [...(item.additionalOptions || []), ...selectedProductOptions] } : item)
+                        const doAdd = () => {
+                          setCart((prev) => {
+                            const idx = findCartItemIndex(selectedProduct.id, selectedProductOptions, prev)
+                            if (idx >= 0) {
+                              return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + selectedProductQty, observation: mergeObservation(item.observation, selectedProductObservation || undefined) } : item)
+                            }
+                            let itemDiscount = hasDiscount
+                            if (itemDiscount && orderConfig.discountExclusive) {
+                              const alreadyHasDiscounted = prev.some((item: any) => item.originalPrice)
+                              if (alreadyHasDiscounted) itemDiscount = false
+                            }
+                            const itemPrice = itemDiscount ? unitPrice : selectedProduct.price + optionsPrice
+                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: itemPrice, originalPrice: itemDiscount ? selectedProduct.price : undefined, basePrice: itemDiscount ? basePrice : selectedProduct.price, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions, observation: selectedProductObservation || undefined } as CartItem]
+                          })
+                          setSelectedProduct(null)
+                          openCart()
+                        }
+                        if (hasDiscount && orderConfig.discountExclusive) {
+                          const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+                          if (alreadyHasDiscounted) {
+                            setDiscountConfirm({ type: "new_item", product: selectedProduct, action: doAdd })
+                            return
                           }
-                          return [...prev, { id: selectedProduct.id, name: selectedProduct.name, price: unitPrice, originalPrice: hasDiscount ? selectedProduct.price : undefined, basePrice: basePrice, image: selectedProduct.image, quantity: selectedProductQty, additionalOptions: selectedProductOptions } as CartItem]
-                        })
-                        setSelectedProduct(null)
-                        setShowCart(true)
+                        }
+                        doAdd()
                       }}
                       className="w-full font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 border-2 mt-2"
                       style={{ borderColor: theme.primary, color: theme.primary }}
@@ -6270,25 +6473,61 @@ onPaymentConfirmed={handlePaymentSuccess}
                 })
                 const hasPromo = (bottomSheetProduct as any).promoPrice && (bottomSheetProduct as any).onSale
                 const hasFeaturedDiscount = (bottomSheetProduct as any).featured && (bottomSheetProduct as any).featuredDiscountPrice && !(bottomSheetProduct as any).onSale
-                const hasDiscount = hasPromo || hasFeaturedDiscount
+                let hasDiscount = hasPromo || hasFeaturedDiscount
                 const basePrice = hasPromo ? (bottomSheetProduct as any).promoPrice : hasFeaturedDiscount ? (bottomSheetProduct as any).featuredDiscountPrice : bottomSheetProduct.price
                 const bsOptionsPrice = Object.values(bottomSheetSelections).flat().reduce((sum: number, o: any) => sum + (o.price * (o.quantity ?? 0)), 0)
                 const bsTotal = basePrice + bsOptionsPrice
                 return (
+                  <>
+                    <div className="mx-5 mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" style={{ color: theme.text }} />
+                          <span className="text-sm font-bold" style={{ color: theme.text }}>Observações?</span>
+                        </div>
+                        <span className="text-xs font-medium" style={{ color: theme.textMutedMore }}>{bottomSheetObservation.length}/140</span>
+                      </div>
+                      <textarea
+                        placeholder="Ex: tirar a cebola, maionese à parte etc."
+                        value={bottomSheetObservation}
+                        onChange={(e) => setBottomSheetObservation(e.target.value)}
+                        maxLength={140}
+                        rows={2}
+                        className="w-full text-sm px-3 py-2.5 rounded-xl border bg-transparent resize-none placeholder:opacity-40 focus:outline-none"
+                        style={{ borderColor: theme.borderInputColor, color: theme.text }}
+                      />
+                    </div>
                   <button
                     onClick={() => {
                       if (missingRequired) return
                       const allSelections = Object.values(bottomSheetSelections).flat()
-                      setCart((prev) => {
-                        const existing = prev.find((item) => item.id === bottomSheetProduct.id)
-                        if (existing) return prev.map((item) => item.id === bottomSheetProduct.id ? { ...item, quantity: item.quantity + 1 } : item)
-                        return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: bsTotal, originalPrice: hasDiscount ? bottomSheetProduct.price : undefined, basePrice: basePrice, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections } as CartItem]
-                      })
-                      setBottomSheetProduct(null)
-                      setAddedItemId(bottomSheetProduct.id)
-                      setTimeout(() => setAddedItemId(null), 800)
-                      setCartToast({ name: bottomSheetProduct.name, image: bottomSheetProduct.image || undefined })
-                      setTimeout(() => setCartToast(null), 3000)
+                      const doAdd = () => {
+                        setCart((prev) => {
+                          const idx = findCartItemIndex(bottomSheetProduct.id, allSelections, prev)
+                          if (idx >= 0) return prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1, observation: mergeObservation(item.observation, bottomSheetObservation || undefined) } : item)
+                          let itemDiscount = hasDiscount
+                          if (itemDiscount && orderConfig.discountExclusive && !skipDiscountExclusiveRef.current) {
+                            const alreadyHasDiscounted = prev.some((item: any) => item.originalPrice)
+                            if (alreadyHasDiscounted) itemDiscount = false
+                          }
+                          skipDiscountExclusiveRef.current = false
+                          const itemPrice = itemDiscount ? basePrice : bottomSheetProduct.price
+                          return [...prev, { id: bottomSheetProduct.id, name: bottomSheetProduct.name, price: itemPrice, originalPrice: itemDiscount ? bottomSheetProduct.price : undefined, basePrice: itemDiscount ? basePrice : bottomSheetProduct.price, image: bottomSheetProduct.image, quantity: 1, additionalOptions: allSelections, observation: bottomSheetObservation || undefined } as CartItem]
+                        })
+                        setBottomSheetProduct(null)
+                        setAddedItemId(bottomSheetProduct.id)
+                        setTimeout(() => setAddedItemId(null), 800)
+                        setCartToast({ name: bottomSheetProduct.name, image: bottomSheetProduct.image || undefined })
+                        setTimeout(() => setCartToast(null), 3000)
+                      }
+                      if (hasDiscount && orderConfig.discountExclusive && !skipDiscountExclusiveRef.current) {
+                        const alreadyHasDiscounted = cart.some((item) => (item as any).originalPrice)
+                        if (alreadyHasDiscounted) {
+                          setDiscountConfirm({ type: "new_item", product: bottomSheetProduct, action: doAdd })
+                          return
+                        }
+                      }
+                      doAdd()
                     }}
                     disabled={missingRequired}
                     className="w-full text-white font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -6297,8 +6536,51 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <Plus className="w-5 h-5" />
                     {missingRequired ? "Selecione os itens obrigatórios" : `Adicionar ao pedido — ${formatCurrency(bsTotal)}`}
                   </button>
+                  </>
                 )
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Confirmation Modal */}
+      {discountConfirm && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="rounded-2xl p-6 shadow-2xl w-[min(380px,95vw)]" style={{ backgroundColor: theme.bgCard }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}15` }}>
+                <Tag className="h-5 w-5" style={{ color: theme.primary }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm" style={{ color: theme.text }}>
+                  {discountConfirm.type === "increment" ? "Mais uma unidade" : "Item com desconto"}
+                </h3>
+              </div>
+            </div>
+            <p className="text-sm mb-5" style={{ color: theme.textMuted }}>
+              {discountConfirm.type === "increment"
+                ? "A próxima unidade será adicionada sem desconto, com o valor normal do produto."
+                : "Já existe um item com desconto no seu carrinho. Este item será adicionado com o valor normal."}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDiscountConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors"
+                style={{ borderColor: theme.borderInputColor, color: theme.text }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  discountConfirm.action()
+                  setDiscountConfirm(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ backgroundColor: theme.primary }}
+              >
+                Adicionar assim
+              </button>
             </div>
           </div>
         </div>

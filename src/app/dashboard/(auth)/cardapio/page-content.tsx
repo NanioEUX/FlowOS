@@ -16,6 +16,7 @@ import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { SearchableSelect } from "@/components/searchable-select"
 import { convertQuantity } from "@/lib/units"
+import { getCategoryEmoji } from "@/lib/category-emoji"
 
 interface Product {
   id: string
@@ -35,6 +36,7 @@ interface Product {
 interface Category {
   id: string
   name: string
+  emoji?: string | null
   order: number
   products: Product[]
   targetMarginPercent?: number | null
@@ -47,6 +49,50 @@ const BADGE_OPTIONS = [
   { value: "mais_vendido", label: "Mais Vendido", icon: Star, color: "text-amber-500 bg-amber-500/10" },
   { value: "novo", label: "Novo", icon: Sparkles, color: "text-blue-500 bg-green-600/10" },
 ]
+
+const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
+  { label: "Comida", emojis: ["🍔", "🍕", "🌭", "🍟", "🥪", "🌮", "🌯", "🥙", "🍝", "🍜", "🍣", "🍱", "🍚", "🥗", "🍲", "🍳", "🍤", "🥩", "🍗", "🍖", "🐟", "🥨", "🫓"] },
+  { label: "Bebidas", emojis: ["☕", "🧋", "🥤", "🧃", "🍺", "🍻", "🍷", "🍹", "🍵", "🥛"] },
+  { label: "Sobremesas", emojis: ["🍦", "🍰", "🥧", "🍩", "🍪", "🎂", "🧁", "🍫", "🍬", "🍭", "🍨"] },
+  { label: "Frutas", emojis: ["🍎", "🍌", "🍓", "🍇", "🥝", "🍑", "🍉", "🥭", "🍍", "🥑"] },
+  { label: "Símbolos", emojis: ["⭐", "🔥", "💕", "✅", "🎯", "🎉", "👑", "❤️", "✨", "🥇"] },
+]
+
+function EmojiPickerPanel({ selected, auto, onPick }: { selected: string; auto: boolean; onPick: (emoji: string) => void }) {
+  return (
+    <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-semibold text-zinc-500">Escolher emoji</span>
+        <button
+          type="button"
+          onClick={() => onPick("")}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${auto ? "bg-green-600 text-white" : "text-green-700 hover:bg-green-50"}`}
+        >
+          🤖 Automático
+        </button>
+      </div>
+      <div className="max-h-52 space-y-2 overflow-y-auto">
+        {EMOJI_SECTIONS.map((section) => (
+          <div key={section.label}>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{section.label}</p>
+            <div className="flex flex-wrap gap-1">
+              {section.emojis.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onPick(emoji)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-zinc-100 ${selected === emoji ? "bg-green-100 ring-1 ring-green-600" : ""}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function getBadgeDisplay(badge: string | null) {
   const found = BADGE_OPTIONS.find((b) => b.value === badge)
@@ -85,6 +131,9 @@ export default function CardapioPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState("")
+  const [newCategoryEmoji, setNewCategoryEmoji] = useState("")
+  const [editingCategoryEmoji, setEditingCategoryEmoji] = useState("")
+  const [emojiPicker, setEmojiPicker] = useState<null | "create" | "edit">(null)
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
@@ -408,12 +457,15 @@ export default function CardapioPage() {
       body: JSON.stringify({
         type: "category",
         name: newCategoryName,
+        emoji: newCategoryEmoji || null,
         establishmentId,
         order: maxOrder + 1,
         syncToIfood: true,
       }),
     })
     setNewCategoryName("")
+    setNewCategoryEmoji("")
+    setEmojiPicker(null)
     setShowCategoryForm(false)
     loadData()
     refreshPreview()
@@ -424,10 +476,12 @@ export default function CardapioPage() {
     await fetchAuth(`/api/categories/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editingCategoryName }),
+      body: JSON.stringify({ name: editingCategoryName, emoji: editingCategoryEmoji || null }),
     })
     setEditingCategoryId(null)
     setEditingCategoryName("")
+    setEditingCategoryEmoji("")
+    setEmojiPicker(null)
     toast("Categoria renomeada", "success")
     loadData()
   }
@@ -1761,7 +1815,7 @@ export default function CardapioPage() {
             <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-zinc-500">Gerencie as categorias e produtos do seu cardápio</p>
             <div className="flex gap-2">
-              <Button onClick={() => setShowCategoryForm(true)}>
+              <Button onClick={() => { setNewCategoryEmoji(""); setEmojiPicker(null); setShowCategoryForm(true) }}>
                 <Plus className="mr-1 h-4 w-4" />
                 Nova Categoria
               </Button>
@@ -1791,18 +1845,26 @@ export default function CardapioPage() {
                   <div className="mb-4 flex items-center justify-between">
                     {editingCategoryId === cat.id ? (
                       <div className="flex items-center gap-2 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => setEmojiPicker(emojiPicker === "edit" ? null : "edit")}
+                          title="Escolher emoji"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-lg hover:bg-zinc-100 transition-colors"
+                        >
+                          {editingCategoryEmoji || getCategoryEmoji(editingCategoryName)}
+                        </button>
                         <input
                           value={editingCategoryName}
                           onChange={(e) => setEditingCategoryName(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") renameCategory(cat.id)
-                            if (e.key === "Escape") setEditingCategoryId(null)
+                            if (e.key === "Escape") { setEditingCategoryId(null); setEmojiPicker(null) }
                           }}
                           className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-lg font-semibold text-zinc-900 focus:border-green-600 focus:outline-none"
                           autoFocus
                         />
                         <Button size="sm" onClick={() => renameCategory(cat.id)}>Salvar</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditingCategoryId(null)}>Cancelar</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingCategoryId(null); setEmojiPicker(null) }}>Cancelar</Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
@@ -1822,8 +1884,8 @@ export default function CardapioPage() {
                             <ArrowDown className="h-4 w-4" />
                           </button>
                         </div>
-                        <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name) }}>
-                          {cat.name}
+                        <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); setEditingCategoryEmoji(cat.emoji || ""); setEmojiPicker(null) }}>
+                          {cat.emoji || getCategoryEmoji(cat.name)} {cat.name}
                         </h3>
                       </div>
                     )}
@@ -1888,6 +1950,14 @@ export default function CardapioPage() {
                       </button>
                     </div>
                   </div>
+
+                  {editingCategoryId === cat.id && emojiPicker === "edit" && (
+                    <EmojiPickerPanel
+                      selected={editingCategoryEmoji || getCategoryEmoji(editingCategoryName)}
+                      auto={!editingCategoryEmoji}
+                      onPick={(emoji) => { setEditingCategoryEmoji(emoji); setEmojiPicker(null) }}
+                    />
+                  )}
 
                   {marginCatId === cat.id && (
                     <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 mb-2 space-y-3">
@@ -2886,19 +2956,36 @@ export default function CardapioPage() {
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Nova Categoria</h3>
-                <button onClick={() => setShowCategoryForm(false)}>
+                <button onClick={() => { setShowCategoryForm(false); setEmojiPicker(null) }}>
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <input
-                placeholder="Ex: Bebidas, Sobremesas..."
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                autoFocus
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEmojiPicker(emojiPicker === "create" ? null : "create")}
+                  title="Escolher emoji"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-xl hover:bg-zinc-100 transition-colors"
+                >
+                  {newCategoryEmoji || getCategoryEmoji(newCategoryName)}
+                </button>
+                <input
+                  placeholder="Ex: Bebidas, Sobremesas..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  autoFocus
+                  className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              {emojiPicker === "create" && (
+                <EmojiPickerPanel
+                  selected={newCategoryEmoji || getCategoryEmoji(newCategoryName)}
+                  auto={!newCategoryEmoji}
+                  onPick={(emoji) => { setNewCategoryEmoji(emoji); setEmojiPicker(null) }}
+                />
+              )}
               <div className="mt-4 flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setShowCategoryForm(false)}>
+                <Button variant="outline" className="flex-1" onClick={() => { setShowCategoryForm(false); setEmojiPicker(null) }}>
                   Cancelar
                 </Button>
                 <Button className="flex-1" onClick={addCategory}>

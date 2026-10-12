@@ -70,6 +70,7 @@ function normalizePaymentMethod(method: string | null | undefined): string {
 const orderTypeLabels: Record<string, string> = {
   delivery: "Entrega",
   pickup: "Retirada",
+  dineIn: "No local",
 }
 
 export default function PedidosPage() {
@@ -322,6 +323,7 @@ export default function PedidosPage() {
               <option value="all">Todos</option>
               <option value="delivery">Entrega</option>
               <option value="pickup">Retirada</option>
+              <option value="dineIn">No local</option>
               <option value="presencial">Mesas</option>
               <option value="balcao">Balcão</option>
             </select>
@@ -582,6 +584,9 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     nextStatus = "delivered"
   } else if (isPresencial && order.status === "preparing") {
     nextStatus = "ready"
+  } else if ((order.orderType === "pickup" || order.orderType === "dineIn") && order.status === "ready") {
+    // Retirada/No local: pula "out_for_delivery" — cliente retira/consome no balcão.
+    nextStatus = "delivered"
   } else if (order.status === "dispatched") {
     // Legacy "dispatched" orders still need a way forward; jump straight to delivered.
     nextStatus = "delivered"
@@ -606,7 +611,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   const [handshakeLoading, setHandshakeLoading] = useState(false)
   const [handshakeError, setHandshakeError] = useState("")
   const [handshakeSuccess, setHandshakeSuccess] = useState(false)
-  const showHandshake = (["out_for_delivery", "dispatched"].includes(order.status) || (order.orderType === "pickup" && order.status === "ready")) && (
+  const showHandshake = order.orderType !== "dineIn" && (["out_for_delivery", "dispatched"].includes(order.status) || (order.orderType === "pickup" && order.status === "ready")) && (
     (isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT") || order.deliveryCode
   )
 
@@ -660,9 +665,18 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }
 
   useEffect(() => {
-    fetchMessages()
-    const i = setInterval(fetchMessages, 30000)
-    return () => clearInterval(i)
+    // Delay aleatório (0-5s) para não disparar todas as buscas do dashboard no
+    // mesmo instante — evita estourar o limite de conexões do pooler do banco
+    // logo após um deploy (todas as lambdas frias ao mesmo tempo).
+    let interval: ReturnType<typeof setInterval> | undefined
+    const start = setTimeout(() => {
+      fetchMessages()
+      interval = setInterval(fetchMessages, 30000)
+    }, Math.floor(Math.random() * 5000))
+    return () => {
+      clearTimeout(start)
+      if (interval) clearInterval(interval)
+    }
   }, [order.id])
 
   useEffect(() => {
@@ -713,7 +727,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     confirmed: "Aceitar e iniciar produção",
     accepted: "Iniciar preparo",
     preparing: "Finalizar preparo",
-    ready: isPresencial ? "Entregar no balcão" : "Sair p/ entrega",
+    ready: isPresencial ? "Entregar no balcão" : order.orderType === "pickup" || order.orderType === "dineIn" ? "Entregar" : "Sair p/ entrega",
     out_for_delivery: "Entregar",
   }
 
@@ -757,7 +771,11 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     <div class="divider"></div>
     <table>
       <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td><td class="right"><strong>Valor</strong></td></tr>
-      ${items.map((item: any) => `<tr><td>${item.name}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`).join("")}
+      ${items.map((item: any) => {
+        const addOns = (item.additionalOptions || []).map((o: any) => `  • ${o.name}${o.price > 0 ? ` +${fmt(o.price)}` : ""}`).join("<br>")
+        const obs = item.observation ? `<br><em>Obs: ${item.observation}</em>` : ""
+        return `<tr><td>${item.name}${addOns ? `<br>${addOns}` : ""}${obs}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`
+      }).join("")}
     </table>
     ${order.deliveryFee > 0 ? `<p class="right">Taxa entrega: ${fmt(order.deliveryFee)}</p>` : ""}
     <div class="divider"></div>
@@ -807,8 +825,8 @@ win.close()
                   #{order.orderNumber}
                 </span>
               ) : null}
-              {order.deliveryCode && order.orderType !== "delivery" && ["ready", "out_for_delivery"].includes(order.status) && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-300" title="Código de entrega">
+              {order.deliveryCode && order.orderType === "pickup" && ["ready", "out_for_delivery"].includes(order.status) && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-300" title="Código de retirada">
                   🔑 {order.deliveryCode}
                 </span>
               )}
@@ -986,9 +1004,22 @@ win.close()
             )}
 
             {items.length > 0 && (
-              <div className="mt-2 rounded-lg bg-zinc-50 border border-zinc-100 p-2.5 space-y-0.5 text-sm text-zinc-600">
+              <div className="mt-2 rounded-lg bg-zinc-50 border border-zinc-100 p-2.5 space-y-1.5 text-sm text-zinc-600">
                 {items.map((item: any, i: number) => (
-                  <p key={i} className="font-medium">{item.quantity}x {item.name} — <span className="text-zinc-400">{formatCurrency(item.price * item.quantity)}</span></p>
+                  <div key={i}>
+                    <p className="font-medium">{item.quantity}x {item.name} — <span className="text-zinc-400">{formatCurrency(item.price * item.quantity)}</span></p>
+                    {item.additionalOptions && item.additionalOptions.length > 0 && (
+                      <div className="ml-3 mt-0.5">
+                        <p className="text-[11px] text-zinc-500 font-medium">Adicionais:</p>
+                        {item.additionalOptions.map((opt: any, oi: number) => (
+                          <p key={oi} className="text-[11px] text-zinc-400">• {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}</p>
+                        ))}
+                      </div>
+                    )}
+                    {item.observation && (
+                      <p className="ml-3 mt-0.5 text-[11px] text-amber-600 italic">Obs: {item.observation}</p>
+                    )}
+                  </div>
                 ))}
                 {!isPresencial && order.deliveryFee > 0 && (
                   <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-100">Taxa de entrega: {formatCurrency(order.deliveryFee)}</p>
@@ -1029,10 +1060,10 @@ win.close()
           </div>
 
           {/* Delivery Code - displayed for the admin (pickup orders only, when ready) */}
-          {order.deliveryCode && order.orderType !== "delivery" && ["ready", "out_for_delivery"].includes(order.status) && (
+          {order.deliveryCode && order.orderType === "pickup" && ["ready", "out_for_delivery"].includes(order.status) && (
             <div className="mt-3 rounded-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-3 text-center">
               <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider mb-1">
-                Código de Entrega
+                Código de Retirada
               </p>
               <p className="text-2xl font-black tracking-[0.4em] text-amber-700">
                 {order.deliveryCode}

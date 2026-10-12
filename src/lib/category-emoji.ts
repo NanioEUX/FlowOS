@@ -1,0 +1,20 @@
+export function getCategoryEmoji(name: string): string {
+  const lower = name.toLowerCase()
+  if (lower.includes("pizza")) return "🍕"
+  if (lower.includes("hambúrguer") || lower.includes("burger") || lower.includes("lanches")) return "🍔"
+  if (lower.includes("bebida") || lower.includes("drink")) return "🥤"
+  if (lower.includes("sobremesa") || lower.includes("doce")) return "🍰"
+  if (lower.includes("acompanhamento") || lower.includes("batata")) return "🍟"
+  if (lower.includes("combo")) return "🎁"
+  if (lower.includes("promoção") || lower.includes("oferta")) return "💰"
+  if (lower.includes("porção")) return "🍽️"
+  if (lower.includes("massa")) return "🍝"
+  if (lower.includes("salada")) return "🥗"
+  if (lower.includes("sorvete") || lower.includes("gelado")) return "🍦"
+  if (lower.includes("café")) return "☕"
+  if (lower.includes("suco")) return "🧃"
+  if (lower.includes("cerveja") || lower.includes("álcool")) return "🍺"
+  if (lower.includes("molho")) return "🫙"
+  if (lower.includes("ingrediente") || lower.includes("insumo")) return "📦"
+  return "🍽️"
+}

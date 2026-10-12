@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -50,12 +51,37 @@ export async function GET(req: NextRequest) {
 
   // List all customers: requires auth
   const user = await verifyAuth(req)
-  if (!user || user.establishmentId !== establishmentId) {
+  if (!user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+  if (user.establishmentId !== establishmentId) {
+    return NextResponse.json({ error: "Estabelecimento não autorizado" }, { status: 403 })
   }
 
   const customers = await prisma.customer.findMany({
     where: { establishmentId },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      cpf: true,
+      email: true,
+      address: true,
+      cep: true,
+      birthDate: true,
+      whatsappVerified: true,
+      verifiedAt: true,
+      loyaltyPoints: true,
+      tier: true,
+      totalOrders: true,
+      totalSpent: true,
+      cancellationCount: true,
+      blockedUntil: true,
+      needsHuman: true,
+      needsHumanAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     orderBy: { createdAt: "desc" },
   })
 
@@ -70,6 +96,9 @@ export async function POST(req: NextRequest) {
     if (!phone || !establishmentId) {
       return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
     }
+
+    const { user, error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     // Check by CPF first (unique identifier)
     const cpfDigits = cpf?.replace(/\D/g, "")

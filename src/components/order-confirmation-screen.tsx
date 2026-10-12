@@ -119,9 +119,15 @@ export function OrderConfirmationScreen({
               </p>
             )}
             {deliveryCode && (
-              <p className="text-sm mt-1.5 font-semibold tracking-wider" style={{ color: theme.text }}>
-                Código {deliveryCode}
-              </p>
+              <div className="mx-auto mt-3 max-w-xs rounded-xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600">
+                  {orderType === "pickup" ? "Código de retirada" : "Código de entrega"}
+                </p>
+                <p className="text-2xl font-black tracking-[0.4em] text-amber-700">{deliveryCode}</p>
+                <p className="mt-1 text-xs text-amber-600">
+                  {orderType === "pickup" ? "Informe este código ao retirar o pedido" : "Informe este código ao entregador"}
+                </p>
+              </div>
             )}
           </div>
 
@@ -140,10 +146,7 @@ export function OrderConfirmationScreen({
                   {item.additionalOptions && item.additionalOptions.length > 0 && (
                     <div className="ml-4 mt-0.5 space-y-0.5">
                       {item.additionalOptions.map((opt, optIdx) => (
-                        <div key={optIdx} className="flex justify-between text-xs">
-                          <span style={{ color: theme.textMutedMore }}>  {opt.quantity}x {opt.name}</span>
-                          <span style={{ color: theme.textMutedMore }}>{fmt(opt.price * opt.quantity)}</span>
-                        </div>
+                        <p key={optIdx} className="text-xs" style={{ color: theme.textMutedMore }}>• {opt.name}</p>
                       ))}
                     </div>
                   )}
@@ -209,15 +212,12 @@ export function OrderConfirmationScreen({
           )}
 
           {/* Pickup Address */}
-          {orderType === "pickup" && establishmentAddress && (
+          {(orderType === "pickup" || orderType === "dineIn") && establishmentAddress && (
             <div className="rounded-xl p-3 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
-                <span className="text-xs font-medium" style={{ color: theme.textSubtle }}>Retirar no local</span>
-              </div>
+              <p className="mb-1 text-xs font-medium" style={{ color: theme.textSubtle }}>{orderType === "dineIn" ? "Consumo no local" : "Retirar no local"}</p>
               <p className="text-sm" style={{ color: theme.text }}>{establishmentAddress}</p>
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishmentAddress || "")}`} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline mt-1 inline-block" style={{ color: theme.primary }}>
-                Abrir no Maps
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishmentAddress || "")}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs hover:underline" style={{ color: theme.primary }}>
+                <MapPin className="h-3.5 w-3.5" /> Abrir no Maps
               </a>
             </div>
           )}

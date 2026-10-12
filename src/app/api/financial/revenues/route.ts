@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-
-export const revalidate = 10
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
-  const establishmentId = req.nextUrl.searchParams.get("establishmentId")
+  const establishmentIdParam = req.nextUrl.searchParams.get("establishmentId")
   const from = req.nextUrl.searchParams.get("from")
   const to = req.nextUrl.searchParams.get("to")
 
-  if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
+  const { user, error } = requireEstablishment(req, establishmentIdParam)
+  if (error) return error
+  const establishmentId = user.establishmentId
 
   const dateFilter: any = {}
   if (from) dateFilter.gte = new Date(from)

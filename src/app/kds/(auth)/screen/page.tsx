@@ -251,6 +251,7 @@ export default function KdsScreen() {
     if (order.method === "ifood") return "iFood"
     if (order.orderType === "delivery") return "Online Entrega"
     if (order.orderType === "pickup") return "Online Retirada"
+    if (order.orderType === "dineIn") return "No local"
     if (order.method === "site") return "Online"
     return "Balcão"
   }
@@ -465,7 +466,7 @@ export default function KdsScreen() {
                                     const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]")
                                     const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
                                     const statusLabels: Record<string, string> = { new: "Novo", pending: "Pendente", confirmed: "Confirmado", accepted: "Aceito", preparing: "Preparando", ready: "Pronto", out_for_delivery: "Saiu p/ Entrega", delivered: "Entregue", cancelled: "Cancelado", abandoned: "Pedido expirado" }
-                                    const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial" }
+                                    const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial", dineIn: "No local" }
                                     const paymentLabels: Record<string, string> = { cash: "Dinheiro", delivery: "Dinheiro (entrega)", pickup: "Dinheiro (retirada)", card_delivery: "Cartão (entrega)", card_pickup: "Cartão (retirada)", pix: "Pix", online: "Online", asaas: "Asaas", inter: "Inter" }
                                     const win = window.open("", "_blank")
                                     if (!win) return
@@ -505,7 +506,11 @@ export default function KdsScreen() {
                                         <div class="divider"></div>
                                         <table>
                                           <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td></tr>
-                                          ${items.map((it: any) => `<tr><td>${it.name}${it.notes ? ` (${it.notes})` : ""}</td><td class="right">${it.quantity}x</td></tr>`).join("")}
+                                          ${items.map((it: any) => {
+                                            const addOns = (it.additionalOptions || []).map((o: any) => `  • ${o.name}`).join("<br>")
+                                            const obs = it.observation ? `<br><em>Obs: ${it.observation}</em>` : ""
+                                            return `<tr><td>${it.name}${addOns ? `<br>${addOns}` : ""}${obs}${it.notes ? `<br><em>Nota: ${it.notes}</em>` : ""}</td><td class="right">${it.quantity}x</td></tr>`
+                                          }).join("")}
                                         </table>
                                         ${order.deliveryFee && order.deliveryFee > 0 ? `<p class="right">Taxa entrega: ${fmt(order.deliveryFee)}</p>` : ""}
                                         ${order.total ? `<div class="divider"></div><p class="total right">Total: ${fmt(order.total)}</p>` : ""}
@@ -549,8 +554,19 @@ export default function KdsScreen() {
                                       <span className={`text-xs font-medium ${done ? "line-through text-zinc-500" : "text-white"}`}>
                                         {item.quantity}x {item.name}
                                       </span>
+                                      {item.additionalOptions && item.additionalOptions.length > 0 && (
+                                        <div className="mt-0.5 ml-1">
+                                          <p className={`text-[10px] font-medium ${done ? "text-zinc-500" : "text-zinc-400"}`}>Adicionais:</p>
+                                          {item.additionalOptions.map((opt: any, oi: number) => (
+                                            <p key={oi} className={`text-[10px] ml-1 ${done ? "text-zinc-500" : "text-zinc-300"}`}>• {opt.name}</p>
+                                          ))}
+                                        </div>
+                                      )}
                                       {item.notes && (
                                         <p className="text-amber-400 text-[10px] mt-0.5">{item.notes}</p>
+                                      )}
+                                      {item.observation && (
+                                        <p className="text-amber-300 text-[10px] mt-0.5">Obs: {item.observation}</p>
                                       )}
                                     </div>
                                   </div>

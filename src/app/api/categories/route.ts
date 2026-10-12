@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       const cat = await prisma.category.create({
         data: {
           name: body.name,
+          emoji: body.emoji || null,
           order: body.order || 0,
           establishmentId: body.establishmentId,
           targetMarginPercent: body.targetMarginPercent ?? null,

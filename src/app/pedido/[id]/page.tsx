@@ -94,9 +94,18 @@ export default async function OrderTrackingPage({
   }
 
   // "Confirmado" removido da timeline do cliente (redundante com "Aceito").
-  const statusSteps = updatedOrder.paymentMethod === "online"
+  // Retirada/No local não passam por "Saiu para entrega".
+  const onsiteOrder = updatedOrder.orderType === "pickup" || updatedOrder.orderType === "dineIn"
+  const pickupSteps = onsiteOrder
     ? allStatusSteps
-    : allStatusSteps.filter(s => s.key !== "payment_pending")
+        .filter(s => s.key !== "out_for_delivery")
+        .map(s => s.key === "ready"
+          ? { ...s, label: updatedOrder.orderType === "dineIn" ? "Pronto" : "Pronto para Retirada" }
+          : s.key === "delivered" && updatedOrder.orderType === "pickup" ? { ...s, label: "Retirado" } : s)
+    : allStatusSteps
+  const statusSteps = updatedOrder.paymentMethod === "online"
+    ? pickupSteps
+    : pickupSteps.filter(s => s.key !== "payment_pending")
 
   return <TrackingPage order={updatedOrder} statusSteps={statusSteps} />
 }

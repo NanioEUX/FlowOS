@@ -96,7 +96,11 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
   const token = order.trackingToken || order.id
 
-  const currentIndex = flowOrder.indexOf(orderStatus)
+  const currentIndexRaw = flowOrder.indexOf(orderStatus)
+  // Retirada/No local legados em "rota": concluem na última etapa disponível
+  const currentIndex = currentIndexRaw === -1 && ["pickup", "dineIn"].includes(order.orderType) && ["out_for_delivery", "dispatched"].includes(orderStatus)
+    ? flowOrder.length - 1
+    : currentIndexRaw
   const cancelled = orderStatus === "cancelled"
 
   // Polling do status do pedido (a cada 10s) — atualiza timeline em tempo real.
@@ -211,6 +215,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
   function getEstimatedTime(): string | null {
     if (orderStatus === "delivered" || orderStatus === "cancelled") return null
+    if (orderStatus === "ready" && order.orderType !== "delivery") return "Pronto!"
     const created = new Date(order.createdAt)
     const now = new Date()
     const elapsed = (now.getTime() - created.getTime()) / 60000
@@ -259,7 +264,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
             {cancelled ? "😢" : statusIcons[orderStatus] || "📋"}
           </div>
           <h1 className="text-2xl font-bold text-zinc-900">
-            {cancelled ? "Pedido Cancelado" : statusLabels[orderStatus] || orderStatus}
+            {cancelled ? "Pedido Cancelado" : (order.orderType === "pickup" && orderStatus === "delivered" ? "Pedido Retirado" : statusLabels[orderStatus] || orderStatus)}
           </h1>
           <p className="text-3xl font-bold text-green-600 mt-2">
             Pedido #{(order as any).orderNumber || order.id.substring(0, 8).toUpperCase()}
@@ -270,7 +275,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
         {order.deliveryCode && orderStatus !== "delivered" && orderStatus !== "cancelled" && (
           <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-center">
             <p className="text-xs font-medium text-amber-600">
-              Código entrega: <span className="font-bold tracking-wider">{order.deliveryCode}</span>
+              {order.orderType === "pickup" ? "Código retirada" : "Código entrega"}: <span className="font-bold tracking-wider">{order.deliveryCode}</span>
             </p>
           </div>
         )}
@@ -283,9 +288,18 @@ export function TrackingPage({ order, statusSteps }: Props) {
             </div>
             <div className="space-y-1.5">
               {items.map((item: any, idx: number) => (
-                <div key={idx} className="flex justify-between text-sm">
-                  <span className="text-zinc-600">{item.quantity}x {item.name}</span>
-                  <span className="font-medium text-zinc-800">{formatCurrency(item.price * item.quantity)}</span>
+                <div key={idx}>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-600">{item.quantity}x {item.name}</span>
+                    <span className="font-medium text-zinc-800">{formatCurrency(item.price * item.quantity)}</span>
+                  </div>
+                  {item.additionalOptions && item.additionalOptions.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-0.5 ml-4">
+                      {item.additionalOptions.map((opt: any, oi: number) => (
+                        <span key={oi} className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500">{opt.name}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {(order as any).deliveryFee > 0 && (
@@ -305,14 +319,14 @@ export function TrackingPage({ order, statusSteps }: Props) {
         <div className="mb-4 flex flex-wrap justify-center gap-2">
           {order.orderType && (
             <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}>
-              {order.orderType === "delivery" ? <Bike className="h-3.5 w-3.5" /> : "🏪"}
-              {order.orderType === "delivery" ? "Entrega" : "Retirada"}
+              {order.orderType === "delivery" ? <Bike className="h-3.5 w-3.5" /> : order.orderType === "dineIn" ? "🍽️" : "🏪"}
+              {order.orderType === "delivery" ? "Entrega" : order.orderType === "dineIn" ? "No local" : "Retirada"}
             </span>
           )}
           {order.paymentMethod && (
             <span className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
               {order.paymentMethod === "online" ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
-              {order.paymentMethod === "online" ? "Pago Online" : order.paymentMethod === "delivery" ? "Pagar na Entrega" : "Pagar na Retirada"}
+              {order.paymentMethod === "online" ? "Pago Online" : order.paymentMethod === "delivery" ? "Pagar na Entrega" : order.orderType === "dineIn" ? "Pagar no Local" : "Pagar na Retirada"}
             </span>
           )}
           {estimatedTime && (

@@ -44,7 +44,10 @@ export async function POST(
     }
 
     // Validate preconditions
-    if (!["out_for_delivery", "dispatched"].includes(order.status)) {
+    // Delivery: must be in route. Pickup: confirmed at the counter while "ready"
+    // (the customer collects the order and informs the code).
+    const isPickupReady = order.orderType === "pickup" && order.status === "ready"
+    if (!["out_for_delivery", "dispatched"].includes(order.status) && !isPickupReady) {
       return NextResponse.json(
         { error: "Pedido precisa estar em rota de entrega para confirmar" },
         { status: 400 }

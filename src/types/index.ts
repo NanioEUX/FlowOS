@@ -7,6 +7,7 @@ export interface CartItem {
   originalPrice?: number
   basePrice?: number
   additionalOptions?: { name: string; price: number; quantity: number }[]
+  observation?: string
 }
 
 export interface OrderFormData {

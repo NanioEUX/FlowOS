@@ -1,4 +1,4 @@
-const CACHE_NAME = "pedefacil-v24"
+const CACHE_NAME = "pedefacil-v25"
 
 /** Lê o contexto push (establishmentId + customerKey) do IndexedDB */
 function getPushContext() {

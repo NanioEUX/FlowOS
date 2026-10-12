@@ -335,7 +335,7 @@ export default function RelatoriosPage() {
                 <div>
                   <p className="text-sm font-medium text-zinc-900">{order.customerName}</p>
                   <p className="text-[10px] text-zinc-500">
-                    {new Date(order.createdAt).toLocaleDateString("pt-BR")} • {order.orderType === "presencial" ? "Caixa" : order.orderType === "delivery" ? "Entrega" : "Retirada"}
+                    {new Date(order.createdAt).toLocaleDateString("pt-BR")} • {order.orderType === "presencial" ? "Caixa" : order.orderType === "delivery" ? "Entrega" : order.orderType === "dineIn" ? "No local" : "Retirada"}
                   </p>
                 </div>
                 <div className="text-right">

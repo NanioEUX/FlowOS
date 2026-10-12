@@ -319,6 +319,7 @@ model DeliveryPerson {
 model Category {
   id                  String        @id @default(cuid())
   name                String
+  emoji               String?
   order               Int           @default(0)
   establishmentId     String
   establishment       Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)

@@ -184,7 +184,7 @@ export async function PATCH(
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
         ...(status === "out_for_delivery" && { assignedAt: new Date() }),
-        ...(status === "out_for_delivery" && order.method !== "ifood" && !order.deliveryCode && { deliveryCode: order.customerPhone ? order.customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)) }),
+        ...(status === "out_for_delivery" && ["delivery", "pickup"].includes(order.orderType) && order.method !== "ifood" && !order.deliveryCode && { deliveryCode: order.customerPhone ? order.customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
         ...(autoConfirmPayment && { paymentStatus: "paid" }),
       },
@@ -373,7 +373,7 @@ export async function PATCH(
       const statusLabels: Record<string, string> = {
         confirmed: "Pedido confirmado!",
         preparing: "Seu pedido está sendo preparado",
-        ready: "Pedido pronto para retirada!",
+        ready: order.orderType === "dineIn" ? "Pedido pronto!" : "Pedido pronto para retirada!",
         out_for_delivery: "Saiu para entrega!",
         delivered: "Pedido entregue!",
         cancelled: "Pedido cancelado",
