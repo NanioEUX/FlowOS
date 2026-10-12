@@ -41,14 +41,14 @@ export default async function AdminPage() {
                 <th className="text-left p-4 font-medium text-zinc-600">Email</th>
                 <th className="text-center p-4 font-medium text-zinc-600">Pedidos</th>
                 <th className="text-right p-4 font-medium text-zinc-600">Faturamento</th>
-                <th className="text-center p-4 font-medium text-zinc-600">Asaas</th>
+                <th className="text-center p-4 font-medium text-zinc-600">Pagamentos</th>
               </tr>
             </thead>
             <tbody>
               {establishments.map((est) => {
                 const totalOrders = est.orders.length
                 const revenue = est.orders.reduce((s, o) => s + o.total, 0)
-                const hasAsaas = est.asaasApiKey && est.asaasApiKey.length > 0
+                const hasPayment = est.paymentProvider === "pagarme" || est.paymentProvider === "inter" || !!est.pagarmeSplitReceiverId
 
                 return (
                   <tr key={est.id} className="border-b border-zinc-100 hover:bg-zinc-50">
@@ -64,7 +64,7 @@ export default async function AdminPage() {
                       {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(revenue)}
                     </td>
                     <td className="p-4 text-center">
-                      {hasAsaas ? "✅" : "❌"}
+                      {hasPayment ? "✅" : "❌"}
                     </td>
                   </tr>
                 )
