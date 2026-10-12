@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const establishmentId = req.nextUrl.searchParams.get("establishmentId")
@@ -28,13 +29,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
+  const { user, error } = requireEstablishment(req, establishmentId)
+  if (error) return error
+
   const combo = await prisma.dailyCombo.create({
     data: {
       name,
       description,
       price,
       image,
-      establishmentId,
+      establishmentId: user.establishmentId,
       items: {
         create: productIds?.map((pid: string, idx: number) => ({
           productId: pid,
@@ -53,11 +57,23 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const { user, error } = requireEstablishment(req)
+  if (error) return error
+
   const body = await req.json()
   const { id, name, description, price, image, active, productIds } = body
 
   if (!id) {
     return NextResponse.json({ error: "id required" }, { status: 400 })
+  }
+
+  // Verify combo belongs to this establishment
+  const existing = await prisma.dailyCombo.findFirst({
+    where: { id, establishmentId: user.establishmentId },
+    select: { id: true },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: "Combo não encontrado" }, { status: 404 })
   }
 
   // If updating products, delete old items and create new ones
@@ -92,9 +108,21 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const { user, error } = requireEstablishment(req)
+  if (error) return error
+
   const id = req.nextUrl.searchParams.get("id")
   if (!id) {
     return NextResponse.json({ error: "id required" }, { status: 400 })
+  }
+
+  // Verify combo belongs to this establishment
+  const existing = await prisma.dailyCombo.findFirst({
+    where: { id, establishmentId: user.establishmentId },
+    select: { id: true },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: "Combo não encontrado" }, { status: 404 })
   }
 
   await prisma.dailyCombo.delete({ where: { id } })

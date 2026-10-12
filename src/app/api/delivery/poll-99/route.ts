@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { buscarStatusCorrida99 } from "@/lib/integrations/nine-nine"
+import { requireEstablishment } from "@/lib/require-auth"
 
 /**
  * Polling de status das corridas 99
@@ -8,10 +9,14 @@ import { buscarStatusCorrida99 } from "@/lib/integrations/nine-nine"
  * GET /api/delivery/poll-99
  * Chama periodicamente para verificar status das corridas ativas
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
+
     const activeRides = await prisma.order.findMany({
       where: {
+        establishmentId: user.establishmentId,
         entrega99RideId: { not: null },
         status: { in: ["out_for_delivery", "ready"] },
       },

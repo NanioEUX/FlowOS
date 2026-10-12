@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyAuth } from "@/lib/auth"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -27,16 +27,23 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
     const body = await req.json()
     const { name, price, selectionType, inputType, groupName, headerText, maxSelection, minSelection, productId, establishmentId, consumesStock, stockProductId, stockQuantity, stockUnit } = body
 
     if (!name || !productId || !establishmentId) {
       return NextResponse.json({ error: "name, productId e establishmentId obrigatórios" }, { status: 400 })
+    }
+
+    const { user, error } = requireEstablishment(req, establishmentId)
+    if (error) return error
+
+    // Verify product belongs to this establishment
+    const product = await prisma.product.findFirst({
+      where: { id: productId, establishmentId: user.establishmentId },
+      select: { id: true },
+    })
+    if (!product) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
     }
 
     const maxOrder = await prisma.additionalOption.findFirst({
@@ -68,7 +75,7 @@ export async function POST(req: NextRequest) {
         order: (maxOrder?.order || 0) + 1,
         groupOrder: (maxGroupOrder?.groupOrder || 0),
         productId,
-        establishmentId,
+        establishmentId: user.establishmentId,
       },
     })
 
@@ -81,10 +88,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
 
     const body = await req.json()
     const { id, ...data } = body
@@ -92,6 +97,18 @@ export async function PATCH(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "id obrigatório" }, { status: 400 })
     }
+
+    // Verify option belongs to this establishment
+    const existing = await prisma.additionalOption.findFirst({
+      where: { id, establishmentId: user.establishmentId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Opção não encontrada" }, { status: 404 })
+    }
+
+    // Prevent client from changing tenant
+    delete data.establishmentId
 
     const option = await prisma.additionalOption.update({
       where: { id },
@@ -107,16 +124,23 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
 
     if (!id) {
       return NextResponse.json({ error: "id obrigatório" }, { status: 400 })
+    }
+
+    // Verify option belongs to this establishment
+    const existing = await prisma.additionalOption.findFirst({
+      where: { id, establishmentId: user.establishmentId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Opção não encontrada" }, { status: 404 })
     }
 
     await prisma.additionalOption.delete({ where: { id } })

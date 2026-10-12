@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// Short cache: 5s (table status changes frequently but doesn't need real-time)
-export const revalidate = 5
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -41,26 +38,24 @@ export async function GET(req: NextRequest) {
         status: { notIn: ["delivered", "cancelled"] },
       },
       orderBy: { createdAt: "asc" },
+      select: {
+        orderNumber: true,
+        total: true,
+        status: true,
+        createdAt: true,
+      },
     })
 
     const totalPending = activeOrders.reduce((sum, o) => sum + o.total, 0)
 
     return NextResponse.json({
       open: true,
-      establishmentId: establishment.id,
       establishmentName: establishment.name,
       tableNumber: num,
       tableCount: establishment.tableCount || 10,
       ordersCount: activeOrders.length,
       totalPending,
-      orders: activeOrders.map((o) => ({
-        id: o.id,
-        orderNumber: o.orderNumber,
-        items: o.items,
-        total: o.total,
-        status: o.status,
-        createdAt: o.createdAt,
-      })),
+      orders: activeOrders,
     })
   } catch (error) {
     console.error("Erro ao verificar mesa:", error)

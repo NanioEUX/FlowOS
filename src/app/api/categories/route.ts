@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-
-// Categories + products: 30s cache
-export const revalidate = 30
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -17,10 +15,6 @@ export async function GET(req: NextRequest) {
     include: {
       products: {
         orderBy: { order: "asc" },
-        include: {
-          stockLinks: true,
-          stockItem: true,
-        },
       },
     },
     orderBy: { order: "asc" },
@@ -32,6 +26,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
+    const { establishmentId } = body
+
+    if (!establishmentId) {
+      return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
+    }
+
+    const { user, error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     if (body.type === "category") {
       const cat = await prisma.category.create({
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
           name: body.name,
           emoji: body.emoji || null,
           order: body.order || 0,
-          establishmentId: body.establishmentId,
+          establishmentId: user.establishmentId,
           targetMarginPercent: body.targetMarginPercent ?? null,
           priceRounding: body.priceRounding || "none",
           syncToIfood: body.syncToIfood ?? true,
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
           order: body.order ?? 0,
           stockItemId: body.stockItemId || null,
           categoryId: body.categoryId,
-          establishmentId: body.establishmentId,
+          establishmentId: user.establishmentId,
         },
       })
       return NextResponse.json(product)

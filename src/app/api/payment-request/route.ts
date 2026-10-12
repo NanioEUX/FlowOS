@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const establishmentId = searchParams.get("establishmentId")
-  if (!establishmentId) {
-    return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
-  }
+  const establishmentIdParam = searchParams.get("establishmentId")
+
+  const { user, error } = requireEstablishment(req, establishmentIdParam)
+  if (error) return error
+  const establishmentId = user.establishmentId
 
   const requests = await prisma.paymentRequest.findMany({
     where: { establishmentId, status: "pending" },
@@ -37,6 +39,17 @@ export async function GET(req: NextRequest) {
         orderType: "presencial",
         status: { notIn: ["cancelled", "delivered"] },
       },
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        items: true,
+        total: true,
+        status: true,
+        tableNumber: true,
+        paymentMethod: true,
+        createdAt: true,
+      },
     })
     table.orders = orders
     table.total = orders.reduce((s: number, o: any) => s + o.total, 0)
@@ -53,16 +66,19 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
 
+    const { user, error } = requireEstablishment(req, establishmentId)
+    if (error) return error
+
     // Mark payment requests as resolved
     await prisma.paymentRequest.updateMany({
-      where: { establishmentId, tableNumber, status: "pending" },
+      where: { establishmentId: user.establishmentId, tableNumber, status: "pending" },
       data: { status: "resolved", paymentMethod, resolvedAt: new Date() },
     })
 
     // Mark orders as delivered/paid
     await prisma.order.updateMany({
       where: {
-        establishmentId,
+        establishmentId: user.establishmentId,
         tableNumber,
         orderType: "presencial",
         status: { notIn: ["cancelled", "delivered"] },
@@ -88,6 +104,15 @@ export async function POST(req: NextRequest) {
     const { tableNumber, establishmentId } = body
     if (!tableNumber || !establishmentId) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
+    }
+
+    // Check if establishment exists and is active
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { id: true, subscriptionStatus: true },
+    })
+    if (!establishment || establishment.subscriptionStatus === "cancelled" || establishment.subscriptionStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento não disponível" }, { status: 404 })
     }
 
     // Check if there's already a pending request for this table

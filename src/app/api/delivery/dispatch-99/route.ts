@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { despacharCorrida99 } from "@/lib/integrations/nine-nine"
+import { requireEstablishment } from "@/lib/require-auth"
 
 /**
  * Despacha corrida para 99Entrega
@@ -8,8 +9,11 @@ import { despacharCorrida99 } from "@/lib/integrations/nine-nine"
  * POST /api/delivery/dispatch-99
  * Body: { orderId: string }
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
+
     const body = await req.json()
     const { orderId } = body
 
@@ -23,6 +27,11 @@ export async function POST(req: Request) {
     })
 
     if (!order) {
+      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
+    }
+
+    // Verify order belongs to this establishment
+    if (order.establishmentId !== user.establishmentId) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
     }
 

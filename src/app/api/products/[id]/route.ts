@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyAuth } from "@/lib/auth"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -11,10 +11,6 @@ export async function GET(
   try {
     const product = await prisma.product.findUnique({
       where: { id: params.id },
-      include: {
-        stockLinks: true,
-        stockItem: true,
-      },
     })
     if (!product) {
       return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
@@ -30,12 +26,20 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
 
     const { id } = params
+
+    // Verify product belongs to this establishment
+    const existing = await prisma.product.findFirst({
+      where: { id, establishmentId: user.establishmentId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
+    }
+
     const contentType = req.headers.get("content-type") || ""
     let data: any = {}
 
@@ -68,14 +72,13 @@ export async function PATCH(
       data = await req.json()
     }
 
-    console.log("[PRODUCT PATCH]", id, data)
+    // Prevent client from changing establishmentId
+    delete data.establishmentId
 
     const product = await prisma.product.update({
       where: { id },
       data,
     })
-
-    console.log("[PRODUCT PATCH] result:", product.sendToPrep)
 
     return NextResponse.json(product)
   } catch (error: any) {
@@ -92,12 +95,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
 
     const { id } = params
+
+    // Verify product belongs to this establishment
+    const existing = await prisma.product.findFirst({
+      where: { id, establishmentId: user.establishmentId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
+    }
 
     // Delete stock links first
     await prisma.productStockLink.deleteMany({ where: { productId: id } })

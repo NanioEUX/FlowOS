@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createPaymentLink } from "@/lib/integrations/asaas"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +11,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
 
+    const { user, error } = requireEstablishment(req, establishmentId)
+    if (error) return error
+
     const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
+      where: { id: user.establishmentId },
       select: { id: true, name: true, asaasApiKey: true, asaasWalletId: true },
     })
 
@@ -38,7 +42,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Fallback: generate a simple Pix payload (static QR)
-    // In production, this should use a proper Pix API
     return NextResponse.json({
       success: true,
       message: "Configure o Asaas para gerar link de pagamento",

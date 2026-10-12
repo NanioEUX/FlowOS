@@ -11,8 +11,16 @@ vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }))
 vi.mock("@/lib/integrations/nine-nine", () => ({
   despacharCorrida99: vi.fn(),
 }))
+vi.mock("@/lib/require-auth", () => ({
+  requireEstablishment: vi.fn(() => ({
+    user: { userId: "user-1", email: "test@test.com", role: "admin", permissions: [], establishmentId: "est-1" },
+    error: null,
+  })),
+}))
 
 import { despacharCorrida99 } from "@/lib/integrations/nine-nine"
+import { requireEstablishment } from "@/lib/require-auth"
+import { NextResponse } from "next/server"
 import { POST } from "../route"
 
 function makeRequest(body: any) {
@@ -20,12 +28,16 @@ function makeRequest(body: any) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  })
+  }) as any
 }
 
 describe("POST /api/delivery/dispatch-99", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(requireEstablishment).mockReturnValue({
+      user: { userId: "user-1", email: "test@test.com", role: "admin", permissions: [], establishmentId: "est-1" },
+      error: null,
+    })
   })
 
   it("retorna 400 quando orderId não fornecido", async () => {
@@ -33,6 +45,15 @@ describe("POST /api/delivery/dispatch-99", () => {
     const data = await res.json()
     expect(res.status).toBe(400)
     expect(data.error).toContain("orderId")
+  })
+
+  it("retorna 401 quando não autenticado", async () => {
+    vi.mocked(requireEstablishment).mockReturnValue({
+      user: null,
+      error: NextResponse.json({ error: "Não autorizado" }, { status: 401 }),
+    })
+    const res = await POST(makeRequest({ orderId: "order-1" }))
+    expect(res.status).toBe(401)
   })
 
   it("retorna 404 quando pedido não encontrado", async () => {
@@ -43,9 +64,18 @@ describe("POST /api/delivery/dispatch-99", () => {
     expect(data.error).toContain("não encontrado")
   })
 
+  it("retorna 404 quando pedido pertence a outro tenant", async () => {
+    mockPrisma.order.findUnique.mockResolvedValue({
+      id: "order-1", establishmentId: "other-est",
+      establishment: { tipoEntregaAtiva: "99entrega", api99Key: "key", api99EmployeeId: "emp-1", addressLat: -23.5, addressLng: -46.6 },
+    })
+    const res = await POST(makeRequest({ orderId: "order-1" }))
+    expect(res.status).toBe(404)
+  })
+
   it("retorna 400 quando tipoEntregaAtiva não é 99entrega", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "propria", api99Key: "key", api99EmployeeId: "emp-1", addressLat: -23.5, addressLng: -46.6 },
     })
     const res = await POST(makeRequest({ orderId: "order-1" }))
@@ -56,7 +86,7 @@ describe("POST /api/delivery/dispatch-99", () => {
 
   it("retorna 400 quando credenciais 99 não configuradas", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "99entrega", api99Key: null, api99EmployeeId: null, addressLat: -23.5, addressLng: -46.6 },
     })
     const res = await POST(makeRequest({ orderId: "order-1" }))
@@ -67,7 +97,7 @@ describe("POST /api/delivery/dispatch-99", () => {
 
   it("retorna 400 quando endereço do estabelecimento não configurado", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "99entrega", api99Key: "key", api99EmployeeId: "emp-1", addressLat: null, addressLng: null },
     })
     const res = await POST(makeRequest({ orderId: "order-1" }))
@@ -78,7 +108,7 @@ describe("POST /api/delivery/dispatch-99", () => {
 
   it("retorna 400 quando endereço do cliente não encontrado", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: null, customerLng: null, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: null, customerLng: null, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "99entrega", api99Key: "key", api99EmployeeId: "emp-1", addressLat: -23.5, addressLng: -46.6 },
     })
     const res = await POST(makeRequest({ orderId: "order-1" }))
@@ -89,7 +119,7 @@ describe("POST /api/delivery/dispatch-99", () => {
 
   it("despacha corrida e salva rideId + pinCode no pedido", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "99entrega", api99Key: "key", api99EmployeeId: "emp-1", addressLat: -23.5, addressLng: -46.6 },
     })
     vi.mocked(despacharCorrida99).mockResolvedValue({ success: true, rideId: "ride-abc", estimatedValue: 15, estimatedTime: 25 })
@@ -113,7 +143,7 @@ describe("POST /api/delivery/dispatch-99", () => {
 
   it("retorna 500 quando API 99 retorna erro", async () => {
     mockPrisma.order.findUnique.mockResolvedValue({
-      id: "order-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
+      id: "order-1", establishmentId: "est-1", orderType: "delivery", customerLat: -23.55, customerLng: -46.63, entrega99RideId: null,
       establishment: { tipoEntregaAtiva: "99entrega", api99Key: "key", api99EmployeeId: "emp-1", addressLat: -23.5, addressLng: -46.6 },
     })
     vi.mocked(despacharCorrida99).mockResolvedValue({ success: false, error: "API 99 returned 500" })
