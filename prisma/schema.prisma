@@ -125,14 +125,6 @@ model Establishment {
   firstPurchaseDiscount         Float?             @default(5.0)
   firstPurchaseBonus            Int                @default(50)
   isActive                      Boolean            @default(true)
-  asaasApiKey                   String?
-  asaasWalletId                 String?
-  efiClientId                   String?
-  efiClientSecret               String?
-  efiPixKey                     String?
-  efiCertificate                String?
-  efiEnvironment                String             @default("sandbox")
-  efiWebhookToken               String?
   paymentProvider               String             @default("pagarme")
   interClientId                 String?
   interClientSecret             String?
@@ -193,8 +185,6 @@ model Establishment {
   closedTitle                   String?
   defaultTheme                  String             @default("dark")
   expenseCategories             String             @default("[\"fixa\",\"variavel\",\"motoboy\",\"insumo\",\"salario\",\"aluguel\",\"energia\",\"agua\",\"internet\",\"imposto\",\"manutencao\",\"marketing\",\"outro\"]")
-  asaasCustomerId               String?
-  asaasSubscriptionId           String?
   nextPaymentAt                 DateTime?
   tableCount                    Int                @default(10)
   subscriptionPlan              String?            @default("starter")

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { createPaymentLink } from "@/lib/integrations/asaas"
 import { requireEstablishment } from "@/lib/require-auth"
 
 export async function POST(req: NextRequest) {
@@ -16,35 +15,16 @@ export async function POST(req: NextRequest) {
 
     const establishment = await prisma.establishment.findUnique({
       where: { id: user.establishmentId },
-      select: { id: true, name: true, asaasApiKey: true, asaasWalletId: true },
+      select: { id: true, name: true },
     })
 
     if (!establishment) {
       return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
     }
 
-    // If Asaas is configured, create a payment link with Pix
-    if (establishment.asaasApiKey) {
-      const payment = await createPaymentLink({
-        apiKey: establishment.asaasApiKey,
-        customerName: description || `${establishment.name} - Mesa`,
-        customerPhone: "00000000000",
-        customerCpf: "",
-        value: amount,
-        description: description || `${establishment.name} - Pagamento`,
-      })
-
-      return NextResponse.json({
-        success: true,
-        invoiceUrl: payment.invoiceUrl,
-        paymentId: payment.id,
-      })
-    }
-
-    // Fallback: generate a simple Pix payload (static QR)
     return NextResponse.json({
       success: true,
-      message: "Configure o Asaas para gerar link de pagamento",
+      message: "Pagamento online não disponível. Configure Pagar.me ou Inter.",
       amount,
     })
   } catch (error) {

@@ -716,8 +716,6 @@ export default function ConfigPage() {
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
     const [showKey, setShowKey] = useState(false)
-    const [testingAsaas, setTestingAsaas] = useState(false)
-    const [asaasTestResult, setAsaasTestResult] = useState<{ ok: boolean; message: string } | null>(null)
     const [recipientData, setRecipientData] = useState<any>(null)
     const [loadingRecipient, setLoadingRecipient] = useState(false)
     const [form, setForm] = useState({
@@ -728,8 +726,6 @@ export default function ConfigPage() {
         description: "",
         logo: "",
         cover: "",
-        asaasApiKey: "",
-        asaasWalletId: "",
         pagarmeApiKey: "",
         pagarmeEnvironment: "sandbox",
         pagarmeWebhookKey: "",
@@ -758,7 +754,6 @@ export default function ConfigPage() {
         pagarmeSplitReceiverId: "",
     })
     
-    const [asaasMode, setAsaasMode] = useState<"both" | "card_only">("both")
     const [paymentConfig, setPaymentConfig] = useState({ online: true, delivery: true, pickup: true })
     const [deliveryLimit, setDeliveryLimit] = useState("150")
     const [blockConcurrent, setBlockConcurrent] = useState(true)
@@ -873,8 +868,6 @@ export default function ConfigPage() {
                         description: data.description || "",
                         logo: data.logo || "",
                         cover: data.cover || "",
-                        asaasApiKey: data.asaasApiKey || "",
-                        asaasWalletId: data.asaasWalletId || "",
                         pagarmeApiKey: data.pagarmeApiKey || "",
                         pagarmeEnvironment: data.pagarmeEnvironment || "sandbox",
                         pagarmeWebhookKey: data.pagarmeWebhookKey || "",
@@ -973,7 +966,6 @@ export default function ConfigPage() {
                     setTipoEntregaAtiva(data.tipoEntregaAtiva || "propria")
                     setApi99Key(data.api99Key || "")
                     setApi99EmployeeId(data.api99EmployeeId || "")
-                    setAsaasMode(data.interClientId ? "card_only" : "both")
                     if (data.paymentConfig) {
                         try { setPaymentConfig(JSON.parse(data.paymentConfig)) } catch {}
                     }
@@ -1018,7 +1010,7 @@ export default function ConfigPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...form,
-                    paymentProvider: asaasMode === "card_only" ? "inter" : "asaas",
+                    paymentProvider: form.interClientId ? "inter" : "pagarme",
                     deliveryFeeAmount: form.deliveryFeeType === "free" ? 0 : Number(form.deliveryFeeAmount),
                     deliveryFreeAbove: form.deliveryFeeType === "free_above" ? Number(form.deliveryFreeAbove) : 0,
                     estimatedDeliveryMin: Number(form.estimatedDeliveryMin) || 30,
@@ -1135,28 +1127,6 @@ export default function ConfigPage() {
         }
     }
     
-    async function testAsaasConnection() {
-        if (!form.asaasApiKey) {
-            setAsaasTestResult({ ok: false, message: "Insira uma API Key primeiro" })
-            return
-        }
-        setTestingAsaas(true)
-        setAsaasTestResult(null)
-        try {
-            const res = await fetchAuth(`/api/asaas-test`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key: form.asaasApiKey }),
-            })
-            const data = await res.json()
-            setAsaasTestResult(data.ok ? { ok: true, message: data.message } : { ok: false, message: data.error || "Falha na conexão" })
-        } catch {
-            setAsaasTestResult({ ok: false, message: "Erro ao conectar com o servidor" })
-        } finally {
-            setTestingAsaas(false)
-        }
-    }
-    
     const [activeGroup, setActiveGroup] = useState<"geral" | "pedidos" | "pagamentos" | "whatsapp" | "ifood" | "99food" | "99entregas">(() => {
       if (typeof window !== "undefined") {
         return (localStorage.getItem("configActiveGroup") as any) || "geral"
@@ -1269,96 +1239,6 @@ export default function ConfigPage() {
             Configure como deseja receber pagamentos no cardápio online.
             </p>
             </div>
-            
-            {/* Asaas - OCULTO (configuração fica no admin SaaS) */}
-            {false && (
-                       <div className="rounded-xl border border-zinc-200 p-4 space-y-4">
-                       <div className="flex items-center gap-2">
-                       <h4 className="font-medium text-zinc-900">Asaas</h4>
-                       <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">Obrigatório</span>
-                       </div>
-                       <p className="text-xs text-zinc-500">
-                       Provider de pagamentos para cartão de crédito e PIX.
-                       </p>
-                       
-                       {/* Modo */}
-                       <div className="flex gap-2">
-                       <button
-                       type="button"
-                       onClick={() => setAsaasMode("both")}
-                       className={`flex-1 rounded-lg border-2 p-3 text-left transition-all ${
-                    asaasMode === "both"
-                      ? "border-green-500 bg-green-50"
-                      : "border-zinc-200 hover:border-zinc-300"
-                  }`}
-                       >
-                       <div className="flex items-center gap-2">
-                       <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${asaasMode === "both" ? "border-green-600" : "border-zinc-300"}`}>
-                       {asaasMode === "both" && <div className="h-2 w-2 rounded-full bg-green-600" />}
-                       </div>
-                       <span className="text-sm font-medium text-zinc-900">PIX + Cartão</span>
-                       </div>
-                       <p className="text-xs text-zinc-500 mt-1 ml-6">Tudo via Asaas</p>
-                       </button>
-                       <button
-                       type="button"
-                       onClick={() => setAsaasMode("card_only")}
-                       className={`flex-1 rounded-lg border-2 p-3 text-left transition-all ${
-                    asaasMode === "card_only"
-                      ? "border-green-500 bg-green-50"
-                      : "border-zinc-200 hover:border-zinc-300"
-                  }`}
-                       >
-                       <div className="flex items-center gap-2">
-                       <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${asaasMode === "card_only" ? "border-green-600" : "border-zinc-300"}`}>
-                       {asaasMode === "card_only" && <div className="h-2 w-2 rounded-full bg-green-600" />}
-                       </div>
-                       <span className="text-sm font-medium text-zinc-900">Somente Cartão</span>
-                       </div>
-                       <p className="text-xs text-zinc-500 mt-1 ml-6">PIX via Banco Inter</p>
-                       </button>
-                       </div>
-                       
-                       {/* Campos Asaas */}
-                       <div className="relative">
-                       <div className="space-y-1">
-                       <label className="block text-sm font-medium text-zinc-700">API Key</label>
-                       <input
-                       type={showKey ? "text" : "password"}
-                       placeholder="asaas_api_key_..."
-                       value={form.asaasApiKey}
-                       onChange={(e) => { setForm({ ...form, asaasApiKey: e.target.value }); setAsaasTestResult(null) }}
-                       className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                       />
-                       </div>
-                       <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-3 top-8 text-zinc-400 hover:text-zinc-400">
-                       {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                       </button>
-                       </div>
-                       <div className="space-y-1">
-                       <label className="block text-sm font-medium text-zinc-700">Wallet ID</label>
-                       <input
-                       type="text"
-                       placeholder="Identificação da carteira"
-                       value={form.asaasWalletId}
-                       onChange={(e) => setForm({ ...form, asaasWalletId: e.target.value })}
-                       className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
-                       />
-                       </div>
-                       <div className="flex items-center gap-3">
-                       <Button type="button" variant="outline" size="sm" onClick={testAsaasConnection} disabled={testingAsaas || !form.asaasApiKey} className="gap-2">
-                       {testingAsaas ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
-                       Testar conexão
-                       </Button>
-                       {asaasTestResult && (
-                                            <span className={`flex items-center gap-1.5 text-sm font-medium ${asaasTestResult?.ok ? "text-green-600" : "text-red-500"}`}>
-                                            {asaasTestResult?.ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                                            {asaasTestResult?.message}
-                                            </span>
-                                            )}
-                       </div>
-                       </div>
-                       )}
             
             {/* Pagar.me (Stone) - Conta do estabelecimento */}
             <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
@@ -1573,15 +1453,14 @@ export default function ConfigPage() {
             </div>
             </div>  */}
 
-              {/* Banco Inter - aparece só quando "Somente Cartão" */}
-              {asaasMode === "card_only" && (
+              {/* Banco Inter */}
               <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-zinc-900">Banco Inter</h4>
                   <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX 0% taxa</span>
                 </div>
                 <div className="rounded-lg bg-green-100/70 px-3 py-2 text-xs text-green-800">
-                  PIX será via Banco Inter, sem taxa. Cartão continua via Asaas.
+                  PIX será via Banco Inter, sem taxa. Cartão via Pagar.me.
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Client ID</label>
@@ -1651,7 +1530,6 @@ export default function ConfigPage() {
                   />
                 </div>
               </div>
-            )}
           </CardContent>
         </Card>
 

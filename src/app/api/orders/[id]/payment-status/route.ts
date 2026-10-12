@@ -3,14 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { getInterPixStatus } from "@/lib/integrations/inter"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 
-const ASAAS_API_URL =
-  process.env.ASAAS_ENVIRONMENT === "sandbox"
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/v3"
-
 // Public endpoint used by the cardápio to poll payment status. Requires the
 // order's trackingToken as ?token= so only someone with the order link can
-// trigger an Asaas/Inter status check. Never returns secrets.
+// trigger a status check. Never returns secrets.
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -31,7 +26,6 @@ export async function GET(
       establishmentId: true,
       establishment: {
         select: {
-          asaasApiKey: true,
           interClientId: true,
           interClientSecret: true,
           interCertificate: true,
@@ -68,25 +62,6 @@ export async function GET(
     } catch (error: any) {
       console.error("[Inter Payment Status] Error:", error.message)
     }
-  }
-
-  if (!isInterPayment && order.paymentStatus === "pending" && order.paymentId && order.establishment.asaasApiKey) {
-    try {
-      const res = await fetch(`${ASAAS_API_URL}/payments/${order.paymentId}`, {
-        headers: { access_token: order.establishment.asaasApiKey },
-      })
-      if (res.ok) {
-        const asaasPayment = await res.json()
-        let asaasStatus = asaasPayment.status
-        if (["CONFIRMED", "RECEIVED", "AUTHORIZED"].includes(asaasStatus)) {
-          await prisma.order.update({
-            where: { id: params.id },
-            data: { paymentStatus: "paid", status: "confirmed" },
-          })
-          return NextResponse.json({ paymentStatus: "paid", status: "confirmed" })
-        }
-      }
-    } catch {}
   }
 
   // Pagar.me payment status polling.

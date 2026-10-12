@@ -6745,11 +6745,9 @@ function PaymentModal({
       for (let i = 0; i < retries; i++) {
         if (controller.signal.aborted) return
         try {
-          let qrEndpoint = "/api/payments/asaas/qr-code"
+          let qrEndpoint = "/api/payments/pagarme/qr-code"
           if (paymentProvider === "inter") {
             qrEndpoint = "/api/payments/inter/qr-code"
-          } else if (paymentProvider === "pagarme") {
-            qrEndpoint = "/api/payments/pagarme/qr-code"
           }
           const res = await fetch(qrEndpoint, {
             method: "POST",
@@ -6889,10 +6887,7 @@ function PaymentModal({
 
     setCardProcessing(true)
     try {
-      let cardEndpoint = "/api/payments/asaas/card"
-      if (paymentProvider === "pagarme") {
-        cardEndpoint = "/api/payments/pagarme/card"
-      }
+      let cardEndpoint = "/api/payments/pagarme/card"
       const res = await fetch(cardEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

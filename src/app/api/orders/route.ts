@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
-import { createPaymentLink } from "@/lib/integrations/asaas"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 import { computeOrderItemCosts } from "@/lib/cmv"
 import { convertQuantity } from "@/lib/units"
@@ -511,8 +510,7 @@ export async function POST(req: NextRequest) {
 
     if (isOnlinePayment) {
       const useInter = establishment.paymentProvider === "inter" && paymentMethod === "pix"
-      const usePagarme = establishment.paymentProvider === "pagarme"
-      const useAsaas = !useInter && !usePagarme
+      const usePagarme = !useInter
 
       if (useInter) {
         // Inter PIX payment (0% fee)
@@ -549,43 +547,6 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Inter] ERRO ao gerar pagamento:", err.message)
-          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
-          return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
-        }
-      }
-
-      if (useAsaas) {
-        // Asaas payment (default) - PIX or Card
-        if (!establishment.asaasApiKey) {
-          return NextResponse.json({ error: "Pagamento online configurado, mas a API Key do Asaas não está configurada. Configure em Configurações." }, { status: 400 })
-        }
-        try {
-          console.log("[Asaas] Criando pagamento:", { customerName, customerPhone, customerCpf: customerCpf ? "***" : "VAZIO", value: order.total })
-
-          const billingType = paymentMethod === "card" ? "UNDEFINED" : "PIX"
-          const payment = await createPaymentLink({
-            apiKey: establishment.asaasApiKey,
-            customerName,
-            customerPhone: customerPhone || "",
-            customerCpf: customerCpf || "",
-            value: order.total,
-            description: `Pedido #${order.orderNumber} - ${establishment.name}`,
-            billingType: billingType as any,
-          })
-
-          paymentLink = payment.invoiceUrl
-
-          await prisma.order.update({
-            where: { id: order.id },
-            data: {
-              paymentId: payment.id,
-              paymentLink: payment.invoiceUrl,
-              paymentStatus: "pending",
-              status: "payment_pending",
-            },
-          })
-        } catch (err: any) {
-          console.error("[Asaas] ERRO ao gerar pagamento:", err.message)
           await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
           return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }

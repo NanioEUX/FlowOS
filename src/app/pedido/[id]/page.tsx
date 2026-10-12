@@ -13,57 +13,6 @@ const allStatusSteps = [
   { key: "delivered", label: "Entregue", icon: "🎉" },
 ]
 
-const ASAAS_API_URL =
-  process.env.ASAAS_ENVIRONMENT === "sandbox"
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/v3"
-
-async function syncPaymentStatus(orderId: string, paymentId: string, apiKey: string) {
-  try {
-    console.log("[Sync] Checking payment:", paymentId)
-    const res = await fetch(`${ASAAS_API_URL}/payments/${paymentId}`, {
-      headers: { access_token: apiKey },
-    })
-    if (!res.ok) {
-      console.log("[Sync] Asaas returned:", res.status)
-      return null
-    }
-    const payment = await res.json()
-    console.log("[Sync] Asaas status:", payment.status)
-
-    const statusMap: Record<string, string> = {
-      RECEIVED: "paid",
-      RECEIVED_IN_CASH: "paid",
-      CONFIRMED: "paid",
-      OVERDUE: "overdue",
-      REFUNDED: "refunded",
-    }
-    const orderStatusMap: Record<string, string> = {
-      RECEIVED: "confirmed",
-      RECEIVED_IN_CASH: "confirmed",
-      CONFIRMED: "confirmed",
-      SETTLED: "confirmed",
-    }
-
-    const newPaymentStatus = statusMap[payment.status]
-    if (!newPaymentStatus) return null
-
-    console.log("[Sync] Updating order:", { orderId, paymentStatus: newPaymentStatus, status: orderStatusMap[payment.status] })
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: newPaymentStatus,
-        status: orderStatusMap[payment.status],
-      },
-    })
-
-    return { paymentStatus: newPaymentStatus, asaasStatus: payment.status }
-  } catch (err: any) {
-    console.error("[Sync] Error:", err?.message)
-    return null
-  }
-}
-
 export default async function OrderTrackingPage({
   params,
 }: {
@@ -78,10 +27,6 @@ export default async function OrderTrackingPage({
 
   if (!order) {
     notFound()
-  }
-
-  if (order.paymentId && order.paymentStatus !== "paid" && order.establishment.asaasApiKey) {
-    await syncPaymentStatus(order.id, order.paymentId, order.establishment.asaasApiKey)
   }
 
   const updatedOrder = await prisma.order.findFirst({
