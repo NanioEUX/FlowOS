@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 import crypto from "crypto"
 import bcrypt from "bcryptjs"
 
@@ -9,6 +10,9 @@ export async function GET(req: NextRequest) {
   if (!establishmentId) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
   const people = await prisma.deliveryPerson.findMany({
     where: { establishmentId, isActive: true },
     orderBy: { name: "asc" },
@@ -33,6 +37,9 @@ export async function POST(req: NextRequest) {
     if (!name || !phone || !establishmentId) {
       return NextResponse.json({ error: "name, phone e establishmentId obrigatórios" }, { status: 400 })
     }
+
+    const auth = requireEstablishment(req, establishmentId)
+    if (auth.error) return auth.error
 
     const token = crypto.randomBytes(8).toString("hex")
     const password = defaultPassword || "123456"

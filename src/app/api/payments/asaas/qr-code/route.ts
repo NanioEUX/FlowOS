@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { establishment: { select: { id: true, asaasApiKey: true, name: true } } },
+      include: { establishment: { select: { id: true, asaasApiKey: true, name: true, subscriptionStatus: true } } },
     })
 
     if (!order) {
@@ -28,6 +28,11 @@ export async function POST(req: NextRequest) {
 
     if (order.establishmentId !== establishmentId) {
       return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
+    }
+
+    const estStatus = (order.establishment as any).subscriptionStatus
+    if (estStatus === "cancelled" || estStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento inativo" }, { status: 403 })
     }
 
     if (!order.paymentId) {

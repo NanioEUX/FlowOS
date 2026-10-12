@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 import crypto from "crypto"
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { establishmentId, customerName, customerPhone, customerAddress, items, total, notes } = body
+
+    if (!establishmentId) {
+      return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
+    }
+
+    const auth = requireEstablishment(req, establishmentId)
+    if (auth.error) return auth.error
 
     // Find or create customer
     let customerId: string | undefined

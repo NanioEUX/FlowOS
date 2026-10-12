@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         customerPhone: true,
         customerAddress: true,
         establishmentId: true,
-        establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true } },
+        establishment: { select: { id: true, name: true, pagarmeSplitReceiverId: true, subscriptionStatus: true } },
         customer: { select: { id: true, name: true, phone: true, cpf: true, email: true, cep: true } },
       },
     })
@@ -44,6 +44,11 @@ export async function POST(req: NextRequest) {
 
     if (order.establishmentId !== establishmentId) {
       return NextResponse.json({ error: "Pedido não pertence a este estabelecimento" }, { status: 403 })
+    }
+
+    const estStatus = (order.establishment as any).subscriptionStatus
+    if (estStatus === "cancelled" || estStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento inativo" }, { status: 403 })
     }
 
     const { apiKey } = await getPagarmeConfig()

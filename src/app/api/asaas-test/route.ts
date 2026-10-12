@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireAuth } from "@/lib/require-auth"
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = requireAuth(req)
+    if (auth.error) return auth.error
+
     const { key } = await req.json()
     if (!key) {
       return NextResponse.json({ ok: false, error: "API Key não fornecida" }, { status: 400 })

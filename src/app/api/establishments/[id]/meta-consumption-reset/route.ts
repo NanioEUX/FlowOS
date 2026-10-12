@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function POST(
   req: NextRequest,
@@ -7,6 +8,10 @@ export async function POST(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
+
     const periodo = new Date().toISOString().slice(0, 7) // "2026-09"
 
     await prisma.establishment.update({

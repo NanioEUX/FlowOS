@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodEvents, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get("authorization")
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const url = new URL(req.url)
     const showDetail = url.searchParams.has("detail")
 

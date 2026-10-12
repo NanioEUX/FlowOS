@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -8,6 +9,9 @@ export async function GET(req: NextRequest) {
   if (!establishmentId) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   const suppliers = await prisma.supplier.findMany({
     where: { establishmentId },
@@ -25,6 +29,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
+
+    if (!body.establishmentId) {
+      return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
+    }
+
+    const auth = requireEstablishment(req, body.establishmentId)
+    if (auth.error) return auth.error
 
     const supplier = await prisma.supplier.create({
       data: {
@@ -48,6 +59,18 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const { id, ...data } = body
+
+    if (!id) {
+      return NextResponse.json({ error: "ID necessário" }, { status: 400 })
+    }
+
+    const existing = await prisma.supplier.findUnique({ where: { id }, select: { establishmentId: true } })
+    if (!existing) {
+      return NextResponse.json({ error: "Fornecedor não encontrado" }, { status: 404 })
+    }
+
+    const auth = requireEstablishment(req, existing.establishmentId)
+    if (auth.error) return auth.error
 
     const supplier = await prisma.supplier.update({
       where: { id },
@@ -75,6 +98,14 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "ID necessário" }, { status: 400 })
     }
+
+    const existing = await prisma.supplier.findUnique({ where: { id }, select: { establishmentId: true } })
+    if (!existing) {
+      return NextResponse.json({ error: "Fornecedor não encontrado" }, { status: 404 })
+    }
+
+    const auth = requireEstablishment(req, existing.establishmentId)
+    if (auth.error) return auth.error
 
     await prisma.supplier.delete({ where: { id } })
 

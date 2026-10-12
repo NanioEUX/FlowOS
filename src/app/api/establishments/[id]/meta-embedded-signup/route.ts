@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
@@ -74,6 +75,10 @@ export async function POST(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
+
     const body = await req.json()
     const { code, phoneNumberId, wabaId, businessId: clientBusinessId, redirectUri, accessToken: existingToken } = body
 

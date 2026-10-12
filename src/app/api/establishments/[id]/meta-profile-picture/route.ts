@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
 
@@ -9,6 +10,10 @@ export async function POST(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
+
     const formData = await req.formData()
     const file = formData.get("file") as File | null
 

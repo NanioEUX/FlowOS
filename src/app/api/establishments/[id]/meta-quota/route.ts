@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getQuotaInfo, refreshQuotaFromMeta, getMetaManagerUrl } from "@/lib/meta-quota"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(
   req: NextRequest,
@@ -8,6 +9,9 @@ export async function GET(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
 
     // If data is fresh (< 50 min), return cached
     const est = await prisma.establishment.findUnique({

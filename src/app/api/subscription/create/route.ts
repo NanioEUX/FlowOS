@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 const ASAAS_API_URL =
   process.env.ASAAS_ENVIRONMENT === "production"
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
     if (!establishmentId || !plan) {
       return NextResponse.json({ error: "Dados obrigatórios não informados" }, { status: 400 })
     }
+
+    const auth = requireEstablishment(req, establishmentId)
+    if (auth.error) return auth.error
 
     if (!PLAN_PRICES[plan]) {
       return NextResponse.json({ error: "Plano inválido" }, { status: 400 })

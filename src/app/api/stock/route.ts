@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export const revalidate = 10
 
@@ -9,6 +10,9 @@ export async function GET(req: NextRequest) {
   if (!establishmentId) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   const [families, categories, items, movements] = await Promise.all([
     prisma.stockFamily.findMany({
@@ -45,6 +49,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { type, establishmentId } = body
+
+    if (!establishmentId) {
+      return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
+    }
+
+    const auth = requireEstablishment(req, establishmentId)
+    if (auth.error) return auth.error
 
     if (type === "family") {
       const family = await prisma.stockFamily.create({

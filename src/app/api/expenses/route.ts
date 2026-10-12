@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { convertQuantity } from "@/lib/units"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const establishmentId = req.nextUrl.searchParams.get("establishmentId")
@@ -13,6 +14,9 @@ export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get("type")
 
   if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   // One-time cleanup: clear date for agendada/recorrente that have date set
   const cleanup = req.nextUrl.searchParams.get("cleanup")
@@ -124,6 +128,9 @@ export async function POST(req: NextRequest) {
   if (!description || !amount || !establishmentId) {
     return NextResponse.json({ error: "description, amount, establishmentId required" }, { status: 400 })
   }
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   const expenseType = type || "lancamento"
   const todayISO = new Date().toLocaleDateString("en-CA")

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { MetaCloudProvider } from "@/lib/whatsapp/meta"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(
   req: NextRequest,
@@ -8,6 +9,9 @@ export async function GET(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
 
     const establishment = await prisma.establishment.findUnique({
       where: { id },

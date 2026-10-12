@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
             interCertificatePassword: true,
             interPixKey: true,
             name: true,
+            subscriptionStatus: true,
           },
         },
       },
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
     }
 
     const est = order.establishment
+    const estStatus = (est as any).subscriptionStatus
+    if (estStatus === "cancelled" || estStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento inativo" }, { status: 403 })
+    }
+
     if (!est.interClientId || !est.interClientSecret || !est.interCertificate || !est.interPixKey) {
       return NextResponse.json({ error: "Integração Inter não configurada" }, { status: 400 })
     }

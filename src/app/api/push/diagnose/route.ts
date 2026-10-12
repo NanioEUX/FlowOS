@@ -1,15 +1,24 @@
 import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import webpush from "web-push"
+import { requireAuth, requireEstablishment } from "@/lib/require-auth"
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@flowos.fs.app"
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const establishmentId = url.searchParams.get("establishmentId")
+
+    if (establishmentId) {
+      const auth = requireEstablishment(req, establishmentId)
+      if (auth.error) return auth.error
+    } else {
+      const auth = requireAuth(req)
+      if (auth.error) return auth.error
+    }
     const orderId = url.searchParams.get("orderId")
     const orderNumber = url.searchParams.get("orderNumber")
 

@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { updateIfoodStatus } from "@/lib/integrations/ifood-status"
+import { requireAuth } from "@/lib/require-auth"
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = requireAuth(req)
+    if (authResult.error) return authResult.error
+
     const { status, externalId } = await req.json()
     if (!externalId || !status) {
       return NextResponse.json({ error: "need status and externalId" })

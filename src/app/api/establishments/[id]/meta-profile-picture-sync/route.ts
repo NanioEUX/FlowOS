@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
 
@@ -9,6 +10,9 @@ export async function POST(
 ) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
 
     if (!META_APP_ID) {
       return NextResponse.json({ success: false, error: "META_APP_ID nao configurado" }, { status: 500 })

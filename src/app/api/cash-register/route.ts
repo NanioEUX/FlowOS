@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: NextRequest) {
   const establishmentId = req.nextUrl.searchParams.get("establishmentId")
   if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   const register = await prisma.cashRegister.findFirst({
     where: { establishmentId, status: "open" },
@@ -19,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!establishmentId) {
     return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
   }
+
+  const auth = requireEstablishment(req, establishmentId)
+  if (auth.error) return auth.error
 
   const existing = await prisma.cashRegister.findFirst({
     where: { establishmentId, status: "open" },

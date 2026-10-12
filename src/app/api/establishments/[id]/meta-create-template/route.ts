@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createDefaultVerificationTemplate, getTemplateStatus } from "@/lib/whatsapp/meta"
+import { requireEstablishment } from "@/lib/require-auth"
 
 /**
  * POST /api/establishments/[id]/meta-create-template
@@ -10,6 +11,9 @@ import { createDefaultVerificationTemplate, getTemplateStatus } from "@/lib/what
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
+
+    const auth = requireEstablishment(req, id)
+    if (auth.error) return auth.error
 
     const establishment = await prisma.establishment.findUnique({
       where: { id },
