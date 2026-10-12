@@ -1946,14 +1946,15 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       return
     }
 
-    // CPF só é obrigatório se o pagamento for online (PIX/Card) — gateways exigem
+    // CPF obrigatório apenas para cartão (proteção contra chargeback).
+    // PIX não precisa — beneficiário é o Pagar.me, não o estabelecimento.
     const paymentMethodCheck: string = paymentMethod as string
-    const isOnlinePayment = paymentMethodCheck === "pix" || paymentMethodCheck === "card" || paymentMethodCheck === "online" || paymentMethodCheck === "asaas" || paymentMethodCheck === "inter"
-    if (isOnlinePayment) {
+    const isCardPayment = paymentMethodCheck === "card"
+    if (isCardPayment) {
       const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
       if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
-        console.log("[submitOrder] RETORNO: CPF obrigatorio para pagamento online")
-        setOrderError("CPF é obrigatório para pagamento online (PIX/Cartão). Adicione na identificação.")
+        console.log("[submitOrder] RETORNO: CPF obrigatorio para cartao")
+        setOrderError("CPF é obrigatório para pagamento com cartão. Adicione na identificação.")
         setOrdering(false)
         orderingRef.current = false
         openIdentifyModal()
@@ -3877,7 +3878,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                           />
                         </div>
                         <div>
-                          <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                          <label className="text-xs" style={{ color: theme.textMuted }}>CPF <span className="text-[10px]" style={{ color: theme.textMutedMore }}>(obrigatório só para cartão)</span></label>
                           <input
                             value={customer.cpf || ""}
                             onChange={(e) => {
