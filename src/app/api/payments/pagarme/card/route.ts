@@ -132,17 +132,26 @@ export async function POST(req: NextRequest) {
       installments,
       splitRules,
       clientIp,
+      customerData: {
+        name: creditCardHolderInfo?.name || order.customerName || order.customer?.name || "",
+        email: creditCardHolderInfo?.email || order.customer?.email || `${(order.customerPhone || "").replace(/\D/g, "")}@pedidoflow.com`,
+        document: creditCardHolderInfo?.cpf || order.customer?.cpf || "",
+        phone: creditCardHolderInfo?.phone || order.customerPhone || order.customer?.phone || "",
+      },
     })
+
+    // Só atualiza status se a transação foi aceita pelo Pagar.me
+    const txStatus = transaction.status || ""
+    const chargeStatus = transaction.charges?.[0]?.status || ""
+    const isPaid = ["paid", "captured", "authorized_pending_capture"].includes(txStatus) ||
+      ["paid", "captured", "authorized_pending_capture"].includes(chargeStatus)
 
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        // Em Pagar.me V5 o webhook do cartão traz o id da charge (ch_...).
-        // Gravamos a charge id no paymentId para que tanto o webhook
-        // quanto o polling em /payment-status encontrem a order.
         paymentId: String(transaction.charges?.[0]?.id || transaction.id),
-        paymentStatus: "pending",
-        status: "payment_pending",
+        paymentStatus: isPaid ? "paid" : "pending",
+        status: isPaid ? "confirmed" : "payment_pending",
       },
     })
 

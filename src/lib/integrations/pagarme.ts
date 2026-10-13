@@ -222,6 +222,7 @@ export async function createCardTransaction({
   installments,
   splitRules,
   clientIp,
+  customerData,
 }: {
   apiKey: string
   customerId: string
@@ -251,6 +252,12 @@ export async function createCardTransaction({
     shippingState?: string
     shippingCep?: string
     shippingRecipientName?: string
+  }
+  customerData?: {
+    name: string
+    email: string
+    document?: string
+    phone?: string
   }
   installments?: number
   splitRules?: SplitRule[]
@@ -307,7 +314,43 @@ export async function createCardTransaction({
         credit_card: creditCardObj,
       },
     ],
-    customer_id: customerId,
+    closed: true,
+  }
+
+  // Enviar customer inline (mais confiável que customer_id no sandbox)
+  if (customerData) {
+    const phoneDigits = (customerData.phone || "").replace(/\D/g, "")
+    const docDigits = (customerData.document || "").replace(/\D/g, "")
+    body.customer = {
+      name: customerData.name.substring(0, 64),
+      email: (customerData.email || "").substring(0, 64),
+      type: docDigits.length === 11 ? "individual" : "company",
+    }
+    if (docDigits) {
+      body.customer.document = docDigits
+    }
+    if (phoneDigits.length >= 10) {
+      body.customer.phones = {
+        mobile_phone: {
+          country_code: "55",
+          area_code: phoneDigits.slice(0, 2),
+          number: phoneDigits.slice(2),
+        },
+      }
+    }
+    // Endereço do customer (PSP exige para antifraude)
+    const custCep = (creditCardHolderInfo?.cep || "").replace(/\D/g, "")
+    if (custCep) {
+      body.customer.address = {
+        line_1: [creditCardHolderInfo?.street || creditCardHolderInfo?.address, creditCardHolderInfo?.number].filter(Boolean).join(", ") || "Não informado",
+        zip_code: custCep,
+        city: creditCardHolderInfo?.city || "Não informado",
+        state: creditCardHolderInfo?.state || "SP",
+        country: "BR",
+      }
+    }
+  } else if (customerId) {
+    body.customer_id = customerId
   }
 
   // Shipping separado (antifraude compara cobrança vs entrega)
