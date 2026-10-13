@@ -130,13 +130,8 @@ export async function createPixTransaction({
   splitRules?: SplitRule[]
 }): Promise<PagarmeTransactionResponse> {
   const body: any = {
-    antifraud_enabled: false,
-    options: {
-      antifraud: { enabled: false },
-    },
     items: [
       {
-        id: orderId,
         code: orderId.substring(0, 40),
         description: description.substring(0, 200),
         amount: Math.round(amount * 100),
@@ -298,13 +293,8 @@ export async function createCardTransaction({
   }
 
   const body: any = {
-    antifraud_enabled: false,
-    options: {
-      antifraud: { enabled: false },
-    },
     items: [
       {
-        id: orderId,
         code: orderId.substring(0, 40),
         description: description.substring(0, 200),
         amount: Math.round(amount * 100),
@@ -323,13 +313,11 @@ export async function createCardTransaction({
   // Shipping separado (antifraude compara cobrança vs entrega)
   if (creditCardHolderInfo?.shippingStreet || creditCardHolderInfo?.shippingCity) {
     body.shipping = {
-      name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
       recipient_name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
       address: {
-        street: creditCardHolderInfo.shippingStreet || creditCardHolderInfo.street || creditCardHolderInfo.address || "Não informado",
-        number: creditCardHolderInfo.shippingNumber || creditCardHolderInfo.number || "s/n",
+        line_1: [creditCardHolderInfo.shippingStreet || creditCardHolderInfo.street || creditCardHolderInfo.address, creditCardHolderInfo.shippingNumber || creditCardHolderInfo.number].filter(Boolean).join(", ") || "Não informado",
+        line_2: creditCardHolderInfo.shippingNeighborhood || creditCardHolderInfo.neighborhood || undefined,
         zip_code: shippingCepDigits,
-        neighborhood: creditCardHolderInfo.shippingNeighborhood || creditCardHolderInfo.neighborhood || "Não informado",
         city: creditCardHolderInfo.shippingCity || creditCardHolderInfo.city || "Não informado",
         state: creditCardHolderInfo.shippingState || creditCardHolderInfo.state || "SP",
         country: "BR",
