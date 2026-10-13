@@ -260,6 +260,7 @@ export async function createCardTransaction({
   const creditCardObj: any = {
     installments: installments || 1,
     statement_descriptor: "FLOWOS",
+    operation_type: "auth_and_capture",
   }
 
   const cepDigits = (creditCardHolderInfo?.cep || "").replace(/\D/g, "") || "00000000"
@@ -326,9 +327,7 @@ export async function createCardTransaction({
 
   // IP do cliente (antifraude usa pra geolocalização e detecção de proxy/VPN)
   if (clientIp) {
-    body.metadata = { ...(body.metadata || {}), client_ip: clientIp }
-    // Pagar.me aceita também em "ip" no nível da order (algumas versões)
-    body.ip = clientIp
+    body.metadata = { client_ip: clientIp }
   }
 
   // Add split rules if provided (V5 format)
@@ -344,10 +343,6 @@ export async function createCardTransaction({
       },
     }))
   }
-
-  // Em cartão de crédito, forçar captura automática para evitar ficar
-  // preso em "waiting_capture" sem evento order.paid chegar.
-  creditCardObj.capture = true
 
   console.log("[Pagar.me] Criando transação cartão:", { customerId, amount, installments: installments || 1 })
 
