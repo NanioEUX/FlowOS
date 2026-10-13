@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createPagarmeCustomer, createCardTransaction } from "@/lib/integrations/pagarme"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
 
 export async function POST(req: NextRequest) {
   let orderId: string | undefined
@@ -158,6 +159,10 @@ export async function POST(req: NextRequest) {
         status: isPaid ? "confirmed" : "payment_pending",
       },
     })
+
+    if (isPaid) {
+      notifyPaymentConfirmed(order.id).catch(() => {})
+    }
 
     return NextResponse.json({
       transactionId: transaction.id,

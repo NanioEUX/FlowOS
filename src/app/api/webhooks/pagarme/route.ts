@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { mapPagarmeStatus, verifyPagarmeSignature } from "@/lib/integrations/pagarme"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
 
 export const runtime = "nodejs"
 
@@ -141,6 +142,12 @@ async function processWebhook(eventType: string, orderData: any) {
       data: updateData,
     })
     console.log("[Pagar.me Webhook] Order #", order.orderNumber, "updated:", updateData)
+  }
+
+  // Notifica o cliente quando o pagamento acabou de ser confirmado
+  // (transição para paid — evita notificar em webhooks repetidos).
+  if (eventStatus === "paid" && updateData.paymentStatus === "paid") {
+    notifyPaymentConfirmed(order.id).catch(() => {})
   }
 
   // Log financial data for paid transactions

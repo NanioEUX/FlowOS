@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getInterPixStatus } from "@/lib/integrations/inter"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
 
 // Public endpoint used by the cardápio to poll payment status. Requires the
 // order's trackingToken as ?token= so only someone with the order link can
@@ -57,6 +58,7 @@ export async function GET(
           where: { id: params.id },
           data: { paymentStatus: "paid", status: "confirmed" },
         })
+        notifyPaymentConfirmed(params.id).catch(() => {})
         return NextResponse.json({ paymentStatus: "paid", status: "confirmed" })
       }
     } catch (error: any) {
@@ -101,6 +103,7 @@ export async function GET(
               where: { id: params.id },
               data: { paymentStatus: "paid", status: newStatus },
             })
+            notifyPaymentConfirmed(params.id).catch(() => {})
             return NextResponse.json({ paymentStatus: "paid", status: newStatus })
           }
           // PIX expired or failed → cancel order with reason
