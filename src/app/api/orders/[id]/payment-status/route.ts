@@ -103,6 +103,20 @@ export async function GET(
             })
             return NextResponse.json({ paymentStatus: "paid", status: newStatus })
           }
+          // PIX expired or failed → cancel order with reason
+          const isExpired = charge.status === "failed" || charge.status === "canceled" || charge.status === "expired"
+            || charge.last_transaction_status === "failed" || charge.last_transaction_status === "expired"
+          if (isExpired) {
+            await prisma.order.update({
+              where: { id: params.id },
+              data: {
+                paymentStatus: "expired",
+                status: "cancelled",
+                cancellationReason: "Pagamento PIX não realizado — cobrança expirada",
+              },
+            })
+            return NextResponse.json({ paymentStatus: "expired", status: "cancelled" })
+          }
         }
       }
     } catch (e: any) {

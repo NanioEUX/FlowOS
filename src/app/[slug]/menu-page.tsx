@@ -1713,12 +1713,24 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         const pendingOnlineOrder = customerOrders.find((o: any) =>
           o.paymentStatus === "pending" && o.paymentLink
         )
-        const orderId = pendingOnlineOrder?.id || lastOrder?.paymentLink ? lastOrder?.orderId : null
-        const orderNumber = pendingOnlineOrder?.orderNumber || 0
-        if (orderId && pendingOnlineOrder) {
-          // Show action modal so customer can pay or cancel the previous
-          // online order before starting a new one.
-          setPendingOrderAction({ orderId, orderNumber, productId: product.id })
+        if (pendingOnlineOrder) {
+          // Before blocking, refresh payment status — PIX may have expired
+          // and payment-status endpoint cancels it server-side.
+          fetch(`/api/orders/${pendingOnlineOrder.id}/payment-status?token=${pendingOnlineOrder.trackingToken}`)
+            .then(r => r.json())
+            .then(status => {
+              if (status.paymentStatus === "expired" || status.paymentStatus === "paid" || status.status === "cancelled") {
+                // Order resolved — don't block, add item normally
+                loadCustomerOrders(true)
+                // Retry adding the item
+                addToCart(product)
+              } else {
+                setPendingOrderAction({ orderId: pendingOnlineOrder.id, orderNumber: pendingOnlineOrder.orderNumber || 0, productId: product.id })
+              }
+            })
+            .catch(() => {
+              setPendingOrderAction({ orderId: pendingOnlineOrder.id, orderNumber: pendingOnlineOrder.orderNumber || 0, productId: product.id })
+            })
           return
         }
       }
@@ -5838,21 +5850,23 @@ onPaymentConfirmed={handlePaymentSuccess}
             <h3 className="mb-2 text-center text-lg font-bold" style={{ color: theme.text }}>Pedido pendente</h3>
             <p className="mb-6 text-center text-sm" style={{ color: theme.textMuted }}>
               {pendingOrderAction.orderNumber > 0
-                ? `Você tem o pedido <strong style={{ color: theme.accent }}>#${pendingOrderAction.orderNumber}</strong> aguardando pagamento. Para fazer novo pedido, pague ou cancele o atual.`
+                ? <>Você tem o pedido <strong style={{ color: theme.accent }}>#{pendingOrderAction.orderNumber}</strong> aguardando pagamento. Para fazer novo pedido, pague ou cancele o atual.</>
                 : "Você tem um pedido aguardando pagamento. Para fazer novo pedido, pague ou cancele o atual."
               }
             </p>
             <div className="flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setPendingOrderAction(null)
-                  setShowCart(true)
-                }}
-                className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: theme.accent }}
-              >
-                Ver carrinho
-              </button>
+              {cart.length > 0 ? (
+                <button
+                  onClick={() => {
+                    setPendingOrderAction(null)
+                    setShowCart(true)
+                  }}
+                  className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: theme.accent }}
+                >
+                  Ver carrinho
+                </button>
+              ) : null}
               {(() => {
                 const pendingOrderStatus =
                   customerOrders.find((o: any) => o.id === pendingOrderAction.orderId)?.status ||
