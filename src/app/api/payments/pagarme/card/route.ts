@@ -4,9 +4,13 @@ import { createPagarmeCustomer, createCardTransaction } from "@/lib/integrations
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 
 export async function POST(req: NextRequest) {
+  let orderId: string | undefined
+  let establishmentId: string | undefined
   try {
     const body = await req.json()
-    const { orderId, installments, establishmentId, creditCard, creditCardHolderInfo } = body
+    orderId = body.orderId
+    establishmentId = body.establishmentId
+    const { installments, creditCard, creditCardHolderInfo } = body
 
     if (!orderId || !establishmentId) {
       return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
@@ -161,6 +165,18 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("[Pagar.me Card] Error:", error.message)
+    // Pagamento falhou: cancela o pedido para não ficar pendente para sempre.
+    if (orderId && establishmentId) {
+      await prisma.order.updateMany({
+        where: { id: orderId, establishmentId, paymentStatus: "pending", status: "payment_pending" },
+        data: {
+          status: "cancelled",
+          paymentStatus: "failed",
+          cancellationReason: `Pagamento do cartão não realizado`.substring(0, 200),
+          cancelledBy: "customer",
+        },
+      }).catch(() => {})
+    }
     return NextResponse.json({ error: error.message || "Erro ao processar cartão" }, { status: 500 })
   }
 }

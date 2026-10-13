@@ -356,6 +356,7 @@ export async function createCardTransaction({
   // Shipping separado (antifraude compara cobrança vs entrega)
   if (creditCardHolderInfo?.shippingStreet || creditCardHolderInfo?.shippingCity) {
     body.shipping = {
+      description: "Entrega do pedido",
       recipient_name: creditCardHolderInfo.shippingRecipientName || creditCardHolderInfo.name || "",
       address: {
         line_1: [creditCardHolderInfo.shippingStreet || creditCardHolderInfo.street || creditCardHolderInfo.address, creditCardHolderInfo.shippingNumber || creditCardHolderInfo.number].filter(Boolean).join(", ") || "Não informado",
@@ -399,7 +400,10 @@ export async function createCardTransaction({
   console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status, charges: data.charges?.map((c: any) => ({ id: c.id, status: c.status, last_transaction_status: c.last_transaction_status })) }))
 
   if (!res.ok || !data.id) {
-    const errMsg = data.message || data.errors?.[0]?.message || JSON.stringify(data.errors || data)
+    const fieldErrors = data.errors && typeof data.errors === "object" && !Array.isArray(data.errors)
+      ? Object.entries(data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("; ")
+      : (Array.isArray(data.errors) ? data.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ") : "")
+    const errMsg = fieldErrors || data.message || JSON.stringify(data)
     console.error("[Pagar.me] FALHA transação cartão:", errMsg)
     console.error("[Pagar.me] Request body enviado:", JSON.stringify(body).substring(0, 1000))
     throw new Error(`Falha ao criar transação cartão: ${errMsg}`)
