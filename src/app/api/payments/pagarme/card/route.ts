@@ -98,11 +98,13 @@ export async function POST(req: NextRequest) {
     })
 
     // Build split rules (SaaS profit only - Pagar.me fee is automatic)
+    // Sandbox: skip split (simulator limitations)
     const configData = await getPagarmeConfig()
     const saasRecipientId = configData.saasRecipientId
     const saasProfit = configData.saasProfitPercentage || 0
+    const isSandbox = apiKey.startsWith("sk_test_")
 
-    const splitRules = (order.establishment.pagarmeSplitReceiverId && saasRecipientId && saasProfit > 0)
+    const splitRules = (!isSandbox && order.establishment.pagarmeSplitReceiverId && saasRecipientId && saasProfit > 0)
       ? [
           {
             recipientId: saasRecipientId,

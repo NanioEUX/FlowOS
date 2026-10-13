@@ -581,13 +581,18 @@ export async function POST(req: NextRequest) {
           const billingType = paymentMethod === "card" ? "card" : "pix"
           
           if (billingType === "pix") {
-            const splitRules = buildSplitRules(
+            // Sandbox PIX simulator doesn't support split — skip it in test mode
+            const isSandbox = pagarmeApiKey.startsWith("sk_test_")
+            const splitRules = isSandbox ? undefined : buildSplitRules(
               order.total,
               establishment.pagarmeSplitReceiverId,
               establishment.saasCommissionPercentage || 10,
               pagarmeConfig.saasRecipientId,
               pagarmeConfig
             )
+            if (isSandbox && establishment.pagarmeSplitReceiverId) {
+              console.log("[Pagar.me] Sandbox detectado — split desabilitado para PIX (simulador não suporta)")
+            }
 
             let pixPayment
             try {
@@ -600,9 +605,9 @@ export async function POST(req: NextRequest) {
                 splitRules,
               })
             } catch (splitErr: any) {
-              // If split fails (invalid recipient in sandbox), retry without split
-              if (splitRules && splitErr.message?.includes("recusada")) {
-                console.log("[Pagar.me] Split falhou, tentando sem split:", splitErr.message)
+              // Fallback: retry without split if it still fails
+              if (splitRules) {
+                console.log("[Pagar.me] Com split falhou, tentando sem split:", splitErr.message)
                 pixPayment = await createPixTransaction({
                   apiKey: pagarmeApiKey,
                   customerId: customer.id,
