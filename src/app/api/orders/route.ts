@@ -188,7 +188,8 @@ export async function POST(req: NextRequest) {
     // pra 'accepted' quando autoAcceptOrders=true. Depois é só clicar em
     // "Iniciar preparo" pra ir pra 'preparing'.
     const autoAccept = establishment.autoAcceptOrders
-    const initialStatus = body.status || (autoAccept ? "accepted" : (isMesa ? "new" : "pending"))
+    // Online payments (pix/card) never start as accepted — payment must confirm first.
+    const initialStatus = body.status || (isOnlinePaymentMethod ? "payment_pending" : (autoAccept ? "accepted" : (isMesa ? "new" : "pending")))
     console.log("[Orders POST] autoAccept:", { autoAcceptOrders: establishment.autoAcceptOrders, paymentMethod, isOnlinePaymentMethod, isMesa, initialStatus })
 
     // Find or create customer - CPF is unique identifier
