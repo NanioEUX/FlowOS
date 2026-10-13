@@ -192,6 +192,14 @@ export async function createPixTransaction({
     throw new Error(`Falha ao criar transação PIX: ${data.message || data.errors?.[0]?.message || JSON.stringify(data)}`)
   }
 
+  // Check if the PIX charge actually succeeded
+  const charge = data.charges?.[0]
+  if (charge && (charge.status === "failed" || charge.status === "declined")) {
+    const reason = charge.last_transaction?.acquirer_message || charge.last_transaction_status || charge.status
+    console.error("[Pagar.me] Cobrança PIX falhou:", JSON.stringify({ chargeId: charge.id, status: charge.status, reason }))
+    throw new Error(`Cobrança PIX recusada: ${reason}`)
+  }
+
   return data as PagarmeTransactionResponse
 }
 

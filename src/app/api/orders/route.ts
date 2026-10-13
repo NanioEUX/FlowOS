@@ -581,20 +581,39 @@ export async function POST(req: NextRequest) {
           const billingType = paymentMethod === "card" ? "card" : "pix"
           
           if (billingType === "pix") {
-            const pixPayment = await createPixTransaction({
-              apiKey: pagarmeApiKey,
-              customerId: customer.id,
-              amount: order.total,
-              description: `Pedido #${order.orderNumber} - ${establishment.name}`,
-              orderId: order.id,
-              splitRules: buildSplitRules(
-                order.total,
-                establishment.pagarmeSplitReceiverId,
-                establishment.saasCommissionPercentage || 10,
-                pagarmeConfig.saasRecipientId,
-                pagarmeConfig
-              ),
-            })
+            const splitRules = buildSplitRules(
+              order.total,
+              establishment.pagarmeSplitReceiverId,
+              establishment.saasCommissionPercentage || 10,
+              pagarmeConfig.saasRecipientId,
+              pagarmeConfig
+            )
+
+            let pixPayment
+            try {
+              pixPayment = await createPixTransaction({
+                apiKey: pagarmeApiKey,
+                customerId: customer.id,
+                amount: order.total,
+                description: `Pedido #${order.orderNumber} - ${establishment.name}`,
+                orderId: order.id,
+                splitRules,
+              })
+            } catch (splitErr: any) {
+              // If split fails (invalid recipient in sandbox), retry without split
+              if (splitRules && splitErr.message?.includes("recusada")) {
+                console.log("[Pagar.me] Split falhou, tentando sem split:", splitErr.message)
+                pixPayment = await createPixTransaction({
+                  apiKey: pagarmeApiKey,
+                  customerId: customer.id,
+                  amount: order.total,
+                  description: `Pedido #${order.orderNumber} - ${establishment.name}`,
+                  orderId: order.id,
+                })
+              } else {
+                throw splitErr
+              }
+            }
             
             const charge = pixPayment.charges?.[0]
             const tx = charge?.last_transaction
