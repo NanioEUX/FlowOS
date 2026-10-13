@@ -7021,10 +7021,12 @@ function PaymentModal({
       })
       const data = await res.json()
       console.log("[Card] Response:", JSON.stringify(data), "status:", res.status)
+      const txStatus = String(data.status || "").toLowerCase()
       if (!res.ok) {
         setCardError(data.error || `Erro ${res.status}`)
-      } else if (data.status === "CONFIRMED" || data.status === "RECEIVED" || data.status === "AUTHORIZED") {
+      } else if (["paid", "captured", "confirmed", "received", "authorized", "authorized_pending_capture"].includes(txStatus)) {
         console.log("[Card] Payment confirmed, calling onPaymentConfirmed")
+        setCardError("")
         setPaymentSuccess(true)
         onPaymentConfirmed?.()
       } else if (data.error) {
@@ -7253,7 +7255,7 @@ function PaymentModal({
                 </p>
                 <div className="flex items-center gap-2 mb-6">
                   <Loader2 className="h-4 w-4 animate-spin" style={{ color: theme.primary }} />
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Aguardando confirmação do Asaas</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Aguardando confirmação do pagamento</p>
                 </div>
                 <button
                   onClick={() => { setCardPending(false); setCardError("") }}

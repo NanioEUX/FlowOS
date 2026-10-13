@@ -55,9 +55,16 @@ async function processWebhook(eventType: string, orderData: any) {
 
   console.log("[Pagar.me Webhook] Processing:", orderId, eventType)
 
-  // Find order by paymentId (which stores the Pagar.me order ID)
+  // Find order by paymentId. Card payments store the charge id (ch_...),
+  // but webhook order events send the order id (or_...). Check both.
+  const chargeId = orderData?.charges?.[0]?.id
   const order = await prisma.order.findFirst({
-    where: { paymentId: String(orderId) },
+    where: {
+      OR: [
+        { paymentId: String(orderId) },
+        ...(chargeId ? [{ paymentId: String(chargeId) }] : []),
+      ],
+    },
   })
 
   if (!order) {
@@ -122,7 +129,10 @@ async function processWebhook(eventType: string, orderData: any) {
   }
 
   const updateData: Record<string, unknown> = {}
-  if (order.paymentStatus !== paymentStatus) updateData.paymentStatus = paymentStatus
+  // Nunca regride paymentStatus de paid para pending (webhooks fora de ordem)
+  if (order.paymentStatus !== paymentStatus && !(order.paymentStatus === "paid" && paymentStatus === "pending")) {
+    updateData.paymentStatus = paymentStatus
+  }
   if (finalOrderStatus && order.status !== finalOrderStatus) updateData.status = finalOrderStatus
 
   if (Object.keys(updateData).length > 0) {

@@ -165,14 +165,16 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("[Pagar.me Card] Error:", error.message)
-    // Pagamento falhou: cancela o pedido para não ficar pendente para sempre.
-    if (orderId && establishmentId) {
+    // Se o cartão foi recusado (negativa da adquirente), mantém o pedido
+    // para o cliente tentar outro cartão. Cancela só em erro de API.
+    const isDeclined = error.message?.startsWith("Cartao nao autorizado")
+    if (!isDeclined && orderId && establishmentId) {
       await prisma.order.updateMany({
         where: { id: orderId, establishmentId, paymentStatus: "pending", status: "payment_pending" },
         data: {
           status: "cancelled",
           paymentStatus: "failed",
-          cancellationReason: `Pagamento do cartão não realizado`.substring(0, 200),
+          cancellationReason: `Erro no pagamento com cartão`.substring(0, 200),
           cancelledBy: "customer",
         },
       }).catch(() => {})
