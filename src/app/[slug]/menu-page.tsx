@@ -129,9 +129,10 @@ function extractTrackingToken(trackingUrl: string | null | undefined): string {
 
 // Pedidos só podem ser cancelados pelo cliente enquanto ainda não foram
 // aceitos pelo estabelecimento. Após "confirmed" (em preparo ou além), o
-// cliente precisa solicitar cancelamento pelo chat.
+// cliente precisa solicitar cancelamento pelo chat. "abandoned" (expirou sem
+// aceite/pagamento) também pode ser cancelado para destravar o carrinho.
 function canCancelByCustomer(orderStatus: string | null | undefined): boolean {
-  return orderStatus === "pending" || orderStatus === "payment_pending"
+  return orderStatus === "pending" || orderStatus === "payment_pending" || orderStatus === "abandoned"
 }
 
 function normalizeUrl(url: string | null): string {
@@ -493,8 +494,21 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     fetch(`/api/orders/${capturedOrderId}/payment-status?token=${extractTrackingToken(lastOrder.trackingUrl)}`, { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
-        if (data.paymentStatus === "paid" && lastOrderIdRef.current === capturedOrderId) {
+        if (lastOrderIdRef.current !== capturedOrderId) return
+        if (data.paymentStatus === "paid") {
           setLastOrder(prev => prev ? { ...prev, paymentDone: true } : null)
+        } else if (
+          data.status === "cancelled" || data.status === "abandoned" ||
+          ["cancelled", "expired", "failed"].includes(data.paymentStatus)
+        ) {
+          // Pedido cancelado/expirou (loja cancelou, Pix expirou ou pedido
+          // abandonado): limpa o estado pendente para destravar o carrinho
+          // e não travar o cliente com itens de pedido morto.
+          setLastOrder(null)
+          localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+          setPendingOrderItems([])
+          setPendingOrderNumber(null)
+          setOrderResult(prev => prev?.orderId === capturedOrderId ? null : prev)
         }
       })
       .catch(() => {})
@@ -1560,7 +1574,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     setPaymentMethod(availablePayments[0].key as any)
   }
 
-  function openCart() {
+  async function openCart() {
     if (!customer.phone || !customer.name || !sessionVerified) {
       pendingCartOpenRef.current = true
       if (!customer.phone || !customer.name) {
@@ -1603,6 +1617,45 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
             pendingItems = []
           }
         }
+      }
+    }
+    // Valida com o servidor ANTES de travar o carrinho: se o pedido pendente
+    // já foi pago, cancelado ou expirou (loja cancelou, Pix expirou, pedido
+    // abandonado), limpa o estado stale e abre o carrinho normal (editável)
+    // em vez de travar com itens de um pedido morto.
+    if (pendingOrderNumberVal !== null) {
+      const checkOrderId = orderResult?.orderId || lastOrder?.orderId || null
+      const checkToken = extractTrackingToken(orderResult?.trackingUrl || lastOrder?.trackingUrl)
+      if (checkOrderId && checkToken) {
+        try {
+          const res = await fetch(`/api/orders/${checkOrderId}/payment-status?token=${checkToken}`)
+          const data = await res.json()
+          const isPaid = data?.paymentStatus === "paid"
+          const isSettled =
+            data?.status === "cancelled" || data?.status === "abandoned" ||
+            ["cancelled", "expired", "failed"].includes(data?.paymentStatus)
+          if (isPaid || isSettled) {
+            pendingItems = []
+            pendingOrderNumberVal = null
+            setPendingOrderItems([])
+            setPendingOrderNumber(null)
+            if (lastOrder?.orderId === checkOrderId) {
+              if (isPaid) {
+                setLastOrder(prev => prev ? { ...prev, paymentDone: true } : null)
+              } else {
+                setLastOrder(null)
+                localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+              }
+            }
+            if (orderResult?.orderId === checkOrderId) {
+              if (isPaid) {
+                setOrderResult(prev => prev ? { ...prev, paymentLink: undefined, paymentDone: true } : prev)
+              } else {
+                setOrderResult(null)
+              }
+            }
+          }
+        } catch {}
       }
     }
     const pendingOrder = pendingOrderNumberVal !== null ? { orderNumber: pendingOrderNumberVal } : null
@@ -1684,6 +1737,22 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
               })
             }
           }, 300)
+          return
+        }
+        if (
+          data.status === "cancelled" || data.status === "abandoned" ||
+          ["cancelled", "expired", "failed"].includes(data.paymentStatus)
+        ) {
+          // Pedido morto (cancelado/expirou): não abre modal de pagamento.
+          // Limpa o estado pendente para destravar o carrinho.
+          setPendingOrderItems([])
+          setPendingOrderNumber(null)
+          if (lastOrder?.orderId === orderId) {
+            setLastOrder(null)
+            localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+          }
+          if (orderResult?.orderId === orderId) setOrderResult(null)
+          toast("Este pedido foi cancelado ou expirou. Faça um novo pedido.", "error")
           return
         }
       }
@@ -2787,6 +2856,23 @@ const handlePaymentSuccess = useCallback(() => {
           if (data.paymentStatus === "paid") {
             console.log("[persistent-poll] Payment confirmed:", orderResult.orderId)
             handlePaymentSuccess()
+            break
+          }
+          if (
+            data.status === "cancelled" || data.status === "abandoned" ||
+            ["cancelled", "expired", "failed"].includes(data.paymentStatus)
+          ) {
+            // Pedido cancelado/expirou: fecha o modal de pagamento e destrava
+            // o carrinho (não deve continuar pedindo pagamento de pedido morto).
+            console.log("[persistent-poll] Order cancelled/expired:", orderResult.orderId, data.status, data.paymentStatus)
+            const deadOrderId = orderResult.orderId
+            setOrderResult(prev => (prev && prev.orderId === deadOrderId) ? { ...prev, paymentLink: undefined, paymentDone: true } : prev)
+            setPendingOrderItems([])
+            setPendingOrderNumber(null)
+            if (lastOrder?.orderId === deadOrderId) {
+              setLastOrder(null)
+              localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+            }
             break
           }
         } catch {}
@@ -6941,6 +7027,20 @@ function PaymentModal({
               setCardPending(false)
               onPaymentConfirmed?.()
               clearInterval(check)
+            } else if (
+              data.status === "cancelled" || data.status === "abandoned" ||
+              ["cancelled", "expired", "failed"].includes(data.paymentStatus)
+            ) {
+              // Pedido cancelado/expirou enquanto o cliente estava pagando:
+              // para o polling e avisa (em vez de girar "aguardando" pra sempre).
+              clearInterval(check)
+              const deadMsg = "Este pedido foi cancelado ou o pagamento expirou. Feche e faça um novo pedido."
+              if (tab === "card") {
+                setCardPending(false)
+                setCardError(deadMsg)
+              } else {
+                setQrError(deadMsg)
+              }
             }
           }
         } catch {}

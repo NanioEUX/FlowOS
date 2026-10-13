@@ -48,9 +48,17 @@ export async function PATCH(
     //   não foi aceito (status="pending"/"payment_pending").
     // - Merchant (admin autenticado): pode cancelar QUALQUER status não-final.
     if (status === "cancelled") {
+      // Idempotente: se o pedido JÁ está cancelado, responde sucesso para que
+      // o cliente possa limpar o estado local (carrinho travado com itens de
+      // pedido antigo) sem receber erro.
+      if (order.status === "cancelled") {
+        return NextResponse.json({ success: true, cancelled: true, alreadyCancelled: true })
+      }
       const isMerchant = !!auth
       if (!isMerchant) {
-        const allowedStatuses = ["pending", "payment_pending"]
+        // "abandoned" = pedido online que expirou sem aceite/pagamento; o
+        // cliente pode cancelar para destravar o próprio carrinho.
+        const allowedStatuses = ["pending", "payment_pending", "abandoned"]
         if (!allowedStatuses.includes(order.status)) {
           return NextResponse.json(
             { error: "Este pedido já está em produção e não pode mais ser cancelado pelo cliente. Entre em contato pelo chat para solicitar cancelamento." },
