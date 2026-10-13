@@ -45,6 +45,7 @@ interface Order {
   cashbackEarned?: number
   loyaltyPointsUsed?: number
   reviewRating?: number | null
+  cancellationReason?: string | null
   establishment?: { name: string; phone: string; logo: string | null; slug: string }
 }
 
@@ -611,7 +612,7 @@ export function OrdersScreen({
                           <span className="text-[11px]" style={{ color: theme.textMutedMore }}>
                             {dateStr}, {timeStr}
                           </span>
-                          {(order.cashbackEarned ?? 0) > 0 && (
+                          {(order.cashbackEarned ?? 0) > 0 && !isCancelled && !isAbandoned && (
                             <span className="text-[11px] font-semibold" style={{ color: theme.success }}>
                               +{formatCurrency((order.cashbackEarned ?? 0) / 100)} Cash
                             </span>
@@ -719,8 +720,15 @@ export function OrdersScreen({
                           )
                         })()}
 
+                        {/* Cancellation reason */}
+                        {(isCancelled || isAbandoned) && order.cancellationReason && (
+                          <div className="mb-3 rounded-lg px-3 py-2 text-[11px]" style={{ backgroundColor: isCancelled ? "rgba(239,68,68,0.06)" : "rgba(249,115,22,0.06)", color: isCancelled ? "#ef4444" : "#f97316" }}>
+                            {order.cancellationReason}
+                          </div>
+                        )}
+
                         {/* CTA */}
-                        {onReorder && !isCancelled && !isAbandoned && (
+                        {onReorder && (
                           <button
                             onClick={() => onReorder(order)}
                             className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"

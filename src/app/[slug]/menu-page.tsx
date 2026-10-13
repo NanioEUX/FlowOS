@@ -1710,8 +1710,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     if (!paymentDone && (customerOrders.length > 0 || (lastOrder?.paymentLink))) {
       const phone = customer.phone || customerData?.phone
       if (phone) {
+        // Only block if order is truly active — not abandoned/cancelled/expired
         const pendingOnlineOrder = customerOrders.find((o: any) =>
-          o.paymentStatus === "pending" && o.paymentLink
+          o.paymentStatus === "pending" && o.paymentLink &&
+          ["pending", "payment_pending"].includes(o.status)
         )
         if (pendingOnlineOrder) {
           // Before blocking, refresh payment status — PIX may have expired

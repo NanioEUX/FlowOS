@@ -701,14 +701,36 @@ export async function GET(req: NextRequest) {
   })
   const abandonMinutes = estConfig?.abandonedOrderMinutes ?? 15
   const abandonThreshold = new Date(Date.now() - abandonMinutes * 60 * 1000)
-  await prisma.order.updateMany({
+  const abandonedOrders = await prisma.order.findMany({
     where: {
       establishmentId,
       status: { in: ["pending", "new", "payment_pending"] },
       createdAt: { lt: abandonThreshold },
     },
-    data: { status: "abandoned" },
+    select: { id: true, customerId: true, loyaltyPointsUsed: true, cashbackEarned: true, firstPurchaseBonus: true, total: true },
   })
+  if (abandonedOrders.length > 0) {
+    await prisma.$transaction(async (tx) => {
+      await tx.order.updateMany({
+        where: { id: { in: abandonedOrders.map(o => o.id) } },
+        data: { status: "abandoned", cancellationReason: "Pedido expirado — não confirmado no tempo limite", cancellationDate: new Date(), cancelledBy: "system" },
+      })
+      // Reverse loyalty for abandoned orders
+      for (const o of abandonedOrders) {
+        if (o.customerId) {
+          const reversalDelta = (o.loyaltyPointsUsed || 0) - (o.cashbackEarned || 0) - (o.firstPurchaseBonus || 0)
+          await tx.customer.update({
+            where: { id: o.customerId },
+            data: {
+              totalOrders: { decrement: 1 },
+              totalSpent: { decrement: o.total || 0 },
+              ...(reversalDelta !== 0 ? { loyaltyPoints: { increment: reversalDelta } } : {}),
+            },
+          })
+        }
+      }
+    })
+  }
 
   const where: any = { establishmentId }
   if (status) where.status = status

@@ -107,13 +107,33 @@ export async function GET(
           const isExpired = charge.status === "failed" || charge.status === "canceled" || charge.status === "expired"
             || charge.last_transaction_status === "failed" || charge.last_transaction_status === "expired"
           if (isExpired) {
-            await prisma.order.update({
+            const fullOrder = await prisma.order.findUnique({
               where: { id: params.id },
-              data: {
-                paymentStatus: "expired",
-                status: "cancelled",
-                cancellationReason: "Pagamento PIX não realizado — cobrança expirada",
-              },
+              select: { customerId: true, loyaltyPointsUsed: true, cashbackEarned: true, firstPurchaseBonus: true, total: true },
+            })
+            await prisma.$transaction(async (tx) => {
+              await tx.order.update({
+                where: { id: params.id },
+                data: {
+                  paymentStatus: "expired",
+                  status: "cancelled",
+                  cancellationReason: "Pagamento PIX não realizado — cobrança expirada",
+                  cancellationDate: new Date(),
+                  cancelledBy: "system",
+                },
+              })
+              // Reverse loyalty points and cashback
+              if (fullOrder?.customerId) {
+                const reversalDelta = (fullOrder.loyaltyPointsUsed || 0) - (fullOrder.cashbackEarned || 0) - (fullOrder.firstPurchaseBonus || 0)
+                await tx.customer.update({
+                  where: { id: fullOrder.customerId },
+                  data: {
+                    totalOrders: { decrement: 1 },
+                    totalSpent: { decrement: fullOrder.total || 0 },
+                    ...(reversalDelta !== 0 ? { loyaltyPoints: { increment: reversalDelta } } : {}),
+                  },
+                })
+              }
             })
             return NextResponse.json({ paymentStatus: "expired", status: "cancelled" })
           }

@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
       updatedAt: true,
       cashbackEarned: true,
       loyaltyPointsUsed: true,
+      cancellationReason: true,
     },
   })
 
