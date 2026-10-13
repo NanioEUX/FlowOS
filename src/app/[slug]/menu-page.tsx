@@ -861,6 +861,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [reviewComment, setReviewComment] = useState("")
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [sessionVerified, setSessionVerified] = useState(false)
+  const [showCpfModal, setShowCpfModal] = useState(false)
+  const [cpfModalInput, setCpfModalInput] = useState("")
+  const [cpfModalError, setCpfModalError] = useState("")
+  const [cpfModalSaving, setCpfModalSaving] = useState(false)
+  const [pendingSubmitAfterCpf, setPendingSubmitAfterCpf] = useState(false)
 
   // Calculate tier multiplier
   const tierMultiplier = useMemo(() => {
@@ -875,6 +880,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...customer, cep }))
     }
   }, [customer, cep])
+
+  // Retoma o pedido quando CPF é salvo pelo modal
+  useEffect(() => {
+    if (pendingSubmitAfterCpf && customer.cpf && isValidCpf(customer.cpf)) {
+      setPendingSubmitAfterCpf(false)
+      setTimeout(() => { submitOrder() }, 100)
+    }
+  }, [pendingSubmitAfterCpf, customer.cpf])
 
   useEffect(() => {
     fetch(`/api/products/likes?establishmentId=${establishment.id}`)
@@ -1934,6 +1947,23 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       return
     }
 
+    // CPF obrigatório para pagamentos online — Pagar.me exige document no customer.
+    // Checado ANTES da verificação de sessão para não abrir o modal de identificação.
+    const paymentMethodCheck: string = paymentMethod as string
+    const isOnlinePayment = paymentMethodCheck === "pix" || paymentMethodCheck === "card"
+    if (isOnlinePayment) {
+      const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
+      if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
+        console.log("[submitOrder] RETORNO: CPF obrigatorio para pagamento online")
+        setCpfModalInput(customer.cpf || "")
+        setCpfModalError("")
+        setShowCpfModal(true)
+        setOrdering(false)
+        orderingRef.current = false
+        return
+      }
+    }
+
     // Verificação WhatsApp obrigatória para esta sessão (flag é apagado no logout)
     if (!sessionVerified) {
       console.log("[submitOrder] RETORNO: sessao nao verificada")
@@ -1944,21 +1974,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setOrdering(false)
       orderingRef.current = false
       return
-    }
-
-    // CPF obrigatório para pagamentos online — Pagar.me exige document no customer.
-    const paymentMethodCheck: string = paymentMethod as string
-    const isOnlinePayment = paymentMethodCheck === "pix" || paymentMethodCheck === "card"
-    if (isOnlinePayment) {
-      const cpfDigits = (customer.cpf || "").replace(/\D/g, "")
-      if (!cpfDigits || cpfDigits.length !== 11 || !isValidCpf(customer.cpf || "")) {
-        console.log("[submitOrder] RETORNO: CPF obrigatorio para pagamento online")
-        setOrderError("CPF é obrigatório para pagamento online. Adicione na identificação.")
-        setOrdering(false)
-        orderingRef.current = false
-        openIdentifyModal()
-        return
-      }
     }
 
     if (orderType === "delivery" && !addressSaved) {
@@ -3540,6 +3555,89 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
       ) : null})()}
+
+      {/* CPF Modal — pagamento online sem CPF */}
+      {showCpfModal && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
+                <Info className="h-5 w-5" style={{ color: theme.accent }} />
+                CPF necessário
+              </h2>
+              <button onClick={() => { setShowCpfModal(false); setCpfModalError("") }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm mb-4" style={{ color: theme.textMuted }}>
+              Para gerar o pagamento ({paymentMethod === "pix" ? "PIX" : "cartão"}), precisamos do seu CPF. Ele é exigido pelo gateway de pagamento.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs" style={{ color: theme.textMuted }}>CPF</label>
+                <input
+                  value={cpfModalInput}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "").slice(0, 11)
+                    let formatted = raw
+                    if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`
+                    if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`
+                    if (raw.length > 9) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`
+                    setCpfModalInput(formatted)
+                    setCpfModalError("")
+                  }}
+                  placeholder="000.000.000-00"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+                  style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }}
+                />
+                {cpfModalError && (
+                  <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{cpfModalError}</p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  const digits = cpfModalInput.replace(/\D/g, "")
+                  if (!digits || digits.length !== 11) {
+                    setCpfModalError("Digite um CPF com 11 dígitos")
+                    return
+                  }
+                  if (!isValidCpf(cpfModalInput)) {
+                    setCpfModalError("CPF inválido. Verifique os números.")
+                    return
+                  }
+                  setCpfModalSaving(true)
+                  setCustomer(prev => {
+                    const updated = { ...prev, cpf: cpfModalInput }
+                    try { localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify({ ...updated, cep })) } catch {}
+                    return updated
+                  })
+                  setCpfModalSaving(false)
+                  setShowCpfModal(false)
+                  setCpfModalError("")
+                  setPendingSubmitAfterCpf(true)
+                }}
+                disabled={cpfModalSaving}
+                className="w-full h-11 rounded-lg font-semibold text-sm text-white disabled:opacity-50"
+                style={{ backgroundColor: theme.primary }}
+              >
+                {cpfModalSaving ? "Salvando..." : "Salvar e continuar"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCpfModal(false)
+                  setCpfModalError("")
+                  // Abre o modal de identificação que já tem campo de CPF
+                  openIdentifyModal()
+                }}
+                className="w-full h-11 rounded-lg font-medium text-sm"
+                style={{ backgroundColor: theme.bgInput, color: theme.text, borderWidth: 1, borderColor: theme.borderInput }}
+              >
+                Editar na identificação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Identify Modal */}
       {showIdentifyModal && (
