@@ -1772,6 +1772,26 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     }
   }
 
+  // Reabre o modal de pagamento (QR Code Pix ou formulário de cartão) a
+  // partir de um pedido pendente na aba "Meus Pedidos → Em andamento".
+  function openPaymentForOrder(order: any) {
+    if (!order?.id) return
+    userClosedPaymentModalRef.current = false
+    const isCard = order.paymentMethod === "card" || order.paymentMethod === "card_delivery" || order.paymentMethod === "card_pickup"
+    setOrderResult({
+      success: true,
+      orderId: order.id,
+      orderNumber: order.orderNumber ?? undefined,
+      trackingUrl: order.trackingToken ? `/pedido/${order.trackingToken}` : undefined,
+      paymentLink: order.paymentLink || undefined,
+      pixPayload: order.pixPayload || undefined,
+      paymentMethod: isCard ? "card" : "pix",
+      orderTotal: order.total ?? total,
+    })
+    setShowOrdersList(false)
+    setTimeout(() => setShowPaymentModal(true), 100)
+  }
+
   function addToCart(product: Product) {
     // Check if has pending online payment (Pix/Card) — pay-on-delivery
     // orders never block; the new order is forced to online.
@@ -2908,13 +2928,14 @@ const handlePaymentSuccess = useCallback(() => {
         total={orderResult.orderTotal ?? total}
         theme={theme}
         onClose={() => {
-          // Only clear orderResult if payment was successful (paymentLink cleared) or error (no paymentLink).
-          // If payment is still pending (has paymentLink), keep it so user can retry.
+          // Keep orderResult when payment is still pending so the user can
+          // reopen it from Meus Pedidos (QR Code / card form).
+          // Only clear when payment is done (paymentLink cleared + paymentDone).
           userClosedPaymentModalRef.current = true
           setOrderResult(prev => {
-            if (prev?.paymentLink === undefined) return null // Payment done → clear
-            if (prev?.paymentLink) return prev // Pending → keep for retry
-            return null
+            if (!prev) return null
+            if (prev.paymentDone) return null // Payment confirmed → clear
+            return prev // Pending (Pix or card) → keep for retry
           })
           setShowCart(false)
           setShowCheckout(false)
@@ -5586,6 +5607,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           onClose={() => setShowOrdersList(false)}
           onOpenTracking={(orderId, trackingUrl) => { setShowOrdersList(false); openTracking(orderId, trackingUrl) }}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
+          onOpenPayment={openPaymentForOrder}
           onReorder={(order) => {
             const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
             if (!reorderToCart(items)) {

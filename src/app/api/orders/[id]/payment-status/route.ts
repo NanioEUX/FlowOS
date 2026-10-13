@@ -54,12 +54,17 @@ export async function GET(
       const result = await getInterPixStatus(config, txid)
 
       if (result.status === "CONCLUIDA") {
+        const est = await prisma.establishment.findUnique({
+          where: { id: order.establishmentId },
+          select: { autoAcceptOrders: true },
+        })
+        const interNewStatus = est?.autoAcceptOrders ? "accepted" : "pending"
         await prisma.order.update({
           where: { id: params.id },
-          data: { paymentStatus: "paid", status: "confirmed" },
+          data: { paymentStatus: "paid", status: interNewStatus },
         })
         notifyPaymentConfirmed(params.id).catch(() => {})
-        return NextResponse.json({ paymentStatus: "paid", status: "confirmed" })
+        return NextResponse.json({ paymentStatus: "paid", status: interNewStatus })
       }
     } catch (error: any) {
       console.error("[Inter Payment Status] Error:", error.message)
@@ -93,12 +98,13 @@ export async function GET(
           const charge = await res.json()
           const isPaid = charge.status === "paid" || charge.last_transaction_status === "paid" || charge.status === "captured"
           if (isPaid) {
-            // Check autoAcceptOrders to decide between confirmed or preparing
+            // Check autoAcceptOrders to decide between accepted (auto) or
+            // pending (waiting for merchant to manually accept)
             const est = await prisma.establishment.findUnique({
               where: { id: order.establishmentId },
               select: { autoAcceptOrders: true },
             })
-            const newStatus = est?.autoAcceptOrders ? "accepted" : "confirmed"
+            const newStatus = est?.autoAcceptOrders ? "accepted" : "pending"
             await prisma.order.update({
               where: { id: params.id },
               data: { paymentStatus: "paid", status: newStatus },

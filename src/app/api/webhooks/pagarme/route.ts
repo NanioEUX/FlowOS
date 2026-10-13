@@ -123,9 +123,13 @@ async function processWebhook(eventType: string, orderData: any) {
       select: { autoAcceptOrders: true },
     })
     if (establishment?.autoAcceptOrders) {
-      // Auto-aceitar: pula direto pra 'accepted' (depois é só clicar em
+      // Auto-aceite: pula direto pra 'accepted' (depois é só clicar em
       // "Iniciar preparo" pra ir pra 'preparing').
       finalOrderStatus = "accepted"
+    } else {
+      // Sem auto-aceite: pagamento confirmado fica 'pending' até o lojista
+      // aceitar manualmente no dashboard.
+      finalOrderStatus = "pending"
     }
   }
 

@@ -151,12 +151,20 @@ export async function POST(req: NextRequest) {
     const isPaid = ["paid", "captured", "authorized_pending_capture"].includes(txStatus) ||
       ["paid", "captured", "authorized_pending_capture"].includes(chargeStatus)
 
+    // Check autoAcceptOrders: if enabled, paid orders go straight to accepted;
+    // otherwise they stay "pending" waiting for the merchant to accept manually.
+    const autoAcceptEst = await prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { autoAcceptOrders: true },
+    })
+    const paidStatus = autoAcceptEst?.autoAcceptOrders ? "accepted" : "pending"
+
     await prisma.order.update({
       where: { id: order.id },
       data: {
         paymentId: String(transaction.charges?.[0]?.id || transaction.id),
         paymentStatus: isPaid ? "paid" : "pending",
-        status: isPaid ? "confirmed" : "payment_pending",
+        status: isPaid ? paidStatus : "payment_pending",
       },
     })
 

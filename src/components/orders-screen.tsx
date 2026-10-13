@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronRight, MessageCircle, Send, Loader2, Package, CheckCircle2, Copy, Check, ShoppingCart } from "lucide-react"
+import { X, ChevronRight, MessageCircle, Send, Loader2, Package, CheckCircle2, Copy, Check, ShoppingCart, CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface OrderItem {
@@ -122,6 +122,7 @@ interface OrdersScreenProps {
   onOpenIdentify: () => void
   onRefresh?: () => void
   onReorder?: (order: Order) => void
+  onOpenPayment?: (order: Order) => void
   hasPhone: boolean
   establishmentSlug: string
   loyaltyConfig?: { enabled?: boolean; pointsPerReal?: number } | null
@@ -136,6 +137,7 @@ export function OrdersScreen({
   onOpenIdentify,
   onRefresh,
   onReorder,
+  onOpenPayment,
   hasPhone,
   establishmentSlug,
   loyaltyConfig,
@@ -461,28 +463,57 @@ export function OrdersScreen({
                           )}
                         </div>
 
-                        {/* PIX Copy Button */}
-                        {order.paymentStatus === "pending" && order.pixPayload && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(order.pixPayload!)
-                                setCopiedPixOrderId(order.id)
-                                setTimeout(() => setCopiedPixOrderId(null), 2000)
-                              } catch {
-                                alert("Não foi possível copiar. Tente novamente.")
-                              }
-                            }}
-                            className="w-full mb-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-[0.98] hover:opacity-90"
-                            style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: `${theme.primary}08` }}
-                          >
-                            {copiedPixOrderId === order.id ? (
-                              <><Check className="h-4 w-4" /> Copiado!</>
-                            ) : (
-                              <><Copy className="h-4 w-4" /> Copiar código PIX</>
-                            )}
-                          </button>
-                        )}
+                        {/* Payment buttons — pending Pix/Card orders */}
+                        {order.paymentStatus === "pending" && ["pending", "payment_pending"].includes(order.status) && (() => {
+                          const isPix = order.paymentMethod === "pix" || order.paymentMethod === "online" || order.paymentMethod === "asaas" || order.paymentMethod === "inter"
+                          const isCard = order.paymentMethod === "card" || order.paymentMethod === "card_delivery" || order.paymentMethod === "card_pickup"
+                          if (!isPix && !isCard) return null
+                          return (
+                            <div className="mb-2 space-y-2">
+                              {isPix && onOpenPayment && (
+                                <button
+                                  onClick={() => onOpenPayment(order)}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-[0.98] hover:opacity-90"
+                                  style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: `${theme.primary}08` }}
+                                >
+                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
+                                  Ver QR Code
+                                </button>
+                              )}
+                              {isPix && order.pixPayload && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(order.pixPayload!)
+                                      setCopiedPixOrderId(order.id)
+                                      setTimeout(() => setCopiedPixOrderId(null), 2000)
+                                    } catch {
+                                      alert("Não foi possível copiar. Tente novamente.")
+                                    }
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-[0.98] hover:opacity-90"
+                                  style={{ borderColor: theme.borderInput, color: theme.textMuted, backgroundColor: theme.bgCard }}
+                                >
+                                  {copiedPixOrderId === order.id ? (
+                                    <><Check className="h-4 w-4" /> Copiado!</>
+                                  ) : (
+                                    <><Copy className="h-4 w-4" /> Copiar código PIX</>
+                                  )}
+                                </button>
+                              )}
+                              {isCard && onOpenPayment && (
+                                <button
+                                  onClick={() => onOpenPayment(order)}
+                                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-[0.98] hover:opacity-90"
+                                  style={{ borderColor: theme.primary, color: theme.primary, backgroundColor: `${theme.primary}08` }}
+                                >
+                                  <CreditCard className="h-4 w-4" />
+                                  Continuar pagamento
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {/* Actions: Ajuda / Chat */}
                         <div className="flex gap-2">
