@@ -243,16 +243,16 @@ export default function CardapioPage() {
     return cost
   }
 
+  // Mantido 1:1 com /api/ifood-catalog/push (base promo quando em promoção + arredondamento)
   function computeIfoodPrice(product: any): number {
     if (!(product as any).ifoodPriceLocked && (product as any).ifoodPrice != null) {
       return (product as any).ifoodPrice
     }
     const catMarkup = ifoodMarkupByCategory[product.categoryId]
     const markup = catMarkup ? parseFloat(catMarkup) : (ifoodMarkupGlobal ? parseFloat(ifoodMarkupGlobal) : 0)
-    if (markup > 0) {
-      return product.price / (1 - markup / 100)
-    }
-    return product.price
+    const basePrice = product.onSale && product.promoPrice ? Number(product.promoPrice) : product.price
+    const computed = markup > 0 ? basePrice / (1 - markup / 100) : basePrice
+    return Math.round(computed * 100) / 100
   }
 
   async function toggleIfoodPriceLock(product: any) {
@@ -2106,7 +2106,7 @@ export default function CardapioPage() {
                                       onChange={(e) => updateIfoodPrice(product, e.target.value)}
                                       onClick={(e) => e.stopPropagation()}
                                       className="w-16 text-[10px] text-right text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1 py-0.5"
-                                      placeholder={formatCurrency(product.price)}
+                                      placeholder={formatCurrency(computeIfoodPrice(product))}
                                     />
                                   )}
                                 </div>

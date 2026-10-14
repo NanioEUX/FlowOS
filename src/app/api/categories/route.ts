@@ -10,11 +10,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "establishmentId necessário" }, { status: 400 })
   }
 
+  // Auth + tenant check: stockLinks/stockItem só volta com JWT validado
+  const { user, error } = requireEstablishment(req, establishmentId)
+  if (error) return error
+
   const categories = await prisma.category.findMany({
-    where: { establishmentId },
+    where: { establishmentId: user.establishmentId },
     include: {
       products: {
         orderBy: { order: "asc" },
+        include: {
+          stockLinks: true,
+          stockItem: true,
+        },
       },
     },
     orderBy: { order: "asc" },

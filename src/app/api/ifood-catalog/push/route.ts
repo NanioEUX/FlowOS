@@ -300,6 +300,8 @@ export async function POST(req: NextRequest) {
               const markup = catMarkup ?? globalMarkup ?? 0
               ifoodPrice = markup > 0 ? basePrice / (1 - markup / 100) : basePrice
             }
+            // 2 casas — mesmo valor exibido no painel (computeIfoodPrice)
+            ifoodPrice = Math.round(ifoodPrice * 100) / 100
 
             const itemResult = await createOrUpdateItem(
               token,

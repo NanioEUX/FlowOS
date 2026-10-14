@@ -9,8 +9,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: params.id },
+    const { user, error } = requireEstablishment(req)
+    if (error) return error
+
+    const product = await prisma.product.findFirst({
+      where: { id: params.id, establishmentId: user.establishmentId },
+      include: {
+        stockLinks: true,
+        stockItem: true,
+      },
     })
     if (!product) {
       return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
