@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { sendPush } from "@/lib/push"
-import { getWhatsAppProvider } from "@/lib/whatsapp"
-import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
 
 /**
  * Notifica o cliente quando o pagamento (Pix ou cartão) é CONFIRMADO.
@@ -11,9 +9,8 @@ import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
  * - polling /payment-status (quando detecta charge paga)
  * - rota do cartão (quando transação retorna paid/captured)
  *
- * Cria notificação no sino (CustomerNotification), envia push PWA e
- * (se configurado) o template de WhatsApp "pedido confirmado".
- * Nunca lança erro — notificação não pode derrubar o fluxo de pagamento.
+ * Envia apenas push PWA. Nunca lança erro — notificação não pode derrubar
+ * o fluxo de pagamento.
  */
 export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
   try {
@@ -22,29 +19,13 @@ export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
       select: {
         id: true,
         orderNumber: true,
-        customerId: true,
         customerName: true,
         customerPhone: true,
         establishmentId: true,
         total: true,
         items: true,
-        method: true,
         establishment: {
-          select: {
-            slug: true,
-            name: true,
-            whatsappProvider: true,
-            evolutionBaseUrl: true,
-            evolutionApiKey: true,
-            evolutionInstanceName: true,
-            whatsappNumber: true,
-            metaPhoneNumberId: true,
-            metaAccessToken: true,
-            botEnabled: true,
-            botTypingDelayMinMs: true,
-            botTypingDelayMaxMs: true,
-            botTemplateOrderConfirmed: true,
-          },
+          select: { slug: true },
         },
       },
     })
@@ -52,23 +33,6 @@ export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
 
     const orderNum = order.orderNumber || order.id.slice(0, 8).toUpperCase()
 
-    // 1) Sino in-app (CustomerNotification)
-    if (order.customerId) {
-      try {
-        await prisma.customerNotification.create({
-          data: {
-            type: "payment_confirmed",
-            title: "Pagamento confirmado!",
-            message: `Pedido #${orderNum} - pagamento confirmado. Já estamos preparando!`,
-            customerId: order.customerId,
-          },
-        })
-      } catch (e: any) {
-        console.warn("[PaymentNotify] CustomerNotification falhou:", e.message)
-      }
-    }
-
-    // 2) Push PWA
     if (order.customerPhone) {
       try {
         const customerFirstName = order.customerName?.split(" ")[0] || "Cliente"
@@ -89,31 +53,6 @@ export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
         console.log("[PaymentNotify] Push:", { orderId: order.id, sent: pushResult.sent, failed: pushResult.failed })
       } catch (e: any) {
         console.warn("[PaymentNotify] Push falhou:", e.message)
-      }
-    }
-
-    // 3) WhatsApp (template "pedido confirmado") — igual ao PATCH do merchant
-    if (order.customerPhone && order.establishment?.botTemplateOrderConfirmed) {
-      try {
-        const provider = getWhatsAppProvider({
-          whatsappProvider: order.establishment.whatsappProvider,
-          evolutionBaseUrl: order.establishment.evolutionBaseUrl,
-          evolutionApiKey: order.establishment.evolutionApiKey,
-          evolutionInstanceName: order.establishment.evolutionInstanceName,
-          whatsappNumber: order.establishment.whatsappNumber,
-          metaPhoneNumberId: order.establishment.metaPhoneNumberId,
-          metaAccessToken: order.establishment.metaAccessToken,
-        })
-        if (provider) {
-          const delay = randomTypingDelay(
-            order.establishment.botTypingDelayMinMs || 1500,
-            order.establishment.botTypingDelayMaxMs || 3500
-          )
-          await provider.sendText(order.customerPhone, order.establishment.botTemplateOrderConfirmed, { delay })
-          console.log("[PaymentNotify] WhatsApp confirmado enviado:", order.id)
-        }
-      } catch (e: any) {
-        console.warn("[PaymentNotify] WhatsApp falhou (não bloqueia):", e.message)
       }
     }
   } catch (e: any) {
