@@ -84,6 +84,10 @@ export default async function EstablishmentPage({
     (establishment.subscriptionStatus === "pending_payment")
 
   const { password, paymentConfig: pc, orderConfig: oc, ...rest } = establishment
+  // Credenciais do tenant nunca vão para o HTML do cardápio público (F6A-001)
+  for (const k of ["evolutionApiKey","metaAccessToken","metaWebhookVerifyToken","asaasApiKey","efiClientSecret","efiCertificate","efiWebhookToken","interClientSecret","interCertificate","interCertificatePassword","pagarmeApiKey","pagarmeWebhookKey","api99Key","ifoodAccessToken","ifoodRefreshToken","nineFoodApiKey"]) {
+    delete (rest as any)[k]
+  }
   const paymentConfig = JSON.parse(pc || '{"online":true,"delivery":true,"pickup":true}')
   const orderConfig = JSON.parse(oc || '{"delivery":true,"pickup":true,"dineIn":true}')
   const minimumOrder = {

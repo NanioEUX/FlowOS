@@ -679,6 +679,13 @@ export async function POST(req: NextRequest) {
       include: { establishment: true },
     })
 
+    // Credenciais do tenant nunca saem na resposta pública (F6A-001)
+    if (fullOrder?.establishment) {
+      for (const k of ["password","evolutionApiKey","metaAccessToken","metaWebhookVerifyToken","asaasApiKey","efiClientSecret","efiCertificate","efiWebhookToken","interClientSecret","interCertificate","interCertificatePassword","pagarmeApiKey","pagarmeWebhookKey","api99Key","ifoodAccessToken","ifoodRefreshToken","nineFoodApiKey"]) {
+        delete (fullOrder.establishment as any)[k]
+      }
+    }
+
     return NextResponse.json({ order: fullOrder, paymentLink, pixPayload: pixPayload || "", trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
   } catch (error) {
     console.error(error)
