@@ -1,3 +1,5 @@
+import { verifyHmacSha256 } from "@/lib/webhook-signature"
+
 const PAGARME_API_URL =
   process.env.PAGARME_ENVIRONMENT === "sandbox"
     ? "https://api.pagar.me/core/v5"
@@ -460,7 +462,5 @@ export function mapPagarmeStatus(status: string): { paymentStatus: string; order
 
 export function verifyPagarmeSignature(body: string, signature: string, secret: string): boolean {
   if (!signature || !secret) return false
-  const crypto = require("crypto")
-  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex")
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+  return verifyHmacSha256(body, signature, secret, { stripPrefix: "sha256=" })
 }

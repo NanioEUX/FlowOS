@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
-
-function verifySignature(body: string, signature: string, secret: string): boolean {
-  if (!signature || !secret) return false
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex")
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signature)
-  )
-}
+import { verifyHmacSha256 } from "@/lib/webhook-signature"
 
 function calcCashbackEarned(total: number, establishment: any): number {
   try {
@@ -30,25 +18,19 @@ function calcCashbackEarned(total: number, establishment: any): number {
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
-    console.log("[ifood webhook] HIT", new Date().toISOString(), "body-len=", raw.length, "headers=", Object.fromEntries(req.headers))
-    const signature =
-      req.headers.get("x-ifood-signature") ||
-      req.headers.get("X-Ifood-Signature") ||
-      req.headers.get("authorization")?.replace("Bearer ", "") ||
-      ""
+    console.log("[ifood webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
 
+    // iFood always sends X-IFood-Signature (HMAC-SHA256 hex of raw body with client_secret)
+    const signature = req.headers.get("x-ifood-signature") || ""
     const secret = process.env.IFOOD_WEBHOOK_SECRET || process.env.IFOOD_CLIENT_SECRET || ""
 
-    if (secret && signature && signature.length > 16) {
-      try {
-        const ok = verifySignature(raw, signature, secret)
-        if (!ok) {
-          console.warn("[ifood webhook] signature mismatch — rejecting")
-          return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
-        }
-      } catch {
+    if (secret) {
+      if (!verifyHmacSha256(raw, signature, secret)) {
+        console.warn("[ifood webhook] missing/invalid signature — rejecting")
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
+    } else {
+      console.error("[ifood webhook] IFOOD_WEBHOOK_SECRET/IFOOD_CLIENT_SECRET not set — accepting unsigned webhook (configure secrets to enforce)")
     }
 
     const payload = JSON.parse(raw)

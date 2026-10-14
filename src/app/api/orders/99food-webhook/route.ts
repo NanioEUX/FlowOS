@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { map99FoodOrderToFlow } from "@/lib/integrations/nine-food"
 import { upsert99FoodCustomer } from "@/lib/integrations/nine-food-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
-
-function verifyHmac(body: string, signature: string, secret: string): boolean {
-  if (!signature || !secret) return false
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex")
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signature)
-  )
-}
+import { verifyHmacSha256 } from "@/lib/webhook-signature"
 
 function calcCashbackEarned(total: number, establishment: any): number {
   try {
@@ -45,32 +33,29 @@ export async function POST(req: NextRequest) {
     const raw = await req.text()
     console.log("[99food webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
 
-    // --- HMAC-SHA256 signature validation ---
+    // --- HMAC-SHA256 signature validation (Open Delivery: X-App-Signature) ---
     const signature =
+      req.headers.get("x-app-signature") ||
       req.headers.get("x-99food-signature") ||
       req.headers.get("x-webhook-signature") ||
-      req.headers.get("authorization")?.replace("Bearer ", "") ||
       ""
 
-    // Find any enabled 99Food establishment to get the API key (used as HMAC secret)
-    const sigEstablishment = await prisma.establishment.findFirst({
+    // Validate against every enabled 99Food establishment key (multi-tenant safe)
+    const sigEstablishments = await prisma.establishment.findMany({
       where: { nineFoodEnabled: true, nineFoodApiKey: { not: null } },
       select: { nineFoodApiKey: true },
     })
-    const hmacSecret = sigEstablishment?.nineFoodApiKey || ""
+    const secrets = sigEstablishments.map((e) => e.nineFoodApiKey).filter(Boolean) as string[]
 
-    if (hmacSecret && signature && signature.length > 16) {
-      try {
-        const ok = verifyHmac(raw, signature, hmacSecret)
-        if (!ok) {
-          console.warn("[99food webhook] signature mismatch — rejecting")
-          return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
-        }
-      } catch {
+    if (secrets.length > 0) {
+      const valid = !!signature && secrets.some((s) => verifyHmacSha256(raw, signature, s))
+      if (!valid) {
+        console.warn("[99food webhook] missing/invalid signature — rejecting")
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
+    } else {
+      console.error("[99food webhook] no nineFoodApiKey configured — accepting unsigned webhook (configure the API key to enforce)")
     }
-    // If no signature header or no secret configured, skip validation (fallback for sandbox/testing)
     // --- End HMAC validation ---
 
     const payload = JSON.parse(raw)

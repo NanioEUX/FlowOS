@@ -13,8 +13,10 @@ import {
   parseTransferKeywords,
   detectTransferIntent,
 } from "@/lib/whatsapp/bot-rules"
+import { timingSafeEqualStr, verifyHmacSha256 } from "@/lib/webhook-signature"
 
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || "flowos-meta-verify"
+const META_APP_SECRET = process.env.META_APP_SECRET || ""
 
 const ESTABLISHMENT_SELECT = {
   id: true,
@@ -95,6 +97,18 @@ export async function POST(req: NextRequest) {
     if (jsonBody.object === "whatsapp_business_account") {
       // ===== META CLOUD API =====
       isMetaWebhook = true
+
+      // Validate X-Hub-Signature-256 (HMAC SHA-256 of raw body with app secret)
+      const metaSignature = req.headers.get("x-hub-signature-256") || ""
+      if (META_APP_SECRET) {
+        if (!verifyHmacSha256(bodyText, metaSignature, META_APP_SECRET, { stripPrefix: "sha256=" })) {
+          console.warn("[WhatsApp Webhook] Meta: invalid X-Hub-Signature-256")
+          return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+        }
+      } else {
+        console.error("[WhatsApp Webhook] META_APP_SECRET not set — accepting unsigned Meta webhook (configure META_APP_SECRET to enforce)")
+      }
+
       const entry = jsonBody.entry?.[0]
       const changes = entry?.changes?.[0]
       const value = changes?.value
@@ -193,18 +207,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, ignored: true })
       }
 
-      // Validate webhook key
-      const webhookKey = req.headers.get("apikey") || req.headers.get("x-api-key")
-      if (webhookKey) {
-        const validKey = await prisma.establishment.findFirst({
-          where: { evolutionApiKey: webhookKey },
-          select: { id: true },
-        })
-        if (!validKey) {
-          console.warn("[WhatsApp Webhook] Invalid webhook key")
-          return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-        }
-      }
+      // Validate webhook key: Evolution sends apikey in the header and/or payload.
+      // Must be present AND match this instance's key.
+      const webhookKey =
+        req.headers.get("apikey") ||
+        req.headers.get("x-api-key") ||
+        (typeof jsonBody.apikey === "string" ? jsonBody.apikey : "") ||
+        (typeof data.apikey === "string" ? data.apikey : "")
 
       establishment = await prisma.establishment.findFirst({
         where: { evolutionInstanceName: instanceName },
@@ -214,6 +223,11 @@ export async function POST(req: NextRequest) {
       if (!establishment) {
         console.warn(`[WhatsApp Webhook] Instance not found: ${instanceName}`)
         return NextResponse.json({ success: false, error: "Instance not found" }, { status: 404 })
+      }
+
+      if (!webhookKey || !establishment.evolutionApiKey || !timingSafeEqualStr(webhookKey, establishment.evolutionApiKey)) {
+        console.warn(`[WhatsApp Webhook] Evolution: missing/invalid apikey for instance ${instanceName}`)
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
       }
 
       // Parse via provider to normalize message format
