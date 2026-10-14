@@ -1,8 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
+import { verifyAuth } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+
+// Credenciais do tenant: nunca saem daqui sem JWT do próprio estabelecimento
+// (F6A-001). Dados públicos do cardápio (horário, pix, GPS, cores…) seguem
+// intactos para não quebrar o que já funciona.
+const TENANT_SECRET_FIELDS = [
+  "password",
+  "evolutionApiKey",
+  "metaAccessToken",
+  "metaWebhookVerifyToken",
+  "asaasApiKey",
+  "efiClientSecret",
+  "efiCertificate",
+  "efiWebhookToken",
+  "interClientSecret",
+  "interCertificate",
+  "interCertificatePassword",
+  "pagarmeApiKey",
+  "pagarmeWebhookKey",
+  "api99Key",
+  "ifoodAccessToken",
+  "ifoodRefreshToken",
+  "nineFoodApiKey",
+]
+
+function establishmentResponse(req: NextRequest, data: any, establishmentId: string) {
+  const auth = verifyAuth(req)
+  if (auth && auth.establishmentId === establishmentId) return data
+  const out: any = { ...data }
+  for (const field of TENANT_SECRET_FIELDS) delete out[field]
+  return out
+}
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -128,7 +160,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { password, ...data } = establishment
-    return NextResponse.json(data)
+    return NextResponse.json(establishmentResponse(req, data, establishment.id))
   }
 
   if (slug) {
@@ -147,7 +179,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { password, ...data } = establishment
-    return NextResponse.json(data)
+    return NextResponse.json(establishmentResponse(req, data, establishment.id))
   }
 
   const establishments = await prisma.establishment.findMany({
