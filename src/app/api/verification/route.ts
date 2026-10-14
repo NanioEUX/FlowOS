@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
 
 const MAX_ATTEMPTS = 3
 const CODE_EXPIRY_MINUTES = 5
@@ -10,15 +11,14 @@ const MAX_REQUESTS_PER_HOUR = 5
 const MAX_REQUESTS_PER_DAY = 10
 const MAX_VERIFICATIONS_PER_DAY = 5
 
-// Números com limite diário dispensado (testes internos)
-const BYPASS_PHONES = new Set(["47984118220", "47984891149"])
+// Nunca em produção: só o gate explícito do env libera o devCode (F7A-001)
+const SHOW_DEV_CODE = process.env.SHOW_DEV_CODE === "true"
 
 /**
  * POST /api/verification
  * Body: { phone: string, establishmentId: string }
  * Generates a 6-digit code, stores it (hashed), and sends via WhatsApp.
- * Rate limited por número: 60s de cooldown, máx 5/hora e máx 10/dia
- * (sem limite diário para números em BYPASS_PHONES).
+ * Rate limited por número: 60s de cooldown, máx 5/hora e máx 10/dia.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
 
     // ---- Rate limits (por número) ----
     const now = Date.now()
-    const bypassLimits = BYPASS_PHONES.has(phoneDigits)
 
     // 1) Cooldown de 60s entre solicitações
     const lastCode = await prisma.verificationCode.findFirst({
@@ -71,21 +70,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Aguarde ${wait}s antes de solicitar outro código.` }, { status: 429 })
     }
 
-    // 2) Máx 5 solicitações/hora (dispensado para números de teste)
+    // 2) Máx 5 solicitações/hora
     const hourAgo = new Date(now - 60 * 60 * 1000)
     const requestsLastHour = await prisma.verificationCode.count({
       where: { customerId: customer.id, createdAt: { gte: hourAgo } },
     })
-    if (!bypassLimits && requestsLastHour >= MAX_REQUESTS_PER_HOUR) {
+    if (requestsLastHour >= MAX_REQUESTS_PER_HOUR) {
       return NextResponse.json({ error: "Muitas solicitações. Tente novamente mais tarde." }, { status: 429 })
     }
 
-    // 3) Máx 10 solicitações/dia (dispensado para números de teste)
+    // 3) Máx 10 solicitações/dia
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000)
     const requestsLastDay = await prisma.verificationCode.count({
       where: { customerId: customer.id, createdAt: { gte: dayAgo } },
     })
-    if (!bypassLimits && requestsLastDay >= MAX_REQUESTS_PER_DAY) {
+    if (requestsLastDay >= MAX_REQUESTS_PER_DAY) {
       return NextResponse.json({ error: "Limite diário de solicitações atingido. Tente novamente amanhã." }, { status: 429 })
     }
 
@@ -95,8 +94,8 @@ export async function POST(req: NextRequest) {
       data: { used: true },
     })
 
-    // Generate code
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generate code — crypto (F7A-002: nunca Math.random)
+    const code = crypto.randomInt(100000, 1000000).toString()
     const codeHash = await bcrypt.hash(code, 10)
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000)
 
@@ -129,13 +128,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
     }
 
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      "https://flowoshub.com"
-    const verifyLink = `${appUrl}/${establishment.slug}?code=${code}&phone=${phoneDigits}`
-
-    console.log(`[VERIFICATION DEBUG] Provider config: whatsappProvider=${establishment.whatsappProvider}, metaPhoneNumberId=${establishment.metaPhoneNumberId}, metaAccessToken=${establishment.metaAccessToken ? establishment.metaAccessToken.substring(0, 20) + '...' : 'NULL'}`)
+    console.log(`[VERIFICATION DEBUG] Provider config: whatsappProvider=${establishment.whatsappProvider}, metaPhoneNumberId=${establishment.metaPhoneNumberId}, metaAccessToken=${establishment.metaAccessToken ? "SET" : "NULL"}`)
 
     // Send via WhatsApp (establishment's own or SaaS fallback)
     const provider = getWhatsAppProvider({
@@ -151,9 +144,14 @@ export async function POST(req: NextRequest) {
     console.log(`[VERIFICATION DEBUG] Provider created: ${provider ? 'OK (' + provider.constructor.name + ')' : 'NULL'}`)
 
     if (!provider) {
-      // Sem provider configurado: retorna o código direto na resposta (DEV).
-      console.log(`[VERIFICATION FALLBACK] Code for ${phoneDigits}: ${code} - NO PROVIDER`)
-      return NextResponse.json({ success: true, devCode: code, verifyLink, message: "Código gerado (sem WhatsApp configurado). Configure provider para envio real." })
+      console.error(`[VERIFICATION] No provider configured for establishment ${establishmentId}`)
+      return NextResponse.json({
+        success: true,
+        whatsappSent: false,
+        whatsappError: "Canal de WhatsApp não configurado. Contate o suporte.",
+        // Código nunca volta na resposta em produção (F7A-001)
+        ...(SHOW_DEV_CODE ? { devCode: code } : {}),
+      })
     }
 
     // Use template FIRST (works for new numbers), text as fallback
@@ -240,30 +238,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const showDevCode =
-      !result.success ||
-      process.env.SHOW_DEV_CODE === "true" ||
-      req.nextUrl.searchParams.get("debug") === "1"
-
     if (!result.success) {
       console.error("[Verification] WhatsApp send failed:", result.error)
       return NextResponse.json({
         success: true,
-        devCode: code,
-        verifyLink,
         whatsappSent: false,
-        whatsappError: result.error,
-        message: "Código gerado (WhatsApp falhou, exibindo código).",
+        whatsappError: "Não foi possível enviar o código por WhatsApp. Tente novamente em instantes.",
+        // Código nunca volta na resposta em produção (F7A-001)
+        ...(SHOW_DEV_CODE ? { devCode: code } : {}),
       })
     }
 
-    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}: ${code}`)
+    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}`)
     return NextResponse.json({
       success: true,
       whatsappSent: true,
-      verifyLink,
       messageId: result.messageId,
-      devCode: code,
     })
   } catch (error) {
     console.error("[Verification POST]", error)
@@ -297,7 +287,7 @@ export async function PUT(req: NextRequest) {
 
     // ---- Limite de verificações/logins por número (máx 5/24h) ----
     const now = Date.now()
-    if (!BYPASS_PHONES.has(phoneDigits) && customer.verificationCount >= MAX_VERIFICATIONS_PER_DAY) {
+    if (customer.verificationCount >= MAX_VERIFICATIONS_PER_DAY) {
       const lastVerified = customer.verifiedAt ? new Date(customer.verifiedAt).getTime() : 0
       const windowStart = now - 24 * 60 * 60 * 1000
       if (lastVerified > windowStart) {

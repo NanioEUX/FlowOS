@@ -554,6 +554,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       } else if (data.devCode) {
         setVerifyDevCode(data.devCode)
         setWhatsappError(data.whatsappError || "WhatsApp não configurado ou falhou")
+      } else {
+        setWhatsappError(data.whatsappError || "Não foi possível enviar o código. Tente novamente.")
       }
     } catch (e: any) {
       setVerifyError(e.message)

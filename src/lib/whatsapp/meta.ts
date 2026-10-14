@@ -97,7 +97,8 @@ export class MetaCloudProvider implements WhatsAppProvider {
         },
       }
 
-      console.log(`[MetaCloud] Template payload:`, JSON.stringify(body, null, 2))
+      // Nunca logar o payload completo: contém o código OTP (F4A-016)
+      console.log(`[MetaCloud] Template payload: to=${phoneDigits} template=${templateName} lang=${languageCode}`)
 
       const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
