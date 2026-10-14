@@ -38,6 +38,11 @@ export default async function OrderTrackingPage({
     notFound()
   }
 
+  // Credenciais do tenant nunca vão para o HTML da página pública de tracking (F6A-001)
+  for (const k of ["password","evolutionApiKey","metaAccessToken","metaWebhookVerifyToken","asaasApiKey","efiClientSecret","efiCertificate","efiWebhookToken","interClientSecret","interCertificate","interCertificatePassword","pagarmeApiKey","pagarmeWebhookKey","api99Key","ifoodAccessToken","ifoodRefreshToken","nineFoodApiKey"]) {
+    delete (updatedOrder.establishment as any)[k]
+  }
+
   // "Confirmado" removido da timeline do cliente (redundante com "Aceito").
   // Retirada/No local não passam por "Saiu para entrega".
   const onsiteOrder = updatedOrder.orderType === "pickup" || updatedOrder.orderType === "dineIn"
