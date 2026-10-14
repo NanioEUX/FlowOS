@@ -208,7 +208,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Validate webhook key: Evolution sends apikey in the header and/or payload.
-      // Must be present AND match this instance's key.
+      // Só valida se presente — a Evolution nem sempre envia (comportamento
+      // original de a9bf586; exigir a chave quebrava mensagens em produção).
       const webhookKey =
         req.headers.get("apikey") ||
         req.headers.get("x-api-key") ||
@@ -225,9 +226,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Instance not found" }, { status: 404 })
       }
 
-      if (!webhookKey || !establishment.evolutionApiKey || !timingSafeEqualStr(webhookKey, establishment.evolutionApiKey)) {
-        console.warn(`[WhatsApp Webhook] Evolution: missing/invalid apikey for instance ${instanceName}`)
-        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      if (webhookKey) {
+        if (!establishment.evolutionApiKey || !timingSafeEqualStr(webhookKey, establishment.evolutionApiKey)) {
+          console.warn(`[WhatsApp Webhook] Evolution: invalid apikey for instance ${instanceName}`)
+          return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+        }
+      } else {
+        console.warn(`[WhatsApp Webhook] Evolution: no apikey header for instance ${instanceName} — accepting`)
       }
 
       // Parse via provider to normalize message format
