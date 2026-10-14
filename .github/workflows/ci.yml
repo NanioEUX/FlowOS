@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders para o build (nenhum segredo real no CI)
+      JWT_SECRET: ci-placeholder-secret
+      DATABASE_URL: postgresql://user:pass@localhost:5432/ci
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      SHOW_DEV_CODE: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
