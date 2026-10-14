@@ -21,13 +21,36 @@ export async function PATCH(
     const body = await req.json()
     const data: any = {}
 
+    // Privilégios (role/permissions/isActive/canCloseRegister) só admin do
+    // tenant — whitelist server-side (F1A-002 / H1#7)
+    const isAdmin = authUser.role === "admin" || authUser.role === "saas_admin"
+
     if (body.name) data.name = body.name
     if (body.email) data.email = body.email
-    if (body.role) data.role = body.role
-    if (body.permissions) data.permissions = JSON.stringify(body.permissions)
-    if (typeof body.isActive === "boolean") data.isActive = body.isActive
-    if (typeof body.canCloseRegister === "boolean") data.canCloseRegister = body.canCloseRegister
+    if (body.role) {
+      if (!isAdmin) return NextResponse.json({ error: "Apenas administradores alteram papéis" }, { status: 403 })
+      const ALLOWED_ROLES = ["admin", "atendente", "kds", "motoboy"]
+      if (!ALLOWED_ROLES.includes(body.role)) {
+        return NextResponse.json({ error: "Papel inválido" }, { status: 400 })
+      }
+      data.role = body.role
+    }
+    if (body.permissions) {
+      if (!isAdmin) return NextResponse.json({ error: "Apenas administradores alteram permissões" }, { status: 403 })
+      data.permissions = JSON.stringify(body.permissions)
+    }
+    if (typeof body.isActive === "boolean") {
+      if (!isAdmin) return NextResponse.json({ error: "Apenas administradores ativa/desativa usuários" }, { status: 403 })
+      data.isActive = body.isActive
+    }
+    if (typeof body.canCloseRegister === "boolean") {
+      if (!isAdmin) return NextResponse.json({ error: "Apenas administradores alteram fechamento de caixa" }, { status: 403 })
+      data.canCloseRegister = body.canCloseRegister
+    }
     if (body.password && body.password.length > 0) {
+      if (body.password.length < 6) {
+        return NextResponse.json({ error: "Senha muito curta (mínimo 6 caracteres)" }, { status: 400 })
+      }
       data.password = await bcrypt.hash(body.password, 10)
     }
 

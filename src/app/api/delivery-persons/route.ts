@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
     if (auth.error) return auth.error
 
     const token = crypto.randomBytes(8).toString("hex")
-    const password = defaultPassword || "123456"
+    // Senha sempre definida pelo admin — sem default fraco (F5B-006/F9A-004)
+    if (!defaultPassword || defaultPassword.length < 6) {
+      return NextResponse.json({ error: "Senha obrigatória (mínimo 6 caracteres)" }, { status: 400 })
+    }
+    const password = defaultPassword
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const email = customEmail || `motoboy-${phone}@flowos.local`
@@ -63,7 +67,8 @@ export async function POST(req: NextRequest) {
       data: { name, phone, establishmentId, token, userId: user.id },
     })
 
-    return NextResponse.json({ ...person, defaultPassword: password })
+    // Não devolve a senha em claro na resposta (F5B-006)
+    return NextResponse.json(person)
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Erro ao criar" }, { status: 500 })

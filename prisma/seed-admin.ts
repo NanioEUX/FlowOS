@@ -5,7 +5,11 @@ const prisma = new PrismaClient()
 
 async function main() {
   const email = "admin@flowoshub.com"
-  const password = "Admin@2026"
+  const password = process.env.ADMIN_SEED_PASSWORD
+  if (!password || password.length < 8) {
+    console.error("Defina ADMIN_SEED_PASSWORD (mín. 8 caracteres) antes de rodar o seed-admin.")
+    process.exit(1)
+  }
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const existing = await prisma.user.findUnique({ where: { email } })
@@ -36,9 +40,7 @@ async function main() {
     console.log(`✅ Admin criado: ${email}`)
   }
 
-  console.log(`\n🔐 Credenciais:`)
-  console.log(`   Email: ${email}`)
-  console.log(`   Senha: ${password}`)
+  console.log(`\n✅ Admin pronto: ${email} (senha definida via ADMIN_SEED_PASSWORD)`)
   console.log(`\n⚠️  Troque a senha no primeiro acesso!`)
 }
 

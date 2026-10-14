@@ -42,8 +42,12 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       buffer = Buffer.from(await res.arrayBuffer())
       contentType = res.headers.get("content-type") || "image/png"
     } else if (logo.startsWith("/")) {
-      // Caminho local em /public
-      const filePath = path.join(process.cwd(), "public", logo)
+      // Caminho local em /public — allowlist: precisa resolver dentro de public/
+      const publicDir = path.join(process.cwd(), "public")
+      const filePath = path.resolve(publicDir, logo.replace(/^[/\\]+/, ""))
+      if (filePath !== publicDir && !filePath.startsWith(publicDir + path.sep)) {
+        throw new Error("logo path outside public/")
+      }
       buffer = await readFile(filePath)
       if (logo.endsWith(".svg")) contentType = "image/svg+xml"
       else if (logo.endsWith(".jpg") || logo.endsWith(".jpeg")) contentType = "image/jpeg"

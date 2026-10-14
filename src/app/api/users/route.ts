@@ -42,12 +42,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
+    // Só admin do tenant cria usuários (F1A-002 / H1#7)
+    if (auth.role !== "admin" && auth.role !== "saas_admin") {
+      return NextResponse.json({ error: "Apenas administradores criam usuários" }, { status: 403 })
+    }
+
     const body = await req.json()
     const { name, email, password, role, permissions, establishmentId, canCloseRegister } = body
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Senha muito curta (mínimo 6 caracteres)" }, { status: 400 })
+    }
+
+    // Whitelist server-side: nunca aceitar roles fora do conjunto do tenant
+    const ALLOWED_ROLES = ["admin", "atendente", "kds", "motoboy"]
+    const finalRole = ALLOWED_ROLES.includes(role) ? role : "atendente"
 
     // Tenant isolation: users can only be created in their own establishment.
     // Ignore any establishmentId in the body and force the caller's tenant.
@@ -65,7 +77,7 @@ export async function POST(req: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        role: role || "atendente",
+        role: finalRole,
         permissions: JSON.stringify(permissions || ["caixa"]),
         canCloseRegister: canCloseRegister || false,
         mustChangePassword: true,

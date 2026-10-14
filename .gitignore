@@ -32,3 +32,9 @@ next-env.d.ts
 .env.backup
 .env*
 auditoria/
+
+# sqlite databases (nunca versionar)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

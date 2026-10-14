@@ -79,7 +79,7 @@ export default function UsuariosPage() {
 
   function openNew() {
     setEditingUser(null)
-    setForm({ name: "", email: "", phone: "", password: "123456", role: "atendente", permissions: ["caixa", "pedidos"], canCloseRegister: false })
+    setForm({ name: "", email: "", phone: "", password: "", role: "atendente", permissions: ["caixa", "pedidos"], canCloseRegister: false })
     setError("")
     setShowForm(true)
   }
@@ -123,8 +123,8 @@ export default function UsuariosPage() {
   async function saveUser() {
     if (!establishmentId || !form.name) return
     if (!editingUser && form.role !== "motoboy" && !form.email) return
-    if (!editingUser && form.role !== "motoboy" && !form.password) {
-      setError("Senha é obrigatória para novos usuários")
+    if (!editingUser && (!form.password || form.password.length < 6)) {
+      setError("Senha é obrigatória para novos usuários (mínimo 6 caracteres)")
       return
     }
     if (form.permissions.length === 0) {
@@ -154,7 +154,7 @@ export default function UsuariosPage() {
             phone: form.phone || "00000000000",
             email: form.email || undefined,
             establishmentId,
-            defaultPassword: form.password || "123456",
+            defaultPassword: form.password,
           }),
         })
         const data = await res.json()
@@ -339,14 +339,14 @@ export default function UsuariosPage() {
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Senha</label>
                   <input
                     type="password"
-                    placeholder={editingUser ? "Deixe vazio para manter" : "123456 (padrão)"}
+                    placeholder={editingUser ? "Deixe vazio para manter" : "Mínimo 6 caracteres"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
                   />
                   {!editingUser && (
                     <p className="mt-1 text-xs text-zinc-400">
-                      Senha padrão: 123456 (usuário deverá trocar no primeiro login)
+                      O usuário deverá trocar a senha no primeiro login
                     </p>
                   )}
                 </div>
