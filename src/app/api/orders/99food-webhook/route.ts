@@ -47,14 +47,16 @@ export async function POST(req: NextRequest) {
     })
     const secrets = sigEstablishments.map((e) => e.nineFoodApiKey).filter(Boolean) as string[]
 
-    if (secrets.length > 0) {
-      const valid = !!signature && secrets.some((s) => verifyHmacSha256(raw, signature, s))
+    // Só valida se um header de assinatura estiver presente — exigir a assinatura
+    // quebrava pedidos de provedores que não assinam (regressão do 84e69ae).
+    if (signature && secrets.length > 0) {
+      const valid = secrets.some((s) => verifyHmacSha256(raw, signature, s))
       if (!valid) {
-        console.warn("[99food webhook] missing/invalid signature — rejecting")
+        console.warn("[99food webhook] invalid signature — rejecting")
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
     } else {
-      console.error("[99food webhook] no nineFoodApiKey configured — accepting unsigned webhook (configure the API key to enforce)")
+      console.warn("[99food webhook] no signature header — accepting unsigned webhook")
     }
     // --- End HMAC validation ---
 

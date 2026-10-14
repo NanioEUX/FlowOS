@@ -3,19 +3,32 @@ import { prisma } from "@/lib/prisma"
 import { getIfoodAuth, getIfoodEvents, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrations/ifood"
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
+import { requireAuth } from "@/lib/require-auth"
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("authorization")
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const authHeader = req.headers.get("authorization") || ""
+    const isCron =
+      !!process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`
+
+    // Aceita cron (todas as lojas) OU usuário logado (só a própria loja) —
+    // o dashboard chama este endpoint com o JWT do usuário.
+    let userEstablishmentId: string | null = null
+    if (!isCron) {
+      const { user, error } = requireAuth(req)
+      if (error) return error
+      userEstablishmentId = user!.establishmentId
     }
 
     const url = new URL(req.url)
     const showDetail = url.searchParams.has("detail")
 
     const establishments = await prisma.establishment.findMany({
-      where: { ifoodEnabled: true, ifoodMerchantId: { not: null } },
+      where: {
+        ifoodEnabled: true,
+        ifoodMerchantId: { not: null },
+        ...(userEstablishmentId ? { id: userEstablishmentId } : {}),
+      },
     })
 
     let created = 0

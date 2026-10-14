@@ -20,17 +20,19 @@ export async function POST(req: NextRequest) {
     const raw = await req.text()
     console.log("[ifood webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
 
-    // iFood always sends X-IFood-Signature (HMAC-SHA256 hex of raw body with client_secret)
+    // iFood NÃO envia header de assinatura na prática (aceitamos sem assinatura
+    // desde sempre). Só valida se um header estiver presente — exigir a assinatura
+    // quebrava todos os pedidos (regressão do 84e69ae).
     const signature = req.headers.get("x-ifood-signature") || ""
     const secret = process.env.IFOOD_WEBHOOK_SECRET || process.env.IFOOD_CLIENT_SECRET || ""
 
-    if (secret) {
+    if (signature && secret) {
       if (!verifyHmacSha256(raw, signature, secret)) {
-        console.warn("[ifood webhook] missing/invalid signature — rejecting")
+        console.warn("[ifood webhook] invalid signature — rejecting")
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
     } else {
-      console.error("[ifood webhook] IFOOD_WEBHOOK_SECRET/IFOOD_CLIENT_SECRET not set — accepting unsigned webhook (configure secrets to enforce)")
+      console.warn("[ifood webhook] no signature header — accepting unsigned webhook (iFood does not sign)")
     }
 
     const payload = JSON.parse(raw)
