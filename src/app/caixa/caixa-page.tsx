@@ -946,12 +946,18 @@ export default function CaixaPOSPage() {
   function printReceiptPopup(order: any) {
     const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
     const paymentLabels: Record<string, string> = { cash: "Dinheiro", card: "Cartão", pix: "Pix" }
+    // Escaping HTML de valores dinâmicos (F8C-008)
+    const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
     const win = window.open("", "_blank")
-    if (!win) return
+    if (!win) {
+      alert("Permita pop-ups para imprimir o cupom")
+      return
+    }
+    const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
     win.document.write(`
       <html>
       <head>
-        <title>Pedido #${order.orderNumber || order.id.slice(0, 8)}</title>
+        <title>Pedido #${orderRef}</title>
         <style>
           @page { margin: 0; }
           body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; color: #000; max-width: 300px; margin: 0 auto; }
@@ -967,16 +973,16 @@ export default function CaixaPOSPage() {
         </style>
       </head>
       <body>
-        <h1>${order.establishmentName || "Estabelecimento"}</h1>
+        <h1>${esc(order.establishmentName || "Estabelecimento")}</h1>
         <h2>--- CUPOM ---</h2>
-        <div class="order-number">Pedido #${order.orderNumber || order.id.slice(0, 8)}</div>
+        <div class="order-number">Pedido #${orderRef}</div>
         <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
         <div class="divider"></div>
-        <p><strong>Pagamento:</strong> ${paymentLabels[order.paymentMethod] || order.paymentMethod}</p>
+        <p><strong>Pagamento:</strong> ${esc(paymentLabels[order.paymentMethod] || order.paymentMethod)}</p>
         <div class="divider"></div>
         <table>
           <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td><td class="right"><strong>Valor</strong></td></tr>
-          ${order.items.map((item: any) => `<tr><td>${item.name}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`).join("")}
+          ${order.items.map((item: any) => `<tr><td>${esc(item.name)}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`).join("")}
         </table>
         <div class="divider"></div>
         <p class="total right">Total: ${fmt(order.total)}</p>

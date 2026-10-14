@@ -733,12 +733,18 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
 
   function printReceipt() {
     const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
+    // Escaping HTML de valores dinâmicos (F8C-008)
+    const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
     const win = window.open("", "_blank")
-    if (!win) return
+    if (!win) {
+      alert("Permita pop-ups para imprimir o cupom")
+      return
+    }
+    const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
     win.document.write(`
       <html>
       <head>
-        <title>Pedido #${order.orderNumber || order.id.slice(0, 8)}</title>
+        <title>Pedido #${orderRef}</title>
         <style>
           @page { margin: 0; }
           body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; color: #000; }
@@ -755,32 +761,32 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     </style>
   </head>
   <body>
-    <h1>${order.establishment?.name || order.establishmentName || "Estabelecimento"}</h1>
+    <h1>${esc(order.establishment?.name || order.establishmentName || "Estabelecimento")}</h1>
     <h2>--- CUPOM ---</h2>
-    <div class="order-number">Pedido #${order.orderNumber || order.id.slice(0, 8)}</div>
+    <div class="order-number">Pedido #${orderRef}</div>
     <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
-    <p>Status: ${statusLabels[order.status] || order.status}</p>
+    <p>Status: ${esc(statusLabels[order.status] || order.status)}</p>
     <div class="divider"></div>
-    <p><strong>Cliente:</strong> ${order.customerName}</p>
-    ${order.customerPhone ? `<p><strong>WhatsApp:</strong> ${order.customerPhone}</p>` : ""}
-    ${order.customerAddress ? `<p><strong>Endereço:</strong> ${order.customerAddress}</p>` : ""}
-    ${order.orderType ? `<p><strong>Tipo:</strong> ${orderTypeLabels[order.orderType] || order.orderType}</p>` : ""}
-    ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}</p>` : ""}
-    ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${order.deliveryPerson}</p>` : ""}
-    ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${order.deliveryCode}</p>` : ""}
+    <p><strong>Cliente:</strong> ${esc(order.customerName)}</p>
+    ${order.customerPhone ? `<p><strong>WhatsApp:</strong> ${esc(order.customerPhone)}</p>` : ""}
+    ${order.customerAddress ? `<p><strong>Endereço:</strong> ${esc(order.customerAddress)}</p>` : ""}
+    ${order.orderType ? `<p><strong>Tipo:</strong> ${esc(orderTypeLabels[order.orderType] || order.orderType)}</p>` : ""}
+    ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${esc(paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod)}</p>` : ""}
+    ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${esc(order.deliveryPerson)}</p>` : ""}
+    ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${esc(order.deliveryCode)}</p>` : ""}
     <div class="divider"></div>
     <table>
       <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td><td class="right"><strong>Valor</strong></td></tr>
       ${items.map((item: any) => {
-        const addOns = (item.additionalOptions || []).map((o: any) => `  • ${o.name}${o.price > 0 ? ` +${fmt(o.price)}` : ""}`).join("<br>")
-        const obs = item.observation ? `<br><em>Obs: ${item.observation}</em>` : ""
-        return `<tr><td>${item.name}${addOns ? `<br>${addOns}` : ""}${obs}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`
+        const addOns = (item.additionalOptions || []).map((o: any) => `  • ${esc(o.name)}${o.price > 0 ? ` +${fmt(o.price)}` : ""}`).join("<br>")
+        const obs = item.observation ? `<br><em>Obs: ${esc(item.observation)}</em>` : ""
+        return `<tr><td>${esc(item.name)}${addOns ? `<br>${addOns}` : ""}${obs}</td><td class="right">${item.quantity}x</td><td class="right">${fmt(item.price * item.quantity)}</td></tr>`
       }).join("")}
     </table>
     ${order.deliveryFee > 0 ? `<p class="right">Taxa entrega: ${fmt(order.deliveryFee)}</p>` : ""}
     <div class="divider"></div>
     <p class="total right">Total: ${fmt(order.total)}</p>
-    ${order.notes ? `<p><span class="label">Obs:</span> ${order.notes}</p>` : ""}
+    ${order.notes ? `<p><span class="label">Obs:</span> ${esc(order.notes)}</p>` : ""}
     <div class="divider"></div>
     <p class="footer">Obrigado pela preferência!</p>
   </body>

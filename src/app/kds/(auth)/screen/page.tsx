@@ -469,12 +469,17 @@ export default function KdsScreen() {
                                     const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial", dineIn: "No local" }
                                     const paymentLabels: Record<string, string> = { cash: "Dinheiro", delivery: "Dinheiro (entrega)", pickup: "Dinheiro (retirada)", card_delivery: "Cartão (entrega)", card_pickup: "Cartão (retirada)", pix: "Pix", online: "Online", asaas: "Asaas", inter: "Inter" }
                                     const win = window.open("", "_blank")
-                                    if (!win) return
-                                    const estName = establishment?.name || "Estabelecimento"
-                                    const custName = order.customerName || order.customer?.name || ""
-                                    const custPhone = order.customerPhone || order.customer?.phone || ""
+                                    if (!win) {
+                                      alert("Permita pop-ups para imprimir o cupom")
+                                      return
+                                    }
+                                    const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+                                    const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
+                                    const estName = esc(establishment?.name || "Estabelecimento")
+                                    const custName = esc(order.customerName || order.customer?.name || "")
+                                    const custPhone = esc(order.customerPhone || order.customer?.phone || "")
                                     win.document.write(`
-                                      <html><head><title>Pedido #${order.orderNumber}</title>
+                                      <html><head><title>Pedido #${orderRef}</title>
                                       <style>
                                         @page { margin: 0; }
                                         body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; color: #000; }
@@ -491,30 +496,31 @@ export default function KdsScreen() {
                                       </style></head><body>
                                         <h1>${estName}</h1>
                                         <h2>--- CUPOM ---</h2>
-                                        <div class="order-number">Pedido #${order.orderNumber}</div>
+                                        <div class="order-number">Pedido #${orderRef}</div>
                                         <p>${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
-                                        <p>Status: ${statusLabels[order.status] || order.status}</p>
+                                        <p>Status: ${esc(statusLabels[order.status] || order.status)}</p>
                                         <div class="divider"></div>
                                         ${custName ? `<p><strong>Cliente:</strong> ${custName}</p>` : ""}
                                         ${custPhone ? `<p><strong>WhatsApp:</strong> ${custPhone}</p>` : ""}
-                                        ${order.customerAddress ? `<p><strong>Endereço:</strong> ${order.customerAddress}</p>` : ""}
-                                        ${order.orderType ? `<p><strong>Tipo:</strong> ${orderTypeLabels[order.orderType] || order.orderType}</p>` : ""}
-                                        ${order.tableNumber ? `<p><strong>Mesa:</strong> ${order.tableNumber}</p>` : ""}
-                                        ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${paymentLabels[order.paymentMethod] || order.paymentMethod}</p>` : ""}
-                                        ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${order.deliveryPerson}</p>` : ""}
-                                        ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${order.deliveryCode}</p>` : ""}
+                                        ${order.customerAddress ? `<p><strong>Endereço:</strong> ${esc(order.customerAddress)}</p>` : ""}
+                                        ${order.orderType ? `<p><strong>Tipo:</strong> ${esc(orderTypeLabels[order.orderType] || order.orderType)}</p>` : ""}
+                                        ${order.tableNumber ? `<p><strong>Mesa:</strong> ${esc(order.tableNumber)}</p>` : ""}
+                                        ${order.paymentMethod ? `<p><strong>Pagamento:</strong> ${esc(paymentLabels[order.paymentMethod] || order.paymentMethod)}</p>` : ""}
+                                        ${order.deliveryPerson ? `<p><strong>Entregador:</strong> ${esc(order.deliveryPerson)}</p>` : ""}
+                                        ${order.deliveryCode ? `<p style="font-size:18px;font-weight:bold;text-align:center;margin:8px 0;">🔑 Código de Entrega: ${esc(order.deliveryCode)}</p>` : ""}
                                         <div class="divider"></div>
                                         <table>
                                           <tr><td><strong>Item</strong></td><td class="right"><strong>Qtd</strong></td></tr>
                                           ${items.map((it: any) => {
-                                            const addOns = (it.additionalOptions || []).map((o: any) => `  • ${o.name}`).join("<br>")
-                                            const obs = it.observation ? `<br><em>Obs: ${it.observation}</em>` : ""
-                                            return `<tr><td>${it.name}${addOns ? `<br>${addOns}` : ""}${obs}${it.notes ? `<br><em>Nota: ${it.notes}</em>` : ""}</td><td class="right">${it.quantity}x</td></tr>`
+                                            const addOns = (it.additionalOptions || []).map((o: any) => `  • ${esc(o.name)}`).join("<br>")
+                                            const obs = it.observation ? `<br><em>Obs: ${esc(it.observation)}</em>` : ""
+                                            const notes = it.notes ? `<br><em>Nota: ${esc(it.notes)}</em>` : ""
+                                            return `<tr><td>${esc(it.name)}${addOns ? `<br>${addOns}` : ""}${obs}${notes}</td><td class="right">${it.quantity}x</td></tr>`
                                           }).join("")}
                                         </table>
                                         ${order.deliveryFee && order.deliveryFee > 0 ? `<p class="right">Taxa entrega: ${fmt(order.deliveryFee)}</p>` : ""}
                                         ${order.total ? `<div class="divider"></div><p class="total right">Total: ${fmt(order.total)}</p>` : ""}
-                                        ${order.notes ? `<p><span class="label">Obs:</span> ${order.notes}</p>` : ""}
+                                        ${order.notes ? `<p><span class="label">Obs:</span> ${esc(order.notes)}</p>` : ""}
                                         <div class="divider"></div>
                                         <p class="footer">Obrigado pela preferência!</p>
                                       </body></html>`)
