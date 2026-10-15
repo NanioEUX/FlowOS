@@ -34,6 +34,13 @@ const PUBLIC_ROUTES = [
   "/api/users/change-password",
   "/api/webhooks",
   "/api/cron",
+  // Adicionados antes de religar o middleware (senão quebraria fluxos que hoje
+  // funcionam sem Bearer — F6B-010):
+  "/api/payments", // checkout público do cardápio (PIX QR + cartão)
+  "/api/bot", // webhook do WhatsApp faz self-fetch para create-order
+  "/api/establishments", // cadastro (/cadastro) + GET público com strip de credenciais
+  "/api/subscription/webhook", // provedores de cobrança chamam sem JWT (create NÃO é público)
+  "/api/saas-admin", // login + rotas autenticadas por cookie (getSaasAdmin/requireSaasAdmin)
 ]
 
 function isPublicRoute(pathname: string): boolean {

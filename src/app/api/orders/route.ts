@@ -5,6 +5,12 @@ import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inte
 import { computeOrderItemCosts } from "@/lib/cmv"
 import { convertQuantity } from "@/lib/units"
 import { deductOrderStock } from "@/lib/stock"
+import {
+  buildOrderInput,
+  computeFirstPurchaseBonus,
+  computeLoyaltyRedemption,
+  OrderInputError,
+} from "@/lib/order-input"
 
 import crypto from "crypto"
 
@@ -69,50 +75,45 @@ function buildSplitRules(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { establishmentId, customerName, customerPhone, customerEmail, customerAddress, customerComplement, customerCep, customerCpf, items, total, deliveryFee, notes, paymentMethod, method, orderType, couponId, useLoyalty, loyaltyPointsUsed, loyaltyDiscount, firstPurchaseDiscount, couponDiscount, tableNumber, waiterName, changeFor, isScheduled, deliveryDate, customerLat, customerLng } = body
 
-    console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method)
+    // Servidor é a única fonte de preço/status/desconto/cupom/fidelidade
+    // (F6B-001…004, F6B-013, F6B-018). `total` do body é ignorado.
+    const input = await buildOrderInput(req, body)
+    const {
+      establishment,
+      establishmentId,
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      customerComplement,
+      customerCep,
+      customerCpf,
+      customerLat,
+      customerLng,
+      orderType,
+      paymentMethod,
+      method,
+      items,
+      itemsJson,
+      subtotal,
+      deliveryFee: deliveryFeeValue,
+      notes,
+      changeFor,
+      tableNumber,
+      waiterName,
+      isScheduled,
+      deliveryDate,
+      couponId,
+      wantsLoyalty,
+      isPayOnDelivery,
+      isOnlinePaymentMethod,
+      isMesa,
+      initialStatus,
+    } = input
 
-    if (!establishmentId || !customerName || !items || !total) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
-    }
-
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-    })
-
-    if (!establishment) {
-      return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
-    }
-
-    if (establishment.subscriptionStatus === "cancelled" || establishment.subscriptionStatus === "suspended") {
-      return NextResponse.json({ error: "Estabelecimento inativo" }, { status: 403 })
-    }
-
-    // Parse items and calculate totals server-side (never trust client-sent total)
-    const parsedItems = typeof items === "string" ? JSON.parse(items) : items
-
-    // Validate items structure
-    if (!Array.isArray(parsedItems) || parsedItems.length === 0) {
-      return NextResponse.json({ error: "Pedido deve conter ao menos um item" }, { status: 400 })
-    }
-    for (const item of parsedItems) {
-      if (!item.id || typeof item.price !== "number" || item.price <= 0 || !Number.isInteger(item.quantity) || item.quantity < 1) {
-        return NextResponse.json({ error: "Item inválido" }, { status: 400 })
-      }
-    }
-
-    const subtotal = parsedItems.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
-    const deliveryFeeValue = deliveryFee ? (typeof deliveryFee === "string" ? parseFloat(deliveryFee) : deliveryFee) : 0
-    const loyaltyDiscountValue = loyaltyDiscount ? (typeof loyaltyDiscount === "string" ? parseFloat(loyaltyDiscount) : loyaltyDiscount) : 0
-    const couponDiscountValue = couponDiscount ? (typeof couponDiscount === "string" ? parseFloat(couponDiscount) : couponDiscount) : 0
-    const firstPurchaseDiscountValue = firstPurchaseDiscount ? (typeof firstPurchaseDiscount === "string" ? parseFloat(firstPurchaseDiscount) : firstPurchaseDiscount) : 0
-    let calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue - couponDiscountValue - firstPurchaseDiscountValue)
-    console.log("[Orders POST] totals:", { subtotal, deliveryFeeValue, loyaltyDiscountValue, couponDiscountValue, firstPurchaseDiscountValue, calculatedTotal })
-
-    const isPayOnDelivery =
-      paymentMethod &&
-      ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(paymentMethod)
+    console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method, "| status:", initialStatus)
+    console.log("[Orders POST] totals (server):", { subtotal, deliveryFeeValue })
 
     // Regra: cliente bloqueado por excesso de cancelamentos (config por
     // estabelecimento: cancellationBlockEnabled). Se bloqueado, só permite
@@ -136,21 +137,6 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         )
       }
-    }
-
-    // Regra: limite de valor para pagar na entrega
-    if (
-      isPayOnDelivery &&
-      establishment.maxPayOnDeliveryAmount != null &&
-      calculatedTotal > establishment.maxPayOnDeliveryAmount
-    ) {
-      return NextResponse.json(
-        {
-          error: `Pedidos acima de R$ ${establishment.maxPayOnDeliveryAmount.toFixed(2).replace(".", ",")} só podem ser pagos online.`,
-          code: "pay_on_delivery_limit_exceeded",
-        },
-        { status: 400 }
-      )
     }
 
     // Regra: bloqueia novo pedido na entrega se já existe um em andamento
@@ -180,25 +166,21 @@ export async function POST(req: NextRequest) {
     }
 
     const trackingToken = crypto.randomBytes(12).toString("hex")
-
-    // For presencial mesa orders: status=new, no payment at creation
-    const isMesa = orderType === "presencial" && tableNumber
-    const isOnlinePaymentMethod = ["pix", "card", "online", "asaas", "inter"].includes(paymentMethod)
-    // Auto-aceite: TODOS os pedidos (online + balcão/PDV + mesa) pulam direto
-    // pra 'accepted' quando autoAcceptOrders=true. Depois é só clicar em
-    // "Iniciar preparo" pra ir pra 'preparing'.
-    const autoAccept = establishment.autoAcceptOrders
-    // Online payments (pix/card) never start as accepted — payment must confirm first.
-    const initialStatus = body.status || (isOnlinePaymentMethod ? "payment_pending" : (autoAccept ? "accepted" : (isMesa ? "new" : "pending")))
     console.log("[Orders POST] autoAccept:", { autoAcceptOrders: establishment.autoAcceptOrders, paymentMethod, isOnlinePaymentMethod, isMesa, initialStatus })
 
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
     let customerTier: string | null = null
     let firstPurchaseBonusValue = 0
-    if (customerPhone || customerCpf) {
-      let customer: any = null
+    let loyaltyDiscountValue = 0
+    let loyaltyPointsUsedValue = 0
+    let calculatedTotal = subtotal + deliveryFeeValue
+    let customer: any = null
+    // Persistência do cliente adiada até após a validação do total (limite pay-on-delivery)
+    let pendingCustomerUpdate: any = null
+    let pendingCustomerCreate: any = null
 
+    if (customerPhone || customerCpf) {
       // 1. Try to find by CPF first (unique per person)
       if (customerCpf) {
         const cpfDigits = customerCpf.replace(/\D/g, "")
@@ -206,16 +188,6 @@ export async function POST(req: NextRequest) {
           customer = await prisma.customer.findFirst({
             where: { cpf: cpfDigits, establishmentId },
           })
-          if (customer) {
-            // Update phone/name if provided
-            await prisma.customer.update({
-              where: { id: customer.id },
-              data: {
-                ...(customerPhone && { phone: customerPhone }),
-                ...(customerName && { name: customerName }),
-              },
-            })
-          }
         }
       }
 
@@ -224,44 +196,30 @@ export async function POST(req: NextRequest) {
         customer = await prisma.customer.findFirst({
           where: { phone: customerPhone, establishmentId },
         })
-        if (customer) {
-          // Update CPF/name/email if provided
-          const cpfDigits = customerCpf?.replace(/\D/g, "")
-          await prisma.customer.update({
-            where: { id: customer.id },
-            data: {
-              ...(cpfDigits?.length === 11 && { cpf: cpfDigits }),
-              ...(customerName && { name: customerName }),
-              ...(customerEmail && { email: customerEmail }),
-            },
-          })
-        }
       }
 
       if (customer) {
         customerId = customer.id
-        // Calculate real totalSpent from delivered orders (excluding this new order)
-        const deliveredAgg = await prisma.order.aggregate({
-          where: {
-            customerId: customer.id,
-            establishmentId,
-            status: { in: ["delivered", "confirmed", "preparing", "ready", "dispatched", "out_for_delivery"] },
-          },
-          _sum: { total: true },
-          _count: true,
-        })
-        const deliveredTotal = (deliveredAgg._sum.total || 0) + calculatedTotal
-        const isFirstOrder = deliveredAgg._count === 0
 
-        // Bônus primeira compra (só se WhatsApp verificado)
-        // NOTA: O desconto de primeira compra já é subtraído pelo client via
-        // firstPurchaseDiscount no body (linha 39). Não aplicar novamente aqui
-        // para evitar double-subtract.
-        firstPurchaseBonusValue = isFirstOrder && establishment.firstPurchaseEnabled && customer.whatsappVerified ? (establishment.firstPurchaseBonus || 0) : 0
+        // Fidelidade recalculada no servidor (F6B-002) — ignora valores do body
+        const loyalty = computeLoyaltyRedemption({
+          customer,
+          loyaltyConfigJson: establishment.loyaltyConfig,
+          wantsLoyalty,
+          subtotal,
+        })
+        loyaltyDiscountValue = loyalty.discount
+        loyaltyPointsUsedValue = loyalty.pointsUsed
+
+        // Bônus primeira compra (só cliente existente verificado no WhatsApp)
+        const firstPurchase = computeFirstPurchaseBonus({ customer, establishment })
+        firstPurchaseBonusValue = firstPurchase.bonusPoints
+
+        calculatedTotal = Math.max(0, subtotal + deliveryFeeValue - loyaltyDiscountValue - firstPurchase.discount)
 
         let pointsDelta = 0
-        if (useLoyalty && loyaltyPointsUsed > 0) {
-          pointsDelta -= loyaltyPointsUsed
+        if (loyaltyPointsUsedValue > 0) {
+          pointsDelta -= loyaltyPointsUsedValue
         }
         // Bônus cash da primeira compra (somado aos pontos ganhos neste pedido)
         if (firstPurchaseBonusValue > 0) {
@@ -331,22 +289,28 @@ export async function POST(req: NextRequest) {
             }
           } catch {}
         }
-        await prisma.customer.update({
+        customerTier = newTier
+        pendingCustomerUpdate = {
           where: { id: customer.id },
           data: {
-            name: customerName,
-            cpf: customerCpf?.replace(/\D/g, "") || customer.cpf,
+            ...(customerPhone && { phone: customerPhone }),
+            ...(customerName && { name: customerName }),
+            ...(customerEmail && { email: customerEmail }),
+            ...(customerCpf?.replace(/\D/g, "")?.length === 11 && { cpf: customerCpf.replace(/\D/g, "") }),
             address: customerComplement || customer.address,
             cep: customerCep || customer.cep,
             totalOrders: { increment: 1 },
             totalSpent: { increment: calculatedTotal },
-            loyaltyPoints: { increment: pointsDelta },
+            ...(loyaltyPointsUsedValue !== 0 || pointsDelta !== 0
+              ? { loyaltyPoints: { increment: pointsDelta } }
+              : {}),
             tier: newTier,
           },
-        })
-        customerTier = newTier
+        }
       } else {
-        // Create new customer
+        // Create new customer — sem desconto de primeira compra (exige
+        // whatsappVerified, que cliente novo ainda não tem).
+        // Criado APÓS a validação do limite pay-on-delivery.
         let initialPoints = 0
         let initialTier = "bronze"
         if (establishment.loyaltyConfig) {
@@ -356,15 +320,6 @@ export async function POST(req: NextRequest) {
               initialPoints = Math.floor(subtotal * (lc.cashbackPercent || lc.pointsPerReal || 1))
             }
           } catch {}
-        }
-        // Bônus primeira compra para cliente novo (verificado via WhatsApp)
-        if (establishment.firstPurchaseEnabled) {
-          if (establishment.firstPurchaseDiscount) {
-            calculatedTotal = Math.max(0, calculatedTotal - establishment.firstPurchaseDiscount)
-          }
-          if (establishment.firstPurchaseBonus) {
-            initialPoints += establishment.firstPurchaseBonus
-          }
         }
         if (establishment.tierConfig) {
           try {
@@ -380,24 +335,44 @@ export async function POST(req: NextRequest) {
             }
           } catch {}
         }
-        customer = await prisma.customer.create({
-          data: {
-            phone: customerPhone || "",
-            name: customerName,
-            cpf: customerCpf?.replace(/\D/g, "") || null,
-            address: customerComplement,
-            cep: customerCep,
-            establishmentId,
-            totalOrders: 1,
-            totalSpent: calculatedTotal,
-            loyaltyPoints: initialPoints,
-            tier: initialTier,
-            // Marca como verificado se tinha código verificado antes do pedido (não é estritamente necessário aqui)
-          },
-        })
-        customerId = customer.id
         customerTier = initialTier
+        pendingCustomerCreate = {
+          phone: customerPhone || "",
+          name: customerName,
+          cpf: customerCpf?.replace(/\D/g, "") || null,
+          address: customerComplement,
+          cep: customerCep,
+          establishmentId,
+          totalOrders: 1,
+          totalSpent: calculatedTotal,
+          loyaltyPoints: initialPoints,
+          tier: initialTier,
+        }
       }
+    }
+
+    // Regra: limite de valor para pagar na entrega (usa total final do servidor)
+    if (
+      isPayOnDelivery &&
+      establishment.maxPayOnDeliveryAmount != null &&
+      calculatedTotal > establishment.maxPayOnDeliveryAmount
+    ) {
+      return NextResponse.json(
+        {
+          error: `Pedidos acima de R$ ${establishment.maxPayOnDeliveryAmount.toFixed(2).replace(".", ",")} só podem ser pagos online.`,
+          code: "pay_on_delivery_limit_exceeded",
+        },
+        { status: 400 }
+      )
+    }
+
+    // Persiste cliente só após validações do total
+    if (pendingCustomerUpdate) {
+      await prisma.customer.update(pendingCustomerUpdate)
+    }
+    if (pendingCustomerCreate) {
+      customer = await prisma.customer.create({ data: pendingCustomerCreate })
+      customerId = customer.id
     }
 
     // Calculate cashbackEarned for this order
@@ -433,35 +408,35 @@ export async function POST(req: NextRequest) {
           customerName,
           customerPhone,
           customerAddress,
-          customerLat: customerLat ? Number(customerLat) : null,
-          customerLng: customerLng ? Number(customerLng) : null,
-          orderType: orderType || "delivery",
-          paymentMethod: isMesa ? "pending" : (paymentMethod || "online"),
-          ...(changeFor && Number(changeFor) > 0 ? { changeFor: Number(changeFor) } : {}),
+          customerLat: customerLat != null ? Number(customerLat) : null,
+          customerLng: customerLng != null ? Number(customerLng) : null,
+          orderType,
+          paymentMethod: isMesa ? "pending" : paymentMethod,
+          ...(changeFor && changeFor > 0 ? { changeFor } : {}),
           deliveryFee: deliveryFeeValue,
-          items: typeof items === "string" ? items : JSON.stringify(items),
+          items: itemsJson,
           total: calculatedTotal,
           notes,
-          method: method || "site",
+          method,
           trackingToken,
           status: initialStatus,
           ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
           orderNumber,
           tableNumber: tableNumber || null,
-          isScheduled: !!isScheduled,
-          deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-          ...((orderType === "delivery" || orderType === "pickup") && (method || "site") !== "ifood" && {
+          isScheduled,
+          deliveryDate: deliveryDate || null,
+          ...((orderType === "delivery" || orderType === "pickup") && method !== "ifood" && {
             deliveryCode: customerPhone ? customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)),
           }),
           cashbackEarned: cashbackEarnedValue,
-          loyaltyPointsUsed: (useLoyalty && loyaltyPointsUsed > 0) ? loyaltyPointsUsed : 0,
+          loyaltyPointsUsed: loyaltyPointsUsedValue,
           firstPurchaseBonus: firstPurchaseBonusValue,
         },
       })
 
       // Decrement stock atomically — if this fails, the entire order rolls back
       // Now includes additional options with consumesStock=true
-      const stockResult = await deductOrderStock(tx, parsedItems, createdOrder.id, establishmentId, false)
+      const stockResult = await deductOrderStock(tx, items, createdOrder.id, establishmentId, false)
       lowStockItems.push(...stockResult)
 
       return createdOrder
@@ -471,7 +446,7 @@ export async function POST(req: NextRequest) {
     // insumos vinculados via ficha técnica (ProductStockLink). Itens sem
     // ficha técnica ficam com custo 0.
     try {
-      const { costs } = await computeOrderItemCosts(parsedItems)
+      const { costs } = await computeOrderItemCosts(items)
       if (costs.length > 0) {
         await prisma.orderItemCost.createMany({
           data: costs.map((c) => ({
@@ -574,7 +549,7 @@ export async function POST(req: NextRequest) {
           const customer = await createPagarmeCustomer({
             apiKey: pagarmeApiKey,
             name: customerName,
-            email: customerEmail || `${customerPhone.replace(/\D/g, "")}@pedidoflow.com`,
+            email: customerEmail || `${(customerPhone || "").replace(/\D/g, "")}@pedidoflow.com`,
             phone: customerPhone || "",
             document: customerCpf || "",
           })
@@ -688,6 +663,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ order: fullOrder, paymentLink, pixPayload: pixPayload || "", trackingUrl: `/pedido/${trackingToken}`, lowStockItems })
   } catch (error) {
+    if (error instanceof OrderInputError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
+    }
     console.error(error)
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 })
   }

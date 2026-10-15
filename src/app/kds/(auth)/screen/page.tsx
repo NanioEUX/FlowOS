@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp, Printer } from "lucide-react"
 import { SoundControl, playKitchenBeep } from "@/components/sound-control"
+import { printHtmlPopup } from "@/lib/print-html"
 
 interface OrderMessage {
   id: string
@@ -468,17 +469,12 @@ export default function KdsScreen() {
                                     const statusLabels: Record<string, string> = { new: "Novo", pending: "Pendente", confirmed: "Confirmado", accepted: "Aceito", preparing: "Preparando", ready: "Pronto", out_for_delivery: "Saiu p/ Entrega", delivered: "Entregue", cancelled: "Cancelado", abandoned: "Pedido expirado" }
                                     const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial", dineIn: "No local" }
                                     const paymentLabels: Record<string, string> = { cash: "Dinheiro", delivery: "Dinheiro (entrega)", pickup: "Dinheiro (retirada)", card_delivery: "Cartão (entrega)", card_pickup: "Cartão (retirada)", pix: "Pix", online: "Online", asaas: "Asaas", inter: "Inter" }
-                                    const win = window.open("", "_blank")
-                                    if (!win) {
-                                      alert("Permita pop-ups para imprimir o cupom")
-                                      return
-                                    }
                                     const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
                                     const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
                                     const estName = esc(establishment?.name || "Estabelecimento")
                                     const custName = esc(order.customerName || order.customer?.name || "")
                                     const custPhone = esc(order.customerPhone || order.customer?.phone || "")
-                                    win.document.write(`
+                                    const html = `
                                       <html><head><title>Pedido #${orderRef}</title>
                                       <style>
                                         @page { margin: 0; }
@@ -523,11 +519,8 @@ export default function KdsScreen() {
                                         ${order.notes ? `<p><span class="label">Obs:</span> ${esc(order.notes)}</p>` : ""}
                                         <div class="divider"></div>
                                         <p class="footer">Obrigado pela preferência!</p>
-                                      </body></html>`)
-                                    win.document.close()
-                                    win.focus()
-                                    win.print()
-                                    win.close()
+                                      </body></html>`
+                                    printHtmlPopup(html)
                                   }}
                                   className="p-1 rounded hover:bg-zinc-700 transition-colors"
                                   title="Imprimir pedido"

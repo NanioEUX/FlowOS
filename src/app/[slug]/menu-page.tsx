@@ -77,6 +77,9 @@ interface Establishment {
   paymentProvider: string
   estimatedDeliveryMin: number
   estimatedDeliveryMax: number
+  isOpenOverride?: boolean | null
+  addressLat?: number | null
+  addressLng?: number | null
 }
 
 interface CustomerData {
@@ -171,10 +174,18 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [darkMode] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [greeting, setGreeting] = useState("Olá")
+  // F6B-005: reavalia isOpen a cada 60s — sem tick, a loja fecha e a página
+  // aberta continua vendendo até recarregar.
+  const [nowTs, setNowTs] = useState(() => Date.now())
 
   useEffect(() => {
     setMounted(true)
     setGreeting(getGreetingFromHour(new Date().getHours()))
+  }, [])
+
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 60000)
+    return () => clearInterval(t)
   }, [])
 
   const theme = useMemo(() => {
@@ -769,8 +780,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   const isOpen = useMemo(() => {
     if (!mounted) return true
+    // Pausa manual do estabelecimento vence o horário (mesma regra do servidor)
+    if (establishment.isOpenOverride === false) return false
+    if (establishment.isOpenOverride === true) return true
     if (!parsedBusinessHours) return true
-    const now = new Date()
+    const now = new Date(nowTs)
     const dayIndex = now.getDay()
     const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
     const todayName = dayMap[dayIndex]
@@ -782,11 +796,11 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const openMinutes = openH * 60 + openM
     const closeMinutes = closeH * 60 + closeM
     return currentMinutes >= openMinutes && currentMinutes < closeMinutes
-  }, [parsedBusinessHours, mounted])
+  }, [parsedBusinessHours, mounted, establishment.isOpenOverride, nowTs])
 
   const closedMessage = useMemo(() => {
     if (!parsedBusinessHours || isOpen) return null
-    const now = new Date()
+    const now = new Date(nowTs)
     const dayIndex = now.getDay()
     const dayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
@@ -831,7 +845,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const sub = customSub || "Aguarde, estaremos de volta!"
 
     return { title, sub }
-  }, [parsedBusinessHours, isOpen, establishment.closedTitle, establishment.closedSub])
+  }, [parsedBusinessHours, isOpen, establishment.closedTitle, establishment.closedSub, nowTs])
 
   // Loyalty
   const parsedLoyalty = useMemo(() => {
@@ -5270,6 +5284,12 @@ onPaymentConfirmed={handlePaymentSuccess}
                         <p className="text-sm mt-1" style={{ color: theme.textMutedMore }}>Nenhum endereço selecionado</p>
                       )}
                     </div>
+
+                    {/* Zonas/geolocalização (F6B-007): só quando o estabelecimento tem GPS
+                        configurado — sem GPS o calculate responde "sem localização". */}
+                    {establishment.addressLat != null && establishment.addressLng != null && (
+                      <GeolocationButton establishmentId={establishment.id} orderTotal={subtotal} onResult={(info) => setGeoDeliveryInfo(info)} />
+                    )}
                   </div>
                 )}
 

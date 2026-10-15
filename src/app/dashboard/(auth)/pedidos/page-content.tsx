@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
+import { printHtmlPopup } from "@/lib/print-html"
 import { useNewOrderAlerts, ensureNotificationPermission, playNewOrderSound } from "@/lib/use-new-order-alerts"
 import { SearchableSelect } from "@/components/searchable-select"
 import { SoundControl } from "@/components/sound-control"
@@ -735,13 +736,8 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
     // Escaping HTML de valores dinâmicos (F8C-008)
     const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-    const win = window.open("", "_blank")
-    if (!win) {
-      alert("Permita pop-ups para imprimir o cupom")
-      return
-    }
     const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
-    win.document.write(`
+    const html = `
       <html>
       <head>
         <title>Pedido #${orderRef}</title>
@@ -790,12 +786,9 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     <div class="divider"></div>
     <p class="footer">Obrigado pela preferência!</p>
   </body>
-</html>`)
-win.document.close()
-win.focus()
-win.print()
-win.close()
-}
+</html>`
+    printHtmlPopup(html)
+  }
 
   const ageMinutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
   const isUnaccepted = ["pending", "new"].includes(order.status)

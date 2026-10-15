@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle, Receipt, QrCode, Loader2, ArrowRightLeft } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
+import { printHtmlPopup } from "@/lib/print-html"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/toast"
@@ -948,13 +949,8 @@ export default function CaixaPOSPage() {
     const paymentLabels: Record<string, string> = { cash: "Dinheiro", card: "Cartão", pix: "Pix" }
     // Escaping HTML de valores dinâmicos (F8C-008)
     const esc = (v: any) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-    const win = window.open("", "_blank")
-    if (!win) {
-      alert("Permita pop-ups para imprimir o cupom")
-      return
-    }
     const orderRef = esc(order.orderNumber || order.id.slice(0, 8))
-    win.document.write(`
+    const html = `
       <html>
       <head>
         <title>Pedido #${orderRef}</title>
@@ -990,11 +986,8 @@ export default function CaixaPOSPage() {
         <p class="footer">Obrigado pela preferência!</p>
       </body>
       </html>
-    `)
-    win.document.close()
-    win.focus()
-    win.print()
-    win.close()
+    `
+    printHtmlPopup(html)
   }
 
   async function openCashRegister() {

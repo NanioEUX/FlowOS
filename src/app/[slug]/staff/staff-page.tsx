@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { CheckCircle, Clock, Banknote, CreditCard, QrCode, Loader2, ArrowLeft, Bell } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { fetchAuth } from "@/lib/fetch-auth"
 
 interface TableRequest {
   tableNumber: number
@@ -26,7 +27,7 @@ export function StaffPage({ establishment }: { establishment: Establishment }) {
 
   const fetchTables = useCallback(async () => {
     try {
-      const res = await fetch(`/api/payment-request?establishmentId=${establishment.id}`)
+      const res = await fetchAuth(`/api/payment-request?establishmentId=${establishment.id}`)
       if (res.ok) {
         const data = await res.json()
         setTables(data)
@@ -45,7 +46,7 @@ export function StaffPage({ establishment }: { establishment: Establishment }) {
     if (!selectedTable) return
     setProcessing(true)
     try {
-      const res = await fetch("/api/payment-request", {
+      const res = await fetchAuth("/api/payment-request", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
