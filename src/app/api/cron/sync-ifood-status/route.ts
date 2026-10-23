@@ -64,7 +64,15 @@ export async function GET(req: NextRequest) {
   }
 
   const establishments = await prisma.establishment.findMany({
-    where: { ifoodEnabled: true, ifoodMerchantId: { not: null } },
+    where: {
+      ifoodEnabled: true,
+      ifoodMerchantId: { not: null },
+      // F3D-003 (checkpoint): pausa MANUAL (ifoodPaused && !ifoodAutoPaused)
+      // sempre cai em "skipped" no loop — tira essas lojas do scan global serial
+      // desde o SQL. Os outros 3 estados (aberto, auto-pausado, inconsistente)
+      // seguem no loop porque podem gerar ação (reopen/pause).
+      OR: [{ ifoodPaused: false }, { ifoodAutoPaused: true }],
+    },
     select: {
       id: true, name: true, businessHours: true,
       ifoodMerchantId: true, ifoodPaused: true, ifoodAutoPaused: true, ifoodInterruptionId: true,
@@ -81,6 +89,7 @@ export async function GET(req: NextRequest) {
   }
 
   let opened = 0, closed = 0, skipped = 0, errors = 0
+  const errorDetails: string[] = []
 
   for (const est of establishments) {
     try {
@@ -118,11 +127,15 @@ export async function GET(req: NextRequest) {
       } else {
         skipped++
       }
-    } catch {
+    } catch (e: any) {
       errors++
+      // F3D-003: não engolir o erro por loja — loga com identificação e devolve
+      // os detalhes (capped) na resposta do cron para o debug em produção.
+      console.error(`[Sync iFood] erro na loja ${est.name} (${est.id}):`, e?.message)
+      if (errorDetails.length < 10) errorDetails.push(`${est.name}: ${e?.message}`)
     }
   }
 
   console.log(`[Sync iFood] opened=${opened} closed=${closed} skipped=${skipped} errors=${errors} total=${establishments.length}`)
-  return NextResponse.json({ success: true, opened, closed, skipped, errors, total: establishments.length })
+  return NextResponse.json({ success: true, opened, closed, skipped, errors, total: establishments.length, errorDetails })
 }

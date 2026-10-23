@@ -38,3 +38,6 @@ auditoria/
 *.db-journal
 *.db-shm
 *.db-wal
+
+# estado local da CLI Supabase (item de imagens pendente)
+supabase/

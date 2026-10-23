@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp, Printer } from "lucide-react"
 import { SoundControl, playKitchenBeep } from "@/components/sound-control"
+import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import { printHtmlPopup } from "@/lib/print-html"
 
 interface OrderMessage {
@@ -50,7 +51,7 @@ export default function KdsScreen() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    if (typeof window === "undefined") return false
+    if (typeof window === "undefined") return true
     try {
       const stored = localStorage.getItem("kds_sound")
       if (stored) {
@@ -58,7 +59,8 @@ export default function KdsScreen() {
         if (typeof parsed.enabled === "boolean") return parsed.enabled
       }
     } catch {}
-    return false
+    // F5D-005: ligado por padrão — kiosk/tablet que abre direto precisa bipar
+    return true
   })
   const [soundVolume, setSoundVolume] = useState(() => {
     if (typeof window === "undefined") return 0.7
@@ -72,7 +74,16 @@ export default function KdsScreen() {
     return 0.7
   })
   const [establishment, setEstablishment] = useState<any>(null)
-  const lastCountRef = useRef(0)
+  // F5D-010: null = ainda não há baseline (primeira carga não bipa; o primeiro
+  // pedido real — inclusive saindo de fila zerada — passa a bipar).
+  const lastCountRef = useRef<number | null>(null)
+  // F5D-002: JWT expirou no meio do turno → overlay de sessão + polling para.
+  const [sessionExpired, setSessionExpired] = useState(false)
+  // F5D-003: estado real de conexão (último poll com sucesso).
+  const [online, setOnline] = useState(true)
+  // F5D-006: pedidos que estavam ativos e ficaram cancelled → aviso vermelho.
+  const [cancelledNotices, setCancelledNotices] = useState<{ key: string; title: string; orderNumber?: number; at: number }[]>([])
+  const prevActiveIdsRef = useRef<Set<string>>(new Set())
   const [timers, setTimers] = useState<Record<string, string>>({})
   const [completedItems, setCompletedItems] = useState<Record<string, Record<number, boolean>>>({})
   const [filter, setFilter] = useState<FilterOrigin>("all")
@@ -108,28 +119,70 @@ export default function KdsScreen() {
     if (!token || !estIdRef.current) return
 
     try {
-      const res = await fetch(`/api/orders?establishmentId=${estIdRef.current}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-
-      if (res.ok) {
-        const all = data.orders || data || []
-        const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "accepted", "preparing", "ready"].includes(o.status))
-        filtered.sort((a: Order, b: Order) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-
-        const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending" || o.status === "accepted").length
-        if (newCount > lastCountRef.current && lastCountRef.current >= 0 && soundEnabled && lastCountRef.current > 0) {
-          playKitchenBeep(soundVolume, 3)
+      // F5A-038: escopo de status + take — o KDS não precisa do histórico
+      // inteiro a cada 5s (cancelled entra para o aviso do F5D-006).
+      const res = await fetch(
+        `/api/orders?establishmentId=${estIdRef.current}&status=new,pending,confirmed,accepted,preparing,ready,cancelled&take=300`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
-        lastCountRef.current = newCount
-        setOrders(filtered)
+      )
 
-        // Fetch messages for all orders
-        fetchMessages(filtered.map((o: Order) => o.id))
+      // F5D-002: 401/403 = sessão JWT expirada → avisar e parar o polling
+      if (res.status === 401 || res.status === 403) {
+        setSessionExpired(true)
+        setOnline(true)
+        return
       }
+
+      let data: any = null
+      try { data = await res.json() } catch {}
+
+      if (!res.ok) {
+        // F5D-003: 5xx/erro do servidor = sem conexão com o back
+        setOnline(false)
+        return
+      }
+      setOnline(true)
+
+      const all: Order[] = data?.orders || data || []
+      const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "accepted", "preparing", "ready"].includes(o.status))
+      filtered.sort((a: Order, b: Order) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+      // F5D-010: bipa quando o total de novos cresce em relação ao baseline
+      // (o baseline nulo da primeira carga não bipa; fila zerada → 1 bipa)
+      const newCount = filtered.filter((o: Order) => o.status === "new" || o.status === "pending" || o.status === "accepted").length
+      if (soundEnabled && lastCountRef.current !== null && newCount > lastCountRef.current) {
+        playKitchenBeep(soundVolume, 3)
+      }
+      lastCountRef.current = newCount
+
+      // F5D-006: pedido que estava na tela e virou cancelled vira aviso vermelho
+      const activeIds = new Set(filtered.map((o: Order) => o.id))
+      const cancelledNow = all.filter((o: Order) => o.status === "cancelled" && prevActiveIdsRef.current.has(o.id))
+      if (cancelledNow.length > 0) {
+        if (soundEnabled) playKitchenBeep(soundVolume, 3)
+        const at = Date.now()
+        setCancelledNotices((prev) => [
+          ...prev,
+          ...cancelledNow.map((o: Order) => ({
+            key: `${o.id}-${at}`,
+            title: getOrderTitle(o),
+            orderNumber: o.orderNumber,
+            at,
+          })),
+        ])
+      }
+      prevActiveIdsRef.current = activeIds
+
+      setOrders(filtered)
+
+      // Fetch messages for all orders
+      fetchMessages(filtered.map((o: Order) => o.id))
     } catch (err) {
+      // F5D-003: falha de rede = offline (o ponto verde passa a refletir isso)
       console.error("[KDS] Fetch error:", err)
+      setOnline(false)
     } finally {
       setLoading(false)
     }
@@ -166,14 +219,16 @@ export default function KdsScreen() {
   async function fetchMessages(orderIds: string[]) {
     const token = localStorage.getItem("kds_token")
     if (!token) return
-    const msgsMap: Record<string, OrderMessage[]> = {}
-    for (const oid of orderIds) {
+    let msgsMap: Record<string, OrderMessage[]> = {}
+    // F3A-021: 1 chamada em lote em vez de N (o loop sequencial fazia ~3.600
+    // req/h a cada 10-15 pedidos na tela).
+    if (orderIds.length > 0) {
       try {
-        const res = await fetch(`/api/orders/${oid}/messages`, {
+        const res = await fetch(`/api/orders/messages?ids=${orderIds.join(",")}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
-          msgsMap[oid] = await res.json()
+          msgsMap = await res.json()
         }
       } catch {}
     }
@@ -286,10 +341,25 @@ export default function KdsScreen() {
   }
 
   useEffect(() => {
+    if (sessionExpired) return
+    // F3C-001: não gasta poll com a aba oculta (KDS escondido em outra aba);
+    // ao voltar, atualiza na hora.
+    const tick = () => {
+      if (!document.hidden) fetchOrders()
+    }
     fetchOrders()
-    const interval = setInterval(fetchOrders, 5000)
+    const interval = setInterval(tick, 5000)
     return () => clearInterval(interval)
-  }, [fetchOrders])
+  }, [fetchOrders, sessionExpired])
+  useVisibilityRefresh(fetchOrders, !sessionExpired)
+
+  // F5D-006: o aviso de cancelamento some sozinho após 60s
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCancelledNotices((prev) => prev.filter((n) => Date.now() - n.at < 60000))
+    }, 5000)
+    return () => clearInterval(t)
+  }, [])
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -310,6 +380,24 @@ export default function KdsScreen() {
   const avgTime = totalCount > 0
     ? Math.round(orders.reduce((acc, o) => acc + (Date.now() - new Date(o.createdAt).getTime()), 0) / totalCount / 60000)
     : 0
+
+  if (sessionExpired) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center gap-4 text-white p-6">
+        <AlertTriangle className="w-10 h-10 text-red-400" />
+        <div className="text-center">
+          <p className="font-bold text-lg">Sessão expirada</p>
+          <p className="text-sm text-zinc-400 mt-1">Entre novamente para continuar acompanhando a cozinha.</p>
+        </div>
+        <button
+          onClick={() => router.push("/kds")}
+          className="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+        >
+          Entrar novamente
+        </button>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -337,8 +425,10 @@ export default function KdsScreen() {
                 {establishment?.name || "Cozinha"}
               </h1>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-500 rounded-full" />
-                <span className="text-zinc-300 text-xs">Modo Serviço: Ativo</span>
+                <span className={`w-2 h-2 rounded-full ${online ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
+                <span className={`text-xs ${online ? "text-zinc-300" : "text-red-400 font-semibold"}`}>
+                  {online ? "Modo Serviço: Ativo" : "Sem conexão"}
+                </span>
               </div>
             </div>
           </div>
@@ -394,7 +484,7 @@ export default function KdsScreen() {
             </div>
             <SoundControl
               storageKey="kds_sound"
-              defaultEnabled={false}
+              defaultEnabled={true}
               defaultVolume={0.7}
               onChange={(enabled, volume) => {
                 setSoundEnabled(enabled)
@@ -405,8 +495,23 @@ export default function KdsScreen() {
         </header>
 
         {/* Kanban Columns */}
-        <main className="flex-1 p-4 overflow-hidden">
-          <div className="grid grid-cols-3 gap-4 h-full">
+        <main className="flex-1 p-4 overflow-hidden flex flex-col">
+          {/* F5D-006: aviso de cancelamento (card vermelho, some em 60s) */}
+          {cancelledNotices.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3 shrink-0">
+              {cancelledNotices.map((n) => (
+                <div
+                  key={n.key}
+                  className="flex items-center gap-2 bg-red-500/15 border border-red-500/50 text-red-300 rounded-lg px-3 py-2 text-xs font-bold"
+                >
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                  CANCELADO — {n.title}
+                  {n.orderNumber ? <span className="font-mono opacity-80">#{n.orderNumber}</span> : null}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
             {columns.map(col => {
               const colOrders = getOrdersForColumn(col.status)
 

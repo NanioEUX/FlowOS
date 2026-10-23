@@ -162,7 +162,8 @@ function getAudioCtx(): any {
   }
 }
 
-// Unlock AudioContext on first user interaction (click/touch)
+// Unlock AudioContext on first user interaction (F5D-005: kiosk/tablet que
+// abre direto precisa de qualquer gesto para desbloquear o autoplay).
 if (typeof window !== "undefined") {
   const unlock = () => {
     if (_audioUnlocked) return
@@ -170,9 +171,17 @@ if (typeof window !== "undefined") {
     getAudioCtx()
     document.removeEventListener("click", unlock)
     document.removeEventListener("touchstart", unlock)
+    document.removeEventListener("touchend", unlock)
+    document.removeEventListener("mousedown", unlock)
+    document.removeEventListener("pointerdown", unlock)
+    document.removeEventListener("keydown", unlock)
   }
   document.addEventListener("click", unlock)
   document.addEventListener("touchstart", unlock)
+  document.addEventListener("touchend", unlock)
+  document.addEventListener("mousedown", unlock)
+  document.addEventListener("pointerdown", unlock)
+  document.addEventListener("keydown", unlock)
 }
 
 export async function playKitchenBeep(volume: number = 0.7, cycles: number = 3) {

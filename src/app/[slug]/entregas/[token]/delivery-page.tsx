@@ -131,7 +131,9 @@ export function DeliveryPage({ token }: { token: string }) {
   }
   async function loadDeliveries() {
     try {
-      const res = await fetch(`/api/delivery-persons/deliveries?token=${token}&all=true`)
+      const res = await fetch(`/api/delivery-persons/deliveries?all=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (!res.ok) {
         if (res.status === 404) setError("Link inválido")
         else setError("Erro ao carregar")

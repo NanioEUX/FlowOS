@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { dayRangeFilter } from "@/lib/finance-dates"
+
+// Status que NÃO são faturamento realizado (F5A-019): cancelado, abandonado
+// e pedido cuja cobrança ainda está pendente de liquidação.
+const REALIZED_STATUS_FILTER: { notIn: string[] } = {
+  notIn: ["cancelled", "abandoned", "payment_pending"],
+}
 
 export async function GET(req: NextRequest) {
   const establishmentIdParam = req.nextUrl.searchParams.get("establishmentId")
@@ -11,13 +18,12 @@ export async function GET(req: NextRequest) {
   if (error) return error
   const establishmentId = user.establishmentId
 
-  const dateFilter: any = {}
-  if (from) dateFilter.gte = new Date(from)
-  if (to) dateFilter.lte = new Date(to + "T23:59:59")
+  // Limites inclusivos no fuso do negócio (F5A-044)
+  const dateFilter: any = dayRangeFilter(from, to)
 
   const orderWhere: any = {
     establishmentId,
-    status: { not: "cancelled" },
+    status: REALIZED_STATUS_FILTER,
   }
   if (Object.keys(dateFilter).length > 0) {
     orderWhere.createdAt = dateFilter
@@ -33,10 +39,21 @@ export async function GET(req: NextRequest) {
     deliveryPaymentWhere.createdAt = dateFilter
   }
 
-  const [orders, expenses, deliveryPayments] = await Promise.all([
+  const [orders, expenses, deliveryPayments, cmvAgg] = await Promise.all([
     prisma.order.findMany({ where: orderWhere }),
     prisma.expense.findMany({ where: expenseWhere }),
     prisma.deliveryPayment.findMany({ where: deliveryPaymentWhere }),
+    // CMV do período (F5A-018): soma dos snapshots de custo dos pedidos
+    prisma.orderItemCost.aggregate({
+      where: {
+        order: {
+          establishmentId,
+          status: REALIZED_STATUS_FILTER,
+          ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+        },
+      },
+      _sum: { totalCostCents: true },
+    }),
   ])
 
   // Revenue breakdown
@@ -87,13 +104,16 @@ export async function GET(req: NextRequest) {
   const deliveryCosts = deliveryPayments.reduce((sum, p) => sum + p.amount, 0)
 
   // DRE calculation
+  const custoMercadorias = (cmvAgg._sum.totalCostCents || 0) / 100 // F5A-018
   const receitaBruta = totalRevenue
   const descontos = couponsDiscount
   const receitaLiquida = receitaBruta - descontos
   const custoEntregas = deliveryCosts
   const despesasOperacionais = totalExpenses
-  const lucroBruto = receitaLiquida - custoEntregas
-  const lucroLiquido = lucroBruto - despesasOperacionais
+  // Lucro bruto = receita líquida − CMV; o operacional sai depois de
+  // entregas + despesas (antes o CMV não aparecia em nenhum lugar).
+  const lucroBruto = receitaLiquida - custoMercadorias
+  const lucroLiquido = lucroBruto - custoEntregas - despesasOperacionais
 
   const result = {
     period: { from: from || "início", to: to || "agora" },
@@ -101,6 +121,7 @@ export async function GET(req: NextRequest) {
       receitaBruta,
       descontos,
       receitaLiquida,
+      custoMercadorias,
       custoEntregas,
       despesasOperacionais,
       lucroBruto,
@@ -114,10 +135,13 @@ export async function GET(req: NextRequest) {
         online: onlineRevenue,
       },
       byPayment: {
-        money: orders.filter((o) => o.paymentMethod === "money").reduce((sum, o) => sum + o.total, 0),
-        card: orders.filter((o) => o.paymentMethod === "card").reduce((sum, o) => sum + o.total, 0),
+        // Valores reais de paymentMethod: "cash" (nunca "money") — F5A-029
+        money: orders.filter((o) => o.paymentMethod === "cash" || o.paymentMethod === "money").reduce((sum, o) => sum + o.total, 0),
+        card: orders.filter((o) => ["card", "card_delivery", "card_pickup"].includes(o.paymentMethod)).reduce((sum, o) => sum + o.total, 0),
         pix: orders.filter((o) => o.paymentMethod === "pix").reduce((sum, o) => sum + o.total, 0),
-        online: onlineRevenue,
+        online: orders.filter((o) => ["online", "asaas", "inter"].includes(o.paymentMethod)).reduce((sum, o) => sum + o.total, 0),
+        delivery: orders.filter((o) => o.paymentMethod === "delivery").reduce((sum, o) => sum + o.total, 0),
+        pickup: orders.filter((o) => o.paymentMethod === "pickup").reduce((sum, o) => sum + o.total, 0),
       },
       expensesByCategory,
     },

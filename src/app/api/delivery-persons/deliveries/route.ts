@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { canTransition, isValidStatus } from "@/lib/order-transitions"
+import crypto from "crypto"
+
+// F5B-019: o token pode vir em header (novo) ou no body/query (legado,
+// mantido para não quebrar páginas já abertas).
+function tokenFrom(req: NextRequest, fromBody?: string): string | null {
+  const auth = req.headers.get("authorization")
+  if (auth?.startsWith("Bearer ")) return auth.slice(7)
+  if (fromBody) return fromBody
+  return new URL(req.url).searchParams.get("token")
+}
+
+// F5B-019: só o que a tela do motoboy usa — status livre virava
+// "delivered" direto de "preparing" ou qualquer string arbitrária.
+const MOTOBOY_TARGETS = ["out_for_delivery", "delivered"]
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const token = searchParams.get("token")
+  const token = tokenFrom(req)
   const all = searchParams.get("all") === "true"
   if (!token) {
     return NextResponse.json({ error: "token necessário" }, { status: 400 })
@@ -41,9 +56,14 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { orderId, status, token, toggleActive } = await req.json()
+    const body = await req.json()
+    const { orderId, status, toggleActive } = body
+    const token = tokenFrom(req, body?.token)
 
     if (toggleActive) {
+      if (!token) {
+        return NextResponse.json({ error: "token obrigatório" }, { status: 400 })
+      }
       const person = await prisma.deliveryPerson.findUnique({ where: { token } })
       if (!person) {
         return NextResponse.json({ error: "Entregador não encontrado" }, { status: 404 })
@@ -57,6 +77,11 @@ export async function PATCH(req: NextRequest) {
 
     if (!orderId || !status || !token) {
       return NextResponse.json({ error: "orderId, status e token obrigatórios" }, { status: 400 })
+    }
+
+    // F5B-019: whitelist de alvos + máquina de estados (igual ao PATCH /api/orders)
+    if (!MOTOBOY_TARGETS.includes(status) || !isValidStatus(status)) {
+      return NextResponse.json({ error: "Status não permitido" }, { status: 400 })
     }
 
     const person = await prisma.deliveryPerson.findUnique({ where: { token } })
@@ -75,6 +100,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Pedido não encontrado ou não atribuído a você" }, { status: 404 })
     }
 
+    if (!canTransition(order.status, status)) {
+      return NextResponse.json(
+        { error: `Transição inválida: ${order.status} → ${status}` },
+        { status: 400 }
+      )
+    }
+
     const isOutForDelivery = status === "out_for_delivery" && order.status !== "out_for_delivery"
     const isNonIfood = order.method !== "ifood"
 
@@ -84,7 +116,7 @@ export async function PATCH(req: NextRequest) {
         status,
         deliveryPerson: person.name,
         ...(isOutForDelivery && { assignedAt: new Date() }),
-        ...(isOutForDelivery && isNonIfood && !order.deliveryCode && { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }),
+        ...(isOutForDelivery && isNonIfood && !order.deliveryCode && { deliveryCode: String(crypto.randomInt(1000, 10000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
       },
     })

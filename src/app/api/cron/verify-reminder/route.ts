@@ -65,7 +65,10 @@ export async function GET(req: NextRequest) {
         id: true,
         customer: { select: { phone: true, name: true } },
       },
-      take: 50,
+      // F3A-043: era take:50 seriais por tenant numa invocação só (corte por
+      // timeout garantido com provider.sendText + delay). Com o cron de hora
+      // em hora, 15 por execução drena o backlog com folga e cabe na janela.
+      take: 15,
     })
 
     for (const code of codes) {

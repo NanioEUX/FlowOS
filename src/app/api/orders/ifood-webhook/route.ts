@@ -195,6 +195,9 @@ export async function POST(req: NextRequest) {
           where: { establishmentId: est.id, externalId: orderId },
         })
         if (existing) {
+          if (existing.status === "cancelled") {
+            results.push({ orderId, action: 'already_cancelled' })
+          } else {
           const reason =
             (event as any).reason ||
             (event as any).metadata?.reason ||
@@ -221,12 +224,24 @@ export async function POST(req: NextRequest) {
                 externalId: existing.externalId,
               },
             })
-            // Restore stock for cancelled iFood order
+            // Restore stock for cancelled iFood order (guard evita estorno em
+            // dobro — F5A-011) e mantém o registro cancelado (sem hard delete:
+            // o evento reentregue recriava o pedido e debitava de novo).
             await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
-            await tx.order.delete({ where: { id: existing.id } })
+            await tx.order.update({
+              where: { id: existing.id },
+              data: {
+                status: "cancelled",
+                paymentStatus: existing.paymentStatus === "paid" ? "refunded" : "cancelled",
+                cancellationReason: typeof reason === "string" ? reason : null,
+                cancellationDate: new Date(),
+                cancelledBy,
+              },
+            })
           })
           updated++
           results.push({ orderId, action: 'cancelled_ifood', reason })
+          }
         } else {
           results.push({ orderId, action: 'not_found_for_cancel' })
         }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { fetchExternal } from "@/lib/fetch-external"
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     const apiUrl = "https://api.pagar.me/core/v5"
     const authHeader = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`
 
-    const res = await fetch(`${apiUrl}/orders/${order.paymentId}`, {
+    const res = await fetchExternal(`${apiUrl}/orders/${order.paymentId}`, {
       headers: { "Authorization": authHeader },
     })
 
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     if (qrCodeUrl) {
       // Fetch the QR code image and convert to base64
       try {
-        const qrRes = await fetch(qrCodeUrl)
+        const qrRes = await fetchExternal(qrCodeUrl)
         if (qrRes.ok) {
           const qrBuffer = await qrRes.arrayBuffer()
           const qrBase64 = Buffer.from(qrBuffer).toString("base64")

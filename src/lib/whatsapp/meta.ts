@@ -1,4 +1,5 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions, SendVerificationOptions } from "./provider"
+import { fetchExternal } from "@/lib/fetch-external"
 
 interface MetaCloudConfig {
   phoneNumberId: string
@@ -47,7 +48,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
         body.context = { message_id: options.quotedMessageId }
       }
 
-      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -100,7 +101,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
       // Nunca logar o payload completo: contém o código OTP (F4A-016)
       console.log(`[MetaCloud] Template payload: to=${phoneDigits} template=${templateName} lang=${languageCode}`)
 
-      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -144,7 +145,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
         },
       }
 
-      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -193,7 +194,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
         body.context = { message_id: options.quotedMessageId }
       }
 
-      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -251,7 +252,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
 
   async testConnection(): Promise<{ connected: boolean; error?: string; phoneInfo?: any }> {
     try {
-      const res = await fetch(`${this.baseUrl}/${this.phoneNumberId}`, {
+      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}`, {
         headers: { "Authorization": `Bearer ${this.accessToken}` },
       })
       const data = await res.json()
@@ -311,7 +312,7 @@ export async function createDefaultVerificationTemplate(
       ],
     }
 
-    const res = await fetch(
+    const res = await fetchExternal(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates`,
       {
         method: "POST",
@@ -357,7 +358,7 @@ export async function getTemplateStatus(
   apiVersion: string = "v21.0"
 ): Promise<{ found: boolean; status?: string; error?: string }> {
   try {
-    const res = await fetch(
+    const res = await fetchExternal(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?name=${templateName}`,
       {
         method: "GET",
@@ -397,7 +398,7 @@ export async function findApprovedTemplate(
 ): Promise<{ found: boolean; templateName?: string; status?: string; error?: string }> {
   try {
     console.log(`[MetaTemplate] Listing templates in WABA: ${wabaId}`)
-    const res = await fetch(
+    const res = await fetchExternal(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?fields=name,status,category,language`,
       {
         method: "GET",
@@ -414,13 +415,18 @@ export async function findApprovedTemplate(
     console.log(`[MetaTemplate] Found ${templates.length} templates:`,
       templates.map((t: any) => `${t.name}(${t.status}/${t.category})`).join(", "))
 
-    // Find any approved template in pt_BR
-    const approved = templates.find((t: any) =>
-      t.status === "APPROVED" && t.language === "pt_BR"
-    )
+    // Prefere template de categoria AUTHENTICATION (ou nome de OTP/verificação,
+    // F7A-013) e só então qualquer aprovado em pt_BR
+    const isApprovedPtBr = (t: any) => t.status === "APPROVED" && t.language === "pt_BR"
+    const approved =
+      templates.find(
+        (t: any) =>
+          isApprovedPtBr(t) &&
+          (t.category === "AUTHENTICATION" || /auth|otp|verif|codigo/i.test(t.name || ""))
+      ) || templates.find(isApprovedPtBr)
 
     if (approved) {
-      console.log(`[MetaTemplate] Using approved template: ${approved.name}`)
+      console.log(`[MetaTemplate] Using approved template: ${approved.name} (${approved.category || "?"})`)
       return { found: true, templateName: approved.name, status: approved.status }
     }
 

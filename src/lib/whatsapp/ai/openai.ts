@@ -111,7 +111,7 @@ export async function generateAIResponse(
     temperature: 0.7,
     tools: toolsHandler ? BOT_TOOLS : undefined,
     tool_choice: toolsHandler ? "auto" : undefined,
-  })
+  }, { timeout: 15000 })
 
   let totalInput = completion.usage?.prompt_tokens || 0
   let totalOutput = completion.usage?.completion_tokens || 0
@@ -139,7 +139,7 @@ export async function generateAIResponse(
       temperature: 0.7,
       tools: BOT_TOOLS,
       tool_choice: "auto",
-    })
+    }, { timeout: 15000 })
     totalInput += completion.usage?.prompt_tokens || 0
     totalOutput += completion.usage?.completion_tokens || 0
   }

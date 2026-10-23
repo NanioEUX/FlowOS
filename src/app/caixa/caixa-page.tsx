@@ -1023,7 +1023,11 @@ export default function CaixaPOSPage() {
     if (!cashRegister || !user?.establishmentId) return
     try {
       const movements = cashRegister.movements || []
-      const totalMovements = movements.reduce((sum: number, m: any) => sum + m.amount, 0)
+      const totalMovements = movements.reduce(
+        (sum: number, m: any) =>
+          sum + (m.type === "expense" || m.type === "withdrawal" || m.type === "refund" ? -Math.abs(m.amount) : Math.abs(m.amount)),
+        0
+      )
       const expected = cashRegister.openingAmount + totalMovements
       await fetchAuth(`/api/cash-register/${cashRegister.id}`, {
         method: "PATCH",
@@ -1967,7 +1971,11 @@ export default function CaixaPOSPage() {
               <div className="space-y-3">
                 <div className={`rounded-lg p-3 text-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-50"}`}>
                   <p className={darkMode ? "text-white/50" : "text-zinc-500"}>Valor esperado: <span className={`font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{formatCurrency(
-                    (cashRegister?.openingAmount || 0) + (cashRegister?.movements || []).reduce((s: number, m: any) => s + m.amount, 0)
+                    (cashRegister?.openingAmount || 0) + (cashRegister?.movements || []).reduce(
+                      (s: number, m: any) =>
+                        s + (m.type === "expense" || m.type === "withdrawal" || m.type === "refund" ? -Math.abs(m.amount) : Math.abs(m.amount)),
+                      0
+                    )
                   )}</span></p>
                 </div>
                 <div>

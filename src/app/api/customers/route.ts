@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { requireEstablishment } from "@/lib/require-auth"
+import { normalizePhone } from "@/lib/phone"
+import {
+  verifyCustomerSession,
+  customerSessionRequired,
+  type CustomerSession,
+} from "@/lib/customer-auth"
+
+// Campos seguros para consulta pública (pré-OTP / auto-relogin): sem PII
+// sensível (address/cep/cpf/birthDate/email) — F7A-006/017. O registro completo
+// só sai quando a sessão do cookie pertence ao próprio cliente.
+const PUBLIC_SELECT = {
+  id: true,
+  name: true,
+  phone: true,
+  whatsappVerified: true,
+  verifiedAt: true,
+  tier: true,
+  loyaltyPoints: true,
+  totalOrders: true,
+  totalSpent: true,
+  cancellationCount: true,
+  blockedUntil: true,
+} as const
+
+function isOwnSession(session: CustomerSession | null, customerId: string): boolean {
+  return !!session && session.customerId === customerId
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -13,7 +40,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "establishmentId é obrigatório" }, { status: 400 })
   }
 
-  // CPF lookup: public (used by menu page identification)
+  const session = await verifyCustomerSession(req)
+
+  // CPF lookup: público, mas só o subset (F7A-006)
   if (cpf) {
     const cpfDigits = cpf.replace(/\D/g, "")
     if (cpfDigits.length === 11) {
@@ -21,14 +50,20 @@ export async function GET(req: NextRequest) {
         where: { cpf: cpfDigits, establishmentId },
         orderBy: { createdAt: "desc" },
       })
-      return NextResponse.json(customer || { notFound: true })
+      if (!customer) return NextResponse.json({ notFound: true })
+      if (isOwnSession(session, customer.id)) return NextResponse.json(customer)
+      const { ...subset } = customer as any
+      const safe: any = {}
+      for (const key of Object.keys(PUBLIC_SELECT)) safe[key] = (subset as any)[key]
+      return NextResponse.json(safe)
     }
   }
 
-  // Phone lookup: public (used by menu page)
+  // Phone lookup: público (menu usa pré-OTP e no auto-relogin), subset sem PII
   if (phone) {
+    const phoneDigits = normalizePhone(phone) || phone.replace(/\D/g, "")
     const customer = await prisma.customer.findFirst({
-      where: { phone, establishmentId },
+      where: { phone: phoneDigits, establishmentId },
       orderBy: { createdAt: "desc" },
     })
     if (!customer) return NextResponse.json({ notFound: true })
@@ -46,7 +81,12 @@ export async function GET(req: NextRequest) {
     const realTotalSpent = deliveredOrders._sum.total || 0
     const realTotalOrders = deliveredOrders._count || 0
 
-    return NextResponse.json({ ...customer, realTotalSpent, realTotalOrders })
+    if (isOwnSession(session, customer.id)) {
+      return NextResponse.json({ ...customer, realTotalSpent, realTotalOrders })
+    }
+    const safe: any = {}
+    for (const key of Object.keys(PUBLIC_SELECT)) safe[key] = (customer as any)[key]
+    return NextResponse.json({ ...safe, realTotalSpent, realTotalOrders })
   }
 
   // List all customers: requires auth
@@ -97,8 +137,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
     }
 
-    const { user, error } = requireEstablishment(req, establishmentId)
+    // Criação/atualização em massa é operação da equipe (já exigia JWT)
+    const { error } = requireEstablishment(req, establishmentId)
     if (error) return error
+
+    const phoneDigits = normalizePhone(phone)
+    if (!phoneDigits) {
+      return NextResponse.json({ error: "Telefone inválido" }, { status: 400 })
+    }
 
     // Check by CPF first (unique identifier)
     const cpfDigits = cpf?.replace(/\D/g, "")
@@ -113,7 +159,7 @@ export async function POST(req: NextRequest) {
     // If no CPF match, check by phone
     if (!existing) {
       existing = await prisma.customer.findFirst({
-        where: { phone, establishmentId },
+        where: { phone: phoneDigits, establishmentId },
       })
     }
 
@@ -122,7 +168,7 @@ export async function POST(req: NextRequest) {
         where: { id: existing.id },
         data: {
           name: name || existing.name,
-          phone: phone || existing.phone,
+          phone: phoneDigits,
           cpf: cpfDigits?.length === 11 ? cpfDigits : existing.cpf,
           address: address !== undefined ? address : existing.address,
           cep: cep !== undefined ? cep : existing.cep,
@@ -132,7 +178,7 @@ export async function POST(req: NextRequest) {
     }
 
     const customer = await prisma.customer.create({
-      data: { phone, name, address, cep, cpf: cpfDigits?.length === 11 ? cpfDigits : null, establishmentId },
+      data: { phone: phoneDigits, name, address, cep, cpf: cpfDigits?.length === 11 ? cpfDigits : null, establishmentId },
     })
 
     return NextResponse.json(customer)
@@ -144,30 +190,33 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    // Perfil do cliente final: só com sessão do cookie; o id vem do token,
+    // nunca do body (F7A-006/F7B-004)
+    const session = await verifyCustomerSession(req)
+    if (!session) return customerSessionRequired()
+
     const body = await req.json()
-    const { id, phone, name, cpf, birthDate, establishmentId } = body
-
-    if (!id || !establishmentId) {
-      return NextResponse.json({ error: "id e establishmentId são obrigatórios" }, { status: 400 })
-    }
-
-    // Verify customer belongs to this establishment
-    const existing = await prisma.customer.findFirst({
-      where: { id, establishmentId },
-      select: { id: true },
-    })
-    if (!existing) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
-    }
+    const { phone, name, cpf, birthDate } = body
 
     const cpfDigits = cpf?.replace(/\D/g, "")
     const birthDateParsed = birthDate ? new Date(birthDate) : null
 
+    // Troca de número exige re-OTP do número novo (F7A-014): recusamos a
+    // troca silenciosa; o front segue gravando o rascunho local.
+    if (phone) {
+      const newPhone = normalizePhone(phone)
+      if (!newPhone || newPhone !== session.phone) {
+        return NextResponse.json(
+          { error: "Para trocar o telefone, verifique o novo número pelo WhatsApp." },
+          { status: 400 }
+        )
+      }
+    }
+
     const customer = await prisma.customer.update({
-      where: { id },
+      where: { id: session.customerId },
       data: {
         ...(name && { name }),
-        ...(phone && { phone }),
         ...(cpfDigits?.length === 11 && { cpf: cpfDigits }),
         ...(birthDateParsed && !isNaN(birthDateParsed.getTime()) && { birthDate: birthDateParsed }),
       },

@@ -48,6 +48,13 @@ export async function POST(
     return NextResponse.json({ error: "type and amount required" }, { status: 400 })
   }
 
+  // F5B-028: type restrito ao vocabulário do caixa — string livre poluía a
+  // conferência por tipo (e permitia forjar receita esperada).
+  const VALID_TYPES = ["sale", "expense", "withdrawal", "injection", "refund"]
+  if (!VALID_TYPES.includes(type)) {
+    return NextResponse.json({ error: `type inválido: ${type}` }, { status: 400 })
+  }
+
   const movement = await prisma.cashMovement.create({
     data: {
       type,

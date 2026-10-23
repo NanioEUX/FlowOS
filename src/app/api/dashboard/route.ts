@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { startOfTodayInTz, dayKeyInTz, startOfInclusiveDay } from "@/lib/finance-dates"
 
 export const revalidate = 10
 
@@ -39,10 +40,12 @@ export async function GET(req: NextRequest) {
 
 async function loadDashboard(establishmentId: string) {
   const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  // Limites no fuso do negócio (F5A-044): em produção o servidor é UTC e
+  // "hoje" começava às 03h de Brasília.
+  const todayStart = startOfTodayInTz(now)
   const yesterdayStart = new Date(todayStart.getTime() - 86400000)
   const weekAgoStart = new Date(now.getTime() - 7 * 86400000)
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthStart = startOfInclusiveDay(dayKeyInTz(now).slice(0, 7) + "-01")
 
   const [
     todayOrders,
@@ -65,15 +68,17 @@ async function loadDashboard(establishmentId: string) {
     activeMesaOrders,
   ] = await Promise.all([
     prisma.order.findMany({
-      where: { establishmentId, createdAt: { gte: todayStart }, status: { not: "cancelled" } },
-      select: { total: true, items: true, status: true, orderType: true, paymentMethod: true, deliveryFee: true, createdAt: true },
+      where: { establishmentId, createdAt: { gte: todayStart }, status: { notIn: ["cancelled", "abandoned", "payment_pending"] } },
+      select: { total: true, items: true, status: true, orderType: true, paymentMethod: true, paymentStatus: true, deliveryFee: true, createdAt: true },
     }),
     prisma.order.findMany({
-      where: { establishmentId, createdAt: { gte: yesterdayStart, lt: todayStart }, status: { not: "cancelled" } },
+      where: { establishmentId, createdAt: { gte: yesterdayStart, lt: todayStart }, status: { notIn: ["cancelled", "abandoned", "payment_pending"] } },
       select: { total: true },
     }),
     prisma.order.findMany({
-      where: { establishmentId, status: { in: ["preparing", "ready", "out_for_delivery"] } },
+      // Pedidos ativos = todo o fluxo em andamento (F5A-041: "new/pending/
+      // confirmed/accepted/dispatched" também estão ativos)
+      where: { establishmentId, status: { in: ["new", "pending", "confirmed", "accepted", "preparing", "ready", "dispatched", "out_for_delivery"] } },
       select: { status: true, deliveryPersonId: true, orderType: true },
     }),
     prisma.customer.count({ where: { establishmentId } }),
@@ -85,12 +90,12 @@ async function loadDashboard(establishmentId: string) {
       select: { id: true, orderNumber: true, customerName: true, total: true, status: true, createdAt: true, items: true, orderType: true },
     }),
     prisma.order.findMany({
-      where: { establishmentId, createdAt: { gte: weekAgoStart }, status: { not: "cancelled" } },
+      where: { establishmentId, createdAt: { gte: weekAgoStart }, status: { notIn: ["cancelled", "abandoned", "payment_pending"] } },
       select: { total: true, createdAt: true },
     }),
     prisma.deliveryPerson.count({ where: { establishmentId, isActive: true } }),
     prisma.order.findMany({
-      where: { establishmentId, createdAt: { gte: monthStart }, status: { not: "cancelled" } },
+      where: { establishmentId, createdAt: { gte: monthStart }, status: { notIn: ["cancelled", "abandoned", "payment_pending"] } },
       select: { total: true },
     }),
     prisma.expense.findMany({
@@ -139,7 +144,13 @@ async function loadDashboard(establishmentId: string) {
   const totalExpenses = todayExpenses.reduce((sum, e) => sum + e.amount, 0)
   const todayProfit = todayTotal - totalExpenses
 
-  const paidTotal = todayOrders.filter((o) => o.paymentMethod !== "online" || o.status === "delivered").reduce((s, o) => s + o.total, 0)
+  // F5A-028: "pago" pelo paymentStatus (com fallback para pagamento na
+  // entrega já concluído em dados antigos) — não pela forma de pagamento.
+  const isPayOnDelivery = (m: string | null | undefined) =>
+    !!m && ["cash", "delivery", "pickup", "card_delivery", "card_pickup"].includes(m)
+  const paidTotal = todayOrders
+    .filter((o) => o.paymentStatus === "paid" || (isPayOnDelivery(o.paymentMethod) && o.status === "delivered"))
+    .reduce((s, o) => s + o.total, 0)
   const pendingTotal = todayTotal - paidTotal
 
   const activeByStatus = {
@@ -174,11 +185,11 @@ async function loadDashboard(establishmentId: string) {
 
   const salesByDay: Record<string, { date: string; total: number; count: number }> = {}
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 86400000)
-    salesByDay[d.toISOString().split("T")[0]] = { date: d.toISOString().split("T")[0], total: 0, count: 0 }
+    const key = dayKeyInTz(new Date(now.getTime() - i * 86400000))
+    salesByDay[key] = { date: key, total: 0, count: 0 }
   }
   for (const order of weekSales) {
-    const key = new Date(order.createdAt).toISOString().split("T")[0]
+    const key = dayKeyInTz(new Date(order.createdAt))
     if (salesByDay[key]) { salesByDay[key].total += order.total; salesByDay[key].count += 1 }
   }
 

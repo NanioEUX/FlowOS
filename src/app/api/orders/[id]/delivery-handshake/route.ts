@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit"
+import crypto from "crypto"
 
 export async function POST(
   req: NextRequest,
@@ -14,6 +16,18 @@ export async function POST(
       return NextResponse.json(
         { error: "Código deve ter exatamente 4 dígitos" },
         { status: 400 }
+      )
+    }
+
+    // F5B-021: 4 dígitos = 10k combinações; limita tentativas por pedido e por
+    // IP (melhor esforço em serverless) antes de qualquer consulta.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+    const perOrder = checkRateLimit(`handshake:order:${params.id}`, 8, 5 * 60 * 1000)
+    const perIp = checkRateLimit(`handshake:ip:${ip}:${params.id}`, 12, 5 * 60 * 1000)
+    if (!perOrder.allowed || !perIp.allowed) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente." },
+        { status: 429 }
       )
     }
 
@@ -61,15 +75,20 @@ export async function POST(
       )
     }
 
-    // Verify code locally
-    if (handshakeCode !== order.deliveryCode) {
+    // Verify code locally (comparação em tempo constante)
+    const codeBuf = Buffer.from(handshakeCode, "utf8")
+    const expectedBuf = Buffer.from(String(order.deliveryCode ?? ""), "utf8")
+    const codeOk = codeBuf.length === expectedBuf.length && crypto.timingSafeEqual(codeBuf, expectedBuf)
+    if (!codeOk) {
       return NextResponse.json(
         { error: "Código de confirmação incorreto. Verifique com o cliente e tente novamente." },
         { status: 400 }
       )
     }
 
-    // Code correct — mark as delivered
+    // Código certo — zera o contador e marca como entregue
+    resetRateLimit(`handshake:order:${params.id}`)
+    resetRateLimit(`handshake:ip:${ip}:${params.id}`)
     await prisma.order.update({
       where: { id: order.id },
       data: { status: "delivered", deliveredAt: new Date() },

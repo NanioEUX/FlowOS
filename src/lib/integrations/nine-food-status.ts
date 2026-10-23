@@ -60,6 +60,7 @@ async function callEndpoint(
 
     req.on("error", (e) => resolve({ success: false, body: e.message }))
     req.write(requestBody)
+    req.setTimeout(15000, () => req.destroy(new Error("99food-status timeout")))
     req.end()
   })
 }

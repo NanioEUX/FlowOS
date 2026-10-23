@@ -37,6 +37,7 @@ function fetchMerchant(merchantId: string, token: string): Promise<MerchantInfo>
       })
     })
     req.on("error", reject)
+    req.setTimeout(15000, () => req.destroy(new Error("ifood-merchant timeout")))
     req.end()
   })
 }

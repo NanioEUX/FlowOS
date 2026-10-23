@@ -3,11 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 const mockPrisma = vi.hoisted(() => ({
   order: { findFirst: vi.fn(), update: vi.fn() },
   logWebhook99: { create: vi.fn(), updateMany: vi.fn() },
+  $transaction: vi.fn(),
 }))
 
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }))
+vi.mock("@/lib/stock", () => ({ restoreOrderStock: vi.fn() }))
 
 import { POST } from "../route"
+import { restoreOrderStock } from "@/lib/stock"
 
 function makeRequest(body: any) {
   return new Request("http://localhost/api/webhooks/99", {
@@ -20,6 +23,8 @@ function makeRequest(body: any) {
 describe("POST /api/webhooks/99", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // $transaction executa o callback com o próprio mock como tx
+    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma))
   })
 
   it("retorna received: true quando body inválido", async () => {
@@ -114,14 +119,21 @@ describe("POST /api/webhooks/99", () => {
     })
   })
 
-  it("mapeia status cancelled e set cancellationReason", async () => {
+  it("mapeia status cancelled, estorna estoque e set cancellationReason (F5A-010)", async () => {
     mockPrisma.logWebhook99.create.mockResolvedValue({})
-    mockPrisma.order.findFirst.mockResolvedValue({ id: "order-1", status: "out_for_delivery" })
+    mockPrisma.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      status: "out_for_delivery",
+      items: "[]",
+      establishmentId: "est-1",
+      paymentStatus: "pending",
+    })
     mockPrisma.order.update.mockResolvedValue({})
     mockPrisma.logWebhook99.updateMany.mockResolvedValue({})
 
     await POST(makeRequest({ rideId: "ride-1", status: "cancelled" }) as any)
 
+    expect(restoreOrderStock).toHaveBeenCalled()
     expect(mockPrisma.order.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
       data: expect.objectContaining({ status: "cancelled", cancellationReason: "Cancelado pela 99" }),
@@ -130,7 +142,13 @@ describe("POST /api/webhooks/99", () => {
 
   it("suporta canceled (com 'z') além de cancelled", async () => {
     mockPrisma.logWebhook99.create.mockResolvedValue({})
-    mockPrisma.order.findFirst.mockResolvedValue({ id: "order-1", status: "out_for_delivery" })
+    mockPrisma.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      status: "out_for_delivery",
+      items: "[]",
+      establishmentId: "est-1",
+      paymentStatus: "pending",
+    })
     mockPrisma.order.update.mockResolvedValue({})
     mockPrisma.logWebhook99.updateMany.mockResolvedValue({})
 
@@ -139,6 +157,40 @@ describe("POST /api/webhooks/99", () => {
     expect(mockPrisma.order.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
       data: expect.objectContaining({ status: "cancelled" }),
+    })
+  })
+
+  it("pedido já cancelado é terminal: não re-estorna nem regrava status", async () => {
+    mockPrisma.logWebhook99.create.mockResolvedValue({})
+    mockPrisma.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      status: "cancelled",
+      items: "[]",
+      establishmentId: "est-1",
+      paymentStatus: "cancelled",
+    })
+
+    await POST(makeRequest({ rideId: "ride-1", status: "delivered" }) as any)
+
+    expect(restoreOrderStock).not.toHaveBeenCalled()
+    expect(mockPrisma.order.update).not.toHaveBeenCalled()
+  })
+
+  it("status fora do mapa não grava string arbitrária (Fase 5)", async () => {
+    mockPrisma.logWebhook99.create.mockResolvedValue({})
+    mockPrisma.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      status: "preparing",
+      items: "[]",
+      establishmentId: "est-1",
+    })
+
+    await POST(makeRequest({ rideId: "ride-1", status: "qualquer_coisa" }) as any)
+
+    // Só o campo de provedor é atualizado — a coluna status fica intacta
+    expect(mockPrisma.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { entregaStatusProvedor: "qualquer_coisa" },
     })
   })
 

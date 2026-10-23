@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
+import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import { Bike, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2, Calendar } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -159,7 +160,14 @@ export default function EntregasPage() {
   }
 
   useEffect(() => { loadAll() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadAll, 30000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => {
+    const tick = () => {
+      if (!document.hidden) loadAll()
+    }
+    const i = setInterval(tick, 30000)
+    return () => clearInterval(i)
+  }, [establishmentId])
+  useVisibilityRefresh(loadAll, !!establishmentId)
 
   async function reassignOrder(orderId: string, deliveryPersonId: string) {
     const person = deliveryPeople.find((p: any) => p.id === deliveryPersonId)

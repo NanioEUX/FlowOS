@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
+import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import {
   MessageCircle,
   Send,
@@ -197,22 +198,30 @@ export default function ChatPage() {
   )
 
   useEffect(() => {
+    const tick = () => {
+      if (!document.hidden) loadConversations()
+    }
     loadConversations()
-    const i = setInterval(loadConversations, 5000)
+    const i = setInterval(tick, 5000)
     return () => clearInterval(i)
   }, [loadConversations])
+  useVisibilityRefresh(loadConversations)
 
   useEffect(() => {
     if (selectedOrderId) {
       loadMessages(selectedOrderId)
       markAsRead(selectedOrderId)
 
-      const i = setInterval(() => {
-        loadMessages(selectedOrderId)
-      }, 5000)
+      const tick = () => {
+        if (!document.hidden) loadMessages(selectedOrderId)
+      }
+      const i = setInterval(tick, 5000)
       return () => clearInterval(i)
     }
   }, [selectedOrderId, loadMessages, markAsRead])
+  useVisibilityRefresh(() => {
+    if (selectedOrderId) loadMessages(selectedOrderId)
+  }, !!selectedOrderId)
 
   useEffect(() => {
     scrollToBottom()

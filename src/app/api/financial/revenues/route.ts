@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { dayRangeFilter, dayKeyInTz } from "@/lib/finance-dates"
 
 export async function GET(req: NextRequest) {
   const establishmentIdParam = req.nextUrl.searchParams.get("establishmentId")
@@ -11,13 +12,13 @@ export async function GET(req: NextRequest) {
   if (error) return error
   const establishmentId = user.establishmentId
 
-  const dateFilter: any = {}
-  if (from) dateFilter.gte = new Date(from)
-  if (to) dateFilter.lte = new Date(to + "T23:59:59")
+  // Limites inclusivos no fuso do negócio (F5A-044)
+  const dateFilter: any = dayRangeFilter(from, to)
 
   const orderWhere: any = {
     establishmentId,
-    status: { not: "cancelled" },
+    // F5A-019: sem cancelado/abandonado/pagamento pendente
+    status: { notIn: ["cancelled", "abandoned", "payment_pending"] },
   }
   if (Object.keys(dateFilter).length > 0) {
     orderWhere.createdAt = dateFilter
@@ -42,11 +43,22 @@ export async function GET(req: NextRequest) {
     total: number
     orders: typeof orders
     count: number
-    byPayment: { money: number; card: number; pix: number; online: number }
+    byPayment: Record<string, number>
   }>()
 
+  // Normaliza paymentMethod para os buckets reais (F5A-029: "cash" nunca
+  // caía em "money" e delivery/pickup eram descartados).
+  const paymentBucket = (method: string): string => {
+    if (method === "cash" || method === "money") return "money"
+    if (method === "card" || method === "card_delivery" || method === "card_pickup") return "card"
+    if (method === "pix") return "pix"
+    if (method === "online" || method === "asaas" || method === "inter") return "online"
+    if (method === "delivery" || method === "pickup") return method
+    return "money"
+  }
+
   for (const order of orders) {
-    const day = order.createdAt.toISOString().split("T")[0]
+    const day = dayKeyInTz(order.createdAt)
     if (!dayMap.has(day)) {
       dayMap.set(day, { total: 0, orders: [], count: 0, byPayment: { money: 0, card: 0, pix: 0, online: 0 } })
     }
@@ -54,10 +66,8 @@ export async function GET(req: NextRequest) {
     dayData.total += order.total
     dayData.count += 1
     dayData.orders.push(order)
-    const method = order.paymentMethod as "money" | "card" | "pix" | "online"
-    if (method in dayData.byPayment) {
-      dayData.byPayment[method] += order.total
-    }
+    const bucket = paymentBucket(order.paymentMethod || "")
+    dayData.byPayment[bucket] = (dayData.byPayment[bucket] || 0) + order.total
   }
 
   // Convert to array sorted by date desc

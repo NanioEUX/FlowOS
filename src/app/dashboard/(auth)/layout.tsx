@@ -92,12 +92,18 @@ export default function DashboardLayout({
         if (data.error) throw new Error(data.error)
         setEstablishment(data)
 
-        if (userData.role === "admin" && !pathname.startsWith("/dashboard/planos")) {
+        // F5C-011: bloqueio por assinatura cobre todos os papéis quando o
+        // plano expirou (antes só admin era redirecionado); no período de
+        // carência (pending_payment) só o admin é mandado para o checkout —
+        // equipe continua operando durante a cobrança. saas_admin não bloqueia.
+        if (!pathname.startsWith("/dashboard/planos") && userData.role !== "saas_admin") {
           const now = new Date()
           const isExpired =
             data.subscriptionStatus === "expired" ||
             (data.subscriptionStatus === "trial" && data.trialEndsAt && new Date(data.trialEndsAt) < now)
-          if (isExpired) {
+          const isGrace = data.subscriptionStatus === "pending_payment"
+          const shouldBlock = isExpired || (isGrace && (userData.role === "admin" || userData.role === "owner"))
+          if (shouldBlock) {
             router.replace("/dashboard/planos")
             return
           }

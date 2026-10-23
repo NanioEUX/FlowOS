@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
+import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import { ShoppingBag, Search, MessageCircle, ExternalLink, User, Plus, Loader2, X, Bike, Store, CreditCard, Banknote, Printer, Calendar, Package, Send, ChefHat } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -95,6 +96,40 @@ export default function PedidosPage() {
   const [filterScheduled, setFilterScheduled] = useState<"all" | "scheduled" | "immediate">("all")
   const [unreadOrders, setUnreadOrders] = useState<Record<string, { count: number; name: string; message: string }>>({})
   const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
+  // F3A-021: mensagens vêm em lote para o pai — os cards deixaram de pollar
+  // 1 requisição por pedido a cada 30s (N+1 do chat).
+  const [messagesByOrder, setMessagesByOrder] = useState<Record<string, any[]>>({})
+  const ordersRef = useRef<any[]>([])
+  ordersRef.current = orders
+
+  const loadMessagesBatch = useCallback(async () => {
+    const ids = ordersRef.current.slice(0, 50).map((o: any) => o.id)
+    if (ids.length === 0) return
+    try {
+      const res = await fetchAuth(`/api/orders/messages?ids=${ids.join(",")}`)
+      if (res.ok) setMessagesByOrder(await res.json())
+    } catch {}
+  }, [])
+
+  const refreshOrderMessages = useCallback(async (orderId: string) => {
+    try {
+      const res = await fetchAuth(`/api/orders/${orderId}/messages`)
+      if (res.ok) {
+        const msgs = await res.json()
+        setMessagesByOrder((prev) => ({ ...prev, [orderId]: msgs }))
+      }
+    } catch {}
+  }, [])
+
+  const markOrderMessagesRead = useCallback(async (orderId: string) => {
+    try {
+      await fetchAuth(`/api/orders/${orderId}/messages`, { method: "PATCH" })
+      setMessagesByOrder((prev) => ({
+        ...prev,
+        [orderId]: (prev[orderId] || []).map((m: any) => (m.sender === "customer" ? { ...m, read: true } : m)),
+      }))
+    } catch {}
+  }, [])
 
   async function loadOrders() {
     if (!establishmentId) return
@@ -126,7 +161,33 @@ export default function PedidosPage() {
   }
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadOrders, 30000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => {
+    const tick = () => {
+      if (!document.hidden) loadOrders()
+    }
+    const i = setInterval(tick, 30000)
+    return () => clearInterval(i)
+  }, [establishmentId])
+  useVisibilityRefresh(loadOrders, !!establishmentId)
+
+  // Load unread messages for visible orders in batch (F3A-021)
+  useEffect(() => {
+    if (!establishmentId) return
+    // Delay aleatório (0-5s) para não disparar todas as lambdas no mesmo instante
+    let interval: ReturnType<typeof setInterval> | undefined
+    const tick = () => {
+      if (!document.hidden) loadMessagesBatch()
+    }
+    const start = setTimeout(() => {
+      tick()
+      interval = setInterval(tick, 30000)
+    }, Math.floor(Math.random() * 5000))
+    return () => {
+      clearTimeout(start)
+      if (interval) clearInterval(interval)
+    }
+  }, [establishmentId, loadMessagesBatch])
+  useVisibilityRefresh(loadMessagesBatch, !!establishmentId)
 
   // Request browser notification permission once the dashboard loads.
   useEffect(() => {
@@ -140,6 +201,7 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!establishmentId) return
     const syncInterval = setInterval(() => {
+      if (document.hidden) return
       const pendingPayments = orders.filter((o: any) => 
         o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
       )
@@ -459,17 +521,17 @@ export default function PedidosPage() {
         </div>
       ) : (
         <>
-          {grouped.active.length > 0 && <OrderSection title="Em Andamento" orders={grouped.active} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} />}
+          {grouped.active.length > 0 && <OrderSection title="Em Andamento" orders={grouped.active} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} messagesByOrder={messagesByOrder} onMarkRead={markOrderMessagesRead} onRefreshMessages={refreshOrderMessages} />}
           {grouped.completed.length > 0 && (
             <details className="group">
               <summary className="cursor-pointer text-sm font-semibold text-zinc-400 hover:text-zinc-400">Entregues ({grouped.completed.length})</summary>
-              <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.completed} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} /></div>
+              <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.completed} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} messagesByOrder={messagesByOrder} onMarkRead={markOrderMessagesRead} onRefreshMessages={refreshOrderMessages} /></div>
             </details>
           )}
           {grouped.cancelled.length > 0 && (
             <details className="group">
               <summary className="cursor-pointer text-sm font-semibold text-red-400 hover:text-red-400">Cancelados ({grouped.cancelled.length})</summary>
-              <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.cancelled} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} /></div>
+              <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.cancelled} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} messagesByOrder={messagesByOrder} onMarkRead={markOrderMessagesRead} onRefreshMessages={refreshOrderMessages} /></div>
             </details>
           )}
         </>
@@ -532,7 +594,7 @@ export default function PedidosPage() {
   )
 }
 
-function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlightOrderId }: {
+function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlightOrderId, messagesByOrder, onMarkRead, onRefreshMessages }: {
   title: string
   orders: any[]
   onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void
@@ -540,20 +602,23 @@ function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliver
   deliveryPeople: any[]
   onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void
   highlightOrderId: string | null
+  messagesByOrder?: Record<string, any[]>
+  onMarkRead?: (orderId: string) => void
+  onRefreshMessages?: (orderId: string) => void | Promise<void>
 }) {
   return (
     <div>
       {title && <h3 className="mb-3 text-sm font-semibold text-zinc-500 uppercase tracking-wider">{title}</h3>}
       <div className="space-y-3">
         {orders.map((order) => (
-          <OrderCard key={order.id} order={order} onUpdateStatus={onUpdateStatus} onUpdateDelivery={onUpdateDelivery} deliveryPeople={deliveryPeople} onUnreadUpdate={onUnreadUpdate} highlight={highlightOrderId === order.id} />
+          <OrderCard key={order.id} order={order} onUpdateStatus={onUpdateStatus} onUpdateDelivery={onUpdateDelivery} deliveryPeople={deliveryPeople} onUnreadUpdate={onUnreadUpdate} highlight={highlightOrderId === order.id} messages={messagesByOrder?.[order.id] || []} onMarkRead={onMarkRead} onRefreshMessages={onRefreshMessages} />
         ))}
       </div>
     </div>
   )
 }
 
-function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlight }: { order: any; onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void; onUpdateDelivery: (id: string, personId: string, personName: string) => void; deliveryPeople: any[]; onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void; highlight: boolean }) {
+function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlight, messages = [], onMarkRead, onRefreshMessages }: { order: any; onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void; onUpdateDelivery: (id: string, personId: string, personName: string) => void; deliveryPeople: any[]; onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void; highlight: boolean; messages?: any[]; onMarkRead?: (orderId: string) => void; onRefreshMessages?: (orderId: string) => void | Promise<void> }) {
   const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
@@ -602,7 +667,6 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     : ["ready", "out_for_delivery", "delivered"].includes(order.status)
 
   const [chatOpen, setChatOpen] = useState(false)
-  const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [sending, setSending] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -616,15 +680,8 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     (isIfoodOrder && order.ifoodDeliveryBy === "MERCHANT") || order.deliveryCode
   )
 
-  async function fetchMessages() {
-    try {
-      const res = await fetchAuth(`/api/orders/${order.id}/messages?_t=${Date.now()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setMessages(data)
-      }
-    } catch (e) {}
-  }
+  // F3A-021: mensagens chegam via prop do pai (polling em lote) — o card não
+  // faz mais 1 requisição por 30s.
 
   async function confirmHandshake() {
     if (!/^\d{4}$/.test(handshakeCode)) {
@@ -657,28 +714,8 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
   }
 
   async function markAsRead() {
-    try {
-      await fetchAuth(`/api/orders/${order.id}/messages`, { method: "PATCH" })
-      setMessages((prev) => prev.map((m) => m.sender === "customer" ? { ...m, read: true } : m))
-    } catch (e) {
-      console.error("Erro ao marcar como lida:", e)
-    }
+    onMarkRead?.(order.id)
   }
-
-  useEffect(() => {
-    // Delay aleatório (0-5s) para não disparar todas as buscas do dashboard no
-    // mesmo instante — evita estourar o limite de conexões do pooler do banco
-    // logo após um deploy (todas as lambdas frias ao mesmo tempo).
-    let interval: ReturnType<typeof setInterval> | undefined
-    const start = setTimeout(() => {
-      fetchMessages()
-      interval = setInterval(fetchMessages, 30000)
-    }, Math.floor(Math.random() * 5000))
-    return () => {
-      clearTimeout(start)
-      if (interval) clearInterval(interval)
-    }
-  }, [order.id])
 
   useEffect(() => {
     if (chatOpen) {
@@ -702,10 +739,10 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
         body: JSON.stringify({ message: newMessage.trim() }),
       })
       if (res.ok) {
-        const msg = await res.json()
-        setMessages((prev) => [...prev, msg])
         setNewMessage("")
         markAsRead()
+        // Rebusca as mensagens do pedido (lote de 30s só atualiza depois)
+        await onRefreshMessages?.(order.id)
       }
     } catch {} finally {
       setSending(false)

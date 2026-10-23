@@ -57,5 +57,11 @@ export default async function OrderTrackingPage({
     ? pickupSteps
     : pickupSteps.filter(s => s.key !== "payment_pending")
 
+  // F5B-020: o código não sai no HTML/props antes de "ready" nem depois de
+  // concluído (mesma regra do /api/tracking).
+  if (!["ready", "dispatched", "out_for_delivery"].includes(updatedOrder.status)) {
+    ;(updatedOrder as any).deliveryCode = null
+  }
+
   return <TrackingPage order={updatedOrder} statusSteps={statusSteps} />
 }

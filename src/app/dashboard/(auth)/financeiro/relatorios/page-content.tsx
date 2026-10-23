@@ -54,6 +54,7 @@ export default function RelatoriosPage() {
       `Receita Bruta;${s.receitaBruta}`,
       `Descontos;${s.descontos}`,
       `Receita Líquida;${s.receitaLiquida}`,
+      `CMV;${s.custoMercadorias ?? 0}`,
       `Custo Entregas;${s.custoEntregas}`,
       `Despesas Operacionais;${s.despesasOperacionais}`,
       `Lucro Bruto;${s.lucroBruto}`,

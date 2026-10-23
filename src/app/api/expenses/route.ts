@@ -51,26 +51,34 @@ export async function GET(req: NextRequest) {
   }
 
   const where: any = { establishmentId }
+  // F5A-030: os dois OR convivem (AND de ORs) — antes a busca sobrescrevia o
+  // filtro de data e o período sumia quando havia texto pesquisado.
+  const andConditions: any[] = []
   if (from || to) {
     const dateFilter: any = {}
     if (from) dateFilter.gte = new Date(from + "T12:00:00Z")
     if (to) dateFilter.lte = new Date(to + "T12:00:00Z")
-    where.OR = [
-      { type: "lancamento", date: dateFilter },
-      { type: "agendada", dueDate: dateFilter },
-      { type: "recorrente", recurrenceStart: dateFilter },
-    ]
+    andConditions.push({
+      OR: [
+        { type: "lancamento", date: dateFilter },
+        { type: "agendada", dueDate: dateFilter },
+        { type: "recorrente", recurrenceStart: dateFilter },
+      ],
+    })
   }
   if (category && category !== "all") where.category = category
   if (paymentMethod && paymentMethod !== "all") where.paymentMethod = paymentMethod
   if (type && type !== "all") where.type = type
 
   if (search) {
-    where.OR = [
-      { description: { contains: search, mode: "insensitive" } },
-      { category: { contains: search, mode: "insensitive" } },
-    ]
+    andConditions.push({
+      OR: [
+        { description: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ],
+    })
   }
+  if (andConditions.length > 0) where.AND = andConditions
 
   const expenses = await prisma.expense.findMany({
     where,
@@ -217,7 +225,9 @@ export async function POST(req: NextRequest) {
     await prisma.cashMovement.create({
       data: {
         type: "expense",
-        amount,
+        // F5A-015: negativo (convencão do caderno de caixa) — o fechamento e
+        // o "valor esperado" somam amount direto; positivo somava 2× a despesa.
+        amount: -Math.abs(amount),
         description,
         cashRegisterId,
       },

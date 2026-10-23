@@ -166,6 +166,9 @@ export async function POST(req: NextRequest) {
         where: { establishmentId: est.id, externalId: orderId },
       })
       if (existing) {
+        if (existing.status === "cancelled") {
+          console.log("[99food webhook] already cancelled", orderId)
+        } else {
         const reason = payload.reason || payload.cancellationReason || null
         const cancelledBy = payload.cancelledBy || "customer"
 
@@ -186,12 +189,23 @@ export async function POST(req: NextRequest) {
               externalId: existing.externalId,
             },
           })
-          // Restore stock for cancelled 99Food order
+          // Restore stock (guard contra estorno em dobro) e mantém o registro
+          // cancelado em vez de hard delete (F5A-011).
           await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
-          await tx.order.delete({ where: { id: existing.id } })
+          await tx.order.update({
+            where: { id: existing.id },
+            data: {
+              status: "cancelled",
+              paymentStatus: existing.paymentStatus === "paid" ? "refunded" : "cancelled",
+              cancellationReason: typeof reason === "string" ? reason : null,
+              cancellationDate: new Date(),
+              cancelledBy,
+            },
+          })
         })
         updated++
         console.log("[99food webhook] CANCELLED order", orderId)
+        }
       }
     }
 
@@ -210,17 +224,44 @@ export async function POST(req: NextRequest) {
           DELIVERED: "delivered",
           CANCELLED: "cancelled",
         }
-        const flowStatus = statusMap[newStatus] || newStatus.toLowerCase()
+        // Fora do mapa não grava string arbitrária (mesma regra do webhooks/99)
+        const flowStatus = statusMap[newStatus] || null
 
+        if (!flowStatus) {
+          console.log("[99food webhook] unknown status, skipped", orderId, newStatus)
+          return NextResponse.json({ ok: true, msg: "skipped" })
+        }
+        if (existing.status === "cancelled") {
+          console.log("[99food webhook] cancelled is terminal, skipped", orderId)
+          return NextResponse.json({ ok: true, msg: "skipped" })
+        }
         if (existing.status === "delivered" && flowStatus !== "delivered") {
           console.log("[99food webhook] skipping downgrade", orderId)
           return NextResponse.json({ ok: true, msg: "skipped" })
         }
 
-        await prisma.order.update({
-          where: { id: existing.id },
-          data: { status: flowStatus },
-        })
+        if (flowStatus === "cancelled") {
+          // Cancel via STATUS_CHANGED também estorna (senão o estoque fica
+          // debitado — mesma regra do evento ORDER_CANCELLED).
+          await prisma.$transaction(async (tx) => {
+            await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
+            await tx.order.update({
+              where: { id: existing.id },
+              data: {
+                status: "cancelled",
+                paymentStatus: existing.paymentStatus === "paid" ? "refunded" : "cancelled",
+                cancellationReason: "Cancelado pela 99",
+                cancellationDate: new Date(),
+                cancelledBy: "system",
+              },
+            })
+          })
+        } else {
+          await prisma.order.update({
+            where: { id: existing.id },
+            data: { status: flowStatus },
+          })
+        }
         updated++
         console.log("[99food webhook] STATUS_CHANGED", orderId, flowStatus)
       }

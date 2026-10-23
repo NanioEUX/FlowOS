@@ -10,6 +10,7 @@ let mockReqInstance: any
 function createMockReq() {
   mockReqInstance = new EventEmitter()
   mockReqInstance.write = mockReqWrite
+  mockReqInstance.setTimeout = vi.fn()
   mockReqInstance.end = mockReqEnd
   return mockReqInstance
 }
@@ -53,6 +54,7 @@ describe("validarCredenciais99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -84,6 +86,7 @@ describe("validarCredenciais99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -108,6 +111,7 @@ describe("validarCredenciais99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -132,6 +136,7 @@ describe("validarCredenciais99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           req.emit("error", new Error("ECONNREFUSED"))
@@ -152,6 +157,7 @@ describe("validarCredenciais99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -178,6 +184,7 @@ describe("buscarEstimativa99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -204,6 +211,7 @@ describe("buscarEstimativa99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -228,6 +236,7 @@ describe("buscarEstimativa99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -253,6 +262,7 @@ describe("buscarEstimativa99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = mockWrite
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -283,6 +293,7 @@ describe("despacharCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -307,6 +318,7 @@ describe("despacharCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -332,6 +344,7 @@ describe("despacharCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = mockWrite
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -362,6 +375,7 @@ describe("despacharCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           req.emit("error", new Error("ETIMEDOUT"))
@@ -382,6 +396,7 @@ describe("despacharCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -407,6 +422,7 @@ describe("buscarStatusCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -430,6 +446,7 @@ describe("buscarStatusCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()
@@ -454,6 +471,7 @@ describe("buscarStatusCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           req.emit("error", new Error("ECONNRESET"))
@@ -474,6 +492,7 @@ describe("buscarStatusCorrida99", () => {
     vi.mocked(https.request).mockImplementation(function (this: any, opts: any, cb: any) {
       const req = new EventEmitter()
       ;(req as any).write = vi.fn()
+      ;(req as any).setTimeout = vi.fn()
       ;(req as any).end = vi.fn(function (this: any) {
         process.nextTick(() => {
           const res = new EventEmitter()

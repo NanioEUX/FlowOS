@@ -70,6 +70,7 @@ function callEndpoint(action: string, token: string, merchantId: string, orderId
     })
     req.on("error", (e) => resolve({ success: false, body: e.message }))
     req.write(body)
+    req.setTimeout(15000, () => req.destroy(new Error("ifood-status timeout")))
     req.end()
   })
 }
@@ -149,6 +150,7 @@ export async function ifoodHandshake(
     })
     req.on("error", (e) => resolve({ success: false, body: e.message }))
     req.write(body)
+    req.setTimeout(15000, () => req.destroy(new Error("ifood-status timeout")))
     req.end()
   })
 }

@@ -20,6 +20,10 @@ export async function GET(
     return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
   }
 
+  // F5B-020: o código só existe quando o cliente precisa entregá-lo
+  // (balcão/motoboy) — antes de "ready" ou depois de concluído, fica oculto.
+  const showDeliveryCode = ["ready", "dispatched", "out_for_delivery"].includes(order.status)
+
   return NextResponse.json({
     id: order.id,
     orderNumber: order.orderNumber,
@@ -35,7 +39,7 @@ export async function GET(
     customerAddress: order.customerAddress,
     notes: order.notes,
     deliveryPerson: order.deliveryPerson,
-    deliveryCode: order.deliveryCode,
+    deliveryCode: showDeliveryCode ? order.deliveryCode : null,
     method: order.method,
     createdAt: order.createdAt,
     deliveredAt: order.deliveredAt,

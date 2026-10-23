@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { timingSafeEqualStr } from "@/lib/webhook-signature"
+import { restoreOrderStock } from "@/lib/stock"
 
 export const runtime = "nodejs"
 
@@ -75,18 +76,41 @@ export async function POST(req: NextRequest) {
     "canceled": "cancelled",
   }
 
-  const mappedStatus = statusMap[status] || status
+  // F5B-... (5.1): fora do mapa, NÃO grava string arbitrária na coluna de
+  // status — só o campo de provedor é atualizado.
+  const mappedStatus = statusMap[status] || null
 
   try {
-    await prisma.order.update({
-      where: { id: pedido.id },
-      data: {
-        entregaStatusProvedor: status,
-        ...(mappedStatus && { status: mappedStatus }),
-        ...(status === "delivered" && { deliveredAt: new Date() }),
-        ...(status === "cancelled" && { cancellationReason: "Cancelado pela 99" }),
-      },
-    })
+    if (pedido.status === "cancelled") {
+      // Terminal: evento de corrida após cancelamento não reescreve status
+      // nem deliveredAt — só o log é marcado como processado.
+    } else if (mappedStatus === "cancelled") {
+      // Estorno de estoque ao cancelamento vindo da 99 (F5A-010: era só
+      // update — o estoque debitado ficava perdido).
+      await prisma.$transaction(async (tx) => {
+        await restoreOrderStock(tx, pedido.items, pedido.id, pedido.establishmentId)
+        await tx.order.update({
+          where: { id: pedido.id },
+          data: {
+            status: "cancelled",
+            paymentStatus: pedido.paymentStatus === "paid" ? "refunded" : "cancelled",
+            cancellationReason: "Cancelado pela 99",
+            cancellationDate: new Date(),
+            cancelledBy: "system",
+            entregaStatusProvedor: status,
+          },
+        })
+      })
+    } else {
+      await prisma.order.update({
+        where: { id: pedido.id },
+        data: {
+          entregaStatusProvedor: status,
+          ...(mappedStatus && { status: mappedStatus }),
+          ...(status === "delivered" && { deliveredAt: new Date() }),
+        },
+      })
+    }
 
     await prisma.logWebhook99.updateMany({
       where: { rideId: rideId || undefined, pedidoId: pedido.id },

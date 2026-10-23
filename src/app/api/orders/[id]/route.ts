@@ -6,6 +6,8 @@ import { verifyAuth } from "@/lib/auth"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
 import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
 import { restoreOrderStock } from "@/lib/stock"
+import { canTransition, isValidStatus, isRoleAllowedToSetStatus } from "@/lib/order-transitions"
+import crypto from "crypto"
 
 export async function PATCH(
   req: NextRequest,
@@ -14,7 +16,7 @@ export async function PATCH(
   try {
     const auth = verifyAuth(req)
     const body = await req.json().catch(() => ({} as any))
-    const { status, paymentStatus, cancellationReason, cancelledBy } = body
+    const { status, paymentStatus, cancellationReason, cancelledBy, deliveryPersonId } = body
     const tokenFromBody = (body && (body.trackingToken || body.token)) || null
 
     const order = await prisma.order.findUnique({
@@ -175,6 +177,52 @@ export async function PATCH(
       return NextResponse.json({ success: true, cancelled: true })
     }
 
+    // Máquina de estados no servidor (F5A-002 / F5D-008): o cancelamento já
+    // tem as próprias regras acima; aqui o resto do fluxo — whitelist de
+    // status, progresso para frente e restrição por papel (kds não entrega,
+    // motoboy não muta status por este caminho).
+    if (status && status !== order.status) {
+      if (!isValidStatus(status)) {
+        return NextResponse.json({ error: `Status inválido: ${status}` }, { status: 400 })
+      }
+      if (!auth) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      }
+      if (!isRoleAllowedToSetStatus(auth.role, status)) {
+        return NextResponse.json(
+          { error: `Seu perfil não pode mover o pedido para "${status}"` },
+          { status: 403 }
+        )
+      }
+      if (!canTransition(order.status, status)) {
+        return NextResponse.json(
+          { error: `Transição inválida: ${order.status} → ${status}` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Reatribuição de motoboy (F5B-018): antes era só regra de tela — o
+    // handler ignorava o campo em silêncio. Agora aceita e valida o dono.
+    let deliveryPersonPatch: Record<string, any> = {}
+    if (deliveryPersonId !== undefined && deliveryPersonId !== null) {
+      if (!auth) {
+        return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+      }
+      if (deliveryPersonId === "") {
+        deliveryPersonPatch = { deliveryPersonId: null, deliveryPerson: null }
+      } else {
+        const person = await prisma.deliveryPerson.findUnique({
+          where: { id: deliveryPersonId },
+          select: { id: true, name: true, establishmentId: true },
+        })
+        if (!person || person.establishmentId !== order.establishmentId) {
+          return NextResponse.json({ error: "Entregador não encontrado" }, { status: 404 })
+        }
+        deliveryPersonPatch = { deliveryPersonId: person.id, deliveryPerson: person.name }
+      }
+    }
+
     // Pagamentos na entrega são confirmados no momento da finalização do
     // pedido (entrega/retirada concluída). Evita precisar clicar em botão
     // separado para marcar como pago.
@@ -191,8 +239,9 @@ export async function PATCH(
       data: {
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
+        ...deliveryPersonPatch,
         ...(status === "out_for_delivery" && { assignedAt: new Date() }),
-        ...(status === "out_for_delivery" && ["delivery", "pickup"].includes(order.orderType) && order.method !== "ifood" && !order.deliveryCode && { deliveryCode: order.customerPhone ? order.customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)) }),
+        ...(status === "out_for_delivery" && ["delivery", "pickup"].includes(order.orderType) && order.method !== "ifood" && !order.deliveryCode && { deliveryCode: String(crypto.randomInt(1000, 10000)) }),
         ...(status === "delivered" && { deliveredAt: new Date() }),
         ...(autoConfirmPayment && { paymentStatus: "paid" }),
       },

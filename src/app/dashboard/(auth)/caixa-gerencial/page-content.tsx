@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
+import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import {
   DollarSign, Clock, TrendingUp, TrendingDown, History, BarChart3,
   Minus, Plus, Trash2, Wallet, ArrowRight, Loader2, ChevronDown, ChevronUp,
@@ -88,7 +89,14 @@ export default function CaixaGerencialPage() {
   }
 
   useEffect(() => { loadCurrent() }, [establishmentId])
-  useEffect(() => { const i = setInterval(loadCurrent, 15000); return () => clearInterval(i) }, [establishmentId])
+  useEffect(() => {
+    const tick = () => {
+      if (!document.hidden) loadCurrent()
+    }
+    const i = setInterval(tick, 15000)
+    return () => clearInterval(i)
+  }, [establishmentId])
+  useVisibilityRefresh(loadCurrent, !!establishmentId)
 
   const { start: dateStart, end: dateEnd } = getDateRange(dateFilter, customStart, customEnd)
 

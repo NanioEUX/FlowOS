@@ -1,37 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { verifyCustomerSession, customerSessionRequired } from "@/lib/customer-auth"
 
+// GET /api/orders/customer — histórico do próprio cliente.
+// Exige o cookie de sessão emitido no PUT /api/verification (F7A-004/F7B-003);
+// telefone e estabelecimento vêm do token, nunca do request.
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const phone = searchParams.get("phone")
-  const establishmentId = searchParams.get("establishmentId")
+  const session = await verifyCustomerSession(req)
+  if (!session) return customerSessionRequired()
 
-  if (!phone || !establishmentId) {
-    return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
-  }
+  const phone = session.phone
+  const establishmentId = session.establishmentId
 
-  // Fetch establishment config for abandoned order timeout
-  const establishment = await prisma.establishment.findUnique({
-    where: { id: establishmentId },
-    select: { abandonedOrderMinutes: true },
-  })
-  const abandonedMinutes = establishment?.abandonedOrderMinutes ?? 15
-
-  const now = new Date()
-  const expiryThreshold = new Date(now.getTime() - abandonedMinutes * 60 * 1000)
-
-  // Mark old pending orders as abandoned if not accepted within the configured time
-  await prisma.order.updateMany({
-    where: {
-      customerPhone: phone,
-      establishmentId,
-      status: { in: ["pending", "new", "payment_pending"] },
-      createdAt: { lt: expiryThreshold },
-    },
-    data: {
-      status: "abandoned",
-    },
-  })
+  // F3A-003: a expiração de abandoned SAIU daqui — era escrita-por-leitura em
+  // todo poll do cliente e marcava abandoned SEM restoreOrderStock/reversão de
+  // fidelidade, "furtando" o pedido do cron expire-orders (que faz o estorno).
+  // O cron */5 min cobre a mesma janela com a regra completa.
 
   // Then fetch orders for the customer's "Meus Pedidos" tab:
   // - Online payments (Pix/Card): visible while paid, pending or expired, so a

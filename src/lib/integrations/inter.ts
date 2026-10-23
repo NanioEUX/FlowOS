@@ -68,6 +68,7 @@ export async function getInterToken(config: InterConfig): Promise<string> {
     })
     req.on("error", reject)
     req.write(body)
+    req.setTimeout(15000, () => req.destroy(new Error("inter timeout")))
     req.end()
   })
 }
@@ -129,6 +130,7 @@ export async function createInterPixCharge(
     })
     req.on("error", reject)
     req.write(body)
+    req.setTimeout(15000, () => req.destroy(new Error("inter timeout")))
     req.end()
   })
 }
@@ -168,6 +170,7 @@ export async function getInterPixQrCode(
       })
     })
     req.on("error", reject)
+    req.setTimeout(15000, () => req.destroy(new Error("inter timeout")))
     req.end()
   })
 }
@@ -203,6 +206,7 @@ export async function getInterPixStatus(
       })
     })
     req.on("error", reject)
+    req.setTimeout(15000, () => req.destroy(new Error("inter timeout")))
     req.end()
   })
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { waitUntil } from "@vercel/functions"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
 import { generateBotResponse } from "@/lib/whatsapp/bot"
@@ -80,35 +81,46 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const bodyText = await req.text()
+  let jsonBody: any
   try {
-    const bodyText = await req.text()
+    jsonBody = JSON.parse(bodyText)
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
+
+  // Meta: valida a assinatura AGORA (401 real para o provedor) antes do ACK.
+  if (jsonBody.object === "whatsapp_business_account") {
+    if (META_APP_SECRET) {
+      const metaSignature = req.headers.get("x-hub-signature-256") || ""
+      if (!verifyHmacSha256(bodyText, metaSignature, META_APP_SECRET, { stripPrefix: "sha256=" })) {
+        console.warn("[WhatsApp Webhook] Meta: invalid X-Hub-Signature-256")
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      }
+    } else {
+      console.error("[WhatsApp Webhook] META_APP_SECRET not set — accepting unsigned Meta webhook (configure META_APP_SECRET to enforce)")
+    }
+  }
+
+  // F3A-048/F3D-015: ACK imediato para a Meta/Evolution — o fluxo pesado
+  // (OpenAI com tool-calling + self-fetch em /api/bot/create-order + envio da
+  // resposta) roda DEPOIS da resposta, segurando o contexto com waitUntil em
+  // vez de duas funções serverless em cascata síncrona dentro do request.
+  const evolutionApiKeyHeader = req.headers.get("apikey") || req.headers.get("x-api-key") || ""
+  waitUntil(handleIncomingMessage(jsonBody, evolutionApiKeyHeader))
+  return NextResponse.json({ success: true })
+}
+
+// F3A-048: processamento de verdade. Os `return` abaixo são só saídas de
+// fluxo — o ACK ao provedor já foi enviado no POST.
+async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: string) {
+  try {
+    const isMetaWebhook = jsonBody.object === "whatsapp_business_account"
     let parsed: any = null
     let establishment: any = null
-    let isMetaWebhook = false
 
-    // Detect provider from body
-    let jsonBody: any
-    try {
-      jsonBody = JSON.parse(bodyText)
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-    }
-
-    if (jsonBody.object === "whatsapp_business_account") {
-      // ===== META CLOUD API =====
-      isMetaWebhook = true
-
-      // Validate X-Hub-Signature-256 (HMAC SHA-256 of raw body with app secret)
-      const metaSignature = req.headers.get("x-hub-signature-256") || ""
-      if (META_APP_SECRET) {
-        if (!verifyHmacSha256(bodyText, metaSignature, META_APP_SECRET, { stripPrefix: "sha256=" })) {
-          console.warn("[WhatsApp Webhook] Meta: invalid X-Hub-Signature-256")
-          return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-        }
-      } else {
-        console.error("[WhatsApp Webhook] META_APP_SECRET not set — accepting unsigned Meta webhook (configure META_APP_SECRET to enforce)")
-      }
-
+    if (isMetaWebhook) {
+      // (assinatura X-Hub-Signature-256 já validada no POST)
       const entry = jsonBody.entry?.[0]
       const changes = entry?.changes?.[0]
       const value = changes?.value
@@ -161,16 +173,16 @@ export async function POST(req: NextRequest) {
             })
           }
         }
-        return NextResponse.json({ success: true, statusHandled: true })
+        return
       }
 
       if (!value?.messages?.[0]) {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
 
       const msg = value.messages[0]
       if (msg.type !== "text") {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
 
       parsed = {
@@ -182,7 +194,7 @@ export async function POST(req: NextRequest) {
 
       const phoneNumberId = value.metadata?.phone_number_id
       if (!phoneNumberId) {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
 
       establishment = await prisma.establishment.findFirst({
@@ -192,27 +204,26 @@ export async function POST(req: NextRequest) {
 
       if (!establishment) {
         console.warn(`[WhatsApp Webhook] Meta: establishment not found for phone_number_id=${phoneNumberId}`)
-        return NextResponse.json({ success: false, error: "Establishment not found" }, { status: 404 })
+        return
       }
     } else {
       // ===== EVOLUTION API =====
       if (jsonBody.event !== "messages.upsert") {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
 
       const data = jsonBody.data
       const instanceName = jsonBody.instance
 
       if (!data || data.key?.fromMe) {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
 
       // Validate webhook key: Evolution sends apikey in the header and/or payload.
       // Só valida se presente — a Evolution nem sempre envia (comportamento
       // original de a9bf586; exigir a chave quebrava mensagens em produção).
       const webhookKey =
-        req.headers.get("apikey") ||
-        req.headers.get("x-api-key") ||
+        evolutionApiKeyHeader ||
         (typeof jsonBody.apikey === "string" ? jsonBody.apikey : "") ||
         (typeof data.apikey === "string" ? data.apikey : "")
 
@@ -223,13 +234,13 @@ export async function POST(req: NextRequest) {
 
       if (!establishment) {
         console.warn(`[WhatsApp Webhook] Instance not found: ${instanceName}`)
-        return NextResponse.json({ success: false, error: "Instance not found" }, { status: 404 })
+        return
       }
 
       if (webhookKey) {
         if (!establishment.evolutionApiKey || !timingSafeEqualStr(webhookKey, establishment.evolutionApiKey)) {
           console.warn(`[WhatsApp Webhook] Evolution: invalid apikey for instance ${instanceName}`)
-          return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+          return
         }
       } else {
         console.warn(`[WhatsApp Webhook] Evolution: no apikey header for instance ${instanceName} — accepting`)
@@ -247,7 +258,7 @@ export async function POST(req: NextRequest) {
       })
 
       if (!provider) {
-        return NextResponse.json({ success: false, error: "Provider not configured" }, { status: 400 })
+        return
       }
 
       const mockReq = new Request("http://localhost", {
@@ -257,26 +268,26 @@ export async function POST(req: NextRequest) {
 
       parsed = await provider.parseWebhook(mockReq)
       if (!parsed || parsed.fromMe) {
-        return NextResponse.json({ success: true, ignored: true })
+        return
       }
     }
 
     // ===== SHARED BOT LOGIC (works for both providers) =====
 
     if (!establishment) {
-      return NextResponse.json({ success: false, error: "No establishment" }, { status: 400 })
+      return
     }
 
     console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Message from ${parsed.phone}: "${parsed.text}"`)
 
     if (!establishment.whatsappAutomationEnabled) {
       console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Automation disabled`)
-      return NextResponse.json({ success: true, automationDisabled: true })
+      return
     }
 
     if (!establishment.botEnabled) {
       console.log(`[WhatsApp] Bot disabled for ${establishment.id}`)
-      return NextResponse.json({ success: true, botDisabled: true })
+      return
     }
 
     // Get provider for sending replies
@@ -291,7 +302,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!provider) {
-      return NextResponse.json({ success: false, error: "Provider not configured" }, { status: 400 })
+      return
     }
 
     // 1. Auto-transfer (keywords)
@@ -317,7 +328,7 @@ export async function POST(req: NextRequest) {
         )
         await provider.sendText(parsed.phone, transferMsg, { delay })
         console.log(`[WhatsApp] Transferred to human (keyword in "${parsed.text}")`)
-        return NextResponse.json({ success: true, transferred: true })
+        return
       }
     }
 
@@ -345,7 +356,7 @@ export async function POST(req: NextRequest) {
         )
         await provider.sendText(parsed.phone, outsideMsg, { delay })
         console.log(`[WhatsApp] Outside hours - sent default message`)
-        return NextResponse.json({ success: true, outsideHours: true })
+        return
       }
     }
 
@@ -383,7 +394,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Inactivity: customer asked for human
     if (establishment.botInactivityEnabled && customer?.needsHuman) {
-      return NextResponse.json({ success: true, ignored: "needsHuman" })
+      return
     }
 
     let responseMessage: string | null = null
@@ -442,7 +453,7 @@ export async function POST(req: NextRequest) {
             const sendResult = await provider!.sendInteractiveUrlButton!(parsed.phone, textCleaned, "Ver Cardápio", cardapioUrl, { delay })
             if (sendResult.success) {
               console.log(`[WhatsApp] ✓ Greeting with URL button sent to ${parsed.phone}`)
-              return NextResponse.json({ success: true, messageId: sendResult.messageId, usedAI: false })
+              return
             }
             // Fallback to plain text if button fails
           }
@@ -531,9 +542,9 @@ export async function POST(req: NextRequest) {
         )
         await provider.sendText(parsed.phone, establishment.botFallbackMessage, { delay })
         console.log(`[WhatsApp] Fallback sent`)
-        return NextResponse.json({ success: true, fallback: true })
+        return
       }
-      return NextResponse.json({ success: true, noResponse: true, receivedText: parsed.text })
+      return
     }
 
     console.log(`[WhatsApp] Responding (${usedAI ? "AI" : "menu"}): "${responseMessage.substring(0, 50)}..."`)
@@ -547,21 +558,14 @@ export async function POST(req: NextRequest) {
 
     if (!sendResult.success) {
       console.error(`[WhatsApp] Send error:`, sendResult.error)
-      return NextResponse.json({ success: false, error: sendResult.error }, { status: 500 })
+      return
     }
 
     console.log(`[WhatsApp] ✓ Response sent to ${parsed.phone}`)
 
-    return NextResponse.json({
-      success: true,
-      messageId: sendResult.messageId,
-      receivedText: parsed.text,
-      usedAI,
-      responsePreview: responseMessage.substring(0, 100),
-    })
+    return
   } catch (error: any) {
     console.error("[WhatsApp Webhook] Error:", error.message)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 

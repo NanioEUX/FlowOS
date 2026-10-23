@@ -13,11 +13,11 @@ function createPrismaClient() {
   })
 }
 
+// F3A-033: memoiza SEMPRE em globalThis, inclusive em produção — sem isso cada
+// isolamento/cold start cria um PrismaClient com pool próprio (conexões ≈
+// isolamentos × connection_limit; P1001 já foi atingido em produção).
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma
-}
+globalForPrisma.prisma = prisma
 
 process.on("beforeExit", async () => {
   await prisma.$disconnect()

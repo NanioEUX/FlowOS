@@ -46,6 +46,7 @@ export async function getIfoodAuth(clientId: string, clientSecret: string): Prom
     })
     req.on("error", (err) => { console.error("[ifood auth] request error:", err.message); resolve(null) })
     req.write(data)
+    req.setTimeout(15000, () => req.destroy(new Error("ifood timeout")))
     req.end()
   })
 }
@@ -59,6 +60,7 @@ export async function getIfoodEvents(token: string, merchantId: string): Promise
       res.on("end", () => { try { resolve(JSON.parse(body)) } catch { resolve([]) } })
     })
     req.on("error", () => resolve([]))
+    req.setTimeout(15000, () => req.destroy(new Error("ifood timeout")))
     req.end()
   })
 }
@@ -72,6 +74,7 @@ export async function getIfoodOrder(token: string, merchantId: string, orderId: 
       res.on("end", () => { try { resolve(JSON.parse(body)) } catch { reject(new Error("Parse error")) } })
     })
     req.on("error", reject)
+    req.setTimeout(15000, () => req.destroy(new Error("ifood timeout")))
     req.end()
   })
 }

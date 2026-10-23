@@ -293,6 +293,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [verifyError, setVerifyError] = useState("")
   const [verifyDevCode, setVerifyDevCode] = useState("")
   const [whatsappSent, setWhatsappSent] = useState(false)
+  // Contador visual de reenvio (cooldown de 60s do servidor — F7B-019)
+  const [verifyResendIn, setVerifyResendIn] = useState(0)
+  // Evita repetir o modal de re-login quando a sessão expira (poll 15s)
+  const sessionExpiredPromptedRef = useRef(false)
   const [whatsappError, setWhatsappError] = useState("")
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([])
   const verifyCodeAutoSentRef = useRef(false)
@@ -560,6 +564,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Erro ao enviar código")
+      setVerifyResendIn(60)
       if (data.whatsappSent) {
         setWhatsappSent(true)
       } else if (data.devCode) {
@@ -574,6 +579,13 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setVerifySending(false)
     }
   }
+
+  // Contagem regressiva do botão "Reenviar código"
+  useEffect(() => {
+    if (verifyResendIn <= 0) return
+    const id = setInterval(() => setVerifyResendIn((v) => (v <= 1 ? 0 : v - 1)), 1000)
+    return () => clearInterval(id)
+  }, [verifyResendIn])
 
   async function submitVerifyCode() {
     const phoneDigits = (customer.phone || phoneInput).replace(/\D/g, "")
@@ -596,6 +608,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       const refreshedData = await refreshed.json()
       if (refreshedData && !refreshedData.notFound) {
         setCustomerData(refreshedData)
+        // Endereços salvos: agora com a sessão (cookie) recém-emitida
+        if (refreshedData.id) fetchAddresses(refreshedData.id)
       }
       setShowVerifyModal(false)
       setShowIdentifyModal(false)
@@ -670,7 +684,6 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     try {
       const res = await fetch(`/api/customers?phone=${phoneDigits}&establishmentId=${establishment.id}&_=${Date.now()}`, { cache: "no-store" })
       const data = await res.json()
-      console.log("[applyLocalVerified] phone:", phoneDigits, "loyaltyPoints:", data?.loyaltyPoints, "tier:", data?.tier, "notFound:", data?.notFound)
       if (data && !data.notFound) {
         setCustomerData(data)
         setCustomerLoyaltyPoints(data.loyaltyPoints || 0)
@@ -681,8 +694,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           address: data.address || prev.address,
           cpf: data.cpf || prev.cpf,
         }))
+        // Com a sessão ativa o servidor devolve o registro completo (endereço/CEP)
+        if (data.id) fetchAddresses(data.id)
       } else {
-        console.warn("[applyLocalVerified] Customer not found for phone:", phoneDigits)
+        console.warn("[applyLocalVerified] Customer not found for phone")
       }
     } catch (err: any) {
       console.error("[applyLocalVerified] FAILED to re-sync customer:", phoneDigits, err?.message || err)
@@ -1309,6 +1324,17 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       })
       const data = await res.json()
       if (!res.ok) {
+        if (res.status === 401) {
+          setAddressFormError("Sessão expirada. Verifique o código no WhatsApp para continuar.")
+          if (!sessionExpiredPromptedRef.current) {
+            sessionExpiredPromptedRef.current = true
+            clearSessionVerified()
+            markVerifySessionStart()
+            setShowIdentifyModal(true)
+            setVerifyStep(2)
+          }
+          return
+        }
         setAddressFormError(data.error || "Erro ao salvar endereço")
         return
       }
@@ -2349,7 +2375,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     const token = trackingTokenRef.current
     if (!currentOrderId || !token) return
 
-    const interval = setInterval(async () => {
+    const tick = async () => {
+      if (document.hidden) return
       try {
         const orderRes = await fetch(`/api/tracking/${token}`)
         if (orderRes.ok) {
@@ -2372,8 +2399,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         const msgRes = await fetch(`/api/orders/${currentOrderId}/messages?token=${token}`)
         if (msgRes.ok) setTrackingMessages(await msgRes.json())
       } catch {}
-    }, 10000)
-    return () => clearInterval(interval)
+    }
+    const interval = setInterval(tick, 10000)
+    const onVisible = () => {
+      if (!document.hidden) void tick()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [showTracking, orderResult?.orderId, lastOrder, trackingOrder?.id])
 
   useEffect(() => {
@@ -2382,6 +2417,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
     if (!token) return
 
     const poll = async () => {
+      if (document.hidden) return
       try {
         const res = await fetch(`/api/orders/${lastOrder.orderId}/messages?token=${token}`)
         if (res.ok) {
@@ -2410,7 +2446,14 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
     poll()
     const i = setInterval(poll, 10000)
-    return () => clearInterval(i)
+    const onVisible = () => {
+      if (!document.hidden) void poll()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      clearInterval(i)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [showTracking, lastOrder])
 
   async function cancelOrder(orderId: string, reason: string) {
@@ -2476,6 +2519,16 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       if (res.ok) {
         const data = await res.json()
         setCustomerOrders(data)
+        sessionExpiredPromptedRef.current = false
+        return data
+      } else if (res.status === 401 && !sessionExpiredPromptedRef.current) {
+        // Sessão (cookie httpOnly) expirou ou nunca existiu neste dispositivo:
+        // limpa a flag local e pede a verificação de novo uma única vez.
+        sessionExpiredPromptedRef.current = true
+        clearSessionVerified()
+        markVerifySessionStart()
+        setShowIdentifyModal(true)
+        setVerifyStep(2)
       }
     } catch {} finally {
       if (!silent) setLoadingOrders(false)
@@ -2484,27 +2537,33 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   // Poll customer orders periodically so the Pedidos badge updates even
   // without push notifications (e.g. browser without service worker).
+  // F3C-006: era um "duplo poll" — chamava loadCustomerOrders e aí buscava o
+  // mesmo endpoint de novo só para comparar status; agora reusa a resposta.
   useEffect(() => {
     const phone = customer.phone || customerData?.phone
     if (!phone) return
-    const interval = setInterval(async () => {
-      await loadCustomerOrders(true)
+    const tick = async () => {
+      if (document.hidden) return
+      const data = await loadCustomerOrders(true)
+      if (!Array.isArray(data)) return
       // Detect status changes and blink Pedidos icon
-      try {
-        const res = await fetch(`/api/orders/customer?phone=${phone.replace(/\D/g, "")}&establishmentId=${establishment.id}&_=${Date.now()}`)
-        if (res.ok) {
-          const data = await res.json()
-          for (const order of data) {
-            const prev = prevOrderStatusesRef.current[order.id]
-            if (prev && prev !== order.status) {
-              setHasNewOrderStatus(true)
-            }
-            prevOrderStatusesRef.current[order.id] = order.status
-          }
+      for (const order of data) {
+        const prev = prevOrderStatusesRef.current[order.id]
+        if (prev && prev !== order.status) {
+          setHasNewOrderStatus(true)
         }
-      } catch {}
-    }, 15000)
-    return () => clearInterval(interval)
+        prevOrderStatusesRef.current[order.id] = order.status
+      }
+    }
+    const interval = setInterval(tick, 15000)
+    const onVisible = () => {
+      if (!document.hidden) void tick()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [customer.phone, customerData?.phone, establishment.id, loadCustomerOrders])
 
   // Initialize prevOrderStatusesRef on first load
@@ -2678,13 +2737,17 @@ const handlePaymentSuccess = useCallback(() => {
   // verificado recentemente (verifiedAt dos últimos 5 min). Só roda enquanto
   // o modal de verificação estiver aberto (fluxo ativo) para não gastar
   // requests com o usuário navegando sem estar em verificação.
+  // F3A-054/055: o intervalo de 2s agora só existe enquanto o modal de OTP
+  // está aberto (antes ficava tique-taqueando mesmo com o modal fechado — o
+  // fetch não disparava, mas o efeito/garbage era permanente).
   useEffect(() => {
-    if (typeof window === "undefined" || sessionVerified) return
+    if (typeof window === "undefined" || sessionVerified || !showVerifyModal) return
     const doneKey = `flowos-verify-done-${establishment.slug}`
     let cancelled = false
 
     async function pollVerified() {
       if (cancelled || sessionVerified || !showVerifyModal || verifyAppliedRef.current) return
+      if (document.hidden) return
       let phoneDigits = (customer.phone || customerData?.phone || phoneInput).replace(/\D/g, "")
       if (phoneDigits.length < 10) {
         try {
@@ -3845,7 +3908,19 @@ onPaymentConfirmed={handlePaymentSuccess}
               {/* Botão enviar código — aparece quando o código ainda NÃO foi enviado */}
               {!whatsappSent && !verifyDevCode && (
                 <>
-                  <p className="text-[10px]" style={{ color: theme.textMutedMore }}>Verificaremos seu WhatsApp antes do primeiro pedido.</p>
+                  <p className="text-[10px]" style={{ color: theme.textMutedMore }}>
+                    Verificaremos seu WhatsApp antes do primeiro pedido. Ao continuar, você concorda com a nossa{" "}
+                    <a
+                      href="/politica-de-privacidade"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                      style={{ color: theme.accent }}
+                    >
+                      Política de Privacidade
+                    </a>
+                    .
+                  </p>
                   <Button
                     onClick={async () => {
                       const finalName = customer.name || customerData?.name || ""
@@ -3943,11 +4018,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <button
                     type="button"
                     onClick={sendVerificationCode}
-                    disabled={verifySending}
-                    className="w-full text-center text-xs underline"
+                    disabled={verifySending || verifyResendIn > 0}
+                    className="w-full text-center text-xs underline disabled:no-underline disabled:opacity-60"
                     style={{ color: theme.textMutedMore }}
                   >
-                    {verifySending ? "Reenviando..." : "Reenviar código"}
+                    {verifySending ? "Reenviando..." : verifyResendIn > 0 ? `Reenviar em ${verifyResendIn}s` : "Reenviar código"}
                   </button>
                 </>
               )}
@@ -4589,6 +4664,8 @@ onPaymentConfirmed={handlePaymentSuccess}
                    setOrderError("")
                   // Session
                   clearSessionVerified()
+                  // Cookie de sessão do cliente (httpOnly): limpar via API
+                  fetch("/api/verification", { method: "DELETE" }).catch(() => {})
                   // localStorage
                   localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)

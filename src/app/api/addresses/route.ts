@@ -1,31 +1,31 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import {
+  verifyCustomerSession,
+  customerSessionRequired,
+  type CustomerSession,
+} from "@/lib/customer-auth"
 
-async function verifyCustomerOwnership(customerId: string, establishmentId: string | null): Promise<boolean> {
-  if (!establishmentId) return false
-  const customer = await prisma.customer.findFirst({
-    where: { id: customerId, establishmentId },
-    select: { id: true },
-  })
-  return !!customer
+// Todas as operações exigem o cookie de sessão do cliente (F7A-005/F7B-016):
+// customerId/establishmentId vêm do token, nunca do request.
+
+async function requireSession(req: NextRequest): Promise<CustomerSession | NextResponse> {
+  const session = await verifyCustomerSession(req)
+  return session ?? customerSessionRequired()
 }
 
-// GET /api/addresses?customerId=xxx&establishmentId=xxx
+function isResponse(v: any): v is NextResponse {
+  return v instanceof NextResponse
+}
+
+// GET /api/addresses
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const customerId = searchParams.get("customerId")
-    const establishmentId = searchParams.get("establishmentId")
-    if (!customerId || !establishmentId) {
-      return NextResponse.json({ error: "customerId and establishmentId required" }, { status: 400 })
-    }
-
-    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
-    }
+    const session = await requireSession(req)
+    if (isResponse(session)) return session
 
     const addresses = await prisma.customerAddress.findMany({
-      where: { customerId },
+      where: { customerId: session.customerId },
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     })
 
@@ -39,16 +39,17 @@ export async function GET(req: NextRequest) {
 // POST /api/addresses
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { customerId, establishmentId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+    const session = await requireSession(req)
+    if (isResponse(session)) return session
 
-    if (!customerId || !establishmentId || !street || !number || !city || !state || !cep) {
+    const body = await req.json()
+    const { label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+
+    if (!street || !number || !city || !state || !cep) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
 
-    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
-    }
+    const customerId = session.customerId
 
     // Check limit (max 3 addresses)
     const count = await prisma.customerAddress.count({ where: { customerId } })
@@ -92,15 +93,26 @@ export async function POST(req: NextRequest) {
 // PATCH /api/addresses
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { id, customerId, establishmentId, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+    const session = await requireSession(req)
+    if (isResponse(session)) return session
 
-    if (!id || !customerId || !establishmentId) {
-      return NextResponse.json({ error: "id, customerId and establishmentId required" }, { status: 400 })
+    const body = await req.json()
+    const { id, label, street, number, neighborhood, city, state, cep, complement, isDefault } = body
+
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 })
     }
 
-    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
+    const customerId = session.customerId
+
+    // O endereço precisa pertencer ao cliente da sessão (o PATCH anterior não
+    // checava isso — atualizar qualquer id com customerId próprio passava)
+    const existing = await prisma.customerAddress.findFirst({
+      where: { id, customerId },
+      select: { id: true },
+    })
+    if (!existing) {
+      return NextResponse.json({ error: "Endereço não encontrado" }, { status: 404 })
     }
 
     // If setting as default, unset others
@@ -133,24 +145,24 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE /api/addresses?id=xxx&customerId=xxx&establishmentId=xxx
+// DELETE /api/addresses?id=xxx
 export async function DELETE(req: NextRequest) {
   try {
+    const session = await requireSession(req)
+    if (isResponse(session)) return session
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
-    const customerId = searchParams.get("customerId")
-    const establishmentId = searchParams.get("establishmentId")
-
-    if (!id || !customerId || !establishmentId) {
-      return NextResponse.json({ error: "id, customerId and establishmentId required" }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 })
     }
 
-    if (!(await verifyCustomerOwnership(customerId, establishmentId))) {
-      return NextResponse.json({ error: "Endereço não encontrado" }, { status: 404 })
-    }
+    const customerId = session.customerId
 
-    const address = await prisma.customerAddress.findUnique({ where: { id } })
-    if (!address || address.customerId !== customerId) {
+    const address = await prisma.customerAddress.findFirst({
+      where: { id, customerId },
+    })
+    if (!address) {
       return NextResponse.json({ error: "Endereço não encontrado" }, { status: 404 })
     }
 

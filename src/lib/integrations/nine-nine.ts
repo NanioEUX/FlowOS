@@ -60,6 +60,8 @@ export async function validarCredenciais99(
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
 
+    req.setTimeout(15000, () => req.destroy(new Error("99food timeout")))
+
     req.end()
   })
 }
@@ -124,6 +126,7 @@ export async function buscarEstimativa99(
     })
 
     req.write(payload)
+    req.setTimeout(15000, () => req.destroy(new Error("99food timeout")))
     req.end()
   })
 }
@@ -192,6 +195,7 @@ export async function despacharCorrida99(
     })
 
     req.write(payload)
+    req.setTimeout(15000, () => req.destroy(new Error("99food timeout")))
     req.end()
   })
 }
@@ -240,6 +244,8 @@ export async function buscarStatusCorrida99(
       console.error("[99 status] request error:", err.message)
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
+
+    req.setTimeout(15000, () => req.destroy(new Error("99food timeout")))
 
     req.end()
   })

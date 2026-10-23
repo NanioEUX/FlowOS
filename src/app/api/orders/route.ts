@@ -4,7 +4,7 @@ import { requireEstablishment } from "@/lib/require-auth"
 import { createInterPixCharge, generateInterTxId } from "@/lib/integrations/inter"
 import { computeOrderItemCosts } from "@/lib/cmv"
 import { convertQuantity } from "@/lib/units"
-import { deductOrderStock } from "@/lib/stock"
+import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 import {
   buildOrderInput,
   computeFirstPurchaseBonus,
@@ -393,7 +393,12 @@ export async function POST(req: NextRequest) {
 
     // Create order with atomic orderNumber + stock decrement in a single transaction
     const lowStockItems: { name: string; quantity: number; minQuantity: number }[] = []
-    const order = await prisma.$transaction(async (tx) => {
+    // F5A-026: MAX+1 lido sem trava — em corrida o segundo insert estoura o
+    // @@unique([establishmentId, orderNumber]) com P2002; refaz o número até 3×.
+    let order: any = null
+    for (let orderAttempt = 0; orderAttempt < 3 && !order; orderAttempt++) {
+      try {
+        order = await prisma.$transaction(async (tx) => {
       // Atomic: get next number in a single query
       const result: any[] = await tx.$queryRawUnsafe(
         `SELECT COALESCE(MAX("orderNumber"), 0) + 1 as next FROM "Order" WHERE "establishmentId" = $1`,
@@ -426,7 +431,8 @@ export async function POST(req: NextRequest) {
           isScheduled,
           deliveryDate: deliveryDate || null,
           ...((orderType === "delivery" || orderType === "pickup") && method !== "ifood" && {
-            deliveryCode: customerPhone ? customerPhone.replace(/\D/g, "").slice(-4) : String(Math.floor(1000 + Math.random() * 9000)),
+            // F5B-020: nunca derivar do telefone do cliente (4 dígitos previsíveis)
+            deliveryCode: String(crypto.randomInt(1000, 10000)),
           }),
           cashbackEarned: cashbackEarnedValue,
           loyaltyPointsUsed: loyaltyPointsUsedValue,
@@ -440,7 +446,15 @@ export async function POST(req: NextRequest) {
       lowStockItems.push(...stockResult)
 
       return createdOrder
-    })
+        })
+      } catch (e: any) {
+        if (e?.code !== "P2002") throw e
+        lowStockItems.length = 0
+      }
+    }
+    if (!order) {
+      throw new Error("Não foi possível gerar um número único para o pedido. Tente novamente.")
+    }
 
     // Snapshot CMV (custo de mercadoria vendida) — calculado a partir dos
     // insumos vinculados via ficha técnica (ProductStockLink). Itens sem
@@ -523,7 +537,14 @@ export async function POST(req: NextRequest) {
           })
         } catch (err: any) {
           console.error("[Inter] ERRO ao gerar pagamento:", err.message)
-          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          // F5A-009: o pedido já debitou estoque na transação de criação —
+          // apagar sem estorno inflava o estoque a cada falha de PSP.
+          await prisma
+            .$transaction(async (tx) => {
+              await restoreOrderStock(tx, order.items, order.id, order.establishmentId)
+              await tx.order.delete({ where: { id: order.id } })
+            })
+            .catch(() => {})
           return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }
       }
@@ -641,7 +662,13 @@ export async function POST(req: NextRequest) {
           }
         } catch (err: any) {
           console.error("[Pagar.me] ERRO ao gerar pagamento:", err.message)
-          await prisma.order.delete({ where: { id: order.id } }).catch(() => {})
+          // F5A-009: estorno do estoque antes do hard delete (falha de PSP).
+          await prisma
+            .$transaction(async (tx) => {
+              await restoreOrderStock(tx, order.items, order.id, order.establishmentId)
+              await tx.order.delete({ where: { id: order.id } })
+            })
+            .catch(() => {})
           return NextResponse.json({ error: `Erro ao gerar pagamento: ${err.message}` }, { status: 500 })
         }
       }
@@ -675,51 +702,32 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const establishmentIdParam = searchParams.get("establishmentId")
   const status = searchParams.get("status")
+  // F5A-038: take opcional (KDS passa para não baixar o histórico inteiro a
+  // cada 5s). Sem parâmetro o comportamento legado é preservado — os relatórios
+  // ainda agregam no cliente e precisam da lista completa (ver Fase 3).
+  const takeParam = parseInt(searchParams.get("take") || "", 10)
+  const take = Number.isFinite(takeParam) && takeParam > 0 ? Math.min(takeParam, 1000) : undefined
 
   const { user, error } = requireEstablishment(req, establishmentIdParam)
   if (error) return error
   const establishmentId = user.establishmentId
 
-  // Expire old pending orders on each dashboard poll
-  const estConfig = await prisma.establishment.findUnique({
-    where: { id: establishmentId },
-    select: { abandonedOrderMinutes: true },
-  })
-  const abandonMinutes = estConfig?.abandonedOrderMinutes ?? 15
-  const abandonThreshold = new Date(Date.now() - abandonMinutes * 60 * 1000)
-  const abandonedOrders = await prisma.order.findMany({
-    where: {
-      establishmentId,
-      status: { in: ["pending", "new", "payment_pending"] },
-      createdAt: { lt: abandonThreshold },
-    },
-    select: { id: true, customerId: true, loyaltyPointsUsed: true, cashbackEarned: true, firstPurchaseBonus: true, total: true },
-  })
-  if (abandonedOrders.length > 0) {
-    await prisma.$transaction(async (tx) => {
-      await tx.order.updateMany({
-        where: { id: { in: abandonedOrders.map(o => o.id) } },
-        data: { status: "abandoned", cancellationReason: "Pedido expirado — não confirmado no tempo limite", cancellationDate: new Date(), cancelledBy: "system" },
-      })
-      // Reverse loyalty for abandoned orders
-      for (const o of abandonedOrders) {
-        if (o.customerId) {
-          const reversalDelta = (o.loyaltyPointsUsed || 0) - (o.cashbackEarned || 0) - (o.firstPurchaseBonus || 0)
-          await tx.customer.update({
-            where: { id: o.customerId },
-            data: {
-              totalOrders: { decrement: 1 },
-              totalSpent: { decrement: o.total || 0 },
-              ...(reversalDelta !== 0 ? { loyaltyPoints: { increment: reversalDelta } } : {}),
-            },
-          })
-        }
-      }
-    })
-  }
+  // F3A-001/F3D-002: o expurgo de abandoned saiu daqui (escrita-por-leitura em
+  // todo poll) e virou o cron /api/cron/expire-orders (vercel.json, */5 min).
 
   const where: any = { establishmentId }
-  if (status) where.status = status
+  if (status) {
+    // F5A-038: lista separada por vírgula vira `in`; valor único mantém o formato legado
+    const statusList = status.split(",").map((s) => s.trim()).filter(Boolean)
+    if (statusList.length > 1) where.status = { in: statusList }
+    else if (statusList.length === 1) where.status = statusList[0]
+  }
+  // F3A-001: janela opcional desde (ISO) — consumidores podem reduzir o scan
+  const since = searchParams.get("since")
+  if (since) {
+    const sinceDate = new Date(since)
+    if (!Number.isNaN(sinceDate.getTime())) where.createdAt = { gte: sinceDate }
+  }
   // Regras para mostrar um pedido no painel de pedidos:
   // - Pedidos fora do cardápio digital (iFood, WhatsApp, manual) → sempre visíveis.
   // - Pedidos do cardápio digital com pagamento NA ENTREGA (cash/card na
@@ -808,6 +816,7 @@ export async function GET(req: NextRequest) {
       customer: { select: { id: true, name: true, phone: true, cancellationCount: true, blockedUntil: true, needsHuman: true, needsHumanAt: true } },
     },
     orderBy: { createdAt: "desc" },
+    ...(take ? { take } : {}),
   })
 
   return NextResponse.json(orders)

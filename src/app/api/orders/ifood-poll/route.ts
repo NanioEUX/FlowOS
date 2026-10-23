@@ -87,6 +87,13 @@ export async function POST(req: NextRequest) {
               continue
             }
 
+            // Pedido cancelado localmente (ou por evento anterior) é terminal:
+            // não deixa evento atrasado do iFood ressuscitar (F5A-011).
+            if (existing.status === "cancelled") {
+              skipped++
+              continue
+            }
+
             // Status priority: delivered > out_for_delivery > ready > preparing > accepted
             // Não faz downgrade do status local (ignora eventos antigos do iFood).
             const statusRank: Record<string, number> = {
@@ -121,11 +128,15 @@ export async function POST(req: NextRequest) {
             continue
           }
 
-          // For cancellation events (CAN), mirror the webhook handler:
-          // write a CancellationLog and delete the order so the panel hides it
-          // but the tenant keeps an audit trail.
+          // For cancellation events (CAN): CancellationLog + estorno + status
+          // cancelled (F5A-011: antes restaurava em dobro e hard-deletava — o
+          // poll recriava o pedido e debitava o estoque de novo).
           if (existing && isCancel) {
             try {
+              if (existing.status === "cancelled") {
+                skipped++
+                continue
+              }
               const reason =
                 (event as any).reason ||
                 (event as any).metadata?.reason ||
@@ -154,7 +165,16 @@ export async function POST(req: NextRequest) {
                 })
                 // Restore stock for cancelled iFood order
                 await restoreOrderStock(tx, existing.items, existing.id, existing.establishmentId)
-                await tx.order.delete({ where: { id: existing.id } })
+                await tx.order.update({
+                  where: { id: existing.id },
+                  data: {
+                    status: "cancelled",
+                    paymentStatus: existing.paymentStatus === "paid" ? "refunded" : "cancelled",
+                    cancellationReason: typeof reason === "string" ? reason : null,
+                    cancellationDate: new Date(),
+                    cancelledBy,
+                  },
+                })
               })
               updated++
             } catch (e: any) {
@@ -170,7 +190,7 @@ export async function POST(req: NextRequest) {
             const isPlaceholder =
               existing.customerName === "Aguardando iFood" ||
               (existing.items === "[]" && (!existing.total || existing.total === 0))
-            if (!isPlaceholder) {
+            if (!isPlaceholder || existing.status === "cancelled") {
               skipped++
               continue
             }
@@ -180,9 +200,21 @@ export async function POST(req: NextRequest) {
               if (order && order.items && order.items.length > 0) {
                 const mapped = mapIfoodOrderToFlow(order, est.id, event.code)
                 const customer = await upsertIfoodCustomer(est.id, order.customer)
-                await prisma.order.update({
-                  where: { id: existing.id },
-                  data: { ...mapped, externalId: event.orderId, customerId: customer?.id }
+                await prisma.$transaction(async (tx) => {
+                  await tx.order.update({
+                    where: { id: existing.id },
+                    data: { ...mapped, externalId: event.orderId, customerId: customer?.id }
+                  })
+                  // F5A-013: o placeholder nasceu sem itens e sem baixa de
+                  // estoque; ao receber o carrinho real, debita como marketplace.
+                  let itemsForStock: any[] = []
+                  try {
+                    const parsed = typeof mapped.items === "string" ? JSON.parse(mapped.items) : mapped.items
+                    if (Array.isArray(parsed)) itemsForStock = parsed
+                  } catch {}
+                  if (itemsForStock.length > 0) {
+                    await deductOrderStock(tx, itemsForStock, existing.id, existing.establishmentId, true)
+                  }
                 })
                 updated++
               } else {

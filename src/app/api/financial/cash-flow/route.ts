@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { dayRangeFilter, dayKeyInTz } from "@/lib/finance-dates"
 
 export async function GET(req: NextRequest) {
   const establishmentIdParam = req.nextUrl.searchParams.get("establishmentId")
@@ -11,11 +12,11 @@ export async function GET(req: NextRequest) {
   if (error) return error
   const establishmentId = user.establishmentId
 
-  const dateFilter: any = {}
-  if (from) dateFilter.gte = new Date(from)
-  if (to) dateFilter.lte = new Date(to + "T23:59:59")
+  // Limites inclusivos no fuso do negócio (F5A-044)
+  const dateFilter: any = dayRangeFilter(from, to)
 
-  const orderWhere: any = { establishmentId, status: { not: "cancelled" } }
+  // Faturamento realizado: sem cancelado/abandonado/pagamento pendente (F5A-019)
+  const orderWhere: any = { establishmentId, status: { notIn: ["cancelled", "abandoned", "payment_pending"] } }
   const expenseWhere: any = { establishmentId }
   if (Object.keys(dateFilter).length > 0) {
     orderWhere.createdAt = dateFilter
@@ -27,11 +28,11 @@ export async function GET(req: NextRequest) {
     prisma.expense.findMany({ where: expenseWhere, select: { amount: true, date: true, createdAt: true } }),
   ])
 
-  // Group by day
+  // Group by day (dia local do negócio — não o UTC do servidor)
   const dayMap = new Map<string, { entradas: number; saidas: number; byPayment: Record<string, number> }>()
 
   for (const order of orders) {
-    const day = order.createdAt.toISOString().split("T")[0]
+    const day = dayKeyInTz(order.createdAt)
     if (!dayMap.has(day)) dayMap.set(day, { entradas: 0, saidas: 0, byPayment: {} })
     const d = dayMap.get(day)!
     d.entradas += order.total
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 
   for (const expense of expenses) {
-    const day = expense.date ? expense.date.toISOString().split("T")[0] : expense.createdAt.toISOString().split("T")[0]
+    const day = dayKeyInTz(expense.date || expense.createdAt)
     if (!dayMap.has(day)) dayMap.set(day, { entradas: 0, saidas: 0, byPayment: {} })
     dayMap.get(day)!.saidas += expense.amount
   }

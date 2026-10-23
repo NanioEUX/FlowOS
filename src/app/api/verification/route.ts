@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
+import { normalizePhone, maskPhone } from "@/lib/phone"
+import { checkRateLimit } from "@/lib/rate-limit"
+import {
+  signCustomerSession,
+  CUSTOMER_SESSION_COOKIE,
+  customerSessionCookieOptions,
+  clearCustomerSessionCookieOptions,
+} from "@/lib/customer-auth"
 import bcrypt from "bcryptjs"
 import crypto from "crypto"
 
@@ -10,9 +18,23 @@ const REQUEST_COOLDOWN_MS = 60 * 1000
 const MAX_REQUESTS_PER_HOUR = 5
 const MAX_REQUESTS_PER_DAY = 10
 const MAX_VERIFICATIONS_PER_DAY = 5
+// Limite best-effort por IP (memória por instância — F7A-009). O limite por
+// número continua em banco e é a trava principal.
+const MAX_REQUESTS_PER_IP_PER_HOUR = 20
+const CODE_RETENTION_DAYS = 7
 
 // Nunca em produção: só o gate explícito do env libera o devCode (F7A-001)
 const SHOW_DEV_CODE = process.env.SHOW_DEV_CODE === "true"
+
+// Resposta única para qualquer falha de validação (F7A-011/017):
+// errado, expirado, esgotado ou cliente inexistente são indistinguíveis.
+const INVALID_CODE_RESPONSE = { error: "Código inválido ou expirado. Solicite um novo." }
+
+function clientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for")
+  if (forwarded) return forwarded.split(",")[0].trim()
+  return req.headers.get("x-real-ip") || "unknown"
+}
 
 /**
  * POST /api/verification
@@ -29,9 +51,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "phone e establishmentId são obrigatórios" }, { status: 400 })
     }
 
-    const phoneDigits = phone.replace(/\D/g, "")
-    if (phoneDigits.length < 10) {
+    // Normalização única (F7A-010): 55/E.164 → DDD+número, 10-11 dígitos
+    const phoneDigits = normalizePhone(phone)
+    if (!phoneDigits) {
       return NextResponse.json({ error: "Telefone inválido" }, { status: 400 })
+    }
+
+    // ---- Rate limit por IP (best-effort, F7A-009) ----
+    const ipLimit = checkRateLimit(`otp-ip:${clientIp(req)}`, MAX_REQUESTS_PER_IP_PER_HOUR, 60 * 60 * 1000)
+    if (!ipLimit.allowed) {
+      return NextResponse.json({ error: "Muitas solicitações. Tente novamente mais tarde." }, { status: 429 })
+    }
+
+    // Poda de códigos antigos (F7A-022) — fire and forget no fluxo
+    prisma.verificationCode
+      .deleteMany({ where: { createdAt: { lt: new Date(Date.now() - CODE_RETENTION_DAYS * 24 * 60 * 60 * 1000) } } })
+      .catch(() => {})
+
+    // Valida o estabelecimento ANTES de criar Customer/VerificationCode
+    // (F7A-018): loja inexistente/cancelada não gera registro nem custo.
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: {
+        name: true,
+        slug: true,
+        subscriptionStatus: true,
+        messagingLimit: true,
+        currentUsage: true,
+        whatsappProvider: true,
+        evolutionBaseUrl: true,
+        evolutionApiKey: true,
+        evolutionInstanceName: true,
+        whatsappNumber: true,
+        metaPhoneNumberId: true,
+        metaAccessToken: true,
+        metaBusinessAccountId: true,
+      },
+    })
+    if (!establishment) {
+      return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
+    }
+    if (establishment.subscriptionStatus === "cancelled" || establishment.subscriptionStatus === "suspended") {
+      return NextResponse.json({ error: "Estabelecimento não disponível" }, { status: 404 })
+    }
+
+    // Cota Meta por loja antes do envio (F7A-012): se o consumo já bateu o
+    // limite do tier, não gera código nem cobra mensagem.
+    if (
+      establishment.messagingLimit != null &&
+      establishment.currentUsage != null &&
+      establishment.currentUsage >= establishment.messagingLimit
+    ) {
+      return NextResponse.json(
+        { error: "Canal de mensagens da loja atingiu o limite. Tente mais tarde ou contate o suporte." },
+        { status: 429 }
+      )
     }
 
     // Find or create customer
@@ -108,25 +182,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Get establishment for WhatsApp config and name
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: {
-        name: true,
-        slug: true,
-        whatsappProvider: true,
-        evolutionBaseUrl: true,
-        evolutionApiKey: true,
-        evolutionInstanceName: true,
-        whatsappNumber: true,
-        metaPhoneNumberId: true,
-        metaAccessToken: true,
-      },
-    })
-
-    if (!establishment) {
-      return NextResponse.json({ error: "Estabelecimento não encontrado" }, { status: 404 })
-    }
+    // establishment já foi validado no topo do handler (F7A-018)
 
     console.log(`[VERIFICATION DEBUG] Provider config: whatsappProvider=${establishment.whatsappProvider}, metaPhoneNumberId=${establishment.metaPhoneNumberId}, metaAccessToken=${establishment.metaAccessToken ? "SET" : "NULL"}`)
 
@@ -164,12 +220,8 @@ export async function POST(req: NextRequest) {
 
       try {
         const { findApprovedTemplate } = await import("@/lib/whatsapp/meta")
-        const est = await prisma.establishment.findUnique({
-          where: { id: establishmentId },
-          select: { metaBusinessAccountId: true, metaAccessToken: true },
-        })
-        if (est?.metaBusinessAccountId && est?.metaAccessToken) {
-          const found = await findApprovedTemplate(est.metaBusinessAccountId, est.metaAccessToken)
+        if (establishment.metaBusinessAccountId && establishment.metaAccessToken) {
+          const found = await findApprovedTemplate(establishment.metaBusinessAccountId, establishment.metaAccessToken)
           if (found.found && found.templateName) {
             templateName = found.templateName
             console.log(`[VERIFICATION] Using approved template: ${templateName}`)
@@ -249,7 +301,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${phoneDigits}`)
+    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${maskPhone(phoneDigits)}`)
     return NextResponse.json({
       success: true,
       whatsappSent: true,
@@ -264,7 +316,8 @@ export async function POST(req: NextRequest) {
 /**
  * PUT /api/verification
  * Body: { phone: string, establishmentId: string, code: string, name?: string }
- * Verifies the code, marks customer as whatsappVerified. Optionally updates name.
+ * Verifies the code, marks customer as whatsappVerified and issues the
+ * customer session cookie (httpOnly, 30 dias — F7A-015).
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -275,14 +328,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "phone, establishmentId e code são obrigatórios" }, { status: 400 })
     }
 
-    const phoneDigits = phone.replace(/\D/g, "")
+    const phoneDigits = normalizePhone(phone)
+    if (!phoneDigits) {
+      return NextResponse.json(INVALID_CODE_RESPONSE, { status: 400 })
+    }
 
     const customer = await prisma.customer.findFirst({
       where: { phone: phoneDigits, establishmentId },
     })
 
+    // Sem enumeração (F7A-017): cliente inexistente responde igual a código errado
     if (!customer) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
+      return NextResponse.json(INVALID_CODE_RESPONSE, { status: 400 })
     }
 
     // ---- Limite de verificações/logins por número (máx 5/24h) ----
@@ -306,23 +363,23 @@ export async function PUT(req: NextRequest) {
     })
 
     if (!codeRecord) {
-      return NextResponse.json({ error: "Código expirado ou não encontrado. Solicite um novo." }, { status: 400 })
+      return NextResponse.json(INVALID_CODE_RESPONSE, { status: 400 })
     }
 
-    if (codeRecord.attempts >= MAX_ATTEMPTS) {
-      return NextResponse.json({ error: "Muitas tentativas. Solicite um novo código." }, { status: 429 })
+    // Consome a tentativa ANTES do compare, de forma atômica (F7A-011):
+    // no máximo 3 bcrypt.compare por código, mesmo com requisições paralelas.
+    const bumped = await prisma.verificationCode.updateMany({
+      where: { id: codeRecord.id, used: false, attempts: { lt: MAX_ATTEMPTS } },
+      data: { attempts: { increment: 1 } },
+    })
+    if (bumped.count === 0) {
+      return NextResponse.json(INVALID_CODE_RESPONSE, { status: 400 })
     }
 
-    const match = await bcrypt.compare(code.trim(), codeRecord.codeHash)
-
+    const match = await bcrypt.compare(String(code).trim(), codeRecord.codeHash)
     if (!match) {
-      // Increment attempts
-      await prisma.verificationCode.update({
-        where: { id: codeRecord.id },
-        data: { attempts: { increment: 1 } },
-      })
-      const remaining = MAX_ATTEMPTS - codeRecord.attempts - 1
-      return NextResponse.json({ error: `Código incorreto. ${remaining > 0 ? `${remaining} tentativa(s) restante(s).` : "Solicite um novo código."}` }, { status: 400 })
+      // Sem contador de restantes na resposta (F7A-011/017)
+      return NextResponse.json(INVALID_CODE_RESPONSE, { status: 400 })
     }
 
     // Mark code as used
@@ -344,9 +401,31 @@ export async function PUT(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, customer: { id: updated.id, whatsappVerified: updated.whatsappVerified, name: updated.name } })
+    // Sessão de cliente (F7A-015): cookie httpOnly assinado — as rotas de
+    // cliente (orders/customer, addresses, customers PUT) passam a exigir ele.
+    const sessionToken = await signCustomerSession({
+      customerId: updated.id,
+      establishmentId,
+      phone: phoneDigits,
+    })
+    const res = NextResponse.json({
+      success: true,
+      customer: { id: updated.id, whatsappVerified: updated.whatsappVerified, name: updated.name },
+    })
+    res.cookies.set(CUSTOMER_SESSION_COOKIE, sessionToken, customerSessionCookieOptions())
+    return res
   } catch (error) {
     console.error("[Verification PUT]", error)
     return NextResponse.json({ error: "Erro ao verificar código" }, { status: 500 })
   }
+}
+
+/**
+ * DELETE /api/verification — logout do cliente final: limpa o cookie de sessão.
+ * (Logout é explícito; o token continua expirando sozinho em 30 dias.)
+ */
+export async function DELETE() {
+  const res = NextResponse.json({ success: true })
+  res.cookies.set(CUSTOMER_SESSION_COOKIE, "", clearCustomerSessionCookieOptions())
+  return res
 }

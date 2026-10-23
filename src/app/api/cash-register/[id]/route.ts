@@ -26,7 +26,13 @@ export async function PATCH(
 
   const { closingAmount, notes } = await req.json()
 
-  const totalMovements = register.movements.reduce((sum, m) => sum + m.amount, 0)
+  // F5A-015: soma assinada por tipo — despesa/saque/estorno saem do caixa,
+  // mesmo para movimentos antigos gravados com sinal positivo.
+  const signedAmount = (m: { type: string; amount: number }) =>
+    m.type === "expense" || m.type === "withdrawal" || m.type === "refund"
+      ? -Math.abs(m.amount)
+      : Math.abs(m.amount)
+  const totalMovements = register.movements.reduce((sum, m) => sum + signedAmount(m), 0)
   const expected = register.openingAmount + totalMovements
 
   const updated = await prisma.cashRegister.update({

@@ -1,4 +1,5 @@
 import { verifyHmacSha256 } from "@/lib/webhook-signature"
+import { fetchExternal } from "@/lib/fetch-external"
 
 const PAGARME_API_URL =
   process.env.PAGARME_ENVIRONMENT === "sandbox"
@@ -97,7 +98,7 @@ export async function createPagarmeCustomer({
 
   console.log("[Pagar.me] Criando cliente:", { name, hasEmail: !!email, hasPhone: !!phone })
 
-  const res = await fetch(`${PAGARME_API_URL}/customers`, {
+  const res = await fetchExternal(`${PAGARME_API_URL}/customers`, {
     method: "POST",
     headers: getAuthHeaders(apiKey),
     body: JSON.stringify(body),
@@ -168,7 +169,7 @@ export async function createPixTransaction({
   console.log("[Pagar.me] Criando transação PIX:", { customerId, amount, orderId })
   console.log("[Pagar.me] Request body:", JSON.stringify(body))
 
-  const res = await fetch(`${PAGARME_API_URL}/orders`, {
+  const res = await fetchExternal(`${PAGARME_API_URL}/orders`, {
     method: "POST",
     headers: getAuthHeaders(apiKey),
     body: JSON.stringify(body),
@@ -392,7 +393,7 @@ export async function createCardTransaction({
 
   console.log("[Pagar.me] Criando transação cartão:", { customerId, amount, installments: installments || 1 })
 
-  const res = await fetch(`${PAGARME_API_URL}/orders`, {
+  const res = await fetchExternal(`${PAGARME_API_URL}/orders`, {
     method: "POST",
     headers: getAuthHeaders(apiKey),
     body: JSON.stringify(body),

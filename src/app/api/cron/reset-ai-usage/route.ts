@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-export async function POST(req: NextRequest) {
+// F3D-002: o cron do Vercel chama GET — antes o GET só respondia {status:"ok"}
+// e o reset mensal do contador de IA (aiMessagesUsed) nunca rodava de verdade
+// (nada mais no código zera o contador; sem isso, o limite mensal nunca renovava).
+async function runReset(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization")
     const cronSecret = process.env.CRON_SECRET || "dev-secret"
@@ -40,6 +43,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({ status: "ok", endpoint: "reset-ai-usage" })
+export async function POST(req: NextRequest) {
+  return runReset(req)
+}
+
+export async function GET(req: NextRequest) {
+  return runReset(req)
 }

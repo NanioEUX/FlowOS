@@ -1,4 +1,5 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions } from "./provider"
+import { fetchExternal } from "@/lib/fetch-external"
 
 interface EvolutionConfig {
   baseUrl: string
@@ -51,7 +52,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async getConnectionState(): Promise<ConnectionState> {
     try {
       const url = `${this.config.baseUrl}/instance/connectionState/${this.config.instanceName}`
-      const response = await fetch(url, {
+      const response = await fetchExternal(url, {
         method: "GET",
         headers: this.getHeaders(),
       })
@@ -74,7 +75,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async connectInstance(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
     try {
       const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
-      const response = await fetch(url, {
+      const response = await fetchExternal(url, {
         method: "GET",
         headers: this.getHeaders(),
       })
@@ -94,7 +95,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async getQRCode(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
     try {
       const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
-      const response = await fetch(url, {
+      const response = await fetchExternal(url, {
         method: "GET",
         headers: this.getHeaders(),
       })
@@ -114,7 +115,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async logoutInstance(): Promise<{ success: boolean; error?: string }> {
     try {
       const url = `${this.config.baseUrl}/instance/logout/${this.config.instanceName}`
-      const response = await fetch(url, {
+      const response = await fetchExternal(url, {
         method: "DELETE",
         headers: this.getHeaders(),
       })
@@ -135,7 +136,7 @@ export class EvolutionProvider implements WhatsAppProvider {
 
       console.log(`[Evolution] Sending to ${normalizedPhone} via ${this.config.baseUrl}`)
 
-      const response = await fetch(url, {
+      const response = await fetchExternal(url, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({

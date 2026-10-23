@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 
+// Credenciais que nunca saem para roles sem permissão de config (F7B-006):
+// um JWT de kds/motoboy/atendente não baixa mais tokens/chaves/senhas.
+const SECRET_FIELDS = [
+  "password",
+  "evolutionApiKey",
+  "metaAccessToken",
+  "metaWebhookVerifyToken",
+  "interClientSecret",
+  "interCertificate",
+  "interCertificatePassword",
+  "pagarmeApiKey",
+  "pagarmeWebhookKey",
+  "asaasApiKey",
+  "efiClientSecret",
+  "efiCertificate",
+  "efiWebhookToken",
+  "api99Key",
+  "nineFoodApiKey",
+  "ifoodAccessToken",
+  "ifoodRefreshToken",
+]
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -30,6 +52,16 @@ export async function GET(
 
   if (!establishment) {
     return NextResponse.json({ error: "Não encontrado" }, { status: 404 })
+  }
+
+  // Quem pode editar as configurações (admin ou permissão "config") continua
+  // recebendo o registro completo — o formulário de settings edita esses campos.
+  const canSeeSecrets =
+    authUser.role === "admin" || authUser.role === "saas_admin" || authUser.permissions?.includes("config")
+  if (!canSeeSecrets) {
+    const safe: Record<string, any> = { ...establishment }
+    for (const field of SECRET_FIELDS) delete safe[field]
+    return NextResponse.json(safe)
   }
 
   return NextResponse.json(establishment)

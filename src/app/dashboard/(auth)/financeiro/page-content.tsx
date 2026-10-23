@@ -83,9 +83,10 @@ export default function FinanceiroPage() {
             <Row label="(-) Descontos (cupons)" value={-s.descontos} color="text-red-500" />
             <Row label="(=) Receita Líquida" value={s.receitaLiquida} color="text-zinc-900" bold />
             <div className="border-t border-white/[.04] my-2" />
-            <Row label="(-) Custo Entregas (motoboys)" value={-s.custoEntregas} color="text-orange-600" />
+            <Row label="(-) CMV (custo da mercadoria)" value={-(s.custoMercadorias || 0)} color="text-orange-600" />
             <Row label="(=) Lucro Bruto" value={s.lucroBruto} color={s.lucroBruto >= 0 ? "text-green-600" : "text-red-400"} bold />
             <div className="border-t border-white/[.04] my-2" />
+            <Row label="(-) Custo Entregas (motoboys)" value={-s.custoEntregas} color="text-orange-600" />
             <Row label="(-) Despesas Operacionais" value={-s.despesasOperacionais} color="text-red-500" />
             <div className="border-t border-zinc-200 my-2" />
             <Row label="(=) LUCRO LÍQUIDO" value={s.lucroLiquido} color={isPositive ? "text-green-600" : "text-red-400"} bold large />

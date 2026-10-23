@@ -65,6 +65,25 @@ export async function POST(req: NextRequest) {
     // Ignore any establishmentId in the body and force the caller's tenant.
     const targetEstablishmentId = auth.establishmentId
 
+    // F5C-021: limite de usuários por plano (promessa da landing: Starter 3,
+    // Pro 10, Enterprise ilimitado). Plano desconhecido → sem limite.
+    const PLAN_USER_LIMITS: Record<string, number | null> = { starter: 3, pro: 10, enterprise: null }
+    const estForLimit = await prisma.establishment.findUnique({
+      where: { id: targetEstablishmentId },
+      select: { subscriptionPlan: true },
+    })
+    const planKey = estForLimit?.subscriptionPlan || "starter"
+    const userLimit = PLAN_USER_LIMITS[planKey] ?? null
+    if (userLimit !== null) {
+      const userCount = await prisma.user.count({ where: { establishmentId: targetEstablishmentId } })
+      if (userCount >= userLimit) {
+        return NextResponse.json(
+          { error: `O plano ${planKey} permite até ${userLimit} usuários. Faça upgrade para adicionar mais.` },
+          { status: 403 }
+        )
+      }
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
       return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
