@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { useSubmitGuard } from "@/hooks/use-submit-guard"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import QRCode from "qrcode"
 
@@ -75,6 +76,13 @@ export default function CaixaPOSPage() {
   const [stagingCart, setStagingCart] = useState<CartItem[]>([])
   const [payment, setPayment] = useState("cash")
   const [closing, setClosing] = useState(false)
+  // F8C-001: travas de re-entrância — duplo clique não dispara a ação duas vezes
+  const closeTableGuard = useSubmitGuard()
+  const abaterGuard = useSubmitGuard()
+  const openRegisterGuard = useSubmitGuard()
+  const closeRegisterGuard = useSubmitGuard()
+  const saleGuard = useSubmitGuard()
+  const transferGuard = useSubmitGuard()
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 })
   const [currentTime, setCurrentTime] = useState("")
   const [customName, setCustomName] = useState("")
@@ -585,6 +593,7 @@ export default function CaixaPOSPage() {
         ? combinedSubtotal * (serviceTaxConfig.value / 100)
         : serviceTaxConfig.value
       : 0
+    await closeTableGuard.run(async () => {
     try {
       const res = await fetchAuth("/api/cash-register/close-table", {
         method: "POST",
@@ -636,6 +645,7 @@ export default function CaixaPOSPage() {
       console.error(err)
       toast("Erro ao fechar mesa", "error")
     }
+    })
   }
 
   function deselectTable() {
@@ -680,6 +690,7 @@ export default function CaixaPOSPage() {
       toast("Valor excede o restante da conta", "error")
       return
     }
+    await abaterGuard.run(async () => {
     try {
       // Save to API
       await fetchAuth("/api/partial-payment", {
@@ -714,6 +725,7 @@ export default function CaixaPOSPage() {
       console.error(err)
       toast("Erro ao registrar abatimento", "error")
     }
+    })
   }
 
   function getTableTotal(tableNum: number): number {
@@ -794,6 +806,10 @@ export default function CaixaPOSPage() {
   async function executeSale(isMesa: boolean, tableLabel: string, saleCart: CartItem[], saleTotal: number) {
     if (!user?.establishmentId) return
     const establishmentId = user.establishmentId
+    // F8C-001: o ConfirmDialog dispara onConfirm; duplo clique no "Confirmar"
+    // chamava executeSale duas vezes (2 pedidos). O guard bloqueia a 2ª.
+    if (saleGuard.busy) return
+    await saleGuard.run(async () => {
     setClosing(true)
     try {
       const savedCart = [...saleCart]
@@ -942,6 +958,7 @@ export default function CaixaPOSPage() {
     } finally {
       setClosing(false)
     }
+    })
   }
 
   function printReceiptPopup(order: any) {
@@ -992,6 +1009,7 @@ export default function CaixaPOSPage() {
 
   async function openCashRegister() {
     if (!user?.establishmentId) return
+    await openRegisterGuard.run(async () => {
     try {
       const res = await fetchAuth("/api/cash-register", {
         method: "POST",
@@ -1017,10 +1035,12 @@ export default function CaixaPOSPage() {
       console.error(err)
       toast("Erro ao abrir caixa", "error")
     }
+    })
   }
 
   async function closeCashRegister() {
     if (!cashRegister || !user?.establishmentId) return
+    await closeRegisterGuard.run(async () => {
     try {
       const movements = cashRegister.movements || []
       const totalMovements = movements.reduce(
@@ -1046,6 +1066,7 @@ export default function CaixaPOSPage() {
       console.error(err)
       toast("Erro ao fechar caixa", "error")
     }
+    })
   }
 
   async function transferCashRegister() {
@@ -1060,6 +1081,7 @@ export default function CaixaPOSPage() {
       successMessage: "",
       onConfirm: async () => {
         setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, confirmed: false, successTitle: "", successMessage: "" })
+        await transferGuard.run(async () => {
         try {
           await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
             method: "POST",
@@ -1078,6 +1100,7 @@ export default function CaixaPOSPage() {
           console.error(err)
           toast("Erro ao transferir caixa", "error")
         }
+        })
       }
     })
   }
@@ -1961,8 +1984,8 @@ export default function CaixaPOSPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
                   />
                 </div>
-                <button onClick={openCashRegister} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
-                  Abrir Caixa
+                <button onClick={openCashRegister} disabled={openRegisterGuard.busy} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                  {openRegisterGuard.busy ? "Abrindo..." : "Abrir Caixa"}
                 </button>
               </div>
             )}
@@ -1989,8 +2012,8 @@ export default function CaixaPOSPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
                   />
                 </div>
-                <button onClick={closeCashRegister} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700">
-                  Fechar Caixa
+                <button onClick={closeCashRegister} disabled={closeRegisterGuard.busy} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
+                  {closeRegisterGuard.busy ? "Fechando..." : "Fechar Caixa"}
                 </button>
               </div>
             )}
@@ -2510,10 +2533,12 @@ export default function CaixaPOSPage() {
                       successMessage: "",
                     })
                   }}
-                  disabled={closeTableMode === "split" && (!splitCount || parseInt(splitCount) < 2)}
+                  disabled={closeTableGuard.busy || (closeTableMode === "split" && (!splitCount || parseInt(splitCount) < 2))}
                   className="w-full rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
                 >
-                  {closingTablePayment === "cash" && closeTableMode === "single" && cashReceived && parseFloat(cashReceived) >= remaining
+                  {closeTableGuard.busy
+                    ? "Fechando..."
+                    : closingTablePayment === "cash" && closeTableMode === "single" && cashReceived && parseFloat(cashReceived) >= remaining
                     ? `Confirmar · Troco ${formatCurrency(parseFloat(cashReceived) - remaining)}`
                     : closingTablePayment === "cash" && closeTableMode === "single"
                     ? `Fechar Mesa · Pagar em Dinheiro`
@@ -2594,10 +2619,10 @@ export default function CaixaPOSPage() {
                 </button>
                 <button
                   onClick={processAbater}
-                  disabled={!abaterAmount || parseFloat(abaterAmount) <= 0}
+                  disabled={!abaterAmount || parseFloat(abaterAmount) <= 0 || abaterGuard.busy}
                   className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-40"
                 >
-                  Registrar Abate
+                  {abaterGuard.busy ? "Registrando..." : "Registrar Abate"}
                 </button>
               </div>
             </div>

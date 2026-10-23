@@ -210,6 +210,16 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   Plan/Subscription (#7), LGPD (#9) e PCI do `pagarme/card` (PAN/CVV no servidor =
   hosted checkout, decisão). Gate: tsc + 150 testes + build OK.
 
+- **Fase 8 parcial (23/10, no working tree)**: **F8C-001/003/004/005/006 (re-entrância do
+  PDV, client-side)** — novo hook `src/hooks/use-submit-guard.ts` (ref síncrono bloqueia
+  duplo clique no mesmo tick; state alimenta `disabled`/"..."); guards em
+  `handleCloseTable`, `processAbater`, `executeSale` (duplo ConfirmDialog não cria 2
+  pedidos), `openCashRegister`, `closeCashRegister` e `transferCashRegister` de
+  `caixa-page.tsx`, com `disabled`+label nos 5 botões correspondentes. **Idempotência
+  server-side de `close-table` (lock/`Idempotency-Key`) agrupada com F6B-006 = adiada pelo
+  usuário**. F8C-008 (XSS cupons) já estava fechado (`eb3d50e`). Gate: tsc + **150 testes**
+  + build OK.
+
 ## Pendências imediatas (próxima sessão)
 1. **Commit da Fase 7 + Fase 5 parcial** (sessão de cliente + hardening OTP + máquina de
    estados + estorno unificado + pacote financeiro 5.6) quando o usuário pedir — working
