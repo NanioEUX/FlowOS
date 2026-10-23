@@ -87,9 +87,12 @@ export default function DashboardLayout({
     }
 
     fetchAuth(`/api/establishments?id=${userData.establishmentId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) throw new Error(data.error)
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({} as any))
+        // F8B-006: 500/offline não derrubam a sessão; 401 (sessão) e 404
+        // (estabelecimento excluído) mandam para /login
+        if (r.status === 401 || r.status === 404) throw new Error("unauthorized")
+        if (!r.ok || data.error) throw new Error(data.error || "fetch-failed")
         setEstablishment(data)
 
         // F5C-011: bloqueio por assinatura cobre todos os papéis quando o
@@ -109,7 +112,11 @@ export default function DashboardLayout({
           }
         }
       })
-      .catch(() => router.replace("/login"))
+      .catch((err) => {
+        // F8B-006: 500/offline não expulsa — só 401 manda para /login
+        if (err?.message === "unauthorized") router.replace("/login")
+        else console.error("Falha ao carregar estabelecimento:", err)
+      })
       .finally(() => setLoading(false))
   }, [router, pathname])
 

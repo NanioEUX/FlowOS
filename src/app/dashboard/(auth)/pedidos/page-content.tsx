@@ -147,17 +147,21 @@ export default function PedidosPage() {
 
     const res = await fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
     const data = await res.json()
-    setOrders(data)
-    setLoading(false)
-
-    // Auto-sync pending payments in background
-    const pendingPayments = data.filter((o: any) =>
-      o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
-    )
-    if (pendingPayments.length > 0) {
-      console.log(`[Orders] Auto-syncing ${pendingPayments.length} pending payments...`)
-      fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+    // F8B-004: não troca a lista por um objeto de erro (500/HTML) — mantém a anterior
+    if (Array.isArray(data)) {
+      setOrders(data)
+      // Auto-sync pending payments in background
+      const pendingPayments = data.filter((o: any) =>
+        o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
+      )
+      if (pendingPayments.length > 0) {
+        console.log(`[Orders] Auto-syncing ${pendingPayments.length} pending payments...`)
+        fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+      }
+    } else if (res.ok) {
+      setOrders([])
     }
+    setLoading(false)
   }
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])

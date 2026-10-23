@@ -24,6 +24,8 @@ export default function RelatoriosPage() {
   const [commissionRates, setCommissionRates] = useState<Record<string, number>>({})
   const [period, setPeriod] = useState<Period>("all")
   const [filterType, setFilterType] = useState("all")
+  // F8B-005: estado de erro honesto — sem ele a tela mostrava "R$ 0,00"
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     if (!establishmentId) return
@@ -31,14 +33,18 @@ export default function RelatoriosPage() {
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
       fetchAuth(`/api/delivery-persons?establishmentId=${establishmentId}`),
       fetchAuth(`/api/delivery-payments?establishmentId=${establishmentId}`),
-    ]).then(([ordersRes, peopleRes, paymentsRes]) =>
+    ]).then(async ([ordersRes, peopleRes, paymentsRes]) =>
       Promise.all([ordersRes.json(), peopleRes.json(), paymentsRes.json()])
     ).then(([ordersData, peopleData, paymentsData]) => {
-      setOrders(ordersData.filter((o: any) => o.status !== "cancelled"))
-      setDeliveryPeople(peopleData)
-      setPayments(paymentsData)
+      if (Array.isArray(ordersData)) setOrders(ordersData.filter((o: any) => o.status !== "cancelled"))
+      else setLoadError(true)
+      if (Array.isArray(peopleData)) setDeliveryPeople(peopleData)
+      if (Array.isArray(paymentsData)) setPayments(paymentsData)
       setLoading(false)
-    }).catch(() => setLoading(false))
+    }).catch(() => {
+      setLoadError(true)
+      setLoading(false)
+    })
   }, [establishmentId])
 
   // Load commission rates from localStorage
@@ -171,6 +177,12 @@ export default function RelatoriosPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-zinc-900">Relatórios Financeiros</h2>
+
+      {loadError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Não foi possível carregar os dados. Verifique sua conexão e recarregue a página — os valores abaixo podem estar incompletos.
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

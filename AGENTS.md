@@ -218,12 +218,21 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   `caixa-page.tsx`, com `disabled`+label nos 5 botões correspondentes. **Idempotência
   server-side de `close-table` (lock/`Idempotency-Key`) agrupada com F6B-006 = adiada pelo
   usuário**. F8C-008 (XSS cupons) já estava fechado (`eb3d50e`). Gate: tsc + **150 testes**
-  + build OK.
+  + build OK. **F8B-002/004/005/006 parcial (23/10, no working tree)** — feedback honesto:
+  `pedidos/page-content.tsx` `loadOrders` só troca a lista se `Array.isArray(data)` (erro
+  de API não zera mais a tela); `relatorios/page-content.tsx` ganhou `loadError` +
+  banner "Não foi possível carregar" (sem mostrar "R$ 0,00" silencioso quando o fetch
+  falha); `dashboard/(auth)/layout.tsx` só manda para `/login` em **401/404** —
+  500/offline não derrubam mais a sessão (F8B-006). Restam da F8B: toast de sucesso só
+  com `res.ok` nos demais fluxos + banner de offline.
 
 ## Pendências imediatas (próxima sessão)
-1. **Commit da Fase 7 + Fase 5 parcial** (sessão de cliente + hardening OTP + máquina de
-   estados + estorno unificado + pacote financeiro 5.6) quando o usuário pedir — working
-   tree madura (~25 arquivos); gate verde (tsc, **150 testes**, build).
+1. **Fase 8 restante**: F8B (res.ok em todos os toasts + banner offline), acessibilidade
+   (userScalable, `<button>` nos cards, role=dialog, aria-label, htmlFor — F8D-001…),
+   responsividade (drawer PDV mobile, KDS TV, CTA motoboy — F8A-001…), PWA seguro
+   (banner nova versão, dedup notificação, versionar localStorage — F8A-004…), contraste
+   (F8D-013…), design system (F8C-013…), impressão (F8C-016), KDS (F8B-007/F8C-012).
+   Depois: **Fase 4** (conflitos — idempotência de webhooks, reconciliação, observabilidade).
 2. **Introspecção feita (SELECT read-only em produção,14/10)**: prod é **`db push`** (sem
    tabela `_prisma_migrations`; 47 tabelas); colunas Efi/Asaas **já não existem** em prod;
    `Coupon` está no **shape novo** (`name/type/conditionValue/usageLimit/timesUsed/available`)
