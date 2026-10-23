@@ -111,9 +111,14 @@ export default function CuponsPage() {
   }
 
   async function confirmDelete() {
-    await fetchAuth(`/api/coupons/${deleteConfirm.id}`, { method: "DELETE" })
-    setCoupons(coupons.filter((c) => c.id !== deleteConfirm.id))
-    toast("Cupom removido", "success")
+    const res = await fetchAuth(`/api/coupons/${deleteConfirm.id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover cupom", "error")
+    } else {
+      setCoupons(coupons.filter((c) => c.id !== deleteConfirm.id))
+      toast("Cupom removido", "success")
+    }
     setDeleteConfirm({ open: false, id: "" })
   }
 

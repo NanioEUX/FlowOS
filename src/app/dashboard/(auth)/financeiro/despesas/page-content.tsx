@@ -166,21 +166,23 @@ export default function DespesasPage() {
       .finally(() => setLoading(false))
   }, [establishmentId, period, customDateFrom, customDateTo, filterCategory, filterPayment, filterStatus, filterType, search])
 
-  async function saveCategories(cats: string[]) {
+  async function saveCategories(cats: string[]): Promise<boolean> {
     setCategories(cats)
-    if (!establishmentId) return
-    await fetchAuth(`/api/establishments/${establishmentId}`, {
+    if (!establishmentId) return false
+    const res = await fetchAuth(`/api/establishments/${establishmentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ expenseCategories: JSON.stringify(cats) }),
     })
+    return res.ok
   }
 
   async function handleAddCategory() {
     const name = newCatName.trim().toLowerCase()
     if (!name) return
     if (categories.includes(name)) { toast("Categoria já existe", "error"); return }
-    await saveCategories([...categories, name])
+    const ok = await saveCategories([...categories, name])
+    if (!ok) { toast("Erro ao salvar categoria", "error"); return }
     setNewCatName("")
     toast("Categoria adicionada", "success")
   }
@@ -192,37 +194,43 @@ export default function DespesasPage() {
     // Rename in all expenses
     const params = new URLSearchParams({ establishmentId: establishmentId!, category: oldName })
     const exps = await fetchAuth(`/api/expenses?${params}`).then((r) => r.json())
+    let expFailures = 0
     if (Array.isArray(exps)) {
       for (const e of exps) {
-        await fetchAuth(`/api/expenses/${e.id}`, {
+        const res = await fetchAuth(`/api/expenses/${e.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ category: newName }),
         })
+        if (!res.ok) expFailures++
       }
     }
-    await saveCategories(categories.map((c) => c === oldName ? newName : c))
+    const ok = await saveCategories(categories.map((c) => c === oldName ? newName : c))
     setEditingCat(null)
     setEditCatName("")
-    toast("Categoria renomeada", "success")
+    if (!ok || expFailures > 0) toast(`Falha ao renomear (${expFailures} despesa(s) não atualizada(s))`, "error")
+    else toast("Categoria renomeada", "success")
   }
 
   async function handleMoveCategory(oldCat: string, newCat: string) {
     const params = new URLSearchParams({ establishmentId: establishmentId!, category: oldCat })
     const exps = await fetchAuth(`/api/expenses?${params}`).then((r) => r.json())
+    let expFailures = 0
     if (Array.isArray(exps)) {
       for (const e of exps) {
-        await fetchAuth(`/api/expenses/${e.id}`, {
+        const res = await fetchAuth(`/api/expenses/${e.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ category: newCat }),
         })
+        if (!res.ok) expFailures++
       }
     }
-    await saveCategories(categories.filter((c) => c !== oldCat))
+    const ok = await saveCategories(categories.filter((c) => c !== oldCat))
     setDeleteCat({ open: false, cat: "", count: 0 })
     setDeleteCatAction(null)
-    toast(`${exps.length} despesa(s) movida(s) para "${newCat}"`, "success")
+    if (!ok || expFailures > 0) toast(`Falha ao mover (${expFailures} despesa(s) não atualizada(s))`, "error")
+    else toast(`${exps.length} despesa(s) movida(s) para "${newCat}"`, "success")
   }
 
   async function handleDeleteCategory(cat: string) {
@@ -230,8 +238,9 @@ export default function DespesasPage() {
     const exps = await fetchAuth(`/api/expenses?${params}`).then((r) => r.json())
     const count = Array.isArray(exps) ? exps.length : 0
     if (count === 0) {
-      await saveCategories(categories.filter((c) => c !== cat))
-      toast("Categoria removida", "success")
+      const ok = await saveCategories(categories.filter((c) => c !== cat))
+      if (ok) toast("Categoria removida", "success")
+      else toast("Erro ao remover categoria", "error")
     } else {
       setDeleteCat({ open: true, cat, count })
       setDeleteCatAction(null)

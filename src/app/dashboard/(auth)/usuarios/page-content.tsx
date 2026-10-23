@@ -208,8 +208,13 @@ export default function UsuariosPage() {
       setDeleteConfirm({ open: false, id: "", name: "", isAdmin: false })
       return
     }
-    await fetchAuth(`/api/users/${deleteConfirm.id}`, { method: "DELETE" })
-    toast("Usuário removido com sucesso", "success")
+    const res = await fetchAuth(`/api/users/${deleteConfirm.id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover usuário", "error")
+    } else {
+      toast("Usuário removido com sucesso", "success")
+    }
     setDeleteConfirm({ open: false, id: "", name: "", isAdmin: false })
     loadUsers()
   }

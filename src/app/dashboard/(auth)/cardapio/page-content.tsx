@@ -473,11 +473,16 @@ export default function CardapioPage() {
 
   async function renameCategory(id: string) {
     if (!editingCategoryName.trim()) return
-    await fetchAuth(`/api/categories/${id}`, {
+    const res = await fetchAuth(`/api/categories/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: editingCategoryName, emoji: editingCategoryEmoji || null }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao renomear categoria", "error")
+      return
+    }
     setEditingCategoryId(null)
     setEditingCategoryName("")
     setEditingCategoryEmoji("")
@@ -498,7 +503,7 @@ export default function CardapioPage() {
   async function saveMarginCategory() {
     if (!marginCatId) return
     setSavingMarginCat(true)
-    await fetchAuth(`/api/categories/${marginCatId}`, {
+    const res = await fetchAuth(`/api/categories/${marginCatId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -508,6 +513,11 @@ export default function CardapioPage() {
     })
     setMarginCatId(null)
     setSavingMarginCat(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao salvar margem", "error")
+      return
+    }
     toast("Margem salva", "success")
     loadData()
     refreshPreview()
@@ -613,12 +623,14 @@ export default function CardapioPage() {
   }
 
   async function confirmDelete() {
-    if (deleteConfirm.type === "category") {
-      await fetchAuth(`/api/categories/${deleteConfirm.id}`, { method: "DELETE" })
-      toast("Categoria removida com sucesso", "success")
+    const res = deleteConfirm.type === "category"
+      ? await fetchAuth(`/api/categories/${deleteConfirm.id}`, { method: "DELETE" })
+      : await fetchAuth(`/api/products/${deleteConfirm.id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover", "error")
     } else {
-      await fetchAuth(`/api/products/${deleteConfirm.id}`, { method: "DELETE" })
-      toast("Produto removido com sucesso", "success")
+      toast(deleteConfirm.type === "category" ? "Categoria removida com sucesso" : "Produto removido com sucesso", "success")
     }
     setDeleteConfirm({ open: false, type: "category", id: "", name: "" })
     loadData()
@@ -920,20 +932,28 @@ export default function CardapioPage() {
     if (!establishmentId) return
     try {
       const globalVal = ifoodMarkupGlobal ? parseFloat(ifoodMarkupGlobal) : null
-      await fetchAuth(`/api/establishments/${establishmentId}`, {
+      const res = await fetchAuth(`/api/establishments/${establishmentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ifoodMarkupPercent: globalVal }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast(data.error || "Erro ao salvar configurações", "error")
+        return
+      }
+      let catFailures = 0
       for (const [catId, val] of Object.entries(ifoodMarkupByCategory)) {
         const catVal = val ? parseFloat(val) : null
-        await fetchAuth(`/api/categories/${catId}`, {
+        const catRes = await fetchAuth(`/api/categories/${catId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ifoodMarkupPercent: catVal }),
         })
+        if (!catRes.ok) catFailures++
       }
-      toast("Configurações de comissão salvas", "success")
+      if (catFailures > 0) toast(`Global salva; ${catFailures} categoria(s) não atualizada(s)`, "error")
+      else toast("Configurações de comissão salvas", "success")
       setShowIfoodSettings(false)
     } catch (e) {
       toast("Erro ao salvar configurações", "error")
@@ -955,11 +975,16 @@ export default function CardapioPage() {
           productId,
           callback: async () => {
             // User chose to deactivate featured and activate promo
-            await fetchAuth(`/api/products/${productId}`, {
+            const res = await fetchAuth(`/api/products/${productId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ onSale: true, featured: false, badge: null, featuredDiscountPrice: null }),
             })
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}))
+              toast(err.error || "Erro ao ativar promoção", "error")
+              return
+            }
             setCategories((prev) =>
               prev.map((cat) => ({
                 ...cat,
@@ -1147,11 +1172,16 @@ export default function CardapioPage() {
           productId,
           callback: async () => {
             // User chose to deactivate promo and activate featured
-            await fetchAuth(`/api/products/${productId}`, {
+            const res = await fetchAuth(`/api/products/${productId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ featured: true, onSale: false, promoPrice: null }),
             })
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}))
+              toast(err.error || "Erro ao ativar destaque", "error")
+              return
+            }
             setCategories((prev) =>
               prev.map((cat) => ({
                 ...cat,
@@ -4560,21 +4590,26 @@ export default function CardapioPage() {
                 onClick={async () => {
                   setSavingRecommend(true)
                   try {
+                    const res = recommendModal.type === "category"
+                      ? await fetchAuth(`/api/categories/${recommendModal.targetId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
+                        })
+                      : await fetchAuth(`/api/products/${recommendModal.targetId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
+                        })
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}))
+                      toast(data.error || "Erro ao salvar", "error")
+                      return
+                    }
                     if (recommendModal.type === "category") {
-                      await fetchAuth(`/api/categories/${recommendModal.targetId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
-                      })
                       setCategories(prev => prev.map(c =>
                         c.id === recommendModal.targetId ? { ...c, recommendedProductIds: JSON.stringify(recommendModal.currentIds) } : c
                       ))
-                    } else {
-                      await fetchAuth(`/api/products/${recommendModal.targetId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ recommendedProductIds: JSON.stringify(recommendModal.currentIds) }),
-                      })
                     }
                     toast("Recomendações salvas!", "success")
                     setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })

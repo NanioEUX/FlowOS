@@ -166,16 +166,26 @@ export default function EstoquePage() {
   }
 
   async function deleteFamily(id: string) {
-    await fetchAuth(`/api/stock/${id}?type=family`, { method: "DELETE" })
-    toast("Família removida", "success")
+    const res = await fetchAuth(`/api/stock/${id}?type=family`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover família", "error")
+    } else {
+      toast("Família removida", "success")
+    }
     setDeleteFamilyConfirm({ open: false, id: "", name: "" })
     if (selectedFamilyFilter === id) setSelectedFamilyFilter(null)
     loadAll()
   }
 
   async function deleteCategory(id: string) {
-    await fetchAuth(`/api/stock/${id}?type=category`, { method: "DELETE" })
-    toast("Categoria removida", "success")
+    const res = await fetchAuth(`/api/stock/${id}?type=category`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover categoria", "error")
+    } else {
+      toast("Categoria removida", "success")
+    }
     setDeleteCategoryConfirm({ open: false, id: "", name: "" })
     if (selectedCategoryFilter === id) setSelectedCategoryFilter(null)
     loadAll()
@@ -296,9 +306,14 @@ export default function EstoquePage() {
   }
 
   async function confirmDeleteItem() {
-    await fetchAuth(`/api/stock/${deleteConfirm.id}`, { method: "DELETE" })
-    toast("Item removido com sucesso", "success")
-    window.dispatchEvent(new Event("stock-updated"))
+    const res = await fetchAuth(`/api/stock/${deleteConfirm.id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao remover item", "error")
+    } else {
+      toast("Item removido com sucesso", "success")
+      window.dispatchEvent(new Event("stock-updated"))
+    }
     setDeleteConfirm({ open: false, id: "", name: "" })
     loadAll()
   }
@@ -1254,8 +1269,13 @@ export default function EstoquePage() {
         title="Remover fornecedor"
         message={`Tem certeza que deseja remover "${deleteSupplierConfirm.name}"?`}
         onConfirm={async () => {
-          await fetchAuth(`/api/suppliers/${deleteSupplierConfirm.id}`, { method: "DELETE" })
-          toast("Fornecedor removido", "success")
+          const res = await fetchAuth(`/api/suppliers/${deleteSupplierConfirm.id}`, { method: "DELETE" })
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            toast(data.error || "Erro ao remover fornecedor", "error")
+          } else {
+            toast("Fornecedor removido", "success")
+          }
           setDeleteSupplierConfirm({ open: false, id: "", name: "" })
           loadAll()
         }}

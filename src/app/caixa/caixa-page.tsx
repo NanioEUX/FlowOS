@@ -693,7 +693,7 @@ export default function CaixaPOSPage() {
     await abaterGuard.run(async () => {
     try {
       // Save to API
-      await fetchAuth("/api/partial-payment", {
+      const res = await fetchAuth("/api/partial-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -703,6 +703,11 @@ export default function CaixaPOSPage() {
           paymentMethod: abaterMethod,
         }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast(data.error || "Erro ao registrar abatimento", "error")
+        return
+      }
       // Record cash movement
       if (cashRegister) {
         await fetchAuth(`/api/cash-register/${cashRegister.id}/movements`, {
@@ -714,7 +719,7 @@ export default function CaixaPOSPage() {
             description: `Abatimento - Mesa ${abaterModal}`,
             paymentMethod: abaterMethod,
           }),
-        })
+        }).catch(() => {})
       }
       const updated = { ...tablePartialPaid, [abaterModal]: (tablePartialPaid[abaterModal] || 0) + amount }
       setTablePartialPaid(updated)
@@ -1049,7 +1054,7 @@ export default function CaixaPOSPage() {
         0
       )
       const expected = cashRegister.openingAmount + totalMovements
-      await fetchAuth(`/api/cash-register/${cashRegister.id}`, {
+      const res = await fetchAuth(`/api/cash-register/${cashRegister.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1057,6 +1062,11 @@ export default function CaixaPOSPage() {
           notes: `Fechado por ${user.name}`,
         }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast(data.error || "Erro ao fechar caixa", "error")
+        return
+      }
       setCashRegister(null)
       setShowCashRegisterModal(false)
       setClosingAmount("")
@@ -1083,7 +1093,7 @@ export default function CaixaPOSPage() {
         setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {}, confirmed: false, successTitle: "", successMessage: "" })
         await transferGuard.run(async () => {
         try {
-          await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
+          const res = await fetchAuth(`/api/cash-register/${cashRegister.id}/transfer`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1092,6 +1102,11 @@ export default function CaixaPOSPage() {
               notes: `Transferência de ${user.name}`,
             }),
           })
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            toast(data.error || "Erro ao transferir caixa", "error")
+            return
+          }
           setShowCashRegisterModal(false)
           setTransferUserId("")
           toast("Caixa transferido com sucesso", "success")
@@ -2695,15 +2710,19 @@ export default function CaixaPOSPage() {
                       saved.tableData = updated
                       localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify(saved))
                       // Transfer orders in database
+                      let serverOk = true
                       try {
-                        await fetchAuth("/api/orders/transfer", {
+                        const res = await fetchAuth("/api/orders/transfer", {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ sourceTable: sourceNum, targetTable: targetNum }),
                         })
+                        serverOk = res.ok
                       } catch {}
                       setTransferModal(null)
-                      toast(`Mesa ${sourceNum} transferida para Mesa ${targetNum}`, "success")
+                      // F8B-002: se o servidor falhou, avisa — a mesa local já moveu
+                      if (serverOk) toast(`Mesa ${sourceNum} transferida para Mesa ${targetNum}`, "success")
+                      else toast(`Mesa transferida localmente; servidor não confirmou`, "error")
                     }}
                     className={`flex flex-col items-center justify-center rounded-xl border-2 py-3 text-sm font-bold transition-colors ${
                       isOccupied

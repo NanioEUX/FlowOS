@@ -223,11 +223,15 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   de API não zera mais a tela); `relatorios/page-content.tsx` ganhou `loadError` +
   banner "Não foi possível carregar" (sem mostrar "R$ 0,00" silencioso quando o fetch
   falha); `dashboard/(auth)/layout.tsx` só manda para `/login` em **401/404** —
-  500/offline não derrubam mais a sessão (F8B-006). Restam da F8B: toast de sucesso só
-  com `res.ok` nos demais fluxos + banner de offline.
+  500/offline não derrubam mais a sessão (F8B-006). **F8B-002 completo (23/10)**: `res.ok`
+  antes de todos os toasts de sucesso em 23 fluxos (PDV: abater/fechar/transferir caixa
+  + transferir mesa com aviso se servidor falhou; cardápio: renomear/margem/deletar
+  categoria+produto/comissão iFood/conflict promo-destaque/recomendações; cupons, entregas
+  (cancelar), estoque (família/categoria/item/fornecedor), despesas (4 handlers de categoria
+  com contagem de falhas), usuários). **Resta da F8B**: banner de offline (F8B-012).
 
 ## Pendências imediatas (próxima sessão)
-1. **Fase 8 restante**: F8B (res.ok em todos os toasts + banner offline), acessibilidade
+1. **Fase 8 restante**: F8B (só banner offline — F8B-012), acessibilidade
    (userScalable, `<button>` nos cards, role=dialog, aria-label, htmlFor — F8D-001…),
    responsividade (drawer PDV mobile, KDS TV, CTA motoboy — F8A-001…), PWA seguro
    (banner nova versão, dedup notificação, versionar localStorage — F8A-004…), contraste

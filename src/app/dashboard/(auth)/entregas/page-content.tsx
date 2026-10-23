@@ -193,12 +193,17 @@ export default function EntregasPage() {
   }
 
   async function confirmCancelOrder() {
-    await fetchAuth(`/api/orders/${cancelConfirm.orderId}`, {
+    const res = await fetchAuth(`/api/orders/${cancelConfirm.orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "cancelled" }),
     })
-    toast("Pedido cancelado", "success")
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast(data.error || "Erro ao cancelar pedido", "error")
+    } else {
+      toast("Pedido cancelado", "success")
+    }
     setCancelConfirm({ open: false, orderId: "" })
     loadAll()
   }
