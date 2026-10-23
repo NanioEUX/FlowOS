@@ -199,6 +199,16 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   globalThis sempre, maxDuration, 5 crons, @@index ×4+Order 8º, strings de literal do
   script que mudaram de forma — `take` como variável, `tick` vs `setInterval`). Restantes
   da Fase 3: itens 5 e 8 (imagens e orçamento — decisão do usuário).
+- **Fase 9 parcial (18/10, no working tree)**: **F9A-003** — rota
+  `admin-saas/estabelecimentos/[id]/api` era anônima (middleware só casa `/api/:path*`)
+  → agora `getSaasAdmin()` com 401; **F9-001** — `subscription/webhook` era diretório
+  vazio (removido) e `subscription/create` já tinha ownership (`requireEstablishment`);
+  sandbox de ativação sem pagamento **permanece = decisão F5C-012**; **F9-002/004/008
+  verificados já fechados** (whitelist users, delivery senha≥6+auth, webhooks com
+  verificação — **envs pendentes: `WEBHOOK_99_SECRET` e `IFOOD_WEBHOOK_SECRET`** sem
+  eles é fail-open). Restam da Fase 9 só decisões/feature: jurídico (#5), model
+  Plan/Subscription (#7), LGPD (#9) e PCI do `pagarme/card` (PAN/CVV no servidor =
+  hosted checkout, decisão). Gate: tsc + 150 testes + build OK.
 
 ## Pendências imediatas (próxima sessão)
 1. **Commit da Fase 7 + Fase 5 parcial** (sessão de cliente + hardening OTP + máquina de
