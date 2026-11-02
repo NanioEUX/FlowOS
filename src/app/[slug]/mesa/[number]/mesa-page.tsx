@@ -79,7 +79,14 @@ interface Props {
 }
 
 export function MesaPage({ establishment: est, tableNumber }: Props) {
-  const [darkMode, setDarkMode] = useState(() => est.defaultTheme !== "light")
+  const [darkMode, setDarkMode] = useState(() => {
+    const initial = est.defaultTheme !== "light"
+    // F8C-013: as cores da mesa passaram a usar as variantes `dark:` do Tailwind.
+    // A classe precisa estar no <html> antes do primeiro paint (o useEffect
+    // abaixo roda depois) — senão a mesa pisca na cor errada ao abrir.
+    if (typeof window !== "undefined") applyDarkClass(initial)
+    return initial
+  })
   // F8D-026: as classes `dark:` do Tailwind seguem o toggle da mesa
   useEffect(() => { applyDarkClass(darkMode) }, [darkMode])
   const [cart, setCart] = useState<CartItem[]>([])
@@ -123,9 +130,15 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
     return (r * 299 + g * 587 + b * 114) / 1000 > 160
   }
 
-  const headerBg = est.colorsPublished ? est.headerColor : darkMode ? "#18181b" : "#ffffff"
-  const headerTextColor = est.colorsPublished && isLightColor(est.headerColor) ? "text-zinc-900" : darkMode ? "text-white" : "text-zinc-900"
-  const headerSubtext = est.colorsPublished && isLightColor(est.headerColor) ? "text-zinc-500" : darkMode ? "text-zinc-500" : "text-zinc-500"
+  // F8C-013: o fallback era a string "#ffffff dark:#18181b" passada como
+  // `backgroundColor` (estilo inline) — isso NÃO é CSS válido, então o
+  // navegador ignorava e o header ficava sem fundo quando a loja não tinha
+  // cores publicadas. Agora a cor do tema vem de classe (com variante `dark:`)
+  // e o estilo inline só é usado quando existe cor do lojista.
+  const usesCustomHeader = !!est.colorsPublished && !!est.headerColor
+  const headerBg = usesCustomHeader ? est.headerColor : undefined
+  const headerTextColor = usesCustomHeader && isLightColor(est.headerColor) ? "text-zinc-900" : "text-zinc-900 dark:text-white"
+  const headerSubtext = usesCustomHeader && isLightColor(est.headerColor) ? "text-zinc-500" : "text-zinc-500 dark:text-zinc-500"
 
   const checkTable = useCallback(async () => {
     try {
@@ -321,37 +334,37 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
   // Closed table screen
   if (tableStatus && !tableStatus.open && !loading) {
     return (
-      <div className={`flex min-h-screen flex-col items-center justify-center p-8 ${darkMode ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}>
+      <div className={`flex min-h-screen flex-col items-center justify-center p-8 bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white`}>
         {est.logo ? <img src={est.logo} alt={est.name} className="mb-6 h-20 w-20 rounded-2xl object-cover" /> : <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-600 text-3xl font-bold text-white">{est.name.charAt(0)}</div>}
         <h1 className="mb-2 text-2xl font-bold">{est.name}</h1>
         <p className="mb-1 text-lg font-semibold text-amber-600">Mesa {tableNumber}</p>
-        <div className={`mt-6 rounded-2xl border-2 border-dashed px-8 py-6 text-center ${darkMode ? "border-zinc-600" : "border-zinc-300"}`}>
+        <div className={`mt-6 rounded-2xl border-2 border-dashed px-8 py-6 text-center border-zinc-300 dark:border-zinc-600`}>
           <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500" />
           <p className="text-xl font-bold">Mesa encerrada</p>
-          <p className={`mt-1 text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Obrigado pela visita!</p>
+          <p className={`mt-1 text-sm text-zinc-500 dark:text-zinc-500`}>Obrigado pela visita!</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={`flex h-screen flex-col ${darkMode ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}>
+    <div className={`flex h-screen flex-col bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4" style={{ backgroundColor: headerBg }}>
+      <div className={`flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4 ${usesCustomHeader ? "" : "bg-white dark:bg-zinc-900"}`} style={{ backgroundColor: headerBg }}>
         {/* Left: logo + establishment - hidden on mobile */}
         <div className="hidden lg:flex items-center gap-3">
           {est.logo ? <img src={est.logo} alt={est.name} className="h-11 w-11 rounded-xl object-cover shadow-sm" /> : <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-green-600 text-sm font-bold text-white shadow-sm`}>{est.name.charAt(0)}</div>}
           <div>
             <span className={`text-sm font-semibold ${headerSubtext}`}>{est.name}</span>
             {est.description && (
-              <p className={`text-[10px] leading-tight ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>{est.description}</p>
+              <p className={`text-[10px] leading-tight text-zinc-500 dark:text-zinc-500`}>{est.description}</p>
             )}
           </div>
         </div>
 
         {/* Center: table number */}
         <div className="flex items-center gap-2">
-          <div className={`rounded-2xl px-4 py-1.5 lg:px-6 lg:py-2 shadow-sm ${est.colorsPublished && isLightColor(est.headerColor) ? "bg-zinc-900 text-white" : darkMode ? "bg-white/10 text-white" : "bg-zinc-900 text-white"}`}>
+          <div className={`rounded-2xl px-4 py-1.5 lg:px-6 lg:py-2 shadow-sm ${est.colorsPublished && isLightColor(est.headerColor) ? "bg-zinc-900 text-white" : "bg-zinc-900 text-white dark:bg-white/10 dark:text-white"}`}>
             <span className="text-lg lg:text-2xl font-extrabold tracking-tight">Mesa {tableNumber}</span>
           </div>
         </div>
@@ -375,7 +388,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               <span className="sm:hidden">Conta</span>
             </button>
           )}
-          <button onClick={() => setDarkMode(!darkMode)} className={`rounded-xl p-2.5 lg:p-3 transition-colors ${darkMode ? "bg-zinc-800 hover:bg-zinc-700" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+          <button onClick={() => setDarkMode(!darkMode)} className={`rounded-xl p-2.5 lg:p-3 transition-colors bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700`}>
             {darkMode ? <Sun className="h-4 w-4 lg:h-5 lg:w-5" /> : <Moon className="h-4 w-4 lg:h-5 lg:w-5" />}
           </button>
         </div>
@@ -384,10 +397,10 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       {/* Success overlay */}
       {showSuccess && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className={`rounded-2xl p-8 text-center shadow-2xl ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
+          <div className={`rounded-2xl p-8 text-center shadow-2xl bg-white dark:bg-zinc-800`}>
             <CheckCircle className="mx-auto mb-3 h-16 w-16 text-green-500" />
-            <p className={`text-xl font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Pedido enviado!</p>
-            <p className={`mt-1 text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Em breve será preparado</p>
+            <p className={`text-xl font-bold text-zinc-900 dark:text-white`}>Pedido enviado!</p>
+            <p className={`mt-1 text-sm text-zinc-500 dark:text-zinc-500`}>Em breve será preparado</p>
           </div>
         </div>
       )}
@@ -395,12 +408,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       {/* Payment modal - new unified design */}
       {showPaymentModal && tableStatus && tableStatus.totalPending > 0 && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) resetPayment() }}>
-          <div className={`w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
+          <div className={`w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-800`}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b dark:border-zinc-700">
               <div>
                 <h2 className="text-lg font-bold">Fechar Mesa {tableNumber}</h2>
-                <p className={`text-xs ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Confirme os itens e a forma de pagamento</p>
+                <p className={`text-xs text-zinc-500 dark:text-zinc-500`}>Confirme os itens e a forma de pagamento</p>
               </div>
               <button onClick={resetPayment} className="rounded-lg p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700" aria-label="Fechar">
                 <X className="h-5 w-5" />
@@ -409,9 +422,9 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
 
             <div className="p-6 space-y-5">
               {/* Total info */}
-              <div className={`rounded-xl border p-4 ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
+              <div className={`rounded-xl border p-4 border-zinc-200 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-700/50`}>
                 <div className="flex justify-between text-sm">
-                  <span className={darkMode ? "text-zinc-500" : "text-zinc-500"}>Total da mesa</span>
+                  <span className={"text-zinc-500 dark:text-zinc-500"}>Total da mesa</span>
                   <span className="font-bold">{formatCurrency(tableStatus.totalPending)}</span>
                 </div>
                 {partialPaid > 0 && (
@@ -420,31 +433,31 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                     <span className="font-bold text-blue-600">− {formatCurrency(partialPaid)}</span>
                   </div>
                 )}
-                <div className={`mt-2 pt-2 border-t flex justify-between text-sm ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                  <span className={darkMode ? "text-zinc-500" : "text-zinc-500"}>Restante a cobrar</span>
+                <div className={`mt-2 pt-2 border-t flex justify-between text-sm border-zinc-200 dark:border-zinc-600`}>
+                  <span className={"text-zinc-500 dark:text-zinc-500"}>Restante a cobrar</span>
                   <span className="text-lg font-extrabold text-green-600">{formatCurrency(Math.max(0, (chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "abater" ? (parseFloat(discountAmount) || 0) : tableStatus.totalPending) - partialPaid))}</span>
                 </div>
               </div>
 
               {/* FORMA DE COBRANÇA */}
               <div>
-                <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Forma de Cobrança</p>
+                <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-500`}>Forma de Cobrança</p>
                 <div className="grid grid-cols-4 gap-2">
-                  <button onClick={() => { setChargeMethod("unique"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "unique" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                    <CreditCard className={`h-5 w-5 ${chargeMethod === "unique" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "unique" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Pagamento único</span>
+                  <button onClick={() => { setChargeMethod("unique"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "unique" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                    <CreditCard className={`h-5 w-5 ${chargeMethod === "unique" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "unique" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Pagamento único</span>
                   </button>
-                  <button onClick={() => { setChargeMethod("split"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "split" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                    <div className={`h-5 w-5 flex items-center justify-center ${chargeMethod === "split" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`}>÷</div>
-                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "split" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Dividir igual</span>
+                  <button onClick={() => { setChargeMethod("split"); setPixQrCode(null) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "split" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                    <div className={`h-5 w-5 flex items-center justify-center ${chargeMethod === "split" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`}>÷</div>
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "split" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Dividir igual</span>
                   </button>
-                  <button onClick={() => { setChargeMethod("each"); setPixQrCode(null); setSelectedItems(new Set()) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "each" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                    <Users className={`h-5 w-5 ${chargeMethod === "each" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "each" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Cada um paga</span>
+                  <button onClick={() => { setChargeMethod("each"); setPixQrCode(null); setSelectedItems(new Set()) }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "each" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                    <Users className={`h-5 w-5 ${chargeMethod === "each" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "each" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Cada um paga</span>
                   </button>
-                  <button onClick={() => { setChargeMethod("abater"); setPixQrCode(null); setDiscountAmount("") }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "abater" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                    <MinusCircle className={`h-5 w-5 ${chargeMethod === "abater" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "abater" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Abater</span>
+                  <button onClick={() => { setChargeMethod("abater"); setPixQrCode(null); setDiscountAmount("") }} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${chargeMethod === "abater" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                    <MinusCircle className={`h-5 w-5 ${chargeMethod === "abater" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                    <span className={`text-[11px] font-bold leading-tight ${chargeMethod === "abater" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Abater</span>
                   </button>
                 </div>
               </div>
@@ -452,18 +465,18 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {/* SPLIT:人数 */}
               {chargeMethod === "split" && !pixQrCode && (
                 <div>
-                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Quantas pessoas?</p>
+                  <p className={`mb-2 text-xs font-bold text-zinc-500 dark:text-zinc-500`}>Quantas pessoas?</p>
                   <div className="flex items-center justify-center gap-4">
-                    <button onClick={() => setSplitCount(String(Math.max(2, parseInt(splitCount) - 1)))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                    <button onClick={() => setSplitCount(String(Math.max(2, parseInt(splitCount) - 1)))} className={`flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600`}>
                       <Minus className="h-4 w-4" />
                     </button>
                     <span className={`w-12 text-center text-2xl font-bold`}>{splitCount}</span>
-                    <button onClick={() => setSplitCount(String(parseInt(splitCount) + 1))} className={`flex h-10 w-10 items-center justify-center rounded-full ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                    <button onClick={() => setSplitCount(String(parseInt(splitCount) + 1))} className={`flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600`}>
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
                   {parseInt(splitCount) >= 2 && (
-                    <div className={`mt-2 text-center text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>
+                    <div className={`mt-2 text-center text-sm text-zinc-500 dark:text-zinc-500`}>
                       <span className="font-bold text-green-600">{formatCurrency(tableStatus.totalPending / parseInt(splitCount))}</span> por pessoa
                     </div>
                   )}
@@ -473,22 +486,22 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {/* EACH: itens */}
               {chargeMethod === "each" && !pixQrCode && (
                 <div>
-                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Selecione os itens que deseja pagar:</p>
+                  <p className={`mb-2 text-xs font-bold text-zinc-500 dark:text-zinc-500`}>Selecione os itens que deseja pagar:</p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {tableItems.map((item, idx) => (
-                      <button key={idx} onClick={() => toggleItemSelection(idx)} className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${selectedItems.has(idx) ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
+                      <button key={idx} onClick={() => toggleItemSelection(idx)} className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${selectedItems.has(idx) ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
                         <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${selectedItems.has(idx) ? "border-green-500 bg-green-500" : "border-zinc-300"}`}>
                           {selectedItems.has(idx) && <CheckCircle className="h-3 w-3 text-white" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
+                          <p className={`text-sm font-medium truncate text-zinc-800 dark:text-zinc-100`}>{item.quantity}x {item.name}</p>
                         </div>
-                        <span className={`text-sm font-bold ${darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                        <span className={`text-sm font-bold text-zinc-700 dark:text-zinc-200`}>{formatCurrency(item.price * item.quantity)}</span>
                       </button>
                     ))}
                   </div>
                   {selectedItems.size > 0 && (
-                    <div className={`mt-2 text-center text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>
+                    <div className={`mt-2 text-center text-sm text-zinc-500 dark:text-zinc-500`}>
                       <span className="font-bold text-green-600">{formatCurrency(getSelectedTotal())}</span> selecionado(s)
                     </div>
                   )}
@@ -498,10 +511,10 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {/* ABATER: valor */}
               {chargeMethod === "abater" && !pixQrCode && (
                 <div>
-                  <p className={`mb-2 text-xs font-bold ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Quanto deseja pagar?</p>
+                  <p className={`mb-2 text-xs font-bold text-zinc-500 dark:text-zinc-500`}>Quanto deseja pagar?</p>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-600">R$</span>
-                    <input type="number" step="0.01" min="0" placeholder="0,00" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} className={`w-full rounded-xl border-2 py-3.5 pl-12 pr-4 text-center text-xl font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-zinc-600 bg-zinc-700" : "border-zinc-200"}`} />
+                    <input type="number" step="0.01" min="0" placeholder="0,00" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} className={`w-full rounded-xl border-2 py-3.5 pl-12 pr-4 text-center text-xl font-bold focus:border-green-500 focus:outline-none border-zinc-200 dark:border-zinc-600 dark:bg-zinc-700`} />
                   </div>
                 </div>
               )}
@@ -509,19 +522,19 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {/* FORMA DE PAGAMENTO */}
               {!pixQrCode && (
                 <div>
-                  <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Forma de Pagamento</p>
+                  <p className={`mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-500`}>Forma de Pagamento</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => setPayMethod("cash")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "cash" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                      <Banknote className={`h-5 w-5 ${payMethod === "cash" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                      <span className={`text-[11px] font-bold ${payMethod === "cash" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Dinheiro</span>
+                    <button onClick={() => setPayMethod("cash")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "cash" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                      <Banknote className={`h-5 w-5 ${payMethod === "cash" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "cash" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Dinheiro</span>
                     </button>
-                    <button onClick={() => setPayMethod("card")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "card" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                      <CreditCard className={`h-5 w-5 ${payMethod === "card" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                      <span className={`text-[11px] font-bold ${payMethod === "card" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Cartão</span>
+                    <button onClick={() => setPayMethod("card")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "card" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                      <CreditCard className={`h-5 w-5 ${payMethod === "card" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "card" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Cartão</span>
                     </button>
-                    <button onClick={() => setPayMethod("pix")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "pix" ? "border-green-500 bg-green-50 dark:bg-green-950" : darkMode ? "border-zinc-600 hover:border-zinc-500" : "border-zinc-200 hover:border-zinc-300"}`}>
-                      <QrCode className={`h-5 w-5 ${payMethod === "pix" ? "text-green-600" : darkMode ? "text-zinc-500" : "text-zinc-500"}`} />
-                      <span className={`text-[11px] font-bold ${payMethod === "pix" ? "text-green-700 dark:text-green-400" : darkMode ? "text-zinc-300" : "text-zinc-700"}`}>Pix</span>
+                    <button onClick={() => setPayMethod("pix")} className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-colors ${payMethod === "pix" ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-600 dark:hover:border-zinc-500"}`}>
+                      <QrCode className={`h-5 w-5 ${payMethod === "pix" ? "text-green-600" : "text-zinc-500 dark:text-zinc-500"}`} />
+                      <span className={`text-[11px] font-bold ${payMethod === "pix" ? "text-green-700 dark:text-green-400" : "text-zinc-700 dark:text-zinc-300"}`}>Pix</span>
                     </button>
                   </div>
                 </div>
@@ -530,12 +543,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {/* QR Code display */}
               {pixQrCode && (
                 <div className="text-center">
-                  <p className={`mb-3 text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Escaneie o QR Code com o app do banco</p>
+                  <p className={`mb-3 text-sm text-zinc-500 dark:text-zinc-500`}>Escaneie o QR Code com o app do banco</p>
                   <img src={pixQrCode} alt="QR Code Pix" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
                   <p className="mt-4 text-2xl font-bold text-green-600">
                     {formatCurrency(chargeMethod === "each" ? getSelectedTotal() : chargeMethod === "split" ? (tableStatus.totalPending / Math.max(parseInt(splitCount) || 1, 1)) : parseFloat(discountAmount) || tableStatus.totalPending)}
                   </p>
-                  <button onClick={() => setPixQrCode(null)} className={`mt-3 rounded-xl px-4 py-2 text-sm font-medium ${darkMode ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200"}`}>
+                  <button onClick={() => setPixQrCode(null)} className={`mt-3 rounded-xl px-4 py-2 text-sm font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600`}>
                     Voltar
                   </button>
                 </div>
@@ -543,23 +556,23 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
 
               {/* Cash/Card message */}
               {!pixQrCode && (payMethod === "cash" || payMethod === "card") && (
-                <div className={`rounded-xl border p-4 text-center ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-zinc-50"}`}>
-                  <p className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Dirija-se ao caixa para pagar</p>
-                  <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>{payMethod === "cash" ? "Dinheiro" : "Cartão de crédito/débito"}</p>
+                <div className={`rounded-xl border p-4 text-center border-zinc-200 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-700/50`}>
+                  <p className={`text-sm font-medium text-zinc-600 dark:text-zinc-300`}>Dirija-se ao caixa para pagar</p>
+                  <p className={`mt-1 text-xs text-zinc-500 dark:text-zinc-500`}>{payMethod === "cash" ? "Dinheiro" : "Cartão de crédito/débito"}</p>
                 </div>
               )}
 
               {/* VER DETALHES */}
-              <button onClick={() => setShowDetails(!showDetails)} className={`flex w-full items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold uppercase tracking-wider transition-colors ${showDetails ? "border-green-500 text-green-600" : darkMode ? "border-zinc-600 text-zinc-500 hover:border-zinc-500" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}>
+              <button onClick={() => setShowDetails(!showDetails)} className={`flex w-full items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold uppercase tracking-wider transition-colors ${showDetails ? "border-green-500 text-green-600" : "border-zinc-200 text-zinc-500 hover:border-zinc-300 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500"}`}>
                 <ChevronDown className={`h-4 w-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
                 Ver detalhes ({tableItems.length} {tableItems.length === 1 ? "item" : "itens"})
               </button>
               {showDetails && (
                 <div className="space-y-2">
                   {tableItems.map((item, idx) => (
-                    <div key={idx} className={`flex items-center justify-between rounded-xl px-3 py-2 ${darkMode ? "bg-zinc-700/50" : "bg-zinc-50"}`}>
-                      <span className={`text-xs ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>{item.quantity}x {item.name}</span>
-                      <span className={`text-xs font-bold ${darkMode ? "text-zinc-200" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                    <div key={idx} className={`flex items-center justify-between rounded-xl px-3 py-2 bg-zinc-50 dark:bg-zinc-700/50`}>
+                      <span className={`text-xs text-zinc-600 dark:text-zinc-300`}>{item.quantity}x {item.name}</span>
+                      <span className={`text-xs font-bold text-zinc-700 dark:text-zinc-200`}>{formatCurrency(item.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
@@ -597,38 +610,38 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Products - left */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className={`sticky top-0 z-10 pb-3 ${darkMode ? "bg-zinc-900" : "bg-white"}`}>
-            <input type="text" placeholder="Buscar produto..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`mb-3 w-full rounded-2xl border px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-500"}`} />
+          <div className={`sticky top-0 z-10 pb-3 bg-white dark:bg-zinc-900`}>
+            <input type="text" placeholder="Buscar produto..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`mb-3 w-full rounded-2xl border px-5 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500 border-zinc-200 bg-zinc-50 placeholder:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500`} />
             <div className="flex gap-2 overflow-x-auto pb-2">
-              <button onClick={() => setActiveCategory("all")} className={`shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${activeCategory === "all" ? "bg-green-600 text-white shadow-sm" : darkMode ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>Todos</button>
+              <button onClick={() => setActiveCategory("all")} className={`shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${activeCategory === "all" ? "bg-green-600 text-white shadow-sm" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"}`}>Todos</button>
               {est.categories.map((cat) => (
-                <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${activeCategory === cat.id ? "bg-green-600 text-white shadow-sm" : darkMode ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}>{cat.name}</button>
+                <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`shrink-0 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors ${activeCategory === cat.id ? "bg-green-600 text-white shadow-sm" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"}`}>{cat.name}</button>
               ))}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             {filteredProducts.map((product) => (
-              <button key={product.id} onClick={() => addToCart(product)} className={`flex flex-col rounded-2xl border p-3 text-left transition-all hover:shadow-lg active:scale-[0.97] ${darkMode ? "border-zinc-700 bg-zinc-800 hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"}`}>
-                {product.image ? <img src={product.image} alt={product.name} className="mb-3 h-28 w-full rounded-xl object-cover" /> : <div className={`mb-3 flex h-28 w-full items-center justify-center rounded-xl text-4xl ${darkMode ? "bg-zinc-700" : "bg-zinc-100"}`}>🍕</div>}
-                <p className={`text-sm font-bold leading-tight ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{product.name}</p>
+              <button key={product.id} onClick={() => addToCart(product)} className={`flex flex-col rounded-2xl border p-3 text-left transition-all hover:shadow-lg active:scale-[0.97] border-zinc-200 bg-white hover:border-green-400 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-green-500`}>
+                {product.image ? <img src={product.image} alt={product.name} className="mb-3 h-28 w-full rounded-xl object-cover" /> : <div className={`mb-3 flex h-28 w-full items-center justify-center rounded-xl text-4xl bg-zinc-100 dark:bg-zinc-700`}>🍕</div>}
+                <p className={`text-sm font-bold leading-tight text-zinc-800 dark:text-zinc-100`}>{product.name}</p>
                 <p className="mt-1.5 text-sm font-extrabold text-green-600">{formatCurrency(product.price)}</p>
               </button>
             ))}
           </div>
-          <p className={`text-center text-[10px] py-4 ${darkMode ? "text-zinc-600" : "text-zinc-500"}`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
+          <p className={`text-center text-[10px] py-4 text-zinc-500 dark:text-zinc-600`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
         </div>
 
         {/* Right panel - Cart + Orders - desktop only */}
-        <div className={`hidden lg:flex w-80 flex-col border-l ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-zinc-50"}`}>
+        <div className={`hidden lg:flex w-80 flex-col border-l border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800`}>
           {/* Tabs */}
-          <div className={`flex border-b ${darkMode ? "border-zinc-700" : "border-zinc-200"}`}>
-            <button onClick={() => setRightTab("cart")} className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold transition-colors ${rightTab === "cart" ? "border-b-2 border-green-600 text-green-600" : darkMode ? "text-zinc-500 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700"}`}>
+          <div className={`flex border-b border-zinc-200 dark:border-zinc-700`}>
+            <button onClick={() => setRightTab("cart")} className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold transition-colors ${rightTab === "cart" ? "border-b-2 border-green-600 text-green-600" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200"}`}>
               <ShoppingBag className="h-3.5 w-3.5" />
               Carrinho
               {cart.length > 0 && <span className="rounded-full bg-green-600 px-1.5 py-0.5 text-[10px] text-white">{cart.reduce((s, i) => s + i.quantity, 0)}</span>}
             </button>
-            <button onClick={() => setRightTab("orders")} className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold transition-colors ${rightTab === "orders" ? "border-b-2 border-green-600 text-green-600" : darkMode ? "text-zinc-500 hover:text-zinc-200" : "text-zinc-500 hover:text-zinc-700"}`}>
+            <button onClick={() => setRightTab("orders")} className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold transition-colors ${rightTab === "orders" ? "border-b-2 border-green-600 text-green-600" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200"}`}>
               <UtensilsCrossed className="h-3.5 w-3.5" />
               Pedidos
               {activeOrders.length > 0 && <span className="rounded-full bg-green-600 px-1.5 py-0.5 text-[10px] text-white">{activeOrders.length}</span>}
@@ -641,33 +654,33 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
             {rightTab === "cart" && (
               cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${darkMode ? "bg-zinc-700" : "bg-zinc-100"}`}>
+                  <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-700`}>
                     <ShoppingBag className="h-8 w-8 text-zinc-500" />
                   </div>
-                  <p className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Seu carrinho está vazio</p>
-                    <p className={`mt-1 text-xs ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Toque nos produtos para adicionar</p>
+                  <p className={`text-sm font-medium text-zinc-600 dark:text-zinc-300`}>Seu carrinho está vazio</p>
+                    <p className={`mt-1 text-xs text-zinc-500 dark:text-zinc-500`}>Toque nos produtos para adicionar</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {cart.map((item) => (
-                    <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 ${darkMode ? "bg-zinc-700" : "bg-white"}`}>
+                    <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 bg-white dark:bg-zinc-700`}>
                       <div className="flex-1 min-w-0">
-                        <p className={`truncate text-sm font-bold ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.name}</p>
-                        <p className={`text-xs font-medium ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
+                        <p className={`truncate text-sm font-bold text-zinc-800 dark:text-zinc-100`}>{item.name}</p>
+                        <p className={`text-xs font-medium text-zinc-500 dark:text-zinc-500`}>{formatCurrency(item.price)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-100 hover:bg-zinc-200"}`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-600 dark:hover:bg-zinc-500`}
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        <span className={`w-7 text-center text-base font-bold ${darkMode ? "text-zinc-200" : ""}`}>
+                        <span className={`w-7 text-center text-base font-bold dark:text-zinc-200`}>
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-100 hover:bg-zinc-200"}`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-600 dark:hover:bg-zinc-500`}
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -689,16 +702,16 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                     const parsedItems = (() => { try { return typeof order.items === "string" ? JSON.parse(order.items) : order.items } catch { return [] } })() as OrderItem[]
                     const st = STATUS_CONFIG[order.status] || STATUS_CONFIG.new
                     return (
-                      <div key={order.id} className={`rounded-xl border p-3 ${darkMode ? "border-zinc-600 bg-zinc-700/50" : "border-zinc-200 bg-white"}`}>
+                      <div key={order.id} className={`rounded-xl border p-3 border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-700/50`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-zinc-500">#{order.orderNumber || "—"}</span>
-                          <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${darkMode ? "text-zinc-500 bg-zinc-700" : "text-zinc-500 bg-zinc-100"}`}>
+                          <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-zinc-500 bg-zinc-100 dark:text-zinc-500 dark:bg-zinc-700`}>
                             <Clock className="h-3 w-3" />
                             {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
                         {parsedItems.map((item, idx) => (
-                          <p key={idx} className={`text-xs ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>{item.quantity}x {item.name} — {formatCurrency(item.price * item.quantity)}</p>
+                          <p key={idx} className={`text-xs text-zinc-600 dark:text-zinc-300`}>{item.quantity}x {item.name} — {formatCurrency(item.price * item.quantity)}</p>
                         ))}
                         <p className="mt-1 text-xs font-bold text-green-600">{formatCurrency(order.total)}</p>
                       </div>
@@ -708,7 +721,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <UtensilsCrossed className="mb-3 h-10 w-10 text-zinc-300" />
-                  <p className={`text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Nenhum pedido ainda</p>
+                  <p className={`text-sm text-zinc-500 dark:text-zinc-500`}>Nenhum pedido ainda</p>
                 </div>
               )
             )}
@@ -716,12 +729,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
 
           {/* Bottom bar - FIXED */}
           {true && (
-            <div className={`shrink-0 border-t px-4 py-3 ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+            <div className={`shrink-0 border-t px-4 py-3 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800`}>
               {cart.length > 0 ? (
                 <>
                   {showNotes ? (
                     <div className="mb-3">
-                      <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-wide ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Observações</p>
+                      <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-500`}>Observações</p>
                       <textarea
                         value={orderNotes}
                         onChange={(e) => setOrderNotes(e.target.value)}
@@ -730,13 +743,13 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                         maxLength={200}
                         autoFocus
                         rows={2}
-                        className={`w-full resize-none rounded-xl border px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-500"}`}
+                        className={`w-full resize-none rounded-xl border px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 border-zinc-200 bg-zinc-50 placeholder:text-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:placeholder:text-zinc-500`}
                       />
                     </div>
                   ) : (
                     <button
                       onClick={() => setShowNotes(true)}
-                      className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2.5 text-xs font-medium transition-colors ${orderNotes ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400" : darkMode ? "border-zinc-600 text-zinc-500 hover:border-zinc-500" : "border-zinc-200 text-zinc-500 hover:border-zinc-300"}`}
+                      className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2.5 text-xs font-medium transition-colors ${orderNotes ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400" : "border-zinc-200 text-zinc-500 hover:border-zinc-300 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500"}`}
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
                       {orderNotes ? `Observação: ${orderNotes.slice(0, 40)}${orderNotes.length > 40 ? "..." : ""}` : "Adicionar observação"}
@@ -744,7 +757,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                   )}
 
                   <div className="mb-3 flex items-center justify-between">
-                    <span className={`text-sm font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Total</span>
+                    <span className={`text-sm font-medium text-zinc-600 dark:text-zinc-300`}>Total</span>
                     <span className="text-xl font-bold text-green-600">{formatCurrency(cartTotal)}</span>
                   </div>
                   <button onClick={sendOrder} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]">
@@ -752,7 +765,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                   </button>
                 </>
               ) : null}
-              <p className={`text-center text-[10px] ${cart.length > 0 ? "pt-3" : ""} ${darkMode ? "text-zinc-600" : "text-zinc-500"}`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
+              <p className={`text-center text-[10px] ${cart.length > 0 ? "pt-3" : ""} text-zinc-500 dark:text-zinc-600`}>Powered by <span className="font-semibold text-green-600">FlowOS</span></p>
             </div>
           )}
         </div>
@@ -761,13 +774,13 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       {/* Mobile Cart Drawer */}
       {mobileCartOpen && (
         <div role="dialog" aria-modal="true" aria-label="Carrinho" className="fixed inset-0 z-50 lg:hidden" onClick={(e) => { if (e.target === e.currentTarget) setMobileCartOpen(false) }}>
-          <div className={`absolute bottom-0 left-0 right-0 max-h-[85vh] rounded-t-3xl overflow-y-auto ${darkMode ? "bg-zinc-800 text-white" : "bg-white text-zinc-900"}`}>
-            <div className={`sticky top-0 flex items-center justify-between px-4 py-3 border-b ${darkMode ? "border-zinc-700 bg-zinc-800" : "border-zinc-200 bg-white"}`}>
+          <div className={`absolute bottom-0 left-0 right-0 max-h-[85vh] rounded-t-3xl overflow-y-auto bg-white text-zinc-900 dark:bg-zinc-800 dark:text-white`}>
+            <div className={`sticky top-0 flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800`}>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold">Carrinho</h3>
                 {cart.length > 0 && <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs text-white">{cart.reduce((s, i) => s + i.quantity, 0)}</span>}
               </div>
-              <button onClick={() => setMobileCartOpen(false)} aria-label="Fechar carrinho" className={`p-1 rounded-lg ${darkMode ? "hover:bg-zinc-700" : "hover:bg-zinc-100"}`}>
+              <button onClick={() => setMobileCartOpen(false)} aria-label="Fechar carrinho" className={`p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700`}>
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
@@ -775,22 +788,22 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
               {cart.length === 0 ? (
                 <div className="text-center py-8">
                   <ShoppingBag className="mx-auto h-12 w-12 text-zinc-500 mb-2" />
-                  <p className={`text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Carrinho vazio</p>
+                  <p className={`text-sm text-zinc-500 dark:text-zinc-500`}>Carrinho vazio</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {cart.map((item) => (
-                    <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 ${darkMode ? "bg-zinc-700" : "bg-zinc-50"}`}>
+                    <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 bg-zinc-50 dark:bg-zinc-700`}>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-bold truncate ${darkMode ? "text-zinc-100" : "text-zinc-800"}`}>{item.name}</p>
-                        <p className={`text-xs ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
+                        <p className={`text-sm font-bold truncate text-zinc-800 dark:text-zinc-100`}>{item.name}</p>
+                        <p className={`text-xs text-zinc-500 dark:text-zinc-500`}>{formatCurrency(item.price)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => updateQuantity(item.id, -1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}>
+                        <button onClick={() => updateQuantity(item.id, -1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-600 dark:hover:bg-zinc-500`}>
                           <Minus className="h-3 w-3" />
                         </button>
                         <span className="w-6 text-center font-bold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${darkMode ? "bg-zinc-600 hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}>
+                        <button onClick={() => updateQuantity(item.id, 1)} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-600 dark:hover:bg-zinc-500`}>
                           <Plus className="h-3 w-3" />
                         </button>
                         <button onClick={() => removeItem(item.id)} className="ml-1 text-red-400 hover:text-red-600" aria-label="Fechar">
@@ -799,8 +812,8 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                       </div>
                     </div>
                   ))}
-                  <div className={`flex justify-between items-center pt-3 border-t ${darkMode ? "border-zinc-600" : "border-zinc-200"}`}>
-                    <span className={`font-medium ${darkMode ? "text-zinc-300" : "text-zinc-600"}`}>Total</span>
+                  <div className={`flex justify-between items-center pt-3 border-t border-zinc-200 dark:border-zinc-600`}>
+                    <span className={`font-medium text-zinc-600 dark:text-zinc-300`}>Total</span>
                     <span className="text-xl font-bold text-green-600">{formatCurrency(cartTotal)}</span>
                   </div>
                   <button onClick={sendOrder} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50">
@@ -835,12 +848,12 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
       {/* Review Modal */}
       {showReviewModal && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${darkMode ? "bg-zinc-800" : "bg-white"}`}>
+          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl bg-white dark:bg-zinc-800`}>
             {reviewSent ? (
               <div className="py-6 text-center">
                 <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500" />
-                <p className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Obrigado!</p>
-                <p className={`mt-1 text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Sua avaliação foi registrada.</p>
+                <p className={`text-lg font-bold text-zinc-900 dark:text-white`}>Obrigado!</p>
+                <p className={`mt-1 text-sm text-zinc-500 dark:text-zinc-500`}>Sua avaliação foi registrada.</p>
                 <button
                   onClick={() => { setShowReviewModal(false); setReviewRating(0); setReviewComment(""); setReviewPhone(""); setReviewSent(false) }}
                   className="mt-6 w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700"
@@ -851,13 +864,13 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
             ) : (
               <>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Avalie sua experiência</h2>
-                  <button onClick={() => setShowReviewModal(false)} className={`rounded-lg p-1 ${darkMode ? "text-zinc-500 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                  <h2 className={`text-lg font-bold text-zinc-900 dark:text-white`}>Avalie sua experiência</h2>
+                  <button onClick={() => setShowReviewModal(false)} className={`rounded-lg p-1 text-zinc-500 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-white`} aria-label="Fechar">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
-                <p className={`mb-4 text-sm ${darkMode ? "text-zinc-500" : "text-zinc-500"}`}>Como foi sua experiência na Mesa {tableNumber}?</p>
+                <p className={`mb-4 text-sm text-zinc-500 dark:text-zinc-500`}>Como foi sua experiência na Mesa {tableNumber}?</p>
 
                 {/* Stars */}
                 <div className="mb-4 flex justify-center gap-2">
@@ -878,7 +891,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder="Deixe um comentário (opcional)"
                   rows={3}
-                  className={`mb-3 w-full resize-none rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-500"}`}
+                  className={`mb-3 w-full resize-none rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-zinc-200 bg-zinc-50 placeholder:text-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:placeholder:text-zinc-500`}
                 />
 
                 {/* Phone */}
@@ -887,7 +900,7 @@ export function MesaPage({ establishment: est, tableNumber }: Props) {
                   value={reviewPhone}
                   onChange={(e) => setReviewPhone(e.target.value)}
                   placeholder="Telefone (opcional)"
-                  className={`mb-4 w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${darkMode ? "border-zinc-600 bg-zinc-700 text-white placeholder:text-zinc-500" : "border-zinc-200 bg-zinc-50 placeholder:text-zinc-500"}`}
+                  className={`mb-4 w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 border-zinc-200 bg-zinc-50 placeholder:text-zinc-500 dark:border-zinc-600 dark:bg-zinc-700 dark:text-white dark:placeholder:text-zinc-500`}
                 />
 
                 {/* Submit */}

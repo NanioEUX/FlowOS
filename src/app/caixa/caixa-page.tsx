@@ -127,7 +127,15 @@ export default function CaixaPOSPage() {
   const [allTableItems, setAllTableItems] = useState<any[]>([])
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("pedefacil-caixa-theme") !== "light"
+      const stored = localStorage.getItem("pedefacil-caixa-theme")
+      // F8C-013: as cores do PDV passaram a usar as variantes `dark:` do Tailwind
+      // (o ternário `darkMode ? "..." : "..."` foi substituído). A classe precisa
+      // estar no <html> ANTES do primeiro paint — por isso ela é aplicada aqui,
+      // no inicializador do estado, e não só no useEffect (que roda depois do
+      // paint e causaria um pisca de tema ao navegar dentro do app).
+      const initial = stored !== "light"
+      applyDarkClass(initial)
+      return initial
     }
     return true
   })
@@ -166,6 +174,9 @@ export default function CaixaPOSPage() {
   const [transferModal, setTransferModal] = useState<number | null>(null)
 
   useEffect(() => {
+    // F8C-013: bug — gravava a string literal "light dark:dark", então a
+    // escolha de tema do lojista nunca era persistida (ao recarregar a página
+    // o PDV voltava para escuro).
     localStorage.setItem("pedefacil-caixa-theme", darkMode ? "dark" : "light")
   }, [darkMode])
 
@@ -1212,12 +1223,12 @@ export default function CaixaPOSPage() {
   const externalOrders = orders.filter((o: any) => o.orderType !== "presencial" && ["preparing", "ready", "out_for_delivery"].includes(o.status))
 
   return (
-    <main className={`flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#0d2137]" : "bg-zinc-100"}`}>
+    <main className={`flex h-[100dvh] flex-col overflow-hidden bg-zinc-100 dark:bg-pdv-bg`}>
       {/* Header */}
-      <div className={`flex h-14 items-center justify-between border-b px-4 lg:h-16 lg:px-8 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+      <div className={`flex h-14 items-center justify-between border-b px-4 lg:h-16 lg:px-8 border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}>
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/dashboard/home")} className={`rounded-lg p-1 lg:hidden ${darkMode ? "hover:bg-[#1a3a5c]" : "hover:bg-zinc-100"}`}>
-            <ArrowLeft className={`h-5 w-5 ${darkMode ? "text-white/70" : "text-zinc-600"}`} />
+          <button onClick={() => router.push("/dashboard/home")} className={`rounded-lg p-1 lg:hidden hover:bg-zinc-100 dark:hover:bg-pdv-card`}>
+            <ArrowLeft className={`h-5 w-5 text-zinc-600 dark:text-white/70`} />
           </button>
           {user.establishment ? (
             <>
@@ -1227,21 +1238,21 @@ export default function CaixaPOSPage() {
                 <FlowOSLogo size={32} variant="icon" className="h-8 w-8" />
               )}
               <div className="min-w-0">
-                <span className={`text-sm font-semibold ${darkMode ? "text-white" : "text-zinc-900"}`}>{user.establishment.name}</span>
+                <span className={`text-sm font-semibold text-zinc-900 dark:text-white`}>{user.establishment.name}</span>
                 {user.establishment.description && (
-                  <p className={`text-[10px] leading-tight ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{user.establishment.description}</p>
+                  <p className={`text-[10px] leading-tight text-zinc-500 dark:text-white/60`}>{user.establishment.description}</p>
                 )}
               </div>
             </>
           ) : (
-            <span className={`text-sm font-semibold ${darkMode ? "text-white" : "text-zinc-900"}`}>Caixa</span>
+            <span className={`text-sm font-semibold text-zinc-900 dark:text-white`}>Caixa</span>
           )}
         </div>
 
         {cashRegister && (
           <div className="hidden items-center gap-3 lg:flex">
-            <span className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{todayStats.count} vendas</span>
-            <span className={`text-sm ${darkMode ? "text-white/60" : "text-zinc-500"}`}>·</span>
+            <span className={`text-lg font-bold text-zinc-900 dark:text-white`}>{todayStats.count} vendas</span>
+            <span className={`text-sm text-zinc-500 dark:text-white/60`}>·</span>
             <span className="text-lg font-bold text-green-500">{formatCurrency(todayStats.total)}</span>
           </div>
         )}
@@ -1249,13 +1260,13 @@ export default function CaixaPOSPage() {
         <div className="flex items-center gap-3">
           {cashRegister ? (
             <>
-              <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium lg:flex ${darkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"}`}>
+              <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium lg:flex bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                 Caixa Aberto
               </span>
               <button
                 onClick={() => { setCashRegisterAction("transfer"); setShowCashRegisterModal(true) }}
-                className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"}`}
+                className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
               >
                 Transferir
               </button>
@@ -1277,24 +1288,24 @@ export default function CaixaPOSPage() {
             </button>
           )}
 
-          <div className={`h-4 w-px hidden lg:block ${darkMode ? "bg-[#162e4a]" : "bg-zinc-200"}`} />
+          <div className={`h-4 w-px hidden lg:block bg-zinc-200 dark:bg-pdv-card-alt`} />
 
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600"}`}
-            title={darkMode ? "Tema claro" : "Tema escuro"}
+            className={`rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:text-white/50 dark:hover:bg-pdv-card dark:hover:text-white/90`}
+            title={"Tema escuro dark:Tema dark:claro"}
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          <span className={`hidden text-sm lg:block ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{currentTime}</span>
+          <span className={`hidden text-sm lg:block text-zinc-500 dark:text-white/50`}>{currentTime}</span>
           <div className="hidden items-center gap-1.5 lg:flex">
-            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${darkMode ? "bg-green-900/40 text-green-400" : "bg-green-100 text-green-700"}`}>
+            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400`}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </div>
-            <span className={`font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>{user?.name}</span>
+            <span className={`font-medium text-zinc-700 dark:text-white/70`}>{user?.name}</span>
           </div>
-          <button onClick={handleLogout} className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600"}`}>
+          <button onClick={handleLogout} className={`rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:text-white/50 dark:hover:bg-pdv-card dark:hover:text-white/90`}>
             <LogOut className="h-4 w-4" />
           </button>
         </div>
@@ -1302,13 +1313,13 @@ export default function CaixaPOSPage() {
 
       {/* Tabs */}
       {showTabs && (
-        <div className={`flex overflow-x-auto border-b ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+        <div className={`flex overflow-x-auto border-b border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}>
           <button
             onClick={() => setActiveTab("caixa")}
             className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "caixa"
                 ? "border-b-2 border-green-500 text-green-600"
-                : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-white/50 dark:hover:text-white/90"
             }`}
           >
             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
@@ -1321,7 +1332,7 @@ export default function CaixaPOSPage() {
             className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "mesas"
                 ? "border-b-2 border-green-500 text-green-600"
-                : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
+                : "text-zinc-500 hover:text-zinc-700 dark:text-white/50 dark:hover:text-white/90"
             }`}
           >
             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
@@ -1340,7 +1351,7 @@ export default function CaixaPOSPage() {
               className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "balcao"
                   ? "border-b-2 border-green-500 text-green-600"
-                  : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
+                  : "text-zinc-500 hover:text-zinc-700 dark:text-white/50 dark:hover:text-white/90"
               }`}
             >
               <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
@@ -1360,7 +1371,7 @@ export default function CaixaPOSPage() {
               className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "pedidos"
                   ? "border-b-2 border-green-500 text-green-600"
-                  : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
+                  : "text-zinc-500 hover:text-zinc-700 dark:text-white/50 dark:hover:text-white/90"
               }`}
             >
               <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
@@ -1381,20 +1392,20 @@ export default function CaixaPOSPage() {
       {activeTab === "caixa" && (
         <>
           {/* Search + Categories */}
-          <div className={`px-4 py-2 shadow-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+          <div className={`px-4 py-2 shadow-sm bg-white dark:bg-pdv-card`}>
             <div className="mb-2 flex items-center gap-2">
               <div className="relative flex-1 max-w-sm">
-                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/60" : "text-zinc-500"}`} />
+                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-white/60`} />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Buscar produto... (F2)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
+                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none border-zinc-200 bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white dark:placeholder:text-white/60`}
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className={`p-1 absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/60" : "text-zinc-500"}`} aria-label="Fechar">
+                  <button onClick={() => setSearchQuery("")} className={`p-1 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-white/60`} aria-label="Fechar">
                     <X aria-hidden="true" className="h-4 w-4" />
                   </button>
                 )}
@@ -1402,7 +1413,7 @@ export default function CaixaPOSPage() {
               <button
                 onClick={() => setShowCustomItemModal(true)}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  darkMode ? "border-white/[.08] bg-[#0f2942] text-white/70 hover:bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                  "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white/70 dark:hover:bg-pdv-card"
                 }`}
               >
                 <Plus className="h-4 w-4" />
@@ -1422,7 +1433,7 @@ export default function CaixaPOSPage() {
               <button
                 onClick={() => setActiveCategory("all")}
                 className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  activeCategory === "all" ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
+                  activeCategory === "all" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 dark:bg-pdv-card dark:text-white/70"
                 }`}
               >
                 Todos
@@ -1432,7 +1443,7 @@ export default function CaixaPOSPage() {
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
                   className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    activeCategory === cat.id ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
+                    activeCategory === cat.id ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 dark:bg-pdv-card dark:text-white/70"
                   }`}
                 >
                   {cat.name}
@@ -1464,19 +1475,19 @@ export default function CaixaPOSPage() {
                   <button
                     key={product.id}
                     onClick={() => addToCart(product)}
-                  className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}
+                  className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}
                 >
                   {product.image ? (
                     <img src={product.image} alt={product.name} className="mb-2 h-16 w-16 rounded-xl object-cover sm:h-20 sm:w-20" />
                   ) : (
-                    <div className={`mb-2 flex h-16 w-16 items-center justify-center rounded-xl text-2xl sm:h-20 sm:w-20 sm:text-3xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
+                    <div className={`mb-2 flex h-16 w-16 items-center justify-center rounded-xl text-2xl sm:h-20 sm:w-20 sm:text-3xl bg-zinc-100 dark:bg-pdv-card`}>🍕</div>
                     )}
-                    <p className={`w-full truncate text-center text-sm font-medium ${darkMode ? "text-white/90" : "text-zinc-800"}`}>{product.name}</p>
+                    <p className={`w-full truncate text-center text-sm font-medium text-zinc-800 dark:text-white/90`}>{product.name}</p>
                     <p className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</p>
                   </button>
                 ))}
                 {filteredProducts.length === 0 && (
-                  <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                  <div className={`col-span-full py-12 text-center text-sm text-zinc-500 dark:text-white/60`}>
                     Nenhum produto encontrado
                   </div>
                 )}
@@ -1485,7 +1496,7 @@ export default function CaixaPOSPage() {
               {/* F8A-001: no mobile o carrinho é um drawer — o botão flutuante abre */}
               <button
                 onClick={() => setCartDrawerOpen(true)}
-                className={`fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold shadow-xl lg:hidden ${darkMode ? "bg-green-600 text-white" : "bg-green-600 text-white"}`}
+                className={`fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold shadow-xl lg:hidden bg-green-600 text-white dark:bg-green-600 dark:text-white`}
                 aria-label={`Abrir carrinho com ${stagingCart.length} itens, total ${formatCurrency(cartTotal)}`}
               >
                 <ShoppingBag className="h-5 w-5" aria-hidden="true" />
@@ -1512,19 +1523,19 @@ export default function CaixaPOSPage() {
                 cartDrawerOpen
                   ? "fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] w-full flex-col rounded-t-2xl shadow-2xl"
                   : "hidden"
-              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-l border-zinc-200 bg-white"}`}
+              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none border-l border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}
             >
               {/* Cart Header */}
               <div className={`border-b px-4 py-2 ${
                 activeTable
-                  ? darkMode ? "border-amber-700 bg-amber-900/30" : "border-amber-200 bg-amber-50"
-                  : darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-100 bg-white"
+                  ? "border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30"
+                  : "border-zinc-100 bg-white dark:border-white/[.1] dark:bg-pdv-card"
               }`}>
                 <div className="flex items-center justify-between">
                   <h2 className={`text-sm font-semibold ${
                     activeTable
-                      ? darkMode ? "text-amber-200" : "text-amber-700"
-                      : darkMode ? "text-green-200" : "text-green-700"
+                      ? "text-amber-700 dark:text-amber-200"
+                      : "text-green-700 dark:text-green-200"
                   }`}>
                     {activeTable ? `Mesa ${activeTable}` : "Venda Balcão"}
                   </h2>
@@ -1532,7 +1543,7 @@ export default function CaixaPOSPage() {
                     {activeTable !== null && (
                       <button
                         onClick={deselectTable}
-                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       >
                         Venda Balcão
                       </button>
@@ -1540,7 +1551,7 @@ export default function CaixaPOSPage() {
                     {/* F8A-001: fechar o drawer no mobile */}
                     <button
                       onClick={() => setCartDrawerOpen(false)}
-                      className={`rounded-lg p-1 lg:hidden ${darkMode ? "text-white/70 hover:bg-[#162e4a]" : "text-zinc-500 hover:bg-zinc-100"}`}
+                      className={`rounded-lg p-1 lg:hidden text-zinc-500 hover:bg-zinc-100 dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       aria-label="Fechar carrinho"
                     >
                       <X aria-hidden="true" className="h-5 w-5" />
@@ -1565,22 +1576,22 @@ export default function CaixaPOSPage() {
                         paymentMethod: "cash",
                         establishmentName: user?.establishment?.name,
                       })}
-                      className={`w-full rounded-lg border px-3 py-2 text-center transition-colors cursor-pointer ${darkMode ? "border-white/[.08] bg-[#1a3a5c]/50 hover:bg-[#1a3a5c] hover:border-zinc-500" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-300"}`}
+                      className={`w-full rounded-lg border px-3 py-2 text-center transition-colors cursor-pointer border-zinc-200 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-300 dark:border-white/[.08] dark:bg-pdv-card/50 dark:hover:bg-pdv-card dark:hover:border-zinc-500`}
                     >
                       <CheckCircle className="mx-auto mb-1 h-5 w-5 text-green-500" />
-                      <p className={`text-xs font-medium ${darkMode ? "text-white/90" : "text-zinc-700"}`}>
+                      <p className={`text-xs font-medium text-zinc-700 dark:text-white/90`}>
                         Pedido #{lastClosedOrder.orderNumber || "—"} enviado!
                       </p>
-                      <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
+                      <p className={`text-[10px] text-zinc-500 dark:text-white/50`}>
                         {lastClosedOrder.tableLabel} • {formatCurrency(lastClosedOrder.total)}
                       </p>
-                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                      <p className={`mt-1 text-[10px] text-zinc-500 dark:text-white/60`}>
                         {printing ? "Imprimindo..." : "Toque para reimprimir"}
                       </p>
                     </button>
                   </div>
                 ) : stagingCart.length === 0 ? (
-                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                  <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Toque nos produtos para adicionar</p>
                     {activeTable && committedTotal > 0 && (
@@ -1590,22 +1601,22 @@ export default function CaixaPOSPage() {
                 ) : (
                   <div className="space-y-2">
                     {stagingCart.map((item) => (
-                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-50"}`}>
+                      <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 bg-zinc-50 dark:bg-pdv-card`}>
                         <div className="flex-1 min-w-0">
-                          <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.name}</p>
-                          <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
+                          <p className={`truncate text-xs font-medium text-zinc-800 dark:text-white`}>{item.name}</p>
+                          <p className={`text-[10px] text-zinc-500 dark:text-white/50`}>{formatCurrency(item.price)} x {item.quantity}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => updateQuantity(item.productId, -1)}
-                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-[#162e4a] hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] bg-zinc-200 hover:bg-zinc-300 dark:bg-pdv-card-alt dark:hover:bg-zinc-500`}
                           >
                             <Minus className="h-2.5 w-2.5" />
                           </button>
-                          <span className={`w-5 text-center text-xs font-medium ${darkMode ? "text-white/90" : ""}`}>{item.quantity}</span>
+                          <span className={`w-5 text-center text-xs font-medium dark:text-white/90`}>{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.productId, 1)}
-                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${darkMode ? "bg-[#162e4a] hover:bg-zinc-500" : "bg-zinc-200 hover:bg-zinc-300"}`}
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] bg-zinc-200 hover:bg-zinc-300 dark:bg-pdv-card-alt dark:hover:bg-zinc-500`}
                           >
                             <Plus className="h-2.5 w-2.5" />
                           </button>
@@ -1624,22 +1635,22 @@ export default function CaixaPOSPage() {
 
               {/* Summary */}
               {/* F8A-015: padding extra para a home-indicator do iOS em PWA */}
-              <div className={`border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
+              <div className={`border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-zinc-200 bg-zinc-50 dark:border-white/[.1] dark:bg-pdv-card`}>
                 <div className="mb-3 flex items-center justify-between">
-                  <span className={`text-sm font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Total</span>
+                  <span className={`text-sm font-medium text-zinc-700 dark:text-white/70`}>Total</span>
                   <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
                 </div>
 
                 {/* Auto prep indicator */}
                 {needsPrep && (
-                  <div className={`mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 ${darkMode ? "border-amber-800 bg-amber-900/20" : "border-amber-200 bg-amber-50"}`}>
+                  <div className={`mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20`}>
                     <span className="text-sm">👨‍🍳</span>
-                    <p className={`text-xs font-medium ${darkMode ? "text-amber-400" : "text-amber-800"}`}>Enviado para preparo automaticamente</p>
+                    <p className={`text-xs font-medium text-amber-800 dark:text-amber-400`}>Enviado para preparo automaticamente</p>
                   </div>
                 )}
 
                 {/* Print receipt */}
-                <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none ${darkMode ? "border-blue-800 bg-blue-900/20" : "border-blue-200 bg-blue-50"}`}>
+                <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer select-none border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20`}>
                   <input
                     type="checkbox"
                     checked={printReceipt}
@@ -1650,8 +1661,8 @@ export default function CaixaPOSPage() {
                     className="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
                   />
                   <div className="flex-1">
-                    <p className={`text-xs font-medium ${darkMode ? "text-blue-400" : "text-blue-800"}`}>Gerar cupom</p>
-                    <p className={`text-[10px] ${darkMode ? "text-blue-500" : "text-blue-600"}`}>Imprimir após venda</p>
+                    <p className={`text-xs font-medium text-blue-800 dark:text-blue-400`}>Gerar cupom</p>
+                    <p className={`text-[10px] text-blue-600 dark:text-blue-500`}>Imprimir após venda</p>
                   </div>
                 </label>
 
@@ -1668,7 +1679,7 @@ export default function CaixaPOSPage() {
                       className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
                         payment === p.value
                           ? p.activeColor
-                          : darkMode ? "border-white/[.08] text-white/50" : "border-zinc-200 text-white/60"
+                          : "border-zinc-200 text-white/60 dark:border-white/[.08] dark:text-white/50"
                       }`}
                     >
                       <p.icon className="h-3 w-3" />
@@ -1679,17 +1690,17 @@ export default function CaixaPOSPage() {
 
                 {/* Cash change calculator — only for balcão sales */}
                 {payment === "cash" && !activeTable && (
-                  <div className={`mb-3 rounded-xl border-2 p-4 space-y-3 ${darkMode ? "border-green-500/50 bg-green-900/30" : "border-green-500/30 bg-green-50/80"}`}>
+                  <div className={`mb-3 rounded-xl border-2 p-4 space-y-3 border-green-500/30 bg-green-50/80 dark:border-green-500/50 dark:bg-green-900/30`}>
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>Pagamento em Dinheiro</span>
+                      <span className={`text-sm font-semibold text-green-700 dark:text-green-400`}>Pagamento em Dinheiro</span>
                       {cashReceived && parseFloat(cashReceived) >= cartTotal && (
-                        <span className={`text-sm font-bold ${darkMode ? "text-green-400" : "text-green-600"}`}>
+                        <span className={`text-sm font-bold text-green-600 dark:text-green-400`}>
                           Troco: {formatCurrency(parseFloat(cashReceived) - cartTotal)}
                         </span>
                       )}
                     </div>
                     <div>
-                      <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
+                      <label className={`text-xs font-medium mb-1 block text-zinc-600 dark:text-white/70`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -1700,7 +1711,7 @@ export default function CaixaPOSPage() {
                         aria-label="Valor recebido pelo cliente"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/50" : "border-green-200 bg-white text-green-700"}`}
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none border-green-200 bg-white text-green-700 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:placeholder:text-white/50`}
                         autoFocus
                       />
                     </div>
@@ -1709,14 +1720,14 @@ export default function CaixaPOSPage() {
                         <button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
-                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
+                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors border-green-200 bg-white text-green-700 hover:bg-green-100 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:hover:bg-green-900/50`}
                         >
                           {v === cartTotal ? "Valor exato" : formatCurrency(v)}
                         </button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < cartTotal && (
-                      <p className={`text-xs font-medium ${darkMode ? "text-red-400" : "text-red-500"}`}>
+                      <p className={`text-xs font-medium text-red-500 dark:text-red-400`}>
                         Valor insuficiente (falta {formatCurrency(cartTotal - parseFloat(cashReceived))})
                       </p>
                     )}
@@ -1756,14 +1767,14 @@ export default function CaixaPOSPage() {
           <div className={`flex flex-1 overflow-hidden`}>
             {/* Tables Grid */}
             {/* F8A-001: espaço extra no mobile para o botão flutuante da conta */}
-            <div className={`flex-1 overflow-auto p-4 pb-24 lg:pb-4 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+            <div className={`flex-1 overflow-auto p-4 pb-24 lg:pb-4 bg-zinc-50 dark:bg-pdv-elevated`}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Mesas</h2>
+                <h2 className={`text-lg font-bold text-zinc-900 dark:text-white`}>Mesas</h2>
                 <div className="flex items-center gap-3">
-                  <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
+                  <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
                     QR Garcom
                   </button>
-                  <p className={`text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Toque na mesa para atender</p>
+                  <p className={`text-xs text-zinc-500 dark:text-white/60`}>Toque na mesa para atender</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1799,8 +1810,8 @@ export default function CaixaPOSPage() {
                           : isFullyPaid
                           ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950"
                           : isOccupied
-                          ? darkMode ? "border-yellow-400 bg-yellow-800/50 hover:border-yellow-300" : "border-yellow-300 bg-yellow-200 hover:border-yellow-400"
-                          : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"
+                          ? "border-yellow-300 bg-yellow-200 hover:border-yellow-400 dark:border-yellow-400 dark:bg-yellow-800/50 dark:hover:border-yellow-300"
+                          : "border-zinc-200 bg-white hover:border-green-400 dark:border-white/[.08] dark:bg-pdv-card dark:hover:border-green-500"
                       }`}
                       onClick={() => selectTable(num)}
                       onKeyDown={(e) => {
@@ -1814,7 +1825,7 @@ export default function CaixaPOSPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); openTableQr(num) }}
                         className={`absolute top-2 left-2 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors ${
-                          darkMode ? "bg-purple-900/60 text-purple-300 hover:bg-purple-800" : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                          "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/60 dark:text-purple-300 dark:hover:bg-purple-800"
                         }`}
                       >
                         QR
@@ -1824,7 +1835,7 @@ export default function CaixaPOSPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); openTransferModal(num) }}
                           className={`absolute top-10 left-2 rounded-full p-1.5 transition-colors ${
-                            darkMode ? "bg-blue-900/60 text-blue-300 hover:bg-blue-800" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-800"
                           }`}
                           title="Transferir mesa"
                         >
@@ -1846,7 +1857,7 @@ export default function CaixaPOSPage() {
                           hasBillRequest ? "text-red-600 dark:text-red-400"
                           : isActive ? "text-green-700 dark:text-green-300"
                           : isOccupied ? "text-yellow-700 dark:text-yellow-300"
-                          : darkMode ? "text-white/60" : "text-zinc-500"
+                          : "text-zinc-500 dark:text-white/60"
                         }`}>{num}</span>
                         {hasBillRequest ? (
                           <span className="mt-2 rounded-full bg-red-100 px-3 py-1 text-xs font-extrabold text-red-700 dark:bg-red-900 dark:text-red-300">Pediu a conta</span>
@@ -1855,10 +1866,10 @@ export default function CaixaPOSPage() {
                             {isFullyPaid ? "Paga" : formatCurrency(total)}
                           </span>
                         ) : (
-                          <span className={`mt-2 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}></span>
+                          <span className={`mt-2 text-xs text-zinc-500 dark:text-white/50`}></span>
                         )}
                         {isOccupied && !hasBillRequest && itemCount > 0 && (
-                          <span className={`mt-1 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-600"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
+                          <span className={`mt-1 text-[10px] text-zinc-600 dark:text-white/60`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
                         )}
                         {partialPaid > 0 && remaining > 0.01 && (
                           <span className="mt-1 text-[10px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
@@ -1866,11 +1877,11 @@ export default function CaixaPOSPage() {
                       </div>
 
                       {isOccupied && (
-                        <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                        <div className={`flex border-t border-zinc-200 dark:border-white/[.08]`}>
                           <button
                             onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-r ${
-                              darkMode ? "text-green-400 hover:bg-green-950 active:bg-green-900 border-white/[.08]" : "text-green-600 hover:bg-green-50 active:bg-green-100 border-zinc-200"
+                              "text-green-600 hover:bg-green-50 active:bg-green-100 border-zinc-200 dark:text-green-400 dark:hover:bg-green-950 dark:active:bg-green-900 dark:border-white/[.08]"
                             }`}
                           >
                             <PlusCircle className="h-5 w-5 mb-1" />
@@ -1879,7 +1890,7 @@ export default function CaixaPOSPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
-                              darkMode ? "text-red-400 hover:bg-red-950 active:bg-red-900" : "text-red-600 hover:bg-red-50 active:bg-red-100"
+                              "text-red-600 hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-950 dark:active:bg-red-900"
                             }`}
                           >
                             <Receipt className="h-5 w-5 mb-1" />
@@ -1888,11 +1899,11 @@ export default function CaixaPOSPage() {
                         </div>
                       )}
                       {!isOccupied && (
-                        <div className={`flex border-t ${darkMode ? "border-white/[.08]" : "border-zinc-200"}`}>
+                        <div className={`flex border-t border-zinc-200 dark:border-white/[.08]`}>
                           <button
                             onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
-                              darkMode ? "text-green-400 hover:bg-green-950 active:bg-green-900" : "text-green-600 hover:bg-green-50 active:bg-green-100"
+                              "text-green-600 hover:bg-green-50 active:bg-green-100 dark:text-green-400 dark:hover:bg-green-950 dark:active:bg-green-900"
                             }`}
                           >
                             <PlusCircle className="h-5 w-5 mb-1" />
@@ -1936,18 +1947,18 @@ export default function CaixaPOSPage() {
                 cartDrawerOpen
                   ? "fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] w-full flex-col rounded-t-2xl shadow-2xl"
                   : "hidden"
-              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-l border-zinc-200 bg-white"}`}
+              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none border-l border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}
             >
               <div className={`border-b px-4 py-2 ${
                 activeTable
-                  ? darkMode ? "border-amber-700 bg-amber-900/30" : "border-amber-200 bg-amber-50"
-                  : darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-100 bg-white"
+                  ? "border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30"
+                  : "border-zinc-100 bg-white dark:border-white/[.1] dark:bg-pdv-card"
               }`}>
                 <div className="flex items-center justify-between">
                   <h2 className={`text-sm font-semibold ${
                     activeTable
-                      ? darkMode ? "text-amber-200" : "text-amber-700"
-                      : darkMode ? "text-white/50" : "text-zinc-500"
+                      ? "text-amber-700 dark:text-amber-200"
+                      : "text-zinc-500 dark:text-white/50"
                   }`}>
                     {activeTable ? `Mesa ${activeTable}` : "Selecione uma mesa"}
                   </h2>
@@ -1955,7 +1966,7 @@ export default function CaixaPOSPage() {
                     {activeTable !== null && (
                       <button
                         onClick={deselectTable}
-                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       >
                         Trocar mesa
                       </button>
@@ -1963,7 +1974,7 @@ export default function CaixaPOSPage() {
                     {/* F8A-001: fechar o drawer no mobile */}
                     <button
                       onClick={() => setCartDrawerOpen(false)}
-                      className={`rounded-lg p-1 lg:hidden ${darkMode ? "text-white/70 hover:bg-[#162e4a]" : "text-zinc-500 hover:bg-zinc-100"}`}
+                      className={`rounded-lg p-1 lg:hidden text-zinc-500 hover:bg-zinc-100 dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       aria-label="Fechar conta da mesa"
                     >
                       <X aria-hidden="true" className="h-5 w-5" />
@@ -1974,7 +1985,7 @@ export default function CaixaPOSPage() {
 
               <div className="flex-1 overflow-y-auto px-4 py-2">
                 {!activeTable ? (
-                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                  <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Selecione uma mesa para ver os itens</p>
                   </div>
@@ -1990,36 +2001,36 @@ export default function CaixaPOSPage() {
                   }
                   const allItems = [...orderItems, ...localItems]
                   if (allItems.length === 0) return (
-                    <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                    <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
                       <ShoppingBag className="mb-2 h-8 w-8" />
                       <p className="text-xs">Nenhum item nesta mesa</p>
-                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Adicione itens pelo card da mesa</p>
+                      <p className={`mt-1 text-[10px] text-zinc-500 dark:text-white/50`}>Adicione itens pelo card da mesa</p>
                     </div>
                   )
                   return (
                     <div className="space-y-2">
                       {orderItems.length > 0 && (
-                        <p className={`text-[10px] font-medium uppercase tracking-wide ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Pedidos enviados</p>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-white/50`}>Pedidos enviados</p>
                       )}
                       {orderItems.map((item, idx) => (
-                        <div key={`order-${idx}`} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]/60" : "bg-zinc-50/60"}`}>
+                        <div key={`order-${idx}`} className={`flex items-center gap-2 rounded-lg p-2 bg-zinc-50/60 dark:bg-pdv-elevated/60`}>
                           <div className="flex-1 min-w-0">
-                            <p className={`truncate text-xs font-medium ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{item.quantity}x {item.name}</p>
-                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
+                            <p className={`truncate text-xs font-medium text-zinc-500 dark:text-white/60`}>{item.quantity}x {item.name}</p>
+                            <p className={`text-[10px] text-zinc-500 dark:text-white/50`}>{formatCurrency(item.price)}</p>
                           </div>
-                          <span className={`text-xs font-bold ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                          <span className={`text-xs font-bold text-zinc-500 dark:text-white/50`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
                       {localItems.length > 0 && orderItems.length > 0 && (
-                        <p className={`text-[10px] font-medium uppercase tracking-wide pt-1 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Adicionados agora</p>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide pt-1 text-zinc-500 dark:text-white/50`}>Adicionados agora</p>
                       )}
                       {localItems.map((item) => (
-                        <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+                        <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 bg-zinc-50 dark:bg-pdv-elevated`}>
                           <div className="flex-1 min-w-0">
-                            <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
-                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
+                            <p className={`truncate text-xs font-medium text-zinc-800 dark:text-white`}>{item.quantity}x {item.name}</p>
+                            <p className={`text-[10px] text-zinc-500 dark:text-white/50`}>{formatCurrency(item.price)}</p>
                           </div>
-                          <span className={`text-xs font-bold ${darkMode ? "text-white/90" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                          <span className={`text-xs font-bold text-zinc-700 dark:text-white/90`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
                     </div>
@@ -2032,14 +2043,14 @@ export default function CaixaPOSPage() {
                 const ordersTotal = tableOrders.reduce((s: number, o: any) => s + o.total, 0)
                 const fullTotal = cartTotal + ordersTotal
                 return (
-                <div className={`border-t px-4 py-3 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
+                <div className={`border-t px-4 py-3 border-zinc-200 bg-zinc-50 dark:border-white/[.1] dark:bg-pdv-card`}>
                   <div className="mb-3 flex items-center justify-between">
-                    <span className={`text-sm font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Total</span>
+                    <span className={`text-sm font-medium text-zinc-700 dark:text-white/70`}>Total</span>
                     <span className="text-xl font-bold text-green-500">{formatCurrency(fullTotal)}</span>
                   </div>
                   {(() => { const pp = activeTable ? (tablePartialPaid[activeTable] || 0) : 0; const rem = cartTotal - pp; return pp > 0 && rem > 0.01 ? (
                     <div className="mb-2 flex items-center justify-between">
-                      <span className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Pago</span>
+                      <span className={`text-xs text-zinc-500 dark:text-white/50`}>Pago</span>
                       <span className="text-sm font-bold text-blue-500">{formatCurrency(pp)}</span>
                     </div>
                   ) : null })()}
@@ -2065,20 +2076,20 @@ export default function CaixaPOSPage() {
 
       {/* Pedidos Balcão Tab */}
       {activeTab === "balcao" && (
-        <BalcaoTab orders={orders} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} darkMode={darkMode} />
+        <BalcaoTab orders={orders} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} />
       )}
 
       {/* Pedidos Externos Tab */}
       {activeTab === "pedidos" && (
-        <PedidosTab orders={orders} deliveryPeople={deliveryPeople} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} darkMode={darkMode} />
+        <PedidosTab orders={orders} deliveryPeople={deliveryPeople} establishmentId={user?.establishmentId || ""} onRefresh={() => loadData(user?.establishmentId || "")} />
       )}
 
       {/* Custom Item Modal */}
       {showCustomItemModal && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setShowCustomItemModal(false) }}>
-          <div className={`w-full max-w-sm rounded-2xl p-5 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+          <div className={`w-full max-w-sm rounded-2xl p-5 shadow-2xl bg-white dark:bg-pdv-card`}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Item Avulso</h3>
+              <h3 className={`text-sm font-bold text-zinc-900 dark:text-white`}>Item Avulso</h3>
               <button onClick={() => setShowCustomItemModal(false)} aria-label="Fechar" className="flex h-6 w-6 items-center justify-center"><X aria-hidden="true" className="h-4 w-4 text-zinc-500" /></button>
             </div>
             <div className="space-y-3">
@@ -2088,7 +2099,7 @@ export default function CaixaPOSPage() {
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 autoFocus
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none border-zinc-200 bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white dark:placeholder:text-white/60`}
               />
               <input
                 type="number"
@@ -2096,7 +2107,7 @@ export default function CaixaPOSPage() {
                 placeholder="Preço (R$)"
                 value={customPrice}
                 onChange={(e) => setCustomPrice(e.target.value)}
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none border-zinc-200 bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white dark:placeholder:text-white/60`}
               />
               <button
                 onClick={() => { addCustomItem(); setShowCustomItemModal(false) }}
@@ -2145,12 +2156,12 @@ export default function CaixaPOSPage() {
       {/* Cash Register Modal */}
       {showCashRegisterModal && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+          <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm bg-white dark:bg-pdv-card`}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>
+              <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>
                 {cashRegisterAction === "open" ? "Abrir Caixa" : cashRegisterAction === "close" ? "Fechar Caixa" : "Transferir Caixa"}
               </h3>
-              <button onClick={() => setShowCashRegisterModal(false)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+              <button onClick={() => setShowCashRegisterModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
@@ -2158,14 +2169,14 @@ export default function CaixaPOSPage() {
             {cashRegisterAction === "open" && (
               <div className="space-y-3">
                 <div>
-                  <label className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Valor em caixa (R$)</label>
+                  <label className={`text-xs text-zinc-500 dark:text-white/50`}>Valor em caixa (R$)</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="0,00"
                     value={openingAmount}
                     onChange={(e) => setOpeningAmount(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/60" : "border-zinc-200"}`}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none border-zinc-200 dark:border-white/[.08] dark:bg-pdv-card dark:text-white dark:placeholder:text-white/60`}
                   />
                 </div>
                 <button onClick={openCashRegister} disabled={openRegisterGuard.busy} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50">
@@ -2176,8 +2187,8 @@ export default function CaixaPOSPage() {
 
             {cashRegisterAction === "close" && (
               <div className="space-y-3">
-                <div className={`rounded-lg p-3 text-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-50"}`}>
-                  <p className={darkMode ? "text-white/50" : "text-zinc-500"}>Valor esperado: <span className={`font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{formatCurrency(
+                <div className={`rounded-lg p-3 text-sm bg-zinc-50 dark:bg-pdv-card`}>
+                  <p className={"text-zinc-500 dark:text-white/50"}>Valor esperado: <span className={`font-bold text-zinc-900 dark:text-white`}>{formatCurrency(
                     (cashRegister?.openingAmount || 0) + (cashRegister?.movements || []).reduce(
                       (s: number, m: any) =>
                         s + (m.type === "expense" || m.type === "withdrawal" || m.type === "refund" ? -Math.abs(m.amount) : Math.abs(m.amount)),
@@ -2186,14 +2197,14 @@ export default function CaixaPOSPage() {
                   )}</span></p>
                 </div>
                 <div>
-                  <label className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Valor contado (R$)</label>
+                  <label className={`text-xs text-zinc-500 dark:text-white/50`}>Valor contado (R$)</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="0,00"
                     value={closingAmount}
                     onChange={(e) => setClosingAmount(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/60" : "border-zinc-200"}`}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none border-zinc-200 dark:border-white/[.08] dark:bg-pdv-card dark:text-white dark:placeholder:text-white/60`}
                   />
                 </div>
                 <button onClick={closeCashRegister} disabled={closeRegisterGuard.busy} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
@@ -2205,11 +2216,11 @@ export default function CaixaPOSPage() {
             {cashRegisterAction === "transfer" && (
               <div className="space-y-3">
                 <div>
-                  <label className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Transferir para</label>
+                  <label className={`text-xs text-zinc-500 dark:text-white/50`}>Transferir para</label>
                   <select
                     value={transferUserId}
                     onChange={(e) => setTransferUserId(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white" : "border-zinc-200"}`}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none border-zinc-200 dark:border-white/[.08] dark:bg-pdv-card dark:text-white`}
                   >
                     <option value="">Selecionar atendente...</option>
                     {allUsers.filter((u: any) => u.id !== user?.id && u.role !== "motoboy").map((u: any) => (
@@ -2248,31 +2259,31 @@ export default function CaixaPOSPage() {
 
         return (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className={`rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
+            <div className={`rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col bg-white text-zinc-900 dark:bg-pdv-bg dark:text-white`}>
               {/* Header */}
-              <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
+              <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b border-zinc-200 dark:border-white/10`}>
                 <div>
-                  <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>
+                  <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>
                     Fechar Mesa {closingTableNumber}
                   </h3>
-                  <p className={`text-xs mt-0.5 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Confirme os itens e a forma de pagamento</p>
+                  <p className={`text-xs mt-0.5 text-zinc-500 dark:text-white/50`}>Confirme os itens e a forma de pagamento</p>
                 </div>
-                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`rounded-lg p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`rounded-lg p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                   <X aria-hidden="true" className="h-5 w-5" />
                 </button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
                 {/* Summary */}
-                <div className={`rounded-xl border p-4 space-y-1.5 ${darkMode ? "bg-white/5 border-white/10" : "bg-zinc-50 border-zinc-200"}`}>
+                <div className={`rounded-xl border p-4 space-y-1.5 bg-zinc-50 border-zinc-200 dark:bg-white/5 dark:border-white/10`}>
                   <div className="flex justify-between text-sm">
-                    <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Subtotal</span>
-                    <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(subtotal)}</span>
+                    <span className={"text-zinc-500 dark:text-white/60"}>Subtotal</span>
+                    <span className={`font-medium text-zinc-700 dark:text-white`}>{formatCurrency(subtotal)}</span>
                   </div>
                   {serviceTax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Taxa de serviço ({serviceTaxConfig.type === "percent" ? `${serviceTaxConfig.value}%` : "fixo"})</span>
-                      <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(serviceTax)}</span>
+                      <span className={"text-zinc-500 dark:text-white/60"}>Taxa de serviço ({serviceTaxConfig.type === "percent" ? `${serviceTaxConfig.value}%` : "fixo"})</span>
+                      <span className={`font-medium text-zinc-700 dark:text-white`}>{formatCurrency(serviceTax)}</span>
                     </div>
                   )}
                   {partialPaid > 0 && (
@@ -2281,15 +2292,15 @@ export default function CaixaPOSPage() {
                       <span className="font-bold text-blue-600">− {formatCurrency(partialPaid)}</span>
                     </div>
                   )}
-                  <div className={`flex justify-between text-sm border-t pt-1.5 mt-1.5 ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
-                    <span className={`font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Restante a cobrar</span>
+                  <div className={`flex justify-between text-sm border-t pt-1.5 mt-1.5 border-zinc-200 dark:border-white/10`}>
+                    <span className={`font-medium text-zinc-700 dark:text-white/70`}>Restante a cobrar</span>
                     <span className="text-lg font-extrabold text-green-600">{formatCurrency(remaining)}</span>
                   </div>
                 </div>
 
                 {/* Mode selector */}
                 <div>
-                  <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de cobrança</p>
+                  <p className={`text-xs font-semibold mb-2 uppercase tracking-wide text-zinc-500 dark:text-white/60`}>Forma de cobrança</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
                       { id: "single", label: "Pagamento único", icon: "💳" },
@@ -2302,7 +2313,7 @@ export default function CaixaPOSPage() {
                         className={`flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
                           closeTableMode === m.id
                             ? "border-green-500 bg-green-50 text-green-700"
-                            : darkMode ? "border-white/10 text-white/60 hover:border-white/20" : "border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                            : "border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-white/10 dark:text-white/60 dark:hover:border-white/20"
                         }`}
                       >
                         <span className="text-lg">{m.icon}</span>
@@ -2315,7 +2326,7 @@ export default function CaixaPOSPage() {
                 {/* Mode: Single payment */}
                 {closeTableMode === "single" && (
                   <div>
-                    <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
+                    <p className={`text-xs font-semibold mb-2 uppercase tracking-wide text-zinc-500 dark:text-white/60`}>Forma de pagamento</p>
                     <div className="flex gap-2">
                       {[
                         { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2328,7 +2339,7 @@ export default function CaixaPOSPage() {
                           className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
                             closingTablePayment === p.value
                               ? "border-green-500 bg-green-50 text-green-700"
-                              : darkMode ? "border-white/10 text-white/60 hover:border-white/20" : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                              : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-white/10 dark:text-white/60 dark:hover:border-white/20"
                           }`}
                         >
                           <p.icon className="h-4 w-4" />
@@ -2341,17 +2352,17 @@ export default function CaixaPOSPage() {
 
                 {/* Cash change calculator */}
                 {closingTablePayment === "cash" && closeTableMode === "single" && (
-                  <div className={`mt-4 rounded-xl border-2 p-4 space-y-3 ${darkMode ? "border-green-500/50 bg-green-900/30" : "border-green-500/30 bg-green-50/80"}`}>
+                  <div className={`mt-4 rounded-xl border-2 p-4 space-y-3 border-green-500/30 bg-green-50/80 dark:border-green-500/50 dark:bg-green-900/30`}>
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>Pagamento em Dinheiro</span>
+                      <span className={`text-sm font-semibold text-green-700 dark:text-green-400`}>Pagamento em Dinheiro</span>
                       {cashReceived && parseFloat(cashReceived) >= remaining && (
-                        <span className={`text-sm font-bold ${darkMode ? "text-green-400" : "text-green-600"}`}>
+                        <span className={`text-sm font-bold text-green-600 dark:text-green-400`}>
                           Troco: {formatCurrency(parseFloat(cashReceived) - remaining)}
                         </span>
                       )}
                     </div>
                     <div>
-                      <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
+                      <label className={`text-xs font-medium mb-1 block text-zinc-600 dark:text-white/70`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -2362,7 +2373,7 @@ export default function CaixaPOSPage() {
                         aria-label="Valor recebido pelo cliente"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/50" : "border-green-200 bg-white text-green-700"}`}
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none border-green-200 bg-white text-green-700 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:placeholder:text-white/50`}
                         autoFocus
                       />
                     </div>
@@ -2371,14 +2382,14 @@ export default function CaixaPOSPage() {
                         <button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
-                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
+                          className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors border-green-200 bg-white text-green-700 hover:bg-green-100 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:hover:bg-green-900/50`}
                         >
                           {v === remaining ? "Valor exato" : formatCurrency(v)}
                         </button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < remaining && (
-                      <p className={`text-xs font-medium ${darkMode ? "text-red-400" : "text-red-500"}`}>
+                      <p className={`text-xs font-medium text-red-500 dark:text-red-400`}>
                         Valor insuficiente (falta {formatCurrency(remaining - parseFloat(cashReceived))})
                       </p>
                     )}
@@ -2389,14 +2400,14 @@ export default function CaixaPOSPage() {
                 {closeTableMode === "split" && (
                   <div className="space-y-3">
                     <div>
-                      <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Quantas pessoas?</label>
+                      <label className={`text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-white/60`}>Quantas pessoas?</label>
                       <input
                         type="number"
                         min="2"
                         placeholder="Ex: 4"
                         value={splitCount}
                         onChange={(e) => { setSplitCount(e.target.value); setSplitPersonStep(0) }}
-                        className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-2xl font-bold text-center focus:border-green-500 focus:outline-none ${darkMode ? "border-white/10 bg-white/5 text-white" : "border-zinc-200 text-zinc-900"}`}
+                        className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-2xl font-bold text-center focus:border-green-500 focus:outline-none border-zinc-200 text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-white`}
                         autoFocus
                       />
                     </div>
@@ -2423,7 +2434,7 @@ export default function CaixaPOSPage() {
                       </>
                     )}
                     <div>
-                      <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
+                      <p className={`text-xs font-semibold mb-2 uppercase tracking-wide text-zinc-500 dark:text-white/60`}>Forma de pagamento</p>
                       <div className="flex gap-2">
                         {[
                           { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2436,7 +2447,7 @@ export default function CaixaPOSPage() {
                             className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
                               closingTablePayment === p.value
                                 ? "border-green-500 bg-green-50 text-green-700"
-                                : darkMode ? "border-white/10 text-white/60 hover:border-white/20" : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                                : "border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-white/10 dark:text-white/60 dark:hover:border-white/20"
                             }`}
                           >
                             <p.icon className="h-4 w-4" />
@@ -2479,8 +2490,8 @@ export default function CaixaPOSPage() {
                 {closeTableMode === "custom" && (
                   <div className="space-y-3">
                     {/* Step indicator */}
-                    <div className={`flex items-center justify-center gap-2 text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
-                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= Object.keys(eachPersonSelections).length ? "text-green-600" : darkMode ? "text-white/50" : "text-zinc-500"}`}>
+                    <div className={`flex items-center justify-center gap-2 text-xs text-zinc-500 dark:text-white/60`}>
+                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= Object.keys(eachPersonSelections).length ? "text-green-600" : "text-zinc-500 dark:text-white/50"}`}>
                         Pessoa {eachPersonStep + 1}
                       </span>
                       <span>·</span>
@@ -2499,7 +2510,7 @@ export default function CaixaPOSPage() {
                             className={`flex items-center gap-2 rounded-xl border-2 p-2.5 transition-all ${
                               isSelected
                                 ? "border-green-500 bg-green-50"
-                                : darkMode ? "border-white/10 hover:border-white/20" : "border-zinc-200 hover:border-zinc-300"
+                                : "border-zinc-200 hover:border-zinc-300 dark:border-white/10 dark:hover:border-white/20"
                             }`}
                           >
                             {maxQty > 1 ? (
@@ -2519,12 +2530,12 @@ export default function CaixaPOSPage() {
                                   className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                                     isSelected
                                       ? "bg-green-600 text-white hover:bg-green-700"
-                                      : darkMode ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
+                                      : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-white/10 dark:text-white/60 dark:hover:bg-white/20"
                                   }`}
                                 >
                                   -
                                 </button>
-                                <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                                <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : "text-zinc-500 dark:text-white/60"}`}>
                                   {selectedQty}/{maxQty}
                                 </span>
                                 <button
@@ -2542,7 +2553,7 @@ export default function CaixaPOSPage() {
                                   className={`flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold transition-colors disabled:opacity-30 ${
                                     isSelected
                                       ? "bg-green-600 text-white hover:bg-green-700"
-                                      : darkMode ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300"
+                                      : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-white/10 dark:text-white/60 dark:hover:bg-white/20"
                                   }`}
                                 >
                                   +
@@ -2563,16 +2574,16 @@ export default function CaixaPOSPage() {
                                 className={`flex h-7 w-7 items-center justify-center rounded-lg border-2 text-xs font-bold transition-all ${
                                   isSelected
                                     ? "border-green-500 bg-green-600 text-white"
-                                    : darkMode ? "border-white/20 text-white/60" : "border-zinc-300 text-zinc-500"
+                                    : "border-zinc-300 text-zinc-500 dark:border-white/20 dark:text-white/60"
                                 }`}
                               >
                                 {isSelected ? "✓" : ""}
                               </button>
                             )}
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{item.quantity}x {item.name}</span>
+                              <span className={`text-sm font-medium text-zinc-900 dark:text-white`}>{item.quantity}x {item.name}</span>
                             </div>
-                            <span className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(item.price * (isSelected ? selectedQty : item.quantity))}</span>
+                            <span className={`text-sm font-bold text-zinc-700 dark:text-white`}>{formatCurrency(item.price * (isSelected ? selectedQty : item.quantity))}</span>
                           </div>
                         )
                       })}
@@ -2616,7 +2627,7 @@ export default function CaixaPOSPage() {
                           }
                         }}
                         disabled={eachPersonStep === 0}
-                        className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40 ${darkMode ? "border-white/10 text-white/60 hover:bg-white/5" : "border-zinc-200 text-zinc-600"}`}
+                        className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40 border-zinc-200 text-zinc-600 dark:border-white/10 dark:text-white/60 dark:hover:bg-white/5`}
                       >
                         Voltar
                       </button>
@@ -2657,7 +2668,7 @@ export default function CaixaPOSPage() {
                           setEachPersonStep(prev => prev + 1)
                           setEachPersonPixUrl(null)
                         }}
-                        className={`rounded-xl border-2 border-dashed px-4 py-2.5 text-sm font-medium hover:border-green-400 hover:text-green-600 ${darkMode ? "border-white/10 text-white/60" : "border-zinc-300 text-zinc-600"}`}
+                        className={`rounded-xl border-2 border-dashed px-4 py-2.5 text-sm font-medium hover:border-green-400 hover:text-green-600 border-zinc-300 text-zinc-600 dark:border-white/10 dark:text-white/60`}
                       >
                         Próxima pessoa
                       </button>
@@ -2667,24 +2678,24 @@ export default function CaixaPOSPage() {
 
                 {/* Orders summary */}
                 {(pendingOrders.length > 0 || allTableItems.length > 0) && (
-                  <details className={`rounded-xl border ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
-                    <summary className={`px-4 py-3 text-xs font-semibold cursor-pointer uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                  <details className={`rounded-xl border border-zinc-200 dark:border-white/10`}>
+                    <summary className={`px-4 py-3 text-xs font-semibold cursor-pointer uppercase tracking-wide text-zinc-500 dark:text-white/60`}>
                       Ver detalhes ({pendingOrders.length + allTableItems.length} itens)
                     </summary>
-                    <div className={`px-4 pb-4 space-y-2 text-sm ${darkMode ? "text-white/60" : "text-zinc-600"}`}>
+                    <div className={`px-4 pb-4 space-y-2 text-sm text-zinc-600 dark:text-white/60`}>
                       {pendingOrders.map((o: any) => {
                         const items = parseOrderItems(o.items)
                         return (
-                          <div key={o.id} className={`flex justify-between py-1 border-b ${darkMode ? "border-white/10" : "border-zinc-100"}`}>
+                          <div key={o.id} className={`flex justify-between py-1 border-b border-zinc-100 dark:border-white/10`}>
                             <span className="text-zinc-600">{items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}</span>
                             <span className="font-medium text-zinc-900">{formatCurrency(o.total)}</span>
                           </div>
                         )
                       })}
                       {closingTableCart.map((item) => (
-                        <div key={item.productId} className={`flex justify-between py-1 border-b ${darkMode ? "border-white/10" : "border-zinc-100"}`}>
-                          <span className={darkMode ? "text-white/60" : "text-zinc-600"}>{item.quantity}x {item.name}</span>
-                          <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                        <div key={item.productId} className={`flex justify-between py-1 border-b border-zinc-100 dark:border-white/10`}>
+                          <span className={"text-zinc-600 dark:text-white/60"}>{item.quantity}x {item.name}</span>
+                          <span className={`font-medium text-zinc-900 dark:text-white`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
                     </div>
@@ -2693,7 +2704,7 @@ export default function CaixaPOSPage() {
               </div>
 
               {/* Footer */}
-              <div className={`px-6 pb-5 pt-3 border-t ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
+              <div className={`px-6 pb-5 pt-3 border-t border-zinc-200 dark:border-white/10`}>
                 <button
                   onClick={() => {
                     if (closingTablePayment === "cash" && closeTableMode === "single") {
@@ -2744,24 +2755,24 @@ export default function CaixaPOSPage() {
         const remainingAbater = total - alreadyPaid
         return (
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className={`rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
+            <div className={`rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 bg-white text-zinc-900 dark:bg-pdv-bg dark:text-white`}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-zinc-900">Abater valor</h3>
-                  <p className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Mesa {abaterModal} · Mesa continua aberta</p>
+                  <p className={`text-xs text-zinc-500 dark:text-white/50`}>Mesa {abaterModal} · Mesa continua aberta</p>
                 </div>
-                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                   <X aria-hidden="true" className="h-5 w-5" />
                 </button>
               </div>
 
-              <div className={`rounded-xl border p-3 flex justify-between text-sm ${darkMode ? "bg-white/5 border-white/10" : "bg-zinc-50 border-zinc-200"}`}>
-                <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Restante na mesa</span>
-                <span className={`font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{formatCurrency(remainingAbater)}</span>
+              <div className={`rounded-xl border p-3 flex justify-between text-sm bg-zinc-50 border-zinc-200 dark:bg-white/5 dark:border-white/10`}>
+                <span className={"text-zinc-500 dark:text-white/60"}>Restante na mesa</span>
+                <span className={`font-bold text-zinc-900 dark:text-white`}>{formatCurrency(remainingAbater)}</span>
               </div>
 
               <div>
-                <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Valor a abater</label>
+                <label className={`text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-white/60`}>Valor a abater</label>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -2771,18 +2782,18 @@ export default function CaixaPOSPage() {
                   aria-label="Valor a abater"
                   value={abaterAmount}
                   onChange={(e) => setAbaterAmount(e.target.value)}
-                  className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-2xl font-bold text-center focus:border-green-500 focus:outline-none ${darkMode ? "border-white/10 bg-white/5 text-white" : "border-zinc-200 text-zinc-900"}`}
+                  className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-2xl font-bold text-center focus:border-green-500 focus:outline-none border-zinc-200 text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-white`}
                   autoFocus
                 />
                 {abaterAmount && parseFloat(abaterAmount) > 0 && (
-                  <p className={`text-xs text-center mt-1 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
+                  <p className={`text-xs text-center mt-1 text-zinc-500 dark:text-white/50`}>
                     Restante após abate: {formatCurrency(Math.max(0, remainingAbater - parseFloat(abaterAmount)))}
                   </p>
                 )}
               </div>
 
               <div>
-                <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
+                <p className={`text-xs font-semibold uppercase tracking-wide mb-2 text-zinc-500 dark:text-white/60`}>Forma de pagamento</p>
                 <div className="flex gap-2">
                   {[
                     { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2793,7 +2804,7 @@ export default function CaixaPOSPage() {
                       key={p.value}
                       onClick={() => setAbaterMethod(p.value)}
                       className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-2.5 text-xs font-medium transition-all ${
-                        abaterMethod === p.value ? "border-green-500 bg-green-50 text-green-700" : darkMode ? "border-white/10 text-white/60" : "border-zinc-200 text-zinc-600"
+                        abaterMethod === p.value ? "border-green-500 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-600 dark:border-white/10 dark:text-white/60"
                       }`}
                     >
                       <p.icon className="h-4 w-4" />
@@ -2804,7 +2815,7 @@ export default function CaixaPOSPage() {
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`flex-1 rounded-xl border py-3 text-sm font-medium hover:bg-zinc-50 ${darkMode ? "border-white/10 text-white/60" : "border-zinc-300 text-zinc-700"}`}>
+                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`flex-1 rounded-xl border py-3 text-sm font-medium hover:bg-zinc-50 border-zinc-300 text-zinc-700 dark:border-white/10 dark:text-white/60`}>
                   Cancelar
                 </button>
                 <button
@@ -2823,22 +2834,22 @@ export default function CaixaPOSPage() {
       {/* Table QR Modal */}
       {tableQRModal && tableQRNumber !== null && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTableQRModal(false) }}>
-          <div className={`rounded-2xl p-6 text-center shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+          <div className={`rounded-2xl p-6 text-center shadow-2xl w-full max-w-sm bg-white dark:bg-pdv-card`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>QR Code · Mesa {tableQRNumber}</h3>
-              <button onClick={() => setTableQRModal(false)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+              <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>QR Code · Mesa {tableQRNumber}</h3>
+              <button onClick={() => setTableQRModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
-            <p className={`text-xs mb-4 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escaneie para ver o cardápio da mesa</p>
+            <p className={`text-xs mb-4 text-zinc-500 dark:text-white/50`}>Escaneie para ver o cardápio da mesa</p>
             {tableQrCodes[tableQRNumber] ? (
               <img src={tableQrCodes[tableQRNumber]} alt="QR Code" className="mx-auto rounded-xl w-64 h-64" />
             ) : (
-              <div className={`mx-auto w-64 h-64 flex items-center justify-center rounded-xl ${darkMode ? "bg-white/5" : "bg-zinc-100"}`}>
+              <div className={`mx-auto w-64 h-64 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/5`}>
                 <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
               </div>
             )}
-            <p className={`mt-3 text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{user?.establishment?.slug}/mesa/{tableQRNumber}</p>
+            <p className={`mt-3 text-xs text-zinc-500 dark:text-white/60`}>{user?.establishment?.slug}/mesa/{tableQRNumber}</p>
             <a
               href={tableQrCodes[tableQRNumber] ? tableQrCodes[tableQRNumber].replace("image/png", "image/octet-stream") : "#"}
               download={`mesa-${tableQRNumber}-qr.png`}
@@ -2853,13 +2864,13 @@ export default function CaixaPOSPage() {
       {/* Transfer Table Modal */}
       {transferModal !== null && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTransferModal(null) }}>
-          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
+          <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl bg-white dark:bg-pdv-card`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Transferir Mesa {transferModal}</h3>
-                <p className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escolha a mesa destino</p>
+                <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>Transferir Mesa {transferModal}</h3>
+                <p className={`text-xs text-zinc-500 dark:text-white/50`}>Escolha a mesa destino</p>
               </div>
-              <button onClick={() => setTransferModal(null)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+              <button onClick={() => setTransferModal(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
@@ -2905,8 +2916,8 @@ export default function CaixaPOSPage() {
                     }}
                     className={`flex flex-col items-center justify-center rounded-xl border-2 py-3 text-sm font-bold transition-colors ${
                       isOccupied
-                        ? darkMode ? "border-yellow-500/50 bg-yellow-900/30 text-yellow-300" : "border-yellow-300 bg-yellow-50 text-yellow-700"
-                        : darkMode ? "border-white/10 bg-white/5 text-white/60 hover:border-green-500" : "border-zinc-200 text-zinc-600 hover:border-green-500"
+                        ? "border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-500/50 dark:bg-yellow-900/30 dark:text-yellow-300"
+                        : "border-zinc-200 text-zinc-600 hover:border-green-500 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:border-green-500"
                     }`}
                   >
                     <span>{t}</span>
@@ -2915,7 +2926,7 @@ export default function CaixaPOSPage() {
                 )
               })}
             </div>
-            <p className={`mt-3 text-xs text-center ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Mesas ocupadas aparecem em amarelo</p>
+            <p className={`mt-3 text-xs text-center text-zinc-500 dark:text-white/60`}>Mesas ocupadas aparecem em amarelo</p>
           </div>
         </div>
       )}
@@ -2937,12 +2948,12 @@ export default function CaixaPOSPage() {
       {/* Staff QR Code Modal */}
       {showStaffQr && staffQrImage && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowStaffQr(false) }}>
-          <div className={`rounded-2xl p-6 text-center shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
-            <p className={`mb-1 text-sm font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>QR Code — Garcom</p>
-            <p className={`mb-4 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escaneie com o celular do garcom</p>
+          <div className={`rounded-2xl p-6 text-center shadow-2xl bg-white dark:bg-pdv-card`}>
+            <p className={`mb-1 text-sm font-bold text-zinc-900 dark:text-white`}>QR Code — Garcom</p>
+            <p className={`mb-4 text-xs text-zinc-500 dark:text-white/50`}>Escaneie com o celular do garcom</p>
             <img src={staffQrImage} alt="QR Code Garcom" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-            <p className={`mt-3 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{`/{${user?.establishment?.slug}}/staff`}</p>
-            <button onClick={() => setShowStaffQr(false)} className={`mt-4 rounded-xl px-6 py-2 text-sm font-bold ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}>
+            <p className={`mt-3 text-[10px] text-zinc-500 dark:text-white/60`}>{`/{${user?.establishment?.slug}}/staff`}</p>
+            <button onClick={() => setShowStaffQr(false)} className={`mt-4 rounded-xl px-6 py-2 text-sm font-bold bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
               Fechar
             </button>
           </div>
@@ -2973,7 +2984,7 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700",
 }
 
-function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMode }: { orders: any[]; deliveryPeople: any[]; establishmentId: string; onRefresh: () => void; darkMode: boolean }) {
+function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { orders: any[]; deliveryPeople: any[]; establishmentId: string; onRefresh: () => void }) {
   const [filter, setFilter] = useState("all")
   const [payModalOrder, setPayModalOrder] = useState<any>(null)
   const [payMethod, setPayMethod] = useState("cash")
@@ -3045,13 +3056,13 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                filter === f.value ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                filter === f.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt"
               }`}
             >
               {f.label}
               {count > 0 && (
                 <span className={`ml-1 rounded-full px-1 py-0.5 text-[9px] font-bold ${
-                  filter === f.value ? "bg-white/20" : darkMode ? "bg-[#162e4a]" : "bg-zinc-200"
+                  filter === f.value ? "bg-white/20" : "bg-zinc-200 dark:bg-pdv-card-alt"
                 }`}>
                   {count}
                 </span>
@@ -3062,7 +3073,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
       </div>
 
       {activeOrders.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+        <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
           <Package className="mb-2 h-8 w-8" />
           <p className="text-sm">
             {filter === "all" ? "Nenhum pedido ativo" :
@@ -3083,7 +3094,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
 
             return (
               <div key={order.id} className={`rounded-xl border p-3 ${
-                order.status === "ready" && isPickup ? "border-amber-300 shadow-sm" : darkMode ? "border-white/[.08] bg-[#1a3a5c]" : "border-zinc-200 bg-white"
+                order.status === "ready" && isPickup ? "border-amber-300 shadow-sm" : "border-zinc-200 bg-white dark:border-white/[.08] dark:bg-pdv-card"
               }`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -3093,7 +3104,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                           #{order.orderNumber}
                         </span>
                       )}
-                      <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{order.customerName}</span>
+                      <span className={`font-medium text-zinc-900 dark:text-white`}>{order.customerName}</span>
                       {filter === "all" && (
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                           order.status === "preparing" ? "bg-amber-100 text-amber-700" :
@@ -3108,12 +3119,12 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                         </span>
                       )}
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        darkMode ? "bg-[#1a3a5c] text-white/70" : "bg-zinc-100 text-zinc-600"
+                        "bg-zinc-100 text-zinc-600 dark:bg-pdv-card dark:text-white/70"
                       }`}>
                         {order.orderType === "dineIn" ? "No local" : isPickup ? "Retirada" : "Entrega"}
                       </span>
                     </div>
-                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
+                    <div className={`mt-1 text-xs text-zinc-500 dark:text-white/50`}>
                       {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                     </div>
                     <div className="mt-1 flex items-center gap-2">
@@ -3164,20 +3175,20 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
 
       {payModalOrder && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
+          <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm bg-white text-zinc-900 dark:bg-pdv-bg dark:text-white`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-zinc-900">Pagar Pedido #{payModalOrder.orderNumber}</h3>
-              <button onClick={() => setPayModalOrder(null)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+              <button onClick={() => setPayModalOrder(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-3">
-              <div className={`rounded-lg p-3 text-sm ${darkMode ? "bg-white/5" : "bg-zinc-50"}`}>
-                <p className={darkMode ? "text-white/50" : "text-zinc-500"}>{payModalOrder.customerName}</p>
+              <div className={`rounded-lg p-3 text-sm bg-zinc-50 dark:bg-white/5`}>
+                <p className={"text-zinc-500 dark:text-white/50"}>{payModalOrder.customerName}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(payModalOrder.total)}</p>
               </div>
               <div>
-                <label className={`text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</label>
+                <label className={`text-xs text-zinc-500 dark:text-white/60`}>Forma de pagamento</label>
                 <div className="flex gap-2 mt-1">
                   {[
                     { value: "cash", label: "Dinheiro" },
@@ -3209,7 +3220,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
   )
 }
 
-function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: any[]; establishmentId: string; onRefresh: () => void; darkMode: boolean }) {
+function BalcaoTab({ orders, establishmentId, onRefresh }: { orders: any[]; establishmentId: string; onRefresh: () => void }) {
   const [filter, setFilter] = useState("all")
   const allBalcao = orders.filter((o: any) => o.orderType === "presencial")
   const activeBalcao = allBalcao.filter((o: any) => ["preparing", "ready"].includes(o.status))
@@ -3244,13 +3255,13 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f.value ? "bg-green-600 text-white" : darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              filter === f.value ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt"
             }`}
           >
             {f.label}
             {f.count > 0 && (
               <span className={`ml-1 rounded-full px-1 py-0.5 text-[9px] font-bold ${
-                filter === f.value ? "bg-white/20" : darkMode ? "bg-[#162e4a]" : "bg-zinc-200"
+                filter === f.value ? "bg-white/20" : "bg-zinc-200 dark:bg-pdv-card-alt"
               }`}>
                 {f.count}
               </span>
@@ -3260,7 +3271,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
       </div>
 
       {balcaoOrders.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+        <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
           <Store className="mb-2 h-8 w-8" />
           <p className="text-sm">
             {filter === "delivered" ? "Nenhum pedido entregue hoje" :
@@ -3278,7 +3289,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
 
             return (
               <div key={order.id} className={`rounded-xl border p-3 ${
-                order.status === "ready" && !isTable ? "border-amber-400 shadow-md" : darkMode ? "border-white/[.08] bg-[#1a3a5c]" : "border-zinc-200 bg-white"
+                order.status === "ready" && !isTable ? "border-amber-400 shadow-md" : "border-zinc-200 bg-white dark:border-white/[.08] dark:bg-pdv-card"
               }`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -3289,9 +3300,9 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
                         </span>
                       )}
                       {isTable ? (
-                        <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{tableLabel}</span>
+                        <span className={`font-medium text-zinc-900 dark:text-white`}>{tableLabel}</span>
                       ) : (
-                        <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-900"}`}>{order.customerName}</span>
+                        <span className={`font-medium text-zinc-900 dark:text-white`}>{order.customerName}</span>
                       )}
                       {filter === "all" && (
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -3302,7 +3313,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
                         </span>
                       )}
                     </div>
-                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
+                    <div className={`mt-1 text-xs text-zinc-500 dark:text-white/50`}>
                       {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                     </div>
                     <p className="mt-1 text-sm font-bold text-green-600">{formatCurrency(order.total)}</p>

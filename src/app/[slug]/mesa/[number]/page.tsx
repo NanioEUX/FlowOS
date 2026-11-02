@@ -52,5 +52,19 @@ export default async function MesaServerPage({
     })),
   }
 
-  return <MesaPage establishment={est} tableNumber={num} />
+  return (
+    <>
+      {/* F8C-013: a mesa escolhe o tema pelo `defaultTheme` do estabelecimento
+          (dado do servidor), mas a classe `dark` fica no <html> — que é
+          renderizado pelo layout raiz, antes deste componente. Este script
+          corrige a classe assim que o HTML da mesa é parseado, para o
+          primeiro paint já sair no tema certo. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.classList.toggle('dark',${est.defaultTheme !== "light"})`,
+        }}
+      />
+      <MesaPage establishment={est} tableNumber={num} />
+    </>
+  )
 }

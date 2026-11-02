@@ -19,6 +19,15 @@ module.exports = {
           gray: "#A7B2C2",
           muted: "#6C7A8E",
         },
+        // F8C-013: paleta do PDV/mesa que vivia em hex hardcoded dentro do
+        // className (69 ocorrências em `caixa-page.tsx`). Tokens com os MESMOS
+        // valores — a troca é visualmente idêntica, só centraliza a paleta.
+        pdv: {
+          bg: "#0d2137", // fundo principal da tela
+          card: "#1a3a5c", // cards, header e abas
+          "card-alt": "#162e4a", // card/hover de superfície
+          elevated: "#0f2942", // superfície elevada (cards sobre card)
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

@@ -248,7 +248,7 @@ export default function DashboardLayout({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 flex flex-col transform border-r border-white/[.08] transition-transform overflow-hidden",
-          "bg-gradient-to-b from-[#1a3a5c] to-[#0d2137]",
+          "bg-gradient-to-b from-pdv-card to-pdv-bg",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
@@ -477,7 +477,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Mobile bottom nav — blue (sidebar style) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[.1] bg-gradient-to-r from-[#1a3a5c] to-[#0d2137] backdrop-blur-xl lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/[.1] bg-gradient-to-r from-pdv-card to-pdv-bg backdrop-blur-xl lg:hidden">
         <div className="flex items-center justify-around py-2">
           {mobileNavItems.map((item) => (
             <Link
