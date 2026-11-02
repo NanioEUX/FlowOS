@@ -10,7 +10,7 @@
 ```bash
 rm -rf .next/types && npx tsc --noEmit && npx vitest run && npm run build
 ```
-Aspas em paths com `[slug]`/`[id]` no zsh. Atual: tsc limpo, 123 testes, build OK.
+Aspas em paths com `[slug]`/`[id]` no zsh. Atual: tsc limpo, 187 testes, build OK.
 
 ## Sequência da auditoria (não seguir ordem H1 cegamente)
 Fase 1 ✅ → Fase 2 ✅ → **Fase 6 (cardápio público) EM ANDAMENTO** → Fase 5/3/4/7/8/9/10 pendentes.
@@ -374,11 +374,26 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   5/hora por IP), **F4D-025** (`delete-all` 403 em produção; `test-dispatch` sem
   merchant hardcoded). Testes: **167**. Gate: tsc + 167 + build OK.
 
+- **`93de203` — F2-001 (mass assignment) + F1B-001 (IDOR cross-tenant) (02/11,
+  commitado)**: novo `src/lib/safe-update.ts` (`pickUpdateData(body, whitelist)`
+  — só escalares da whitelist chegam ao Prisma; objetos/nested write descartados,
+  4 testes novos → **187**) aplicado nos PATCH de `products/[id]` (28 campos),
+  `additional-options` (15) e `stock/[id]` (allowlists por modelo).
+  **Bug latente corrigido**: o front de estoque envia `familyId` no PATCH de item
+  e `StockItem` não tem essa coluna → o PATCH derrubava com
+  `PrismaClientValidationError` (500 em produção); agora `familyId` fica fora da
+  allowlist e o back-fill de família na categoria lê o body cru. Também:
+  `delivery-persons/[id]` PATCH era `data: body` cru (allowlist preventiva);
+  **IDOR cross-tenant fechado** em `delivery-zones` (PUT/DELETE com `id` do body
+  sem ownership → 404), `admin/banners` e `admin/stories` (GET/POST agora
+  `requireEstablishment(id)`; PATCH/DELETE de `[id]` conferem tenant → 404;
+  `stories/[id]` DELETE não faz mais cascata cross-tenant; `items` valida story +
+  produto do mesmo tenant). Gate: tsc 0, lint 0 erros, 187 testes, build OK.
+
 ## Pendências imediatas (próxima sessão)
-0. **Client do Prisma local**: se aparecer `column Establishment.asaasApiKey does
-   not exist` (ou qualquer coluna antiga), rode `npx prisma generate` — o
-   `node_modules/.prisma` estava defasado (gerado antes da remoção do Asaas/Efi).
-   `prisma generate` **não** escreve no banco.
+0. ~~**Client do Prisma local**~~ — `npx prisma generate` executado (02/11);
+   se voltar a aparecer `column … does not exist`, rodar de novo (`prisma
+   generate` **não** escreve no banco).
 1. **Fase 8 restante**: F8C-014 parcial (adoção de `ui/Input` nos 52 inputs canônicos
    do dashboard **feita**; faltam as 128 variantes `h-8/h-9`/`bg-white` — exigiria
    `size="sm"` no `ui/Input`, decisão de design) + `ui/Button` no PDV; 2ª via da
