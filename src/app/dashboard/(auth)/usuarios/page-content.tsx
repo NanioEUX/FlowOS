@@ -6,6 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Users, Plus, Pencil, Trash2, X, Loader2, Shield, Eye, EyeOff, Check, Copy, ExternalLink } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -323,31 +324,28 @@ export default function UsuariosPage() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input
+                  <Input
                     placeholder="Nome do usuário"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Email</label>
-                  <input
+                  <Input
                     type="email"
                     placeholder="email@exemplo.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Senha</label>
-                  <input
+                  <Input
                     type="password"
                     placeholder={editingUser ? "Deixe vazio para manter" : "Mínimo 6 caracteres"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                   {!editingUser && (
                     <p className="mt-1 text-xs text-zinc-500">
@@ -380,21 +378,19 @@ export default function UsuariosPage() {
                   <>
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Email</label>
-                      <input
+                      <Input
                         type="email"
                         placeholder="motoboy@email.com"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">WhatsApp (com DDD)</label>
-                      <input
+                      <Input
                         placeholder="11999999999"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                   </>

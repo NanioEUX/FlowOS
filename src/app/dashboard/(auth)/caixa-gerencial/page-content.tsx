@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -645,13 +646,12 @@ export default function CaixaGerencialPage() {
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-zinc-900 mb-4">Sangria</h2>
-            <input
+            <Input
               type="number"
               placeholder="Valor"
               value={movAmount}
               onChange={(e) => setMovAmount(e.target.value)}
-              autoFocus
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
+              autoFocus className="mb-4"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setSangriaModal(false)}>Cancelar</Button>
@@ -668,13 +668,12 @@ export default function CaixaGerencialPage() {
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-zinc-900 mb-4">Suprimento</h2>
-            <input
+            <Input
               type="number"
               placeholder="Valor"
               value={movAmount}
               onChange={(e) => setMovAmount(e.target.value)}
-              autoFocus
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
+              autoFocus className="mb-4"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setSuprimentoModal(false)}>Cancelar</Button>
@@ -691,19 +690,17 @@ export default function CaixaGerencialPage() {
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-zinc-900 mb-4">Despesa</h2>
-            <input
+            <Input
               placeholder="Descrição"
               value={despesaDesc}
               onChange={(e) => setDespesaDesc(e.target.value)}
-              autoFocus
-              className="mb-3 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
+              autoFocus className="mb-3"
             />
-            <input
+            <Input
               type="number"
               placeholder="Valor"
               value={movAmount}
-              onChange={(e) => setMovAmount(e.target.value)}
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
+              onChange={(e) => setMovAmount(e.target.value)} className="mb-4"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setDespesaModal(false)}>Cancelar</Button>

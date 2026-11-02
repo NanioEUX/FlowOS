@@ -6,6 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Package, Plus, Trash2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, X, Tag, Edit3, Search, ShoppingCart } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -640,7 +641,7 @@ export default function EstoquePage() {
           {movementError && <p className="text-xs text-red-600">{movementError}</p>}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-700">Observações (opcional)</label>
-            <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
+            <Input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} placeholder="Ex: Lote 12345..." />
           </div>
           <Button className="w-full bg-red-600 hover:bg-red-700" onClick={saveMovement}>Registrar Saída</Button>
         </CardContent>
@@ -927,7 +928,7 @@ export default function EstoquePage() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input type="text" placeholder="Ex: Alimentos, Limpeza..." value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                  <Input type="text" placeholder="Ex: Alimentos, Limpeza..." value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} />
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" className="flex-1" onClick={() => setShowFamilyForm(false)}>Cancelar</Button>
@@ -951,7 +952,7 @@ export default function EstoquePage() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input type="text" placeholder="Ex: Carnes, Laticínios..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                  <Input type="text" placeholder="Ex: Carnes, Laticínios..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Família (opcional)</label>
@@ -982,7 +983,7 @@ export default function EstoquePage() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome do item</label>
-                  <input type="text" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                  <Input type="text" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
                 </div>
 
                 {!addingFromCategory && (
@@ -1076,7 +1077,7 @@ export default function EstoquePage() {
                         </div>
                         <div className="space-y-1">
                           <label className="block text-sm font-medium text-zinc-700">Custo (R$)</label>
-                          <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                          <Input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} />
                         </div>
                       </div>
                       {parseFloat(itemForm.packageQty) > 0 && parseFloat(itemForm.unitCost) > 0 && (
@@ -1093,13 +1094,13 @@ export default function EstoquePage() {
                   {!isPackageUnit && (
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Custo unitário (R$)</label>
-                      <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                      <Input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} />
                     </div>
                   )}
 
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Estoque mínimo</label>
-                    <input type="number" step="0.01" min="0" value={itemForm.minQuantity} onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+                    <Input type="number" step="0.01" min="0" value={itemForm.minQuantity} onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })} />
                   </div>
 
                   <div className="space-y-1">
@@ -1201,7 +1202,7 @@ export default function EstoquePage() {
                 {movementError && <p className="text-xs text-red-600">{movementError}</p>}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Observações (opcional)</label>
-                  <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
+                  <Input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} placeholder="Ex: Lote 12345..." />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowMovementForm(false)}>Cancelar</Button>

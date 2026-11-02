@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { formatCurrency } from "@/lib/utils"
 
@@ -1192,12 +1193,11 @@ export default function ConfigPage() {
             </div>
             <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-700">WhatsApp (com DDD)</label>
-            <input
+            <Input
             type="text"
             placeholder="11999999999"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             </div>
             <div className="space-y-1">
@@ -1430,12 +1430,11 @@ export default function ConfigPage() {
             </div>
             <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-700">Chave PIX para recebimento</label>
-            <input
+            <Input
             type="text"
             placeholder="Chave PIX onde receberá o líquido (ex: 551199999999@email)"
             value={form.flowChavePix}
             onChange={(e) => setForm({ ...form, flowChavePix: e.target.value })}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <label className="block text-sm font-medium text-zinc-700">Ativar Modelo Flow</label>
             <div className="flex items-center">
@@ -1969,27 +1968,25 @@ export default function ConfigPage() {
                 <div className="rounded-lg bg-zinc-50 p-4 space-y-3">
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Valor da taxa (R$)</label>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       min="0"
                       placeholder="5,00"
                       value={form.deliveryFeeAmount}
                       onChange={(e) => setForm({ ...form, deliveryFeeAmount: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                     />
                   </div>
                   {form.deliveryFeeType === "free_above" && (
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Grátis a partir de (R$)</label>
-                      <input
+                      <Input
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="50,00"
                         value={form.deliveryFreeAbove}
                         onChange={(e) => setForm({ ...form, deliveryFreeAbove: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                   )}
@@ -2007,26 +2004,24 @@ export default function ConfigPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-zinc-700">Mínimo (min)</label>
-                <input
+                <Input
                   type="number"
                   min="5"
                   max="180"
                   placeholder="30"
                   value={form.estimatedDeliveryMin || ""}
                   onChange={(e) => setForm({ ...form, estimatedDeliveryMin: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-zinc-700">Máximo (min)</label>
-                <input
+                <Input
                   type="number"
                   min="5"
                   max="180"
                   placeholder="45"
                   value={form.estimatedDeliveryMax || ""}
                   onChange={(e) => setForm({ ...form, estimatedDeliveryMax: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
             </div>

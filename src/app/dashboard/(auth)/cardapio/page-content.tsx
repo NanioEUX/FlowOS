@@ -6,6 +6,7 @@ import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { Plus, Pencil, Trash2, UtensilsCrossed, X, GripVertical, Star, Sparkles, Image as ImageIcon, Upload, Eye, Save, Loader2, Palette, Clock, ExternalLink, Percent, AlertTriangle, ArrowUp, ArrowDown, Search, Tag, DollarSign, Download, Check, Settings, Lock, Unlock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { IfoodCatalogWizard } from "@/components/ifood-catalog-wizard"
 
 
@@ -2617,24 +2618,22 @@ export default function CardapioPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-zinc-500">Ou cole a URL da imagem abaixo</p>
-              <input
+              <Input
                 type="text"
                 placeholder="https://..."
                 value={form.logo.startsWith("data:") ? "" : form.logo}
                 onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
               />
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700">Link do Instagram</label>
-              <input
+              <Input
                 type="text"
                 id="instagramUrl"
                 placeholder="https://instagram.com/seuperfil"
                 value={form.instagramUrl}
                 onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
               />
               <p className="mt-1 text-xs text-zinc-500">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
             </div>
@@ -2644,11 +2643,10 @@ export default function CardapioPage() {
               <div className="space-y-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Título de Confirmação</label>
-                  <input
+                  <Input
                     placeholder="Pedido enviado!"
                     value={form.confirmationTitle}
                     onChange={(e) => setForm({ ...form, confirmationTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                   <p className="mt-1 text-xs text-zinc-500">Título exibido ao cliente após finalizar o pedido</p>
                 </div>
@@ -2735,20 +2733,18 @@ export default function CardapioPage() {
                 <p className="text-xs text-amber-400">Personalize a mensagem exibida quando o estabelecimento estiver fechado. Use {'{day}'} e {'{time}'} para preencher automaticamente.</p>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Título</label>
-                  <input
+                  <Input
                     placeholder="Encerramos por hoje, mas {day} às {time} retornamos"
                     value={form.closedTitle}
                     onChange={(e) => setForm({ ...form, closedTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Submensagem</label>
-                  <input
+                  <Input
                     placeholder="Aguarde, estaremos de volta!"
                     value={form.closedSub}
                     onChange={(e) => setForm({ ...form, closedSub: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 {/* Preview */}
@@ -3199,11 +3195,10 @@ export default function CardapioPage() {
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                      <input
+                      <Input
                         placeholder="Ex: Pizza Calabresa"
                         value={productForm.name}
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -3316,11 +3311,10 @@ export default function CardapioPage() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-zinc-500">Ou cole a URL da imagem abaixo</p>
-                      <input
+                      <Input
                         placeholder="https://exemplo.com/foto.jpg"
                         value={productForm.image.startsWith("data:") ? "" : productForm.image}
                         onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                       {productForm.image && (
                         <img

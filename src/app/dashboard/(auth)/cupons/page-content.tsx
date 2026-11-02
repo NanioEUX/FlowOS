@@ -7,6 +7,7 @@ import { Tag, Plus, Trash2, ToggleLeft, ToggleRight, Percent, DollarSign, Loader
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -177,11 +178,10 @@ export default function CuponsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-zinc-500">Código</label>
-                <input
+                <Input
                   placeholder="DESCONTO10"
                   value={form.code}
-                  onChange={(e) => handleCodeChange(e.target.value)}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none uppercase"
+                  onChange={(e) => handleCodeChange(e.target.value)} className="uppercase"
                 />
                 {codeError && <p className="mt-1 text-xs text-red-500">{codeError}</p>}
               </div>
@@ -199,41 +199,37 @@ export default function CuponsPage() {
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Valor</label>
-                <input
+                <Input
                   type="number"
                   placeholder={form.type === "percent" ? "10" : "5.00"}
                   value={form.value}
                   onChange={(e) => setForm({ ...form, value: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Pedido mínimo (R$)</label>
-                <input
+                <Input
                   type="number"
                   placeholder="0"
                   value={form.minOrder}
                   onChange={(e) => setForm({ ...form, minOrder: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Máx. usos</label>
-                <input
+                <Input
                   type="number"
                   placeholder="Ilimitado"
                   value={form.maxUses}
                   onChange={(e) => setForm({ ...form, maxUses: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
                 <label className="text-xs text-zinc-500">Expira em</label>
-                <input
+                <Input
                   type="date"
                   value={form.expiresAt}
                   onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
             </div>

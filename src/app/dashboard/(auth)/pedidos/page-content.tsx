@@ -8,6 +8,7 @@ import { ShoppingBag, Search, MessageCircle, ExternalLink, User, Plus, Loader2, 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
@@ -579,32 +580,29 @@ export default function PedidosPage() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome do cliente</label>
-                  <input
+                  <Input
                     type="text"
                     placeholder="Ex: João"
                     value={newOrder.customerName}
                     onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">WhatsApp do cliente</label>
-                  <input
+                  <Input
                     type="text"
                     placeholder="11999999999"
                     value={newOrder.customerPhone}
                     onChange={(e) => setNewOrder({ ...newOrder, customerPhone: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Observações</label>
-                  <input
+                  <Input
                     type="text"
                     placeholder="Ex: Pedido feito pelo WhatsApp"
                     value={newOrder.notes}
                     onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <p className="text-xs text-zinc-500">Os itens são gerenciados manualmente pelo WhatsApp. Use isso para registrar pedidos que chegaram pelo chat.</p>

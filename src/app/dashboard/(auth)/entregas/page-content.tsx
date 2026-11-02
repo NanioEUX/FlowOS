@@ -8,6 +8,7 @@ import { Bike, MapPin, Copy, CheckCircle, Clock, Package, MessageCircle, Loader2
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
@@ -111,18 +112,16 @@ function DateFilters({ active, onChange, customStart, customEnd, onCustomStartCh
       </button>
       {active === "custom" && (
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="date"
             value={customStart}
-            onChange={(e) => onCustomStartChange(e.target.value)}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none w-36 text-xs"
+            onChange={(e) => onCustomStartChange(e.target.value)} className="w-36 text-xs"
           />
           <span className="text-xs text-zinc-500">até</span>
-          <input
+          <Input
             type="date"
             value={customEnd}
-            onChange={(e) => onCustomEndChange(e.target.value)}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none w-36 text-xs"
+            onChange={(e) => onCustomEndChange(e.target.value)} className="w-36 text-xs"
           />
         </div>
       )}
