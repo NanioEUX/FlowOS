@@ -34,15 +34,21 @@ export async function generateMetadata({
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://flowos.fs.app"
-  const imageUrl = establishment.cover || establishment.logo || `${baseUrl}/og-default.png`
+  // og-default.png não existia em public/ (link quebrado) — usa o ícone 512
+  const imageUrl = establishment.cover || establishment.logo || `${baseUrl}/icons/icon-512.png`
 
   return {
     title: `${establishment.name} - Cardápio Digital | FlowOS`,
     description: establishment.description || `Faça seu pedido no ${establishment.name}. Cardápio digital com delivery e retirada.`,
+    // F6B-021: canonical por tenant (evita indexar a mesma página por URL
+    // de rastreio/parâmetros)
+    alternates: { canonical: `${baseUrl}/${params.slug}` },
     openGraph: {
       title: establishment.name,
       description: establishment.description || `Faça seu pedido no ${establishment.name}`,
-      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      // Sem width/height fixos: cover/logo têm proporção variável e dims
+      // erradas cortam a prévia no WhatsApp (F6B-021)
+      images: [{ url: imageUrl }],
       siteName: "FlowOS",
       locale: "pt_BR",
       type: "website",
@@ -119,5 +125,29 @@ export default async function EstablishmentPage({
     )
   }
 
-  return <MenuPage establishment={rest as any} paymentConfig={paymentConfig} orderConfig={orderConfig} minimumOrder={minimumOrder} />
+  // F6B-021 — JSON-LD (rich result do cardápio). `replace(/</g)` impede que
+  // qualquer string do tenant feche o </script> (XSS via JSON).
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://flowos.fs.app"
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    name: rest.name,
+    description: rest.description || undefined,
+    url: `${baseUrl}/${establishment.slug}`,
+    image: rest.cover || rest.logo || `${baseUrl}/icons/icon-512.png`,
+    telephone: rest.phone || undefined,
+    address: rest.address
+      ? { "@type": "PostalAddress", streetAddress: rest.address }
+      : undefined,
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <MenuPage establishment={rest as any} paymentConfig={paymentConfig} orderConfig={orderConfig} minimumOrder={minimumOrder} />
+    </>
+  )
 }
