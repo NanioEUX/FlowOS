@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   CircleDot,
 } from "lucide-react"
@@ -66,6 +67,8 @@ export default function ChatPage() {
   const { toast } = useToast()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  // F8B-013: erro de carga era indistinguível de "conversas vazias"
+  const [loadError, setLoadError] = useState(false)
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
   const [messages, setMessages] = useState<OrderMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -152,6 +155,7 @@ export default function ChatPage() {
       })
 
       setConversations(convList)
+      setLoadError(false)
       setLoading(false)
 
       const totalUnread = convList.reduce((s, c) => s + c.unreadCount, 0)
@@ -160,6 +164,7 @@ export default function ChatPage() {
       )
     } catch (e) {
       console.error("Erro ao carregar conversas:", e)
+      setLoadError(true)
       setLoading(false)
     }
   }, [establishmentId])
@@ -320,7 +325,7 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-zinc-900">Chat</h2>
+          <h1 className="text-2xl font-bold text-zinc-900">Chat</h1>
           {totalUnread > 0 && (
             <Badge variant="danger" className="px-2 py-0.5 text-xs">
               {totalUnread}
@@ -338,13 +343,13 @@ export default function ChatPage() {
         >
           <div className="p-3 border-b border-zinc-200">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
               <input
                 type="text"
                 placeholder="Buscar conversa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none"
+                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-500 focus:outline-none"
               />
             </div>
           </div>
@@ -352,10 +357,24 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <MessageCircle className="h-8 w-8 text-zinc-300" />
-                <p className="mt-2 text-sm text-zinc-500">
-                  Nenhuma conversa encontrada
-                </p>
+                {loadError ? (
+                  <>
+                    <AlertTriangle className="h-8 w-8 text-red-400" />
+                    <p className="mt-2 text-sm text-zinc-700">
+                      Não foi possível carregar as conversas.
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Verifique sua conexão e tente novamente.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="h-8 w-8 text-zinc-300" />
+                    <p className="mt-2 text-sm text-zinc-500">
+                      Nenhuma conversa encontrada
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               filteredConversations.map((conv) => (
@@ -388,13 +407,13 @@ export default function ChatPage() {
                         {conv.name}
                       </span>
                       {conv.lastMessage && (
-                        <span className="text-[10px] text-zinc-400 flex-shrink-0">
+                        <span className="text-[10px] text-zinc-500 flex-shrink-0">
                           {timeAgo(conv.lastMessage.createdAt)}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-zinc-500">
                         {conv.phone}
                       </span>
                     </div>
@@ -403,7 +422,7 @@ export default function ChatPage() {
                         className={`text-xs mt-1 truncate ${
                           conv.unreadCount > 0
                             ? "text-zinc-700 font-medium"
-                            : "text-zinc-400"
+                            : "text-zinc-500"
                         }`}
                       >
                         {conv.lastMessage.sender === "establishment" && "Você: "}
@@ -411,7 +430,7 @@ export default function ChatPage() {
                       </p>
                     )}
                     {conv.orders.length > 1 && (
-                      <span className="text-[10px] text-zinc-400 mt-0.5">
+                      <span className="text-[10px] text-zinc-500 mt-0.5">
                         {conv.orders.length} pedidos
                       </span>
                     )}
@@ -449,10 +468,10 @@ export default function ChatPage() {
                   <p className="text-sm font-semibold text-zinc-900">
                     {selectedConv.name}
                   </p>
-                  <p className="text-xs text-zinc-400">{selectedConv.phone}</p>
+                  <p className="text-xs text-zinc-500">{selectedConv.phone}</p>
                 </div>
                 {selectedConv.orders.length > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-zinc-400">
+                  <div className="flex items-center gap-1 text-xs text-zinc-500">
                     <CircleDot className="h-3 w-3" />
                     <span>
                       Pedido #{selectedConv.orders[selectedConv.orders.length - 1].orderNumber || selectedConv.orders[selectedConv.orders.length - 1].id.slice(0, 8)}
@@ -497,7 +516,7 @@ export default function ChatPage() {
                           className={`text-[10px] mt-1.5 ${
                             msg.sender === "establishment"
                               ? "text-green-200"
-                              : "text-zinc-400"
+                              : "text-zinc-500"
                           }`}
                         >
                           {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
@@ -525,7 +544,7 @@ export default function ChatPage() {
                       }
                     }}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-500 focus:outline-none"
+                    className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-500 focus:outline-none"
                     disabled={sending}
                   />
                   <Button
@@ -549,7 +568,7 @@ export default function ChatPage() {
               <p className="mt-3 text-sm font-medium text-zinc-500">
                 Selecione uma conversa
               </p>
-              <p className="text-xs text-zinc-400 mt-1">
+              <p className="text-xs text-zinc-500 mt-1">
                 Escolha uma conversa ao lado para iniciar
               </p>
             </div>

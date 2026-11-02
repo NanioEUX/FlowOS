@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { formatCurrency } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -85,8 +86,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KPI label="Estabelecimentos Ativos" value={data.estabelecimentosAtivos} sub={`${data.totalEstabelecimentos} total`} icon="🏪" />
         <KPI label="Pedidos no Mês" value={data.totalPedidosMes} sub="Total geral" icon="📦" />
-        <KPI label="Faturamento Mês" value={`R$ ${data.faturamentoMes.toFixed(2)}`} sub="Soma de pedidos" icon="💰" color="green" />
-        <KPI label="Custo IA Mês" value={`R$ ${data.aiCostMonth.toFixed(2)}`} sub={`${data.aiUsageMonth} chamadas`} icon="🤖" color={data.aiCostMonth > 100 ? "red" : "blue"} />
+        <KPI label="Faturamento Mês" value={formatCurrency(data.faturamentoMes)} sub="Soma de pedidos" icon="💰" color="green" />
+        <KPI label="Custo IA Mês" value={formatCurrency(data.aiCostMonth)} sub={`${data.aiUsageMonth} chamadas`} icon="🤖" color={data.aiCostMonth > 100 ? "red" : "blue"} />
       </div>
 
       {/* Monitores */}
@@ -130,11 +131,11 @@ export default async function DashboardPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-zinc-200">
               <tr className="text-left text-zinc-500">
-                <th className="py-2 px-3">Pedido</th>
-                <th className="py-2 px-3">Estabelecimento</th>
-                <th className="py-2 px-3">Total</th>
-                <th className="py-2 px-3">Status</th>
-                <th className="py-2 px-3">Quando</th>
+                <th scope="col" className="py-2 px-3">Pedido</th>
+                <th scope="col" className="py-2 px-3">Estabelecimento</th>
+                <th scope="col" className="py-2 px-3">Total</th>
+                <th scope="col" className="py-2 px-3">Status</th>
+                <th scope="col" className="py-2 px-3">Quando</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +143,7 @@ export default async function DashboardPage() {
                 <tr key={o.id} className="border-b border-zinc-100 hover:bg-zinc-50">
                   <td className="py-2 px-3 font-medium">#{o.orderNumber || o.id.slice(-6)}</td>
                   <td className="py-2 px-3">{o.establishment.name}</td>
-                  <td className="py-2 px-3 font-medium text-green-600">R$ {o.total.toFixed(2)}</td>
+                  <td className="py-2 px-3 font-medium text-green-600">{formatCurrency(o.total)}</td>
                   <td className="py-2 px-3"><StatusBadge status={o.status} /></td>
                   <td className="py-2 px-3 text-zinc-500">{new Date(o.createdAt).toLocaleString("pt-BR")}</td>
                 </tr>
@@ -169,7 +170,7 @@ function KPI({ label, value, sub, icon, color = "zinc" }: any) {
         <span className="text-2xl">{icon}</span>
       </div>
       <p className={`text-2xl font-bold ${colors[color]}`}>{value}</p>
-      <p className="text-xs text-zinc-400 mt-1">{sub}</p>
+      <p className="text-xs text-zinc-500 mt-1">{sub}</p>
     </div>
   )
 }

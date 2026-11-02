@@ -43,7 +43,7 @@ export function CommissionEditor({ establishmentId, currentPercentage, pagarmeFe
           {saving ? "Salvando..." : saved ? "✓ Salvo" : "Salvar"}
         </button>
       </div>
-      <div className="text-xs text-zinc-400 space-y-0.5">
+      <div className="text-xs text-zinc-500 space-y-0.5">
         <p>Estabelecimento recebe: <span className="text-zinc-600">{(100 - value).toFixed(2)}%</span></p>
         <p>Pagar.me cobra: <span className="text-zinc-600">{pagarmeFee}%</span></p>
         <p>Líquido SaaS: <span className="text-green-600 font-medium">{netProfit.toFixed(2)}%</span></p>

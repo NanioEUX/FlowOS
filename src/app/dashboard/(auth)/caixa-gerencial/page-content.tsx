@@ -208,7 +208,7 @@ export default function CaixaGerencialPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Caixa</h2>
+        <h1 className="text-2xl font-bold text-zinc-900">Caixa</h1>
         <p className="text-sm text-zinc-500">Vendas são feitas na Frente de Caixa</p>
       </div>
 
@@ -222,7 +222,7 @@ export default function CaixaGerencialPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === t.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
           >
             <t.icon className="h-4 w-4" />
             {t.label}
@@ -236,22 +236,22 @@ export default function CaixaGerencialPage() {
           <button
             key={f}
             onClick={() => setDateFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === f ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === f ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
           >
             {f === "today" ? "Hoje" : f === "7days" ? "7 dias" : f === "30days" ? "30 dias" : "Tudo"}
           </button>
         ))}
         <button
           onClick={() => { setDateFilter(dateFilter === "custom" ? "today" : "custom") }}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${dateFilter === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
         >
           <Filter className="h-3 w-3" />
         </button>
         {dateFilter === "custom" && (
           <div className="flex items-center gap-2">
-            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="flex h-10 w-36 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
-            <span className="text-xs text-zinc-400">até</span>
-            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="flex h-10 w-36 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="flex h-10 w-36 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+            <span className="text-xs text-zinc-500">até</span>
+            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="flex h-10 w-36 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
           </div>
         )}
       </div>
@@ -331,7 +331,7 @@ export default function CaixaGerencialPage() {
                           <div key={m.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
                             <div>
                               <p className="text-zinc-700">{m.description || typeLabels[m.type]}</p>
-                              <p className="text-xs text-zinc-400">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}{m.paymentMethod && ` • ${paymentLabels[m.paymentMethod] || m.paymentMethod}`}</p>
+                              <p className="text-xs text-zinc-500">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}{m.paymentMethod && ` • ${paymentLabels[m.paymentMethod] || m.paymentMethod}`}</p>
                             </div>
                             <span className={`font-semibold ${typeColors[m.type]}`}>
                               {m.type === "sale" ? "+" : "-"}{formatCurrency(Math.abs(m.amount))}
@@ -351,7 +351,7 @@ export default function CaixaGerencialPage() {
             <Card>
               <CardContent className="p-4">
                 <h4 className="text-sm font-semibold text-zinc-700 mb-3">Vendas Presenciais do Dia ({todayOrders.length})</h4>
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
                   <div className="rounded-lg bg-zinc-50 p-3 text-center">
                     <p className="text-lg font-bold text-green-600">{formatCurrency(cashSales)}</p>
                     <p className="text-xs text-zinc-500">Dinheiro</p>
@@ -370,7 +370,7 @@ export default function CaixaGerencialPage() {
                     <div key={o.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
                       <div>
                         <p className="font-medium text-zinc-900">{o.customerName || "Cliente"}</p>
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-xs text-zinc-500">
                           {new Date(o.createdAt).toLocaleTimeString("pt-BR")} • {paymentLabels[o.paymentMethod] || "Pendente"}
                           {o.tableNumber && ` • Mesa ${o.tableNumber}`}
                         </p>
@@ -394,7 +394,7 @@ export default function CaixaGerencialPage() {
             </div>
           ) : historyRegisters.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center text-zinc-400">
+              <CardContent className="p-8 text-center text-zinc-500">
                 <History className="h-8 w-8 mx-auto mb-2 text-zinc-700" />
                 <p>Nenhum caixa encontrado neste período</p>
               </CardContent>
@@ -425,7 +425,7 @@ export default function CaixaGerencialPage() {
                                 {reg.status === "open" ? "Aberto" : "Fechado"}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-zinc-500">
                               Abertura: {formatCurrency(reg.openingAmount)}
                               {reg.closingAmount != null && ` • Fechamento: ${formatCurrency(reg.closingAmount)}`}
                               {reg.closedAt && ` • ${new Date(reg.closedAt).toLocaleTimeString("pt-BR")}`}
@@ -434,9 +434,9 @@ export default function CaixaGerencialPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {reg.movements && (
-                            <span className="text-xs text-zinc-400">{reg.movements.length} mov.</span>
+                            <span className="text-xs text-zinc-500">{reg.movements.length} mov.</span>
                           )}
-                          {expandedRegister === reg.id ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
+                          {expandedRegister === reg.id ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
                         </div>
                       </button>
 
@@ -446,17 +446,17 @@ export default function CaixaGerencialPage() {
                           <div className="grid grid-cols-3 gap-2 text-center text-xs">
                             <div className="rounded-lg bg-zinc-50 p-2">
                               <p className="font-bold text-zinc-900">{formatCurrency(reg.openingAmount)}</p>
-                              <p className="text-zinc-400">Abertura</p>
+                              <p className="text-zinc-500">Abertura</p>
                             </div>
                             <div className="rounded-lg bg-zinc-50 p-2">
                               <p className="font-bold text-zinc-900">{formatCurrency(reg.expectedAmount || 0)}</p>
-                              <p className="text-zinc-400">Esperado</p>
+                              <p className="text-zinc-500">Esperado</p>
                             </div>
                             <div className="rounded-lg bg-zinc-50 p-2">
                               <p className={`font-bold ${(reg.closingAmount || 0) >= (reg.expectedAmount || 0) ? "text-green-600" : "text-red-400"}`}>
                                 {formatCurrency((reg.closingAmount || 0) - (reg.expectedAmount || 0))}
                               </p>
-                              <p className="text-zinc-400">Sobra/Falta</p>
+                              <p className="text-zinc-500">Sobra/Falta</p>
                             </div>
                           </div>
                           {expandedMovements[reg.id] && expandedMovements[reg.id].length > 0 && (
@@ -465,7 +465,7 @@ export default function CaixaGerencialPage() {
                                 <div key={m.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
                                   <div>
                                     <p className="text-zinc-700">{m.description || typeLabels[m.type]}</p>
-                                    <p className="text-xs text-zinc-400">
+                                    <p className="text-xs text-zinc-500">
                                       {new Date(m.createdAt).toLocaleTimeString("pt-BR")}
                                       {m.paymentMethod && ` • ${paymentLabels[m.paymentMethod] || m.paymentMethod}`}
                                     </p>
@@ -478,7 +478,7 @@ export default function CaixaGerencialPage() {
                             </div>
                           )}
                           {(!expandedMovements[reg.id] || expandedMovements[reg.id].length === 0) && (
-                            <p className="text-xs text-zinc-400 text-center py-2">Carregando movimentações...</p>
+                            <p className="text-xs text-zinc-500 text-center py-2">Carregando movimentações...</p>
                           )}
                         </div>
                       )}
@@ -564,7 +564,7 @@ export default function CaixaGerencialPage() {
                       return (
                         <div key={method} className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100">
-                            <Icon className="h-4 w-4 text-zinc-400" />
+                            <Icon className="h-4 w-4 text-zinc-500" />
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between text-sm">
@@ -575,12 +575,12 @@ export default function CaixaGerencialPage() {
                               <div className="h-full rounded-full bg-green-600" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
-                          <span className="text-xs text-zinc-400 w-12 text-right">{pct}%</span>
+                          <span className="text-xs text-zinc-500 w-12 text-right">{pct}%</span>
                         </div>
                       )
                     })}
                     {Object.values(summary.salesByPayment).every((v) => v === 0) && (
-                      <p className="text-sm text-zinc-400 text-center py-4">Nenhuma venda no período</p>
+                      <p className="text-sm text-zinc-500 text-center py-4">Nenhuma venda no período</p>
                     )}
                   </div>
                 </CardContent>
@@ -607,7 +607,7 @@ export default function CaixaGerencialPage() {
               <Card>
                 <CardContent className="p-4">
                   <h4 className="text-sm font-semibold text-zinc-700 mb-3">Informações dos Caixas</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg bg-zinc-50 p-3">
                       <p className="text-zinc-500">Total de caixas</p>
                       <p className="font-bold text-zinc-900">{summary.registerCount}</p>
@@ -630,7 +630,7 @@ export default function CaixaGerencialPage() {
             </>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center text-zinc-400">
+              <CardContent className="p-8 text-center text-zinc-500">
                 <BarChart3 className="h-8 w-8 mx-auto mb-2 text-zinc-700" />
                 <p>Nenhum dado disponível</p>
               </CardContent>
@@ -642,16 +642,16 @@ export default function CaixaGerencialPage() {
       {/* ===== MODALS ===== */}
       {/* Sangria Modal */}
       {sangriaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Sangria</h3>
+            <h2 className="text-lg font-semibold text-zinc-900 mb-4">Sangria</h2>
             <input
               type="number"
               placeholder="Valor"
               value={movAmount}
               onChange={(e) => setMovAmount(e.target.value)}
               autoFocus
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setSangriaModal(false)}>Cancelar</Button>
@@ -665,16 +665,16 @@ export default function CaixaGerencialPage() {
 
       {/* Suprimento Modal */}
       {suprimentoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Suprimento</h3>
+            <h2 className="text-lg font-semibold text-zinc-900 mb-4">Suprimento</h2>
             <input
               type="number"
               placeholder="Valor"
               value={movAmount}
               onChange={(e) => setMovAmount(e.target.value)}
               autoFocus
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setSuprimentoModal(false)}>Cancelar</Button>
@@ -688,22 +688,22 @@ export default function CaixaGerencialPage() {
 
       {/* Despesa Modal */}
       {despesaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">Despesa</h3>
+            <h2 className="text-lg font-semibold text-zinc-900 mb-4">Despesa</h2>
             <input
               placeholder="Descrição"
               value={despesaDesc}
               onChange={(e) => setDespesaDesc(e.target.value)}
               autoFocus
-              className="mb-3 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="mb-3 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <input
               type="number"
               placeholder="Valor"
               value={movAmount}
               onChange={(e) => setMovAmount(e.target.value)}
-              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="mb-4 flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setDespesaModal(false)}>Cancelar</Button>

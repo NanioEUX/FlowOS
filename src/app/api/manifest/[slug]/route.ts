@@ -22,7 +22,6 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     start_url: slugPath,
     scope: slugPath,
     display: "standalone",
-    orientation: "portrait",
     background_color: "#ffffff",
     theme_color: themeColor,
     categories: ["food", "lifestyle", "shopping"],

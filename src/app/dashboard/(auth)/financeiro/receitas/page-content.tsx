@@ -171,7 +171,7 @@ export default function ReceitasPage() {
         <CardContent className="p-4">
           <h3 className="mb-3 font-semibold text-sm text-zinc-900">Resumo por Dia</h3>
           {days.length === 0 ? (
-            <p className="text-center text-sm text-zinc-400 py-4">Nenhuma venda no período</p>
+            <p className="text-center text-sm text-zinc-500 py-4">Nenhuma venda no período</p>
           ) : (
             <div className="space-y-2">
               {days.map((day: DayData) => (
@@ -189,21 +189,21 @@ export default function ReceitasPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-bold text-green-600">{formatCurrency(day.total)}</span>
                       {expandedDay === day.date ? (
-                        <ChevronUp className="h-4 w-4 text-zinc-400" />
+                        <ChevronUp className="h-4 w-4 text-zinc-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-zinc-400" />
+                        <ChevronDown className="h-4 w-4 text-zinc-500" />
                       )}
                     </div>
                   </button>
                   {expandedDay === day.date && (
                     <div className="border-t border-zinc-200 p-3">
                       {/* Payment breakdown */}
-                      <div className="mb-3 grid grid-cols-4 gap-2">
+                      <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {Object.entries(day.byPayment).filter(([, v]) => v > 0).map(([method, value]) => {
                           const Icon = paymentIcons[method] || DollarSign
                           return (
                             <div key={method} className="rounded-lg bg-zinc-50 p-2 text-center">
-                              <Icon className="mx-auto h-3 w-3 text-zinc-400" />
+                              <Icon className="mx-auto h-3 w-3 text-zinc-500" />
                               <p className="text-[10px] text-zinc-500">{paymentLabels[method] || method}</p>
                               <p className="text-xs font-bold">{formatCurrency(value)}</p>
                             </div>
@@ -219,7 +219,7 @@ export default function ReceitasPage() {
                             className="flex w-full items-center justify-between rounded-lg p-2 text-left hover:bg-zinc-50"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-zinc-400">{formatTime(order.createdAt)}</span>
+                              <span className="text-xs text-zinc-500">{formatTime(order.createdAt)}</span>
                               <span className="text-sm text-zinc-700">
                                 {order.tableNumber ? `Mesa ${order.orderType === "mesa" ? "Comanda" : ""}` : "Balcão/Online"}
                               </span>
@@ -239,11 +239,11 @@ export default function ReceitasPage() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-semibold text-zinc-900">Detalhes do Pedido</h3>
-              <button onClick={() => setSelectedOrder(null)} className="text-zinc-400 hover:text-zinc-600">
+              <button onClick={() => setSelectedOrder(null)} className="text-zinc-500 hover:text-zinc-600" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>

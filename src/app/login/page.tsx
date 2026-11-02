@@ -1,13 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Loader2, Eye, EyeOff, ShieldCheck, AlertTriangle } from "lucide-react"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
+  // F8B-009: a tela precisa explicar por que o usuário caiu no login
+  const searchParams = useSearchParams()
+  const sessionReason = searchParams.get("reason")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -22,6 +25,13 @@ export default function LoginPage() {
   const [changeError, setChangeError] = useState("")
   const [changeSuccess, setChangeSuccess] = useState(false)
   const [loginData, setLoginData] = useState<any>(null)
+
+  const sessionNotice =
+    sessionReason === "expired"
+      ? "Sua sessão expirou. Entre novamente para continuar — seus dados salvos foram mantidos."
+      : sessionReason === "manual"
+        ? "Você saiu da sua conta. Entre novamente para continuar."
+        : null
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -178,7 +188,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-flow-bg px-5 overflow-hidden">
+    <main className="relative flex min-h-screen items-center justify-center bg-flow-bg px-5 overflow-hidden">
       {/* Background glow effects */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-flow-blue/[0.07] blur-[150px]" />
@@ -186,6 +196,16 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-[440px]">
+        {/* F8B-009: aviso de por que o usuário está no login */}
+        {sessionNotice && (
+          <div
+            role="status"
+            className="mb-6 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          >
+            <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{sessionNotice}</span>
+          </div>
+        )}
         {/* Logo */}
         <div className="mb-10 text-center">
           <Link href="/" className="inline-block">
@@ -204,9 +224,12 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Email</label>
+                  <label htmlFor="login-email" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Email</label>
                   <input
+                    id="login-email"
                     type="email"
+                    name="email"
+                    autoComplete="email"
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -216,10 +239,13 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Senha</label>
+                  <label htmlFor="login-password" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Senha</label>
                   <div className="relative">
                     <input
+                      id="login-password"
                       type={showPassword ? "text" : "password"}
+                      name="password"
+                      autoComplete="current-password"
                       placeholder="••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -229,9 +255,11 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      aria-pressed={showPassword}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-flow-muted hover:text-flow-white transition-colors"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
@@ -285,10 +313,13 @@ export default function LoginPage() {
               ) : (
                 <form onSubmit={handleChangePassword} className="space-y-5">
                   <div>
-                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Nova senha</label>
+                    <label htmlFor="login-new-password" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Nova senha</label>
                     <div className="relative">
                       <input
+                        id="login-new-password"
                         type={showNewPassword ? "text" : "password"}
+                        name="new-password"
+                        autoComplete="new-password"
                         placeholder="Mínimo 6 caracteres"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
@@ -298,17 +329,22 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
+                        aria-label={showNewPassword ? "Ocultar nova senha" : "Mostrar nova senha"}
+                        aria-pressed={showNewPassword}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-flow-muted hover:text-flow-white transition-colors"
                       >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showNewPassword ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Confirmar nova senha</label>
+                    <label htmlFor="login-confirm-password" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.15em] text-flow-muted">Confirmar nova senha</label>
                     <input
+                      id="login-confirm-password"
                       type={showNewPassword ? "text" : "password"}
+                      name="confirm-password"
+                      autoComplete="new-password"
                       placeholder="Repita a nova senha"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -343,6 +379,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   )
 }

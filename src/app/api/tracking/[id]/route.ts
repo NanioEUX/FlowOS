@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { parseOrderItems } from "@/lib/items"
 
 export async function GET(
   req: NextRequest,
@@ -32,7 +33,7 @@ export async function GET(
     paymentMethod: order.paymentMethod,
     orderType: order.orderType,
     paymentLink: order.paymentLink,
-    items: JSON.parse(order.items),
+    items: parseOrderItems(order.items),
     total: order.total,
     deliveryFee: order.deliveryFee,
     customerName: order.customerName,

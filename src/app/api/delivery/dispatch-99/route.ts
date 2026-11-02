@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { despacharCorrida99 } from "@/lib/integrations/nine-nine"
@@ -53,7 +54,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Endereço do cliente não encontrado" }, { status: 400 })
     }
 
-    const entregaPinCode = String(Math.floor(1000 + Math.random() * 9000))
+    // F4B-030: a guarda existia só no PATCH do operador — retry ou duplo clique
+    // em `dispatch-99` criava uma SEGUNDA corrida (2 cobranças na 99).
+    if (order.entrega99RideId) {
+      return NextResponse.json(
+        {
+          error: "Este pedido já tem uma corrida despachada",
+          rideId: order.entrega99RideId,
+        },
+        { status: 409 }
+      )
+    }
+
+    // F5B-020: PIN criptográfico (nunca os 4 últimos dígitos do telefone)
+    const entregaPinCode = String(crypto.randomInt(1000, 10000))
 
     const result = await despacharCorrida99(
       establishment.api99Key,

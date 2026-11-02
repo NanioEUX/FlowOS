@@ -37,11 +37,11 @@ export default async function AdminPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50">
               <tr>
-                <th className="text-left p-4 font-medium text-zinc-600">Estabelecimento</th>
-                <th className="text-left p-4 font-medium text-zinc-600">Email</th>
-                <th className="text-center p-4 font-medium text-zinc-600">Pedidos</th>
-                <th className="text-right p-4 font-medium text-zinc-600">Faturamento</th>
-                <th className="text-center p-4 font-medium text-zinc-600">Pagamentos</th>
+                <th scope="col" className="text-left p-4 font-medium text-zinc-600">Estabelecimento</th>
+                <th scope="col" className="text-left p-4 font-medium text-zinc-600">Email</th>
+                <th scope="col" className="text-center p-4 font-medium text-zinc-600">Pedidos</th>
+                <th scope="col" className="text-right p-4 font-medium text-zinc-600">Faturamento</th>
+                <th scope="col" className="text-center p-4 font-medium text-zinc-600">Pagamentos</th>
               </tr>
             </thead>
             <tbody>

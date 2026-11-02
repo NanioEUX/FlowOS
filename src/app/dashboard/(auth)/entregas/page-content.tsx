@@ -93,19 +93,19 @@ function DateFilters({ active, onChange, customStart, customEnd, onCustomStartCh
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Calendar className="h-4 w-4 text-zinc-400" />
+      <Calendar className="h-4 w-4 text-zinc-500" />
       {dateFilterButtons.map((f) => (
         <button
           key={f.key}
           onClick={() => onChange(f.key)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === f.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === f.key ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
         >
           {f.label}
         </button>
       ))}
       <button
         onClick={() => onChange(active === "custom" ? "all" : "custom")}
-        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${active === "custom" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
       >
         Personalizado
       </button>
@@ -115,14 +115,14 @@ function DateFilters({ active, onChange, customStart, customEnd, onCustomStartCh
             type="date"
             value={customStart}
             onChange={(e) => onCustomStartChange(e.target.value)}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none w-36 text-xs"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none w-36 text-xs"
           />
-          <span className="text-xs text-zinc-400">até</span>
+          <span className="text-xs text-zinc-500">até</span>
           <input
             type="date"
             value={customEnd}
             onChange={(e) => onCustomEndChange(e.target.value)}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none w-36 text-xs"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none w-36 text-xs"
           />
         </div>
       )}
@@ -148,15 +148,26 @@ export default function EntregasPage() {
   const [customStart, setCustomStart] = useState("")
   const [customEnd, setCustomEnd] = useState("")
 
+  // F8B-001: falha de rede não pode deixar o spinner eterno.
   async function loadAll() {
     if (!establishmentId) return
+    try {
+      await loadAllInner()
+    } catch (err) {
+      console.error("[Entregas] Falha ao carregar dados:", err)
+      toast("Não foi possível carregar as entregas. Verifique sua conexão.", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadAllInner() {
     const [peopleRes, ordersRes] = await Promise.all([
       fetchAuth(`/api/delivery-persons?establishmentId=${establishmentId}`),
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
     ])
     if (peopleRes.ok) setDeliveryPeople(await peopleRes.json())
     if (ordersRes.ok) setOrders(await ordersRes.json())
-    setLoading(false)
   }
 
   useEffect(() => { loadAll() }, [establishmentId])
@@ -223,7 +234,7 @@ export default function EntregasPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Entregas</h2>
+        <h1 className="text-2xl font-bold text-zinc-900">Entregas</h1>
         <p className="text-sm text-zinc-500">
           Motoboys são cadastrados na aba{" "}
           <a href="/dashboard/usuarios" className="font-medium text-[#FF6B35] hover:underline">
@@ -236,7 +247,7 @@ export default function EntregasPage() {
       <div className="flex gap-2">
         <button
           onClick={() => setTab("entregas")}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "entregas" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-400 hover:bg-white/[.08]"}`}
+          className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === "entregas" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-500 hover:bg-white/[.08]"}`}
         >
           <Bike className="h-4 w-4" />
           Entregas
@@ -266,7 +277,7 @@ export default function EntregasPage() {
             <div className="flex flex-wrap items-center gap-1 mt-1">
               <button
                 onClick={() => setSelectedMotoboy("")}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-400 hover:bg-white/[.08]"}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!selectedMotoboy ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-500 hover:bg-white/[.08]"}`}
               >
                 Todos
               </button>
@@ -276,7 +287,7 @@ export default function EntregasPage() {
                   <button
                     key={p.id}
                     onClick={() => setSelectedMotoboy(p.id)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-400 hover:bg-white/[.08]"}`}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedMotoboy === p.id ? "bg-green-600 text-white" : "bg-zinc-50 text-zinc-500 hover:bg-white/[.08]"}`}
                   >
                     <Bike className="h-3 w-3" />
                     {p.name}
@@ -316,14 +327,14 @@ export default function EntregasPage() {
                     </div>
                     <button
                       onClick={() => navigator.clipboard.writeText(`${window.location.origin}/${person.establishmentSlug}/entregas/${person.token}`)}
-                      className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-400"
+                      className="rounded p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-500"
                       title="Copiar link"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
                   </div>
 
-                  <div className="mb-4 grid grid-cols-3 gap-3">
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
                       <p className="text-2xl font-bold text-amber-600">{vinculados}</p>
                       <p className="text-xs font-medium text-amber-600/70">Vinculados</p>
@@ -348,7 +359,7 @@ export default function EntregasPage() {
                   )}
 
                   {activeOrders.length === 0 && completedOrders.length === 0 && (
-                    <p className="text-sm text-zinc-400 italic">Nenhum pedido atribuído neste período</p>
+                    <p className="text-sm text-zinc-500 italic">Nenhum pedido atribuído neste período</p>
                   )}
                 </CardContent>
               </Card>
@@ -406,7 +417,7 @@ function OrderRow({ order, deliveryPeople, onReassign, onCancel, onUpdateStatus 
           <Badge variant={statusColors[order.status] || "default"}>{statusLabels[order.status] || order.status}</Badge>
         </div>
         <div className="flex items-center gap-3 mt-1">
-          <p className="text-xs text-zinc-400">{createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+          <p className="text-xs text-zinc-500">{createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
           {order.customerAddress && <p className="flex items-center gap-1 text-xs text-zinc-500"><MapPin className="h-3 w-3 shrink-0" />{order.customerAddress}</p>}
         </div>
         <div className="flex items-center gap-3 mt-0.5">
@@ -463,10 +474,10 @@ function PendingOrdersSection({ orders, deliveryPeople, onReassign, onCancel, on
   return (
     <Card className="border-amber-500/20 bg-amber-500/5">
       <CardContent className="p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-600 mb-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-600 mb-3">
           <Package className="h-4 w-4" />
           Pedidos prontos sem motoboy ({orders.length})
-        </h3>
+        </h2>
         <div className="space-y-2">
           {orders.map((order: any) => (
             <OrderRow key={order.id} order={order} deliveryPeople={deliveryPeople} onReassign={onReassign} onCancel={onCancel} onUpdateStatus={onUpdateStatus} />

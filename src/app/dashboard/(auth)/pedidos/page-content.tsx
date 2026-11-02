@@ -12,9 +12,11 @@ import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { printHtmlPopup } from "@/lib/print-html"
+import { useToast } from "@/components/toast"
 import { useNewOrderAlerts, ensureNotificationPermission, playNewOrderSound } from "@/lib/use-new-order-alerts"
 import { SearchableSelect } from "@/components/searchable-select"
 import { SoundControl } from "@/components/sound-control"
+import { parseOrderItems } from "@/lib/items"
 
 const statusLabels: Record<string, string> = {
   new: "Novo",
@@ -78,11 +80,14 @@ const orderTypeLabels: Record<string, string> = {
 export default function PedidosPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { toast } = useToast()
   const hookEstablishmentId = useEstablishmentId()
   const searchParamsEstablishmentId = searchParams.get("establishment")
   const establishmentId = searchParamsEstablishmentId || hookEstablishmentId
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  // F8B-001: sinaliza falha de carga para diferenciar "sem pedidos" de "sem rede".
+  const [loadError, setLoadError] = useState(false)
   const [filter, setFilter] = useState("")
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [newOrder, setNewOrder] = useState({ customerName: "", customerPhone: "", notes: "" })
@@ -145,23 +150,34 @@ export default function PedidosPage() {
       await fetchAuth(`/api/delivery/poll-99`, { method: "GET" })
     } catch (e) {}
 
-    const res = await fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
-    const data = await res.json()
-    // F8B-004: não troca a lista por um objeto de erro (500/HTML) — mantém a anterior
-    if (Array.isArray(data)) {
-      setOrders(data)
-      // Auto-sync pending payments in background
-      const pendingPayments = data.filter((o: any) =>
-        o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
-      )
-      if (pendingPayments.length > 0) {
-        console.log(`[Orders] Auto-syncing ${pendingPayments.length} pending payments...`)
-        fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+    // F8B-001: falha de rede não pode deixar o spinner eterno nem zerar a lista.
+    try {
+      const res = await fetchAuth(`/api/orders?establishmentId=${establishmentId}`)
+      const data = await res.json()
+      // F8B-004: não troca a lista por um objeto de erro (500/HTML) — mantém a anterior
+      if (Array.isArray(data)) {
+        setLoadError(false)
+        setOrders(data)
+        // Auto-sync pending payments in background
+        const pendingPayments = data.filter((o: any) =>
+          o.paymentId && o.paymentStatus === "pending" && o.status !== "cancelled"
+        )
+        if (pendingPayments.length > 0) {
+          console.log(`[Orders] Auto-syncing ${pendingPayments.length} pending payments...`)
+          fetchAuth(`/api/payments/sync?establishmentId=${establishmentId}`).catch(() => {})
+        }
+      } else if (res.ok) {
+        setLoadError(false)
+        setOrders([])
+      } else {
+        setLoadError(true)
       }
-    } else if (res.ok) {
-      setOrders([])
+    } catch (err) {
+      console.error("[Orders] Falha ao carregar pedidos:", err)
+      setLoadError(true)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => { loadOrders(); loadDeliveryPeople() }, [establishmentId])
@@ -518,6 +534,13 @@ export default function PedidosPage() {
         </div>
       )}
 
+      {loadError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+          <p className="text-sm text-red-300">Não foi possível carregar os pedidos. Verifique sua conexão.</p>
+          <Button variant="outline" size="sm" onClick={() => loadOrders()}>Tentar novamente</Button>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
           <ShoppingBag className="mx-auto h-8 w-8 text-zinc-300" />
@@ -528,7 +551,7 @@ export default function PedidosPage() {
           {grouped.active.length > 0 && <OrderSection title="Em Andamento" orders={grouped.active} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} messagesByOrder={messagesByOrder} onMarkRead={markOrderMessagesRead} onRefreshMessages={refreshOrderMessages} />}
           {grouped.completed.length > 0 && (
             <details className="group">
-              <summary className="cursor-pointer text-sm font-semibold text-zinc-400 hover:text-zinc-400">Entregues ({grouped.completed.length})</summary>
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-500 hover:text-zinc-500">Entregues ({grouped.completed.length})</summary>
               <div className="mt-3 space-y-3"><OrderSection title="" orders={grouped.completed} onUpdateStatus={updateStatus} onUpdateDelivery={updateDeliveryPerson} deliveryPeople={deliveryPeople} onUnreadUpdate={handleUnreadUpdate} highlightOrderId={highlightOrderId} messagesByOrder={messagesByOrder} onMarkRead={markOrderMessagesRead} onRefreshMessages={refreshOrderMessages} /></div>
             </details>
           )}
@@ -543,7 +566,7 @@ export default function PedidosPage() {
 
       {/* New WhatsApp Order Modal */}
       {showNewOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -551,7 +574,7 @@ export default function PedidosPage() {
                   <MessageCircle className="h-5 w-5 text-green-600" />
                   Pedido via WhatsApp
                 </h3>
-                <button onClick={() => setShowNewOrder(false)}><X className="h-5 w-5" /></button>
+                <button onClick={() => setShowNewOrder(false)} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
@@ -561,7 +584,7 @@ export default function PedidosPage() {
                     placeholder="Ex: João"
                     value={newOrder.customerName}
                     onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -571,7 +594,7 @@ export default function PedidosPage() {
                     placeholder="11999999999"
                     value={newOrder.customerPhone}
                     onChange={(e) => setNewOrder({ ...newOrder, customerPhone: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -581,7 +604,7 @@ export default function PedidosPage() {
                     placeholder="Ex: Pedido feito pelo WhatsApp"
                     value={newOrder.notes}
                     onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <p className="text-xs text-zinc-500">Os itens são gerenciados manualmente pelo WhatsApp. Use isso para registrar pedidos que chegaram pelo chat.</p>
@@ -623,7 +646,10 @@ function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliver
 }
 
 function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, onUnreadUpdate, highlight, messages = [], onMarkRead, onRefreshMessages }: { order: any; onUpdateStatus: (id: string, s: string, extras?: Record<string, unknown>) => void; onUpdateDelivery: (id: string, personId: string, personName: string) => void; deliveryPeople: any[]; onUnreadUpdate: (orderId: string, count: number, name: string, message: string) => void; highlight: boolean; messages?: any[]; onMarkRead?: (orderId: string) => void; onRefreshMessages?: (orderId: string) => void | Promise<void> }) {
-  const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+  // F8C-016: estado "Imprimindo..." no botão de imprimir
+  const [printing, setPrinting] = useState(false)
+  const { toast } = useToast()
+  const items = parseOrderItems(order.items)
   const isPresencial = order.orderType === "presencial"
   const currentIdx = flowOrder.indexOf(order.status)
   const isNewOrder = ["new", "pending", "payment_pending"].includes(order.status)
@@ -828,7 +854,17 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
     <p class="footer">Obrigado pela preferência!</p>
   </body>
 </html>`
-    printHtmlPopup(html)
+    setPrinting(true)
+    printHtmlPopup(html, {
+      // F8C-016: aviso honesto quando o pop-up é bloqueado
+      onStatus: (status) => {
+        if (status === "blocked") {
+          setPrinting(false)
+          toast("Não foi possível imprimir: o navegador bloqueou o pop-up.", "error")
+        }
+        if (status === "closed") setPrinting(false)
+      },
+    })
   }
 
   const ageMinutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
@@ -956,7 +992,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
                   {normalizePaymentMethod(order.paymentMethod) === "online" ? <CreditCard className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
                   <span>{paymentMethodLabels[normalizePaymentMethod(order.paymentMethod)] || order.paymentMethod}</span>
                   {normalizePaymentMethod(order.paymentMethod) === "cash" && order.changeFor && order.changeFor > 0 ? (
-                    <span className="font-semibold text-amber-700">· troco p/ R$ {order.changeFor.toFixed(2).replace(".", ",")}</span>
+                    <span className="font-semibold text-amber-700">· troco p/ {formatCurrency(order.changeFor)}</span>
                   ) : null}
                 </span>
               )}
@@ -1047,12 +1083,12 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
               <div className="mt-2 rounded-lg bg-zinc-50 border border-zinc-100 p-2.5 space-y-1.5 text-sm text-zinc-600">
                 {items.map((item: any, i: number) => (
                   <div key={i}>
-                    <p className="font-medium">{item.quantity}x {item.name} — <span className="text-zinc-400">{formatCurrency(item.price * item.quantity)}</span></p>
+                    <p className="font-medium">{item.quantity}x {item.name} — <span className="text-zinc-500">{formatCurrency(item.price * item.quantity)}</span></p>
                     {item.additionalOptions && item.additionalOptions.length > 0 && (
                       <div className="ml-3 mt-0.5">
                         <p className="text-[11px] text-zinc-500 font-medium">Adicionais:</p>
                         {item.additionalOptions.map((opt: any, oi: number) => (
-                          <p key={oi} className="text-[11px] text-zinc-400">• {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}</p>
+                          <p key={oi} className="text-[11px] text-zinc-500">• {opt.name}{opt.price > 0 && ` +${formatCurrency(opt.price)}`}</p>
                         ))}
                       </div>
                     )}
@@ -1062,22 +1098,22 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
                   </div>
                 ))}
                 {!isPresencial && order.deliveryFee > 0 && (
-                  <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-100">Taxa de entrega: {formatCurrency(order.deliveryFee)}</p>
+                  <p className="text-xs text-zinc-500 pt-1 border-t border-zinc-100">Taxa de entrega: {formatCurrency(order.deliveryFee)}</p>
                 )}
               </div>
             )}
 
-            {order.notes && <p className="mt-1.5 text-sm text-zinc-400 italic">Obs: {order.notes}</p>}
+            {order.notes && <p className="mt-1.5 text-sm text-zinc-500 italic">Obs: {order.notes}</p>}
 
             {lastCustomerMsg && (
               <div className={`mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${unreadCount > 0 ? "bg-red-500/10 border border-red-500/20" : "bg-zinc-50 border border-zinc-200"}`}>
-                <MessageCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${unreadCount > 0 ? "text-red-500" : "text-zinc-400"}`} />
+                <MessageCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${unreadCount > 0 ? "text-red-500" : "text-zinc-500"}`} />
                 <div className="flex-1 min-w-0">
                   <p className={`text-xs font-medium ${unreadCount > 0 ? "text-red-400" : "text-zinc-500"}`}>
                     {unreadCount > 0 ? "Última mensagem do cliente:" : "Mensagem do cliente:"}
                   </p>
-                  <p className={`truncate ${unreadCount > 0 ? "text-red-400 font-medium" : "text-zinc-400"}`}>{lastCustomerMsg.message}</p>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">{new Date(lastCustomerMsg.createdAt).toLocaleString("pt-BR")}</p>
+                  <p className={`truncate ${unreadCount > 0 ? "text-red-400 font-medium" : "text-zinc-500"}`}>{lastCustomerMsg.message}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{new Date(lastCustomerMsg.createdAt).toLocaleString("pt-BR")}</p>
                 </div>
               </div>
             )}
@@ -1085,7 +1121,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
             {/* Delivery person - only for delivery orders */}
             {order.orderType === "delivery" && (
               <div className="mt-2 flex items-center gap-2">
-                <Bike className="h-3 w-3 text-zinc-400" />
+                <Bike className="h-3 w-3 text-zinc-500" />
                 <SearchableSelect
                   value={order.deliveryPersonId || ""}
                   onChange={(id) => {
@@ -1170,11 +1206,11 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
           <div className="flex flex-col items-end justify-between gap-3 lg:min-h-[90px]">
             <p className="text-xl font-black text-green-600 tracking-tight">{formatCurrency(order.total)}</p>
             <div className="flex items-center gap-2">
-              <button onClick={printReceipt} className="rounded-lg p-2 text-zinc-400 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600 transition-colors" title="Imprimir">
+              <button onClick={printReceipt} disabled={printing} aria-label={printing ? "Imprimindo pedido" : "Imprimir pedido"} className="rounded-lg p-2 text-zinc-500 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600 transition-colors disabled:opacity-60" title={printing ? "Imprimindo..." : "Imprimir"}>
                 <Printer className="h-4 w-4" />
               </button>
               {messages.length > 0 && (
-                <button onClick={() => setChatOpen(!chatOpen)} className={`rounded-lg p-2 border transition-colors ${chatOpen ? "bg-green-50 text-green-600 border-green-200" : "text-zinc-400 border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600"}`} title="Chat">
+                <button onClick={() => setChatOpen(!chatOpen)} className={`rounded-lg p-2 border transition-colors ${chatOpen ? "bg-green-50 text-green-600 border-green-200" : "text-zinc-500 border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-600"}`} title="Chat">
                   <MessageCircle className="h-4 w-4" />
                   {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-red-500 text-white text-[7px] font-bold items-center justify-center">{unreadCount}</span></span>}
                 </button>
@@ -1185,7 +1221,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
                 </button>
               )}
               {order.status !== "delivered" && order.status !== "cancelled" && (
-                <button onClick={() => { setShowCancelModal(true); setCancelReason(""); setCancelError("") }} className="rounded-lg p-2 text-red-400 border border-red-200 bg-white hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir pedido">
+                <button onClick={() => { setShowCancelModal(true); setCancelReason(""); setCancelError("") }} className="rounded-lg p-2 text-red-400 border border-red-200 bg-white hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir pedido" aria-label="Fechar">
                   <X className="h-4 w-4" />
                 </button>
               )}
@@ -1198,13 +1234,13 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
           <div className="mt-4 border-t border-zinc-200 pt-4">
             <div ref={chatContainerRef} className="max-h-60 overflow-y-auto space-y-2 mb-3">
               {messages.length === 0 && (
-                <p className="text-center text-sm text-zinc-400 py-3">Nenhuma mensagem ainda</p>
+                <p className="text-center text-sm text-zinc-500 py-3">Nenhuma mensagem ainda</p>
               )}
               {messages.map((msg: any) => (
                 <div key={msg.id} className={`flex ${msg.sender === "establishment" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.sender === "establishment" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-200"}`}>
                     <p>{msg.sender === "customer" ? "Você: " : "Estabelecimento: "}{msg.message}</p>
-                    <p className={`text-[10px] mt-1 ${msg.sender === "establishment" ? "text-green-200" : "text-zinc-400"}`}>
+                    <p className={`text-[10px] mt-1 ${msg.sender === "establishment" ? "text-green-200" : "text-zinc-500"}`}>
                       {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
@@ -1228,7 +1264,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
       </CardContent>
 
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !cancelling && setShowCancelModal(false)}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !cancelling && setShowCancelModal(false)}>
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-start gap-3">
               <div className="rounded-full bg-red-100 p-2">

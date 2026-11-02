@@ -399,7 +399,7 @@ function MockProductDetail() {
       {/* Image */}
       <div className="relative h-48 bg-gradient-to-br from-emerald-400 to-teal-600">
         <div className="absolute inset-0 flex items-center justify-center text-7xl">🍨</div>
-        <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white">
+        <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white" aria-label="Fechar">
           <X className="h-4 w-4" />
         </button>
         <button className="absolute top-3 left-3 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white">
@@ -580,7 +580,7 @@ function MockCartPage() {
               <span className="text-sm font-bold text-zinc-900 w-5 text-center">2</span>
               <button className="w-6 h-6 rounded-full border border-zinc-300 flex items-center justify-center text-zinc-400"><Plus className="h-3 w-3" /></button>
             </div>
-            <button className="text-zinc-300"><X className="h-4 w-4" /></button>
+            <button className="text-zinc-300" aria-label="Fechar"><X className="h-4 w-4" /></button>
           </div>
         </div>
         <button className="w-full mt-2 text-xs text-red-500 font-medium py-1">Esvaziar carrinho</button>

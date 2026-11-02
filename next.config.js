@@ -3,6 +3,14 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
+  // F8A-008: id do build inlined no front. O service worker é registrado como
+  // /sw.js?v=<id>, então cada build gera uma URL nova — o browser busca um SW
+  // novo, o cache antigo é purged e o app avisa que há versão nova. Não existe
+  // mais número de versão hardcoded para alguém lembrar de bumpar.
+  env: {
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.NEXT_PUBLIC_BUILD_ID || `build-${Date.now().toString(36)}`,
+  },
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },

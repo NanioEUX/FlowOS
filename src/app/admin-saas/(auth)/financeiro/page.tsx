@@ -24,22 +24,22 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Financeiro</h1>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Stat label="Total Bruto" value={`R$ ${(totals.gross / 100).toFixed(2)}`} />
         <Stat label="Total Taxas" value={`R$ ${(totals.fees / 100).toFixed(2)}`} />
         <Stat label="Total SaaS" value={`R$ ${(totals.saas / 100).toFixed(2)}`} />
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-xl border border-zinc-200 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-zinc-100">
-              <th className="text-left p-3 text-zinc-500 font-medium">Data</th>
-              <th className="text-left p-3 text-zinc-500 font-medium">Estabelecimento</th>
-              <th className="text-left p-3 text-zinc-500 font-medium">Tipo</th>
-              <th className="text-right p-3 text-zinc-500 font-medium">Bruto</th>
-              <th className="text-right p-3 text-zinc-500 font-medium">Taxa</th>
-              <th className="text-right p-3 text-zinc-500 font-medium">SaaS</th>
+              <th scope="col" className="text-left p-3 text-zinc-500 font-medium">Data</th>
+              <th scope="col" className="text-left p-3 text-zinc-500 font-medium">Estabelecimento</th>
+              <th scope="col" className="text-left p-3 text-zinc-500 font-medium">Tipo</th>
+              <th scope="col" className="text-right p-3 text-zinc-500 font-medium">Bruto</th>
+              <th scope="col" className="text-right p-3 text-zinc-500 font-medium">Taxa</th>
+              <th scope="col" className="text-right p-3 text-zinc-500 font-medium">SaaS</th>
             </tr>
           </thead>
           <tbody>
@@ -63,7 +63,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: {
             ))}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-zinc-400">Nenhuma transação encontrada</td>
+                <td colSpan={6} className="p-8 text-center text-zinc-500">Nenhuma transação encontrada</td>
               </tr>
             )}
           </tbody>

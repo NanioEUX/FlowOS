@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { fetchExternal } from "@/lib/fetch-external"
+import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const apiUrl = "https://api.pagar.me/core/v5"
     const authHeader = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`
 
-    const res = await fetchExternal(`${apiUrl}/orders/${order.paymentId}`, {
+    const res = await fetchExternalWithRetry(`${apiUrl}/orders/${order.paymentId}`, {
       headers: { "Authorization": authHeader },
     })
 

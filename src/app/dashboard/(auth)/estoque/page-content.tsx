@@ -118,8 +118,20 @@ export default function EstoquePage() {
     ? filteredByFamily.filter((c) => c.id === selectedCategoryFilter)
     : filteredByFamily
 
+  // F8B-001: falha de rede não pode deixar o spinner eterno.
   async function loadAll() {
     if (!establishmentId) return
+    try {
+      await loadAllInner()
+    } catch (err) {
+      console.error("[Estoque] Falha ao carregar dados:", err)
+      toast("Não foi possível carregar o estoque. Verifique sua conexão.", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadAllInner() {
     const res = await fetchAuth(`/api/stock?establishmentId=${establishmentId}`)
     if (res.ok) {
       const data = await res.json()
@@ -136,7 +148,6 @@ export default function EstoquePage() {
     if (resPurchases.ok) {
       setRecentPurchases(await resPurchases.json())
     }
-    setLoading(false)
   }
 
   useEffect(() => { loadAll() }, [establishmentId])
@@ -403,8 +414,8 @@ export default function EstoquePage() {
             >
               {f.name}
             </button>
-            <button onClick={() => { setEditingFamily(f); setNewFamilyName(f.name); setShowFamilyForm(true) }} className="p-0.5 rounded hover:bg-zinc-200"><Edit3 className="h-3 w-3 text-zinc-400" /></button>
-            <button onClick={() => setDeleteFamilyConfirm({ open: true, id: f.id, name: f.name })} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="h-3 w-3 text-zinc-400 hover:text-red-500" /></button>
+            <button onClick={() => { setEditingFamily(f); setNewFamilyName(f.name); setShowFamilyForm(true) }} className="p-0.5 rounded hover:bg-zinc-200"><Edit3 className="h-3 w-3 text-zinc-500" /></button>
+            <button onClick={() => setDeleteFamilyConfirm({ open: true, id: f.id, name: f.name })} className="p-0.5 rounded hover:bg-red-100"><Trash2 className="h-3 w-3 text-zinc-500 hover:text-red-500" /></button>
           </div>
         ))}
       </div>
@@ -444,13 +455,13 @@ export default function EstoquePage() {
               <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 bg-zinc-50 border-b border-zinc-100">
                   <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-zinc-400" />
+                    <Tag className="h-4 w-4 text-zinc-500" />
                     <span className="font-semibold text-zinc-800">{cat.name}</span>
-                    <span className="text-xs text-zinc-400">{catItems.length} itens</span>
+                    <span className="text-xs text-zinc-500">{catItems.length} itens</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setEditingCategory(cat); setNewCatName(cat.name); setNewCatFamilyId(cat.familyId || ""); setShowCategoryForm(true) }} className="p-1 hover:bg-zinc-200 rounded"><Edit3 className="h-3.5 w-3.5 text-zinc-500" /></button>
-                    <button onClick={() => setDeleteCategoryConfirm({ open: true, id: cat.id, name: cat.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" /></button>
+                    <button onClick={() => setDeleteCategoryConfirm({ open: true, id: cat.id, name: cat.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-3.5 w-3.5 text-zinc-500 hover:text-red-500" /></button>
                     <Button size="sm" variant="secondary" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => { resetItemForm(); setItemForm((prev) => ({ ...prev, categoryId: cat.id, familyId: cat.familyId || "" })); setAddingFromCategory(true); setShowItemForm(true) }}>
                       <Plus className="mr-1 h-3 w-3" /> Adicionar
                     </Button>
@@ -473,7 +484,7 @@ export default function EstoquePage() {
                             </div>
                             <p className="text-xs text-zinc-500 mt-0.5">
                               {displayQty} {displayUnit} × {formatCurrency(item.unitCost)}/{displayUnit}
-                              <span className="text-zinc-400 mx-1">|</span>
+                              <span className="text-zinc-500 mx-1">|</span>
                               <span className="font-medium text-green-700">Total: {formatCurrency(totalValue)}</span>
                             </p>
                             {item.productLinks && item.productLinks.length > 0 && (
@@ -487,7 +498,7 @@ export default function EstoquePage() {
                               <Edit3 className="h-4 w-4 text-zinc-500" />
                             </button>
                             <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors">
-                              <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
+                              <Trash2 className="h-4 w-4 text-zinc-500 hover:text-red-500" />
                             </button>
                           </div>
                         </div>
@@ -495,7 +506,7 @@ export default function EstoquePage() {
                     })}
                   </div>
                 ) : (
-                  <div className="px-4 py-4 text-center text-xs text-zinc-400">
+                  <div className="px-4 py-4 text-center text-xs text-zinc-500">
                     Nenhum item nesta categoria
                   </div>
                 )}
@@ -507,7 +518,7 @@ export default function EstoquePage() {
             <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-zinc-50 border-b border-zinc-100">
                 <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-zinc-400" />
+                  <Tag className="h-4 w-4 text-zinc-500" />
                   <span className="font-semibold text-zinc-800">Sem categoria</span>
                 </div>
               </div>
@@ -520,7 +531,7 @@ export default function EstoquePage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => editItem(item)} className="p-1.5 hover:bg-zinc-200 rounded-lg"><Edit3 className="h-4 w-4 text-zinc-500" /></button>
-                      <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1.5 hover:bg-red-100 rounded-lg"><Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" /></button>
+                      <button onClick={() => handleDeleteItem(item.id, item.name)} className="p-1.5 hover:bg-red-100 rounded-lg"><Trash2 className="h-4 w-4 text-zinc-500 hover:text-red-500" /></button>
                     </div>
                   </div>
                 ))}
@@ -530,7 +541,7 @@ export default function EstoquePage() {
 
           <button
             onClick={() => setShowCategoryForm(true)}
-            className="w-full rounded-xl border-2 border-dashed border-zinc-200 py-3 text-sm font-medium text-zinc-400 hover:border-green-300 hover:text-green-600 transition-colors"
+            className="w-full rounded-xl border-2 border-dashed border-zinc-200 py-3 text-sm font-medium text-zinc-500 hover:border-green-300 hover:text-green-600 transition-colors"
           >
             + Adicionar nova categoria
           </button>
@@ -562,7 +573,7 @@ export default function EstoquePage() {
               <p className={`text-sm font-semibold ${m.type === "entry" ? "text-green-600" : "text-red-600"}`}>
                 {m.type === "entry" ? "+" : "-"}{m.quantity} {m.item?.unit}
               </p>
-              <p className="text-[10px] text-zinc-400">{new Date(m.createdAt).toLocaleDateString("pt-BR")}</p>
+              <p className="text-[10px] text-zinc-500">{new Date(m.createdAt).toLocaleDateString("pt-BR")}</p>
             </div>
           </div>
         ))}
@@ -590,7 +601,7 @@ export default function EstoquePage() {
             </div>
             <div className="flex items-center gap-1">
               <button onClick={() => { setEditingSupplier(s); setSupplierForm({ name: s.name, phone: s.phone || "", cnpj: s.cnpj || "", email: s.email || "", notes: s.notes || "" }); setShowSupplierForm(true) }} className="p-1 hover:bg-zinc-100 rounded"><Edit3 className="h-4 w-4 text-zinc-500" /></button>
-              <button onClick={() => setDeleteSupplierConfirm({ open: true, id: s.id, name: s.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" /></button>
+              <button onClick={() => setDeleteSupplierConfirm({ open: true, id: s.id, name: s.name })} className="p-1 hover:bg-red-100 rounded"><Trash2 className="h-4 w-4 text-zinc-500 hover:text-red-500" /></button>
             </div>
           </div>
         ))}
@@ -629,7 +640,7 @@ export default function EstoquePage() {
           {movementError && <p className="text-xs text-red-600">{movementError}</p>}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-700">Observações (opcional)</label>
-            <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
+            <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
           </div>
           <Button className="w-full bg-red-600 hover:bg-red-700" onClick={saveMovement}>Registrar Saída</Button>
         </CardContent>
@@ -644,7 +655,7 @@ export default function EstoquePage() {
       </div>
       <Card>
         <CardContent className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-600">Fornecedor</label>
               <SearchableSelect value={purchaseSupplierName} onChange={setPurchaseSupplierName} options={[{ value: "", label: "Selecionar..." }, ...suppliers.map((s) => ({ value: s.name, label: s.name }))]} placeholder="Fornecedor..." />
@@ -654,7 +665,7 @@ export default function EstoquePage() {
               <input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-600">Documento (NF)</label>
               <input type="text" value={purchaseDocument} onChange={(e) => setPurchaseDocument(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" placeholder="Nº da nota..." />
@@ -670,7 +681,7 @@ export default function EstoquePage() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-600">Condição</label>
               <select value={purchasePaymentCondition} onChange={(e) => setPurchasePaymentCondition(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none">
@@ -687,7 +698,7 @@ export default function EstoquePage() {
             </div>
           </div>
           {(purchasePaymentCondition === "prazo" || purchaseExpenseType === "recorrente") && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-zinc-600">Vencimento</label>
                 <input type="date" value={purchaseDueDate} onChange={(e) => setPurchaseDueDate(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" />
@@ -762,7 +773,7 @@ export default function EstoquePage() {
               }} className="w-20 h-8 rounded border border-zinc-200 bg-white px-2 text-xs text-center focus:border-green-600 focus:outline-none" />
               <span className="text-xs font-medium text-zinc-700 w-20 text-right">{formatCurrency(pi.totalCost)}</span>
               <button onClick={() => setPurchaseItems(purchaseItems.filter((_, i) => i !== idx))} className="p-1 hover:bg-red-100 rounded">
-                <Trash2 className="h-3 w-3 text-zinc-400 hover:text-red-500" />
+                <Trash2 className="h-3 w-3 text-zinc-500 hover:text-red-500" />
               </button>
             </div>
           ))}
@@ -906,17 +917,17 @@ export default function EstoquePage() {
 
       {/* Family Form Modal */}
       {showFamilyForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">{editingFamily ? "Editar Família" : "Nova Família"}</h3>
-                <button onClick={() => { setShowFamilyForm(false); setEditingFamily(null); setNewFamilyName("") }}><X className="h-5 w-5" /></button>
+                <button onClick={() => { setShowFamilyForm(false); setEditingFamily(null); setNewFamilyName("") }} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input type="text" placeholder="Ex: Alimentos, Limpeza..." value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                  <input type="text" placeholder="Ex: Alimentos, Limpeza..." value={newFamilyName} onChange={(e) => setNewFamilyName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" className="flex-1" onClick={() => setShowFamilyForm(false)}>Cancelar</Button>
@@ -930,17 +941,17 @@ export default function EstoquePage() {
 
       {/* Category Form Modal */}
       {showCategoryForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">{editingCategory ? "Editar Categoria" : "Nova Categoria"}</h3>
-                <button onClick={() => { setShowCategoryForm(false); setEditingCategory(null); setNewCatName(""); setNewCatFamilyId("") }}><X className="h-5 w-5" /></button>
+                <button onClick={() => { setShowCategoryForm(false); setEditingCategory(null); setNewCatName(""); setNewCatFamilyId("") }} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome</label>
-                  <input type="text" placeholder="Ex: Carnes, Laticínios..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                  <input type="text" placeholder="Ex: Carnes, Laticínios..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Família (opcional)</label>
@@ -961,21 +972,21 @@ export default function EstoquePage() {
 
       {/* Item Modal */}
       {showItemForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">{editingItem ? "Editar Item" : "Novo Item"}</h3>
-                <button onClick={resetItemForm}><X className="h-5 w-5" /></button>
+                <button onClick={resetItemForm} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Nome do item</label>
-                  <input type="text" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                  <input type="text" placeholder="Ex: Farinha de trigo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                 </div>
 
                 {!addingFromCategory && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     {inlineForm === "family" ? (
                       <>
@@ -1055,7 +1066,7 @@ export default function EstoquePage() {
                         <label className="block text-sm font-medium text-zinc-700">Unidade de uso</label>
                         <SearchableSelect value={itemForm.useUnit || "un"} onChange={(v) => setItemForm({ ...itemForm, useUnit: v })} options={useUnits} placeholder="Selecionar..." />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <label className="block text-sm font-medium text-zinc-700">Contém</label>
                           <div className="flex gap-1">
@@ -1065,7 +1076,7 @@ export default function EstoquePage() {
                         </div>
                         <div className="space-y-1">
                           <label className="block text-sm font-medium text-zinc-700">Custo (R$)</label>
-                          <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                          <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                         </div>
                       </div>
                       {parseFloat(itemForm.packageQty) > 0 && parseFloat(itemForm.unitCost) > 0 && (
@@ -1082,13 +1093,13 @@ export default function EstoquePage() {
                   {!isPackageUnit && (
                     <div className="space-y-1">
                       <label className="block text-sm font-medium text-zinc-700">Custo unitário (R$)</label>
-                      <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      <input type="number" step="0.01" min="0" value={itemForm.unitCost} onChange={(e) => setItemForm({ ...itemForm, unitCost: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                     </div>
                   )}
 
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Estoque mínimo</label>
-                    <input type="number" step="0.01" min="0" value={itemForm.minQuantity} onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                    <input type="number" step="0.01" min="0" value={itemForm.minQuantity} onChange={(e) => setItemForm({ ...itemForm, minQuantity: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
 
                   <div className="space-y-1">
@@ -1132,8 +1143,8 @@ export default function EstoquePage() {
                           <div key={link.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-1.5">
                             <span className="text-xs text-zinc-700">{link.product.name}</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-zinc-400">x{link.quantity} {editingItem.unit}</span>
-                              <button onClick={() => unlinkProduct(link.productId)} className="text-zinc-400 hover:text-red-500"><X className="h-3 w-3" /></button>
+                              <span className="text-[10px] text-zinc-500">x{link.quantity} {editingItem.unit}</span>
+                              <button onClick={() => unlinkProduct(link.productId)} className="text-zinc-500 hover:text-red-500" aria-label="Fechar"><X className="h-3 w-3" /></button>
                             </div>
                           </div>
                         ))}
@@ -1161,12 +1172,12 @@ export default function EstoquePage() {
 
       {/* Movement Modal */}
       {showMovementForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Registrar Saída de Estoque</h3>
-                <button onClick={() => setShowMovementForm(false)}><X className="h-5 w-5" /></button>
+                <button onClick={() => setShowMovementForm(false)} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div>
@@ -1190,7 +1201,7 @@ export default function EstoquePage() {
                 {movementError && <p className="text-xs text-red-600">{movementError}</p>}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Observações (opcional)</label>
-                  <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
+                  <input type="text" value={movementForm.notes} onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" placeholder="Ex: Lote 12345..." />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowMovementForm(false)}>Cancelar</Button>
@@ -1204,19 +1215,19 @@ export default function EstoquePage() {
 
       {/* Supplier Form Modal */}
       {showSupplierForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">{editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}</h3>
-                <button onClick={() => setShowSupplierForm(false)}><X className="h-5 w-5" /></button>
+                <button onClick={() => setShowSupplierForm(false)} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-zinc-600">Nome *</label>
                   <input type="text" value={supplierForm.name} onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" placeholder="Nome do fornecedor..." />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-zinc-600">Telefone</label>
                     <input type="tel" value={supplierForm.phone} onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-green-600 focus:outline-none" placeholder="(11) 99999-9999" />

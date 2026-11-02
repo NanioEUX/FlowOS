@@ -133,7 +133,7 @@ export default function ClientesPage() {
             <div className="divide-y divide-zinc-100">
               {topCustomers.map((c, i) => (
                 <div key={c.id} className="grid grid-cols-12 py-2.5 items-center text-sm">
-                  <div className="col-span-1 text-zinc-400 font-bold">{i + 1}.</div>
+                  <div className="col-span-1 text-zinc-500 font-bold">{i + 1}.</div>
                   <div className="col-span-5 font-semibold text-zinc-800">{c.name || formatPhone(c.phone)}</div>
                   <div className="col-span-3 text-right text-zinc-500 text-xs">{c.totalOrders} pedidos</div>
                   <div className="col-span-3 text-right font-bold text-green-600">{formatCurrency(c.totalSpent)}</div>
@@ -146,7 +146,7 @@ export default function ClientesPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
         <input
           placeholder="Buscar por nome ou telefone..."
           value={search}
@@ -154,15 +154,15 @@ export default function ClientesPage() {
           className="w-full rounded-lg border border-zinc-300 bg-zinc-50 pl-10 pr-4 py-2.5 text-sm focus:border-green-600 focus:outline-none"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-            <X className="h-4 w-4 text-zinc-400 hover:text-zinc-400" />
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Fechar">
+            <X className="h-4 w-4 text-zinc-500 hover:text-zinc-500" />
           </button>
         )}
       </div>
 
       {/* Customer List */}
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-zinc-400">
+        <div className="text-center py-12 text-zinc-500">
           <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p>{search ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado ainda"}</p>
         </div>
@@ -190,7 +190,7 @@ export default function ClientesPage() {
                     <div>
                       <p className="text-sm font-bold text-zinc-900">{customer.name || "Sem nome"}</p>
                       <p className="text-xs font-medium text-zinc-500">{formatPhone(customer.phone)}</p>
-                      <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                      <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
                         <Calendar className="h-3 w-3" /> Cliente desde {formatDate(customer.createdAt)}
                       </p>
                     </div>
@@ -198,7 +198,7 @@ export default function ClientesPage() {
                   <div className="flex items-center justify-between sm:justify-end gap-6 border-t border-zinc-50 pt-2 sm:border-t-0 sm:pt-0">
                     <div className="text-left sm:text-right">
                       <span className="text-sm font-bold text-green-600 block">{formatCurrency(customer.totalSpent)}</span>
-                      <span className="text-[11px] font-medium text-zinc-400 block">{customer.totalOrders} pedidos</span>
+                      <span className="text-[11px] font-medium text-zinc-500 block">{customer.totalOrders} pedidos</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <a
@@ -206,7 +206,7 @@ export default function ClientesPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="rounded-lg border border-zinc-200 p-2 text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                        className="rounded-lg border border-zinc-200 p-2 text-zinc-500 hover:text-green-600 hover:bg-green-50 transition-colors"
                         title="Chamar no WhatsApp"
                       >
                         <MessageSquare className="h-4 w-4" />

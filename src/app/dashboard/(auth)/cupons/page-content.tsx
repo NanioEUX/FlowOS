@@ -11,6 +11,7 @@ import { fetchAuth } from "@/lib/fetch-auth"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { SearchableSelect } from "@/components/searchable-select"
+import { formatCurrency } from "@/lib/utils"
 
 interface Coupon {
   id: string
@@ -65,6 +66,27 @@ export default function CuponsPage() {
     if (!form.code || !form.value) return
     if (form.code.length < 3) {
       setCodeError("Código deve ter pelo menos 3 caracteres")
+      return
+    }
+    // F8C-011: validação de faixa no cliente — percent > 100 ou valor <= 0
+    // passavam e só quebravam (ou não) no servidor.
+    const numericValue = parseFloat(form.value)
+    if (!Number.isFinite(numericValue)) {
+      setCodeError("Informe um valor numérico válido")
+      return
+    }
+    if (form.type === "percent") {
+      if (numericValue <= 0 || numericValue > 100) {
+        setCodeError("O desconto em % deve estar entre 1 e 100")
+        return
+      }
+    } else if (numericValue <= 0) {
+      setCodeError("O valor do cupom deve ser maior que zero")
+      return
+    }
+    const minOrderValue = form.minOrder ? parseFloat(form.minOrder) : 0
+    if (form.minOrder && (!Number.isFinite(minOrderValue) || minOrderValue < 0)) {
+      setCodeError("O valor mínimo do pedido não pode ser negativo")
       return
     }
     setSaving(true)
@@ -147,19 +169,19 @@ export default function CuponsPage() {
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Novo Cupom</h3>
-              <button onClick={() => setShowForm(false)}>
-                <X className="h-5 w-5 text-zinc-400" />
+              <h2 className="font-semibold">Novo Cupom</h2>
+              <button onClick={() => setShowForm(false)} aria-label="Fechar">
+                <X className="h-5 w-5 text-zinc-500" />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-zinc-500">Código</label>
                 <input
                   placeholder="DESCONTO10"
                   value={form.code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none uppercase"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none uppercase"
                 />
                 {codeError && <p className="mt-1 text-xs text-red-500">{codeError}</p>}
               </div>
@@ -182,7 +204,7 @@ export default function CuponsPage() {
                   placeholder={form.type === "percent" ? "10" : "5.00"}
                   value={form.value}
                   onChange={(e) => setForm({ ...form, value: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
@@ -192,7 +214,7 @@ export default function CuponsPage() {
                   placeholder="0"
                   value={form.minOrder}
                   onChange={(e) => setForm({ ...form, minOrder: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
@@ -202,7 +224,7 @@ export default function CuponsPage() {
                   placeholder="Ilimitado"
                   value={form.maxUses}
                   onChange={(e) => setForm({ ...form, maxUses: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div>
@@ -211,7 +233,7 @@ export default function CuponsPage() {
                   type="date"
                   value={form.expiresAt}
                   onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -237,14 +259,14 @@ export default function CuponsPage() {
           <Card key={coupon.id} className={!coupon.active ? "opacity-50" : ""}>
             <CardContent className="p-3 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10 text-green-600 font-bold text-sm">
-                {coupon.type === "percent" ? `${coupon.value}%` : `R$${coupon.value}`}
+                {coupon.type === "percent" ? `${coupon.value}%` : formatCurrency(coupon.value)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-mono font-bold text-sm text-zinc-900">{coupon.code}</p>
                   {coupon.minOrder > 0 && (
                     <Badge variant="info" className="text-[10px]">
-                      min R${coupon.minOrder}
+                      min {formatCurrency(coupon.minOrder)}
                     </Badge>
                   )}
                 </div>

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { getInterPixStatus } from "@/lib/integrations/inter"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
+import { isClosedOrderStatus } from "@/lib/order-transitions"
+import { getRequestId, logger } from "@/lib/logger"
 
 // Public endpoint used by the cardápio to poll payment status. Requires the
 // order's trackingToken as ?token= so only someone with the order link can
@@ -11,6 +13,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const requestId = getRequestId(req)
   const { searchParams } = new URL(req.url)
   const token = searchParams.get("token")
   if (!token) {
@@ -59,6 +62,19 @@ export async function GET(
           select: { autoAcceptOrders: true },
         })
         const interNewStatus = est?.autoAcceptOrders ? "accepted" : "pending"
+        // F4B-035: pagamento tardio em pedido já cancelado/abandonado não
+        // ressuscita o pedido — o dinheiro é registrado (para o reembolso
+        // manual) e o lojista é alertado.
+        if (isClosedOrderStatus(order.status)) {
+          console.error(
+            `[Inter Payment Status] Pagamento recebido para pedido ${order.status} (id=${params.id}) — reembolso manual necessário`,
+          )
+          await prisma.order.update({
+            where: { id: params.id },
+            data: { paymentStatus: "paid" },
+          })
+          return NextResponse.json({ paymentStatus: "paid", status: order.status })
+        }
         await prisma.order.update({
           where: { id: params.id },
           data: { paymentStatus: "paid", status: interNewStatus },
@@ -67,7 +83,7 @@ export async function GET(
         return NextResponse.json({ paymentStatus: "paid", status: interNewStatus })
       }
     } catch (error: any) {
-      console.error("[Inter Payment Status] Error:", error.message)
+      logger.error("payment-status", "erro ao consultar status do PIX Inter", { requestId, orderId: params.id, error: error?.message })
     }
   }
 
@@ -105,6 +121,18 @@ export async function GET(
               select: { autoAcceptOrders: true },
             })
             const newStatus = est?.autoAcceptOrders ? "accepted" : "pending"
+            // F4B-035: pagamento tardio em pedido cancelado/abandonado não
+            // ressuscita o pedido (registra o pago + alerta para reembolso).
+            if (isClosedOrderStatus(order.status)) {
+              console.error(
+                `[Pagar.me Payment Status] Pagamento recebido para pedido ${order.status} (id=${params.id}) — reembolso manual necessário`,
+              )
+              await prisma.order.update({
+                where: { id: params.id },
+                data: { paymentStatus: "paid" },
+              })
+              return NextResponse.json({ paymentStatus: "paid", status: order.status })
+            }
             await prisma.order.update({
               where: { id: params.id },
               data: { paymentStatus: "paid", status: newStatus },
@@ -149,7 +177,7 @@ export async function GET(
         }
       }
     } catch (e: any) {
-      console.error("[Pagar.me Payment Status] Error:", e.message)
+      logger.error("payment-status", "erro ao consultar status da cobrança Pagar.me", { requestId, orderId: params.id, error: e?.message })
     }
   }
 

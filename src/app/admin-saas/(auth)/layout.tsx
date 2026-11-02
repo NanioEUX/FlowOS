@@ -39,7 +39,7 @@ export default async function SaasLayout({ children }: { children: React.ReactNo
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-all"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-800/50 hover:text-white transition-all"
             >
               <span className="text-base">{item.icon}</span>
               <span>{item.label}</span>

@@ -1,5 +1,11 @@
 # AGENTS.md — Contexto do projeto (auditoria FlowOS)
 
+> **Documentação do sistema**: `docs/SISTEMA.md` (stack, arquitetura, modelo de
+> dados, API, fluxos, segurança, operação). Runbook de incidentes:
+> `docs/RUNBOOK.md`. Painel SaaS: `docs/ADMIN_SAAS.md`. Bot:
+> `docs/WHATSAPP_BOT.md`. **Passagem de bastão/onboarding**:
+> `docs/HANDOVER.md`. Env vars: `.env.example`.
+
 ## Validação obrigatória (antes de cada commit/push)
 ```bash
 rm -rf .next/types && npx tsc --noEmit && npx vitest run && npm run build
@@ -229,14 +235,137 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   categoria+produto/comissão iFood/conflict promo-destaque/recomendações; cupons, entregas
   (cancelar), estoque (família/categoria/item/fornecedor), despesas (4 handlers de categoria
   com contagem de falhas), usuários). **Resta da F8B**: banner de offline (F8B-012).
+- **Fase 8 parcial (26/10, no working tree)** — lote grande de UX/a11y/PWA/feedback:
+  **Feedback honesto (F8B)**: F8B-001 (spinner infinito — try/catch/finally nos 6 fetches
+  iniciais: PDV, pedidos, cardápio admin, estoque, entregas, caixa do dashboard); F8B-003
+  (`src/app/error.tsx` + `global-error.tsx` + `not-found.tsx` — antes não havia UI de erro
+  no App Router); F8B-012 (banner de offline — novo `src/components/offline-banner.tsx`
+  montado no layout raiz); F8B-013 (chat: erro de carga ≠ "sem conversas"); F8B-014
+  (tracking: erro ao enviar mensagem visível); F8B-015 (`orders-screen`: cancelamento só
+  fecha o modal com `res.ok`); F8B-018 (KDS: spinner em vez de flash branco); F8B-019
+  (despesas: delete falho avisa). **Acessibilidade (F8D)**: F8D-003 (zoom liberado);
+  F8D-001/002 (cards de produto/mesa com `role="button"`+Tab+Enter); F8D-004 (63 overlays
+  com `role="dialog" aria-modal`); F8D-006 (68 botões só-ícone com `aria-label`); F8D-007
+  (login com `htmlFor`/`id`); F8D-008 (`ui/Input|Textarea|Select` com `useId` → rótulo
+  sempre associado); F8D-010 (skip link no dashboard); F8D-011 (`aria-expanded`/`aria-current`);
+  F8D-012 (título por rota); F8D-016 (`:focus-visible` global); F8D-017 (`ConfirmDialog` com
+  foco preso/devolvido + `aria-labelledby`); F8D-018 (Escape nos modais que faltavam no PDV
+  + pilha global no cardápio do cliente); F8D-023 (`scope="col"` em 59 `<th>`); F8D-024
+  (alvo ≥24px nos botões só-ícone do PDV); F8D-027 (toast `role="status"`/`aria-live`);
+  F8D-030 (`prefers-reduced-motion`). **Contraste (F8D-013/014/015/019)**: `.badge-fire`
+  criado no `globals.css` (não existia → texto branco sumia), 12 selos com texto escuro
+  sobre âmbar/verde, `theme.textMutedMore` 0,40→0,63 (claro) e 0,30→0,62 (escuro),
+  `text-zinc-400`→`500` no tracking/motoboy. **PWA (F8A-004/005/008/009/010/014/019)**:
+  `sw.js` reescrito — versão via `NEXT_PUBLIC_BUILD_ID` (`/sw.js?v=<id>`), evento
+  `new-version-available` em vez de `navigate()` forçado, `notificationclick` foca a janela
+  da mesma URL; novo `src/components/pwa/update-banner.tsx`; novo `src/lib/storage.ts`
+  (chaves versionadas + migração sem perda: mesas do PDV e carrinho do cliente);
+  manifests sem `orientation: portrait`, `start_url` global = `/dashboard`.
+  **Impressão (F8C-016)**: `printHtmlPopup` reportando `printing|blocked|closed`, sem
+  `alert()` (F8B-017) — 3 call sites com toast honesto quando o pop-up é bloqueado.
+  **KDS (F8C-012)**: relógio calibrado pelo header `Date` do servidor (`serverNow()`).
+  **Outros**: F8A-003/016 (alvos 44px no KDS e no CTA/handshake do motoboy), F8A-012
+  (scroll horizontal em 4 tabelas + tabela de ajuste de preço), F8A-015 (PDV `100dvh` +
+  safe-area), F8A-021 (tabs do PDV sem quebrar), F8C-002 (cardápio: salvar produto com
+  validação + estado "Salvando..."), F8C-011 (faixa de cupom validada), F8C-021 ("Cash" →
+  "cashback"), F8C-024 (`inputMode`/`enterKeyHint` nos campos de dinheiro do PDV).
+  Gate: tsc + **150 testes** + build OK.
+- **Fase 8 parcial (26/10, 2º lote, no working tree)** — responsividade, sessão do KDS e
+  feedback fino: **F8A-001** — no celular o carrinho do PDV (abas Caixa e Mesas) virou
+  **drawer bottom sheet** (backdrop, X, Escape, fecha ao trocar de aba) com **FAB**
+  flutuante (itens + total); grade de produtos 2 col. no celular + `pb-24` sob o FAB.
+  **F8A-002** — KDS com **breakpoints de TV**: fonte do item 16/18/20px em `lg`/`xl`/`2xl`
+  (era `text-[10px]`), kanban `1/2/3` colunas, lateral 56→72px e **botão "Modo TV"**
+  (zoom 1,2×, persistido). **F8D-021** — contraste do KDS (`text-zinc-500`→`400`).
+  **F8B-007** — **`POST /api/auth/kds-refresh`** (novo): `kds-login` emite refresh token
+  (cookie httpOnly `kds_refresh`, 30d, path `/api/auth/kds-refresh`) e a rota reemite o
+  access token (24h) + rotaciona o refresh; no front o `kdsFetch()` renova em 401/403 e
+  repete 1× — o KDS não silencia mais quando o token expira. `updateStatus` passou a
+  checar `res.ok` (o 401 era engolido). **F8A-013** — 47 grades `grid-cols-N` sem
+  responsividade. **F8D-010** — `<main>` no PDV, login, cardápio, tracking e KDS.
+  **F8C-023** — atalhos visíveis na UI e **F5 não é mais sequestrado** (externos → F6);
+  **F8C-025** — Enter finaliza a venda; **F8B-022** — caixa do dashboard com `loadError`
+  (não mostra "R$ 0,00" em falha); **F8B-023** — banner no cardápio para sub-fetch
+  falho (curtidas/destaques/endereços). Gate: tsc + **150 testes** + build OK.
+- **Fase 8 parcial (26/10, 3º lote, no working tree)** — tema, contraste, moeda e
+  sessão expirada: **F8D-026** — o Tailwind passou a `darkMode: "class"` (antes as
+  classes `dark:` seguiam o SO e o dashboard claro ficava com componentes escuros);
+  novo `src/lib/theme.ts` (`applyDarkClass`) — dashboard remove a classe (é claro),
+  PDV e mesa aplicam conforme o toggle manual + script inline no layout raiz (sem
+  flash). **F8C-015** — 13 ramos do PDV com texto branco sobre fundo branco (invisível
+  no tema claro) → `text-zinc-500`. **F8D-019/020** — varredura de contraste: 407
+  `text-zinc-400`→`500` no dashboard/admin-saas, 87 no PDV/mesa (`text-white/30`→`/50`,
+  `/40`→`/60` no escuro). **F8C-017** — 15 formatadores manuais de moeda → `formatCurrency`
+  (troco, cardápio, cashback, cupons, quota Meta, KPIs admin-saas). **F8C-016** —
+  estado "Imprimindo..." no PDV, KDS e pedidos (botão desabilitado + spinner até o
+  `afterprint`). **F8B-008/009** — `clearAuth(reason)` manda `/login?reason=expired` e a
+  tela de login explica ("Sua sessão expirou…"); `kds-login` devolve 400 (não 500) com
+  corpo inválido. Gate: tsc + **150 testes** + build OK.
+  **F8D-022** — hierarquia de headings: 11 telas do dashboard passaram a ter `h1` como
+  título e os 72 `h3` dessas páginas viraram `h2` (sem salto de nível; visualmente
+  neutro pelo preflight do Tailwind).
+  **Restam da Fase 8**: F8C-013/F8C-014 (adoção de `ui/Button`/`ui/Input` no PDV e
+  dashboard + remover os 69 hex hardcoded — refactor visual, faz por tela com revisão
+  do dono), 2ª via da impressão em PDF (feature).
+
+- **Fase 4 — 1º lote (26/10, no working tree)**: **F4A-001** (iFood devolve 500 em
+  falha, não 200), **F4B-002** (P2002 = já existe; loja sem iFood não duplica),
+  **F4A-002/F4B-009** (Pagar.me: `await processWebhook` + 500 em falha + checa
+  `financialTransaction` existente), **F4A-008/F4A-009** (webhook 99: evento sem
+  pedido deixa rastro e devolve 500; falha ao atualizar devolve 500 — antes o
+  pedido travava em `out_for_delivery`; lógica extraída para `src/lib/webhook-99.ts`),
+  **F4B-006/F4B-021** (novo cron `/api/cron/replay-webhooks`, `*/10 * * * *` no
+  `vercel.json`: reprocessa até 50 eventos 99 "pendente"/"erro" com >2 min),
+  **F4A-008 99Food** (cancel/status sem pedido → rastro + 500), **F4B-030**
+  (`dispatch-99` recusa 409 pedido com `entrega99RideId`; PIN com `crypto.randomInt`),
+  **F4A-020/F4C-034** (novo `GET /api/health` público, `?deep=1` roda `SELECT 1`),
+  **F4A-014/F4A-016** (novo `src/lib/redact.ts`: token da Meta e link de reset fora
+  dos logs — reset só com `SHOW_DEV_CODE=true`), **F4A-025** (novo
+  `src/lib/items.ts` com `parseOrderItems` — `JSON.parse(order.items)` sem guarda
+  em 10 telas/APIs), **F4A-011** (`fetchExternalWithRetry`: retry exponencial só em
+  método idempotente; aplicado nos GETs Meta/Evolution/Pagar.me), **F4A-026**
+  (`restoreOrderStock` conta as falhas → `alerts.stockRestoreFailures` no
+  `/api/health`), **F4B-035** (pagamento tardio NÃO ressuscita pedido
+  cancelado/abandonado — `isClosedOrderStatus()` no polling Inter/Pagar.me e no
+  webhook Pagar.me; registra o pago + alerta de reembolso manual),
+  **F4A-018 parcial** (novo `src/lib/logger.ts` com log estruturado JSON e
+  request-id `x-request-id` gerado/propagado pelo middleware; webhooks iFood/99/
+  99Food/Pagar.me com `orderId`/`establishmentId`/`requestId`; migrados os
+  `console.error` de orders POST/PATCH, payment-status, verification e webhooks),
+  **F4D-001**
+  (novo `docs/RUNBOOK.md`: incidente p/ 5 cenários + política de rotação de
+  chaves). Testes novos: 15 → **165 testes**. Gate: tsc + 165 testes + build OK.
+
+- **Fase 10 — Go-live (28/10, no working tree)**: novo `auditoria/10-go-live.md` +
+  script `auditoria/testes/10-01-golive-estatico.sh` re-verificam os **30 itens**
+  do checklist de go-live (`RELATORIO-FINAL.md` §6) contra o código atual:
+  **35 verdes | 0 falhas | 15 manuais**. Fechou o que ainda dava: **F1B-002**
+  (IDOR cross-tenant em `delivery-config`/`delivery-zones`/`location`/
+  `establishments/me` — autenticavam pelo cookie `auth_token` sem conferir o
+  tenant; agora `verifyAuth` aceita header **ou** cookie e as 4 rotas usam
+  `requireEstablishment(req, id)` → 403, com teste de regressão; `delivery-config`
+  GET parou de devolver `api99Key`), **F9D-001/F4A-014** (**PAN/CVV no log da
+  Vercel** — body da transação de cartão era logado em falha; agora só
+  identificadores), **F1A-003** (`/api/bot/create-order` público → token interno
+  **HMAC do `JWT_SECRET`**, sem env nova), **F9A-004** (`/api/push/test` e
+  `/api/push/cleanup` sem auth → `requireEstablishment`; `push/test` tinha
+  `establishmentId` hardcoded), **F1D-003** (`/api/push/order-details` lia pedido
+  pelo telefone → exige subscription push), **F1A-007** (cadastro sem rate limit →
+  5/hora por IP), **F4D-025** (`delete-all` 403 em produção; `test-dispatch` sem
+  merchant hardcoded). Testes: **167**. Gate: tsc + 167 + build OK.
 
 ## Pendências imediatas (próxima sessão)
-1. **Fase 8 restante**: F8B (só banner offline — F8B-012), acessibilidade
-   (userScalable, `<button>` nos cards, role=dialog, aria-label, htmlFor — F8D-001…),
-   responsividade (drawer PDV mobile, KDS TV, CTA motoboy — F8A-001…), PWA seguro
-   (banner nova versão, dedup notificação, versionar localStorage — F8A-004…), contraste
-   (F8D-013…), design system (F8C-013…), impressão (F8C-016), KDS (F8B-007/F8C-012).
-   Depois: **Fase 4** (conflitos — idempotência de webhooks, reconciliação, observabilidade).
+0. **Client do Prisma local**: se aparecer `column Establishment.asaasApiKey does
+   not exist` (ou qualquer coluna antiga), rode `npx prisma generate` — o
+   `node_modules/.prisma` estava defasado (gerado antes da remoção do Asaas/Efi).
+   `prisma generate` **não** escreve no banco.
+1. **Fase 8 restante**: F8C-013/F8C-014 (design system no PDV/dashboard — refactor
+   visual, por tela), F8D-022 (hierarquia de headings), 2ª via da impressão em PDF.
+   **Fase 4 (em andamento)**: F4B-019 (`Idempotency-Key` no `POST /api/orders` —
+   exige coluna `clientRequestId`/`db push`, decisão do dono), F4A-019 (APM —
+   Sentry é decisão do dono), F4C-022 (CI já roda lint+tsc+`npm test`+build;
+   falta o gate de status check no painel da Vercel), F4A-018 (migração
+   incremental dos ~570 `console.*` das rotas não críticas).
 2. **Introspecção feita (SELECT read-only em produção,14/10)**: prod é **`db push`** (sem
    tabela `_prisma_migrations`; 47 tabelas); colunas Efi/Asaas **já não existem** em prod;
    `Coupon` está no **shape novo** (`name/type/conditionValue/usageLimit/timesUsed/available`)

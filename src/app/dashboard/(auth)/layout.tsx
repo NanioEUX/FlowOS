@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { applyDarkClass } from "@/lib/theme"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Store, ShoppingBag, Bike, UtensilsCrossed, Settings, BarChart3, LogOut, Menu, X, Package, DollarSign, Boxes, Users, Tag, Landmark, ChevronDown, ChevronRight, LayoutDashboard, CreditCard, Megaphone, Star, Clock, TrendingUp, Wallet, FileText, MapPin, Image, Eye, MessageCircle } from "lucide-react"
@@ -70,6 +71,45 @@ export default function DashboardLayout({
   const [toggleChannel, setToggleChannel] = useState<"direto" | "ifood">("direto")
   const [pauseReason, setPauseReason] = useState("Ajuste operacional interno")
   const [unreadChatCount, setUnreadChatCount] = useState(0)
+
+  // F8D-026: o dashboard é claro por design — a classe `dark` do Tailwind
+  // precisa ser removida aqui (o PDV a liga conforme o toggle manual).
+  useEffect(() => {
+    applyDarkClass(false)
+  }, [])
+
+  // F8D-012: título da página por rota (antes todas herdavam
+  // "FlowOS - Cardápio Digital" — WCAG 2.4.2).
+  useEffect(() => {
+    const labels: Record<string, string> = {
+      "/dashboard/home": "Dashboard",
+      "/dashboard/pedidos": "Pedidos",
+      "/dashboard/chat": "Chat",
+      "/dashboard/entregas": "Entregas",
+      "/dashboard/cardapio": "Cardápio",
+      "/dashboard/estoque": "Estoque",
+      "/dashboard/clientes": "Clientes",
+      "/dashboard/cupons": "Cupons",
+      "/dashboard/fidelidade": "Fidelidade",
+      "/dashboard/stories": "Stories",
+      "/dashboard/destaques": "Destaques",
+      "/dashboard/config": "Configurações",
+      "/dashboard/usuarios": "Usuários",
+      "/dashboard/planos": "Planos",
+      "/dashboard/delivery-zones": "Zonas de Entrega",
+      "/dashboard/caixa": "Caixa",
+      "/dashboard/caixa-gerencial": "Caixa Gerencial",
+      "/dashboard/relatorios": "Relatórios",
+      "/dashboard/financeiro": "DRE",
+      "/dashboard/financeiro/visao-geral": "Visão Geral",
+      "/dashboard/financeiro/receitas": "Receitas",
+      "/dashboard/financeiro/despesas": "Despesas",
+      "/dashboard/financeiro/fluxo-caixa": "Fluxo de Caixa",
+      "/dashboard/financeiro/cmv": "CMV",
+      "/dashboard/financeiro/relatorios": "Relatórios",
+    }
+    document.title = `${labels[pathname] || "Dashboard"} · FlowOS`
+  }, [pathname])
 
   useEffect(() => {
     const stored = localStorage.getItem("pedefacil-user")
@@ -186,7 +226,7 @@ export default function DashboardLayout({
   if (!establishment) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 gap-4">
-        <Store className="h-12 w-12 text-zinc-400" />
+        <Store className="h-12 w-12 text-zinc-500" />
         <p className="text-zinc-600">Nenhum estabelecimento vinculado</p>
         <Link href="/cadastro">
           <button className="bg-green-600 text-white hover:bg-green-700 px-6 py-2.5 text-sm rounded-lg font-medium">Criar estabelecimento</button>
@@ -197,6 +237,13 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-zinc-50">
+      {/* F8D-010: skip link — permite pular o menu para o conteúdo (WCAG 2.4.1) */}
+      <a
+        href="#conteudo-principal"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-lg focus:bg-green-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Pular para o conteúdo
+      </a>
       {/* Sidebar — blue gradient */}
       <aside
         className={cn(
@@ -218,7 +265,7 @@ export default function DashboardLayout({
               {establishment?.name || "FlowOS"}
             </p>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden flex-shrink-0">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden flex-shrink-0" aria-label="Fechar">
             <X className="h-5 w-5 text-white/60" />
           </button>
           <button onClick={handleLogout} className="lg:hidden flex-shrink-0" title="Sair">
@@ -235,6 +282,9 @@ export default function DashboardLayout({
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
+                // F8D-011: o item ativo é comunicado por estilo; falta o estado
+                // de navegação para leitor de tela.
+                aria-current={pathname === item.href ? "page" : undefined}
                 className={cn(
                   "sidebar-item",
                   pathname === item.href ? "active" : ""
@@ -244,7 +294,7 @@ export default function DashboardLayout({
                 {item.label}
                 {chatUnread > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0 animate-pulse">{chatUnread}</span>}
                 {alertLevel === "danger" && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
-                {alertLevel === "warning" && <span className="ml-auto rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
+                {alertLevel === "warning" && <span className="ml-auto rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-zinc-900 flex-shrink-0">Atenção</span>}
               </Link>
             )
           })}
@@ -276,6 +326,8 @@ export default function DashboardLayout({
             <div>
               <button
                 onClick={() => setFinanceiroOpen(!financeiroOpen)}
+                aria-expanded={financeiroOpen}
+                aria-controls="menu-financeiro"
                 className={cn(
                   "sidebar-item w-full",
                   (pathname.startsWith("/dashboard/financeiro") || pathname === "/dashboard/relatorios") ? "active" : ""
@@ -284,16 +336,17 @@ export default function DashboardLayout({
                 <Landmark className="h-[18px] w-[18px]" />
                 Financeiro
                 {expenseAlert === "danger" && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
-                {expenseAlert === "warning" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-white flex-shrink-0">Atenção</span>}
+                {expenseAlert === "warning" && <span className="rounded-full bg-yellow-400 px-1.5 py-0.5 text-[9px] font-bold text-zinc-900 flex-shrink-0">Atenção</span>}
                 {financeiroOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
               </button>
               {financeiroOpen && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
+                <div id="menu-financeiro" className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
                   {financeiroSubItems.filter((item) => !item.perm || user?.role === "admin" || user?.permissions?.includes(item.perm)).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      aria-current={pathname === item.href ? "page" : undefined}
                       className={cn("sidebar-item text-xs", pathname === item.href ? "active" : "")}
                     >
                       <item.icon className="h-4 w-4" />
@@ -309,6 +362,8 @@ export default function DashboardLayout({
             <div>
               <button
                 onClick={() => setMarketingOpen(!marketingOpen)}
+                aria-expanded={marketingOpen}
+                aria-controls="menu-marketing"
                 className={cn("sidebar-item w-full", pathname === "/dashboard/cupons" ? "active" : "")}
               >
                 <Megaphone className="h-[18px] w-[18px]" />
@@ -316,12 +371,13 @@ export default function DashboardLayout({
                 {marketingOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
               </button>
               {marketingOpen && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
+                <div id="menu-marketing" className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
                   {marketingSubItems.filter((item) => !item.perm || user?.role === "admin" || user?.permissions?.includes(item.perm)).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      aria-current={pathname === item.href ? "page" : undefined}
                       className={cn("sidebar-item text-xs", pathname === item.href ? "active" : "")}
                     >
                       <item.icon className="h-4 w-4" />
@@ -337,6 +393,8 @@ export default function DashboardLayout({
             <div>
               <button
                 onClick={() => setConfigOpen(!configOpen)}
+                aria-expanded={configOpen}
+                aria-controls="menu-config"
                 className={cn(
                   "sidebar-item w-full",
                   (pathname === "/dashboard/config" || pathname === "/dashboard/usuarios" || pathname === "/dashboard/planos" || pathname === "/dashboard/delivery-zones") ? "active" : ""
@@ -347,12 +405,13 @@ export default function DashboardLayout({
                 {configOpen ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
               </button>
               {configOpen && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
+                <div id="menu-config" className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[.1] pl-3">
                   {configSubItems.filter((item) => !item.perm || user?.role === "admin" || user?.permissions?.includes(item.perm)).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      aria-current={pathname === item.href ? "page" : undefined}
                       className={cn("sidebar-item text-xs", pathname === item.href ? "active" : "")}
                     >
                       <item.icon className="h-4 w-4" />
@@ -405,7 +464,7 @@ export default function DashboardLayout({
             </div>
             <button
               onClick={handleLogout}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-red-500"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-red-500"
               title="Sair"
             >
               <LogOut className="h-4 w-4" />
@@ -414,7 +473,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Content — light bg */}
-        <main className="p-3 lg:p-8">{children}</main>
+        <main id="conteudo-principal" className="p-3 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile bottom nav — blue (sidebar style) */}
@@ -460,7 +519,7 @@ export default function DashboardLayout({
 
       {/* iFood pause modal with reasons */}
       {toggleOpenConfirm && toggleChannel === "ifood" && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50" onClick={() => setToggleOpenConfirm(false)}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50" onClick={() => setToggleOpenConfirm(false)}>
           <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             {establishment?.ifoodPaused ? (
               <>

@@ -152,6 +152,8 @@ export function OrdersScreen({
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState("")
   const [cancelling, setCancelling] = useState(false)
+  // F8B-015: falha no cancelamento precisa de feedback (o modal fechava em 4xx/5xx)
+  const [cancelError, setCancelError] = useState("")
   const [activeTab, setActiveTab] = useState<"active" | "history">("active")
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -244,13 +246,13 @@ export function OrdersScreen({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: theme.overlay }}>
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: theme.overlay }}>
       <div className="w-full max-w-lg max-h-[85vh] overflow-hidden rounded-t-2xl sm:rounded-2xl flex flex-col" style={{ backgroundColor: theme.bgPage }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: theme.borderCard }}>
           <h1 className="text-lg font-bold" style={{ color: theme.text }}>Meus Pedidos</h1>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:opacity-70" style={{ color: theme.textMutedMore }}>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:opacity-70" style={{ color: theme.textMutedMore }} aria-label="Fechar">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -645,7 +647,7 @@ export function OrdersScreen({
                           </span>
                           {(order.cashbackEarned ?? 0) > 0 && !isCancelled && !isAbandoned && (
                             <span className="text-[11px] font-semibold" style={{ color: theme.success }}>
-                              +{formatCurrency((order.cashbackEarned ?? 0) / 100)} Cash
+                              +{formatCurrency((order.cashbackEarned ?? 0) / 100)} de cashback
                             </span>
                           )}
                         </div>
@@ -724,7 +726,7 @@ export function OrdersScreen({
                                 <>
                                   {discount > 0 && (
                                     <div className="flex justify-between text-[12px]" style={{ color: "#ef4444" }}>
-                                      <span>{hasCashUsed ? "Cash Utilizado" : "Desconto"}</span>
+                                      <span>{hasCashUsed ? "Cashback Utilizado" : "Desconto"}</span>
                                       <span>-{formatCurrency(discount)}</span>
                                     </div>
                                   )}
@@ -781,7 +783,7 @@ export function OrdersScreen({
 
       {/* Cancel modal */}
       {cancelModalOrderId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
             <h3 className="text-base font-bold text-zinc-900">Cancelar pedido?</h3>
             <p className="text-sm text-zinc-500">
@@ -800,9 +802,14 @@ export function OrdersScreen({
                 className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm resize-none"
               />
             </div>
+            {cancelError && (
+              <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {cancelError}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
-                onClick={() => { setCancelModalOrderId(null); setCancelReason("") }}
+                onClick={() => { setCancelModalOrderId(null); setCancelReason(""); setCancelError("") }}
                 disabled={cancelling}
                 className="flex-1 py-2.5 text-sm font-medium rounded-lg border border-zinc-200 text-zinc-700"
               >
@@ -812,9 +819,10 @@ export function OrdersScreen({
                 onClick={async () => {
                   if (!cancelModalOrderId) return
                   setCancelling(true)
+                  setCancelError("")
                   try {
                     const order = orders.find(o => o.id === cancelModalOrderId)
-                    await fetch(`/api/orders/${cancelModalOrderId}`, {
+                    const res = await fetch(`/api/orders/${cancelModalOrderId}`, {
                       method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
@@ -824,11 +832,17 @@ export function OrdersScreen({
                         trackingToken: order?.trackingToken,
                       }),
                     })
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({} as any))
+                      setCancelError(data?.error || "Não foi possível cancelar o pedido. Tente novamente.")
+                      return
+                    }
                     setCancelModalOrderId(null)
                     setCancelReason("")
                     onRefresh?.()
                   } catch (e) {
                     console.error("Erro ao cancelar:", e)
+                    setCancelError("Não foi possível cancelar o pedido. Verifique sua conexão.")
                   } finally {
                     setCancelling(false)
                   }

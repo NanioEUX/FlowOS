@@ -245,7 +245,7 @@ export default function DeliveryZonesPage() {
         <h2 className="text-lg font-semibold text-zinc-900 mb-1">🚚 Modo de Entrega</h2>
         <p className="text-xs text-zinc-500 mb-4">Escolha como as entregas serão processadas</p>
         
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <button
             onClick={() => setTipoEntregaAtiva("propria")}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
@@ -304,7 +304,7 @@ export default function DeliveryZonesPage() {
         <h2 className="text-lg font-semibold text-zinc-900 mb-1">📍 Localização do estabelecimento</h2>
         <p className="text-xs text-zinc-500 mb-4">Usada como ponto de origem para cálculo de distância</p>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div>
             <label className="block text-xs text-zinc-600 mb-1">Latitude</label>
             <input
@@ -377,7 +377,7 @@ export default function DeliveryZonesPage() {
                 <button
                   type="button"
                   onClick={() => setShowApi99Key(!showApi99Key)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-600"
                 >
                   {showApi99Key ? "🙈" : "👁️"}
                 </button>
@@ -417,7 +417,7 @@ export default function DeliveryZonesPage() {
             <h2 className="text-lg font-semibold text-zinc-900 mb-1">➕ Nova zona de entrega</h2>
             <p className="text-xs text-zinc-500 mb-4">Ex: &ldquo;Centro&rdquo; de 0 a 1km, taxa R$ 3</p>
 
-            <div className="grid grid-cols-7 gap-2 mb-3">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-3">
               <input
                 placeholder="Nome"
                 value={newZone.name}
@@ -475,17 +475,17 @@ export default function DeliveryZonesPage() {
           </div>
 
           {/* Lista de zonas */}
-          <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-xl border border-zinc-200 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-zinc-50 border-b border-zinc-200">
                 <tr className="text-left text-zinc-500 uppercase text-xs">
-                  <th className="py-3 px-4">Nome</th>
-                  <th className="py-3 px-4">Distância</th>
-                  <th className="py-3 px-4">Taxa</th>
-                  <th className="py-3 px-4">Grátis acima</th>
-                  <th className="py-3 px-4">Tempo</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4"></th>
+                  <th scope="col" className="py-3 px-4">Nome</th>
+                  <th scope="col" className="py-3 px-4">Distância</th>
+                  <th scope="col" className="py-3 px-4">Taxa</th>
+                  <th scope="col" className="py-3 px-4">Grátis acima</th>
+                  <th scope="col" className="py-3 px-4">Tempo</th>
+                  <th scope="col" className="py-3 px-4">Status</th>
+                  <th scope="col" className="py-3 px-4"></th>
                 </tr>
               </thead>
               <tbody>

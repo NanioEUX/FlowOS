@@ -41,6 +41,7 @@ const PUBLIC_ROUTES = [
   "/api/establishments", // cadastro (/cadastro) + GET público com strip de credenciais
   "/api/subscription/webhook", // provedores de cobrança chamam sem JWT (create NÃO é público)
   "/api/saas-admin", // login + rotas autenticadas por cookie (getSaasAdmin/requireSaasAdmin)
+  "/api/health", // health check público (monitor sintético não tem JWT)
 ]
 
 function isPublicRoute(pathname: string): boolean {
@@ -50,12 +51,22 @@ function isPublicRoute(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // F4A-018: request-id de correlação. Vem do proxy/CDN ou é gerado aqui e
+  // repassado ao handler + devolvido no header da resposta.
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID()
+
   if (!pathname.startsWith("/api/")) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    res.headers.set("x-request-id", requestId)
+    return res
   }
 
   if (isPublicRoute(pathname)) {
-    return NextResponse.next()
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set("x-request-id", requestId)
+    const res = NextResponse.next({ request: { headers: requestHeaders } })
+    res.headers.set("x-request-id", requestId)
+    return res
   }
 
   const authHeader = request.headers.get("authorization")
@@ -75,10 +86,13 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set("x-user-id", payload.userId as string)
     requestHeaders.set("x-establishment-id", payload.establishmentId as string)
     requestHeaders.set("x-user-role", payload.role as string)
+    requestHeaders.set("x-request-id", requestId)
 
-    return NextResponse.next({
+    const res = NextResponse.next({
       request: { headers: requestHeaders },
     })
+    res.headers.set("x-request-id", requestId)
+    return res
   } catch {
     return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 })
   }

@@ -4,6 +4,7 @@ import { getIfoodAuth, getIfoodOrder, mapIfoodOrderToFlow } from "@/lib/integrat
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 import { verifyHmacSha256 } from "@/lib/webhook-signature"
+import { getRequestId, logger } from "@/lib/logger"
 
 function calcCashbackEarned(total: number, establishment: any): number {
   try {
@@ -70,7 +71,16 @@ export async function POST(req: NextRequest) {
         select: { establishmentId: true },
       })
       if (existingOrder) {
-        return establishments.find(e => e.id === existingOrder.establishmentId) || establishments[0]
+        const match = establishments.find(e => e.id === existingOrder.establishmentId)
+        if (match) return match
+        // F4B-002: o pedido existe numa loja que não está na lista (iFood
+        // desativado). Cair no primeiro tenant criaria pedido duplicado na
+        // loja errada — melhor não tocar em nada.
+        console.warn("[ifood webhook] order belongs to an establishment without iFood enabled — skipping", {
+          orderId: orderId?.slice(0, 8),
+          establishmentId: existingOrder.establishmentId,
+        })
+        return null
       }
       return establishments[0]
     }
@@ -98,6 +108,12 @@ export async function POST(req: NextRequest) {
       }
 
       const est = await findEstablishment(orderId)
+      if (!est) {
+        // F4B-002: condição permanente (loja sem iFood) — não conta como falha
+        // transitória para não gerar retry infinito do iFood.
+        results.push({ orderId, action: 'unknown_establishment' })
+        continue
+      }
 
       if (["PLACED", "CFM", "CONFIRMED"].includes(code)) {
         const existing = await prisma.order.findFirst({
@@ -115,12 +131,27 @@ export async function POST(req: NextRequest) {
                 await deductOrderStock(tx, items, createdOrder.id, est.id, true)
               })
             } catch (stockErr: any) {
-              console.error("[ifood webhook] stock deduction error:", stockErr.message)
+              logger.error("webhook-ifood", "falha ao debitar estoque do pedido criado", {
+                requestId: getRequestId(req),
+                orderId: orderId?.slice(0, 8),
+                error: stockErr.message,
+              })
             }
             created++
             results.push({ orderId, action: 'created' })
           } catch (e: any) {
-            results.push({ orderId, action: 'create_error', error: e.message })
+            // F4B-002: corrida entre duas entregas do mesmo evento — o
+            // unique de externalId barrou a segunda. Não é erro: o pedido já
+            // existe (a dedup foi criada junto).
+            if (e?.code === "P2002") {
+              logger.warn("webhook-ifood", "externalId duplicado — pedido já criado", {
+                requestId: getRequestId(req),
+                orderId: orderId?.slice(0, 8),
+              })
+              results.push({ orderId, action: 'already_exists' })
+            } else {
+              results.push({ orderId, action: 'create_error', error: e.message })
+            }
           }
         } else if (!existing) {
           try {
@@ -149,14 +180,28 @@ export async function POST(req: NextRequest) {
                     await deductOrderStock(tx, items, createdOrder.id, est.id, true)
                   })
                 } catch (stockErr: any) {
-                  console.error("[ifood webhook] stock deduction error:", stockErr.message)
+                  logger.error("webhook-ifood", "falha ao debitar estoque do pedido placeholder", {
+                    requestId: getRequestId(req),
+                    orderId: orderId?.slice(0, 8),
+                    error: stockErr.message,
+                  })
                 }
                 created++
                 results.push({ orderId, action: 'created' })
                 console.log("[ifood webhook] SAVED order", orderId, "id=", mapped.establishmentId)
               } catch (createErr: any) {
-                console.error("[ifood webhook] PRISMA CREATE ERROR", orderId, createErr.message)
-                results.push({ orderId, action: 'create_error', error: createErr.message })
+                // F4B-002: corrida de dedup — tratar como "já existe"
+                if (createErr?.code === "P2002") {
+                  console.warn("[ifood webhook] duplicate externalId — order already created", orderId)
+                  results.push({ orderId, action: 'already_exists' })
+                } else {
+                  logger.error("webhook-ifood", "falha ao criar o pedido", {
+                    requestId: getRequestId(req),
+                    orderId: orderId?.slice(0, 8),
+                    error: createErr.message,
+                  })
+                  results.push({ orderId, action: 'create_error', error: createErr.message })
+                }
               }
             } else {
               // PLC pode vir com items vazios. Salva o pedido com dados básicos
@@ -180,8 +225,17 @@ export async function POST(req: NextRequest) {
                 results.push({ orderId, action: 'created_placeholder' })
                 console.log("[ifood webhook] SAVED placeholder order", orderId)
               } catch (createErr: any) {
-                console.error("[ifood webhook] PRISMA PLACEHOLDER ERROR", orderId, createErr.message)
-                results.push({ orderId, action: 'create_placeholder_error', error: createErr.message })
+                if (createErr?.code === "P2002") {
+                  console.warn("[ifood webhook] duplicate externalId — order already created", orderId)
+                  results.push({ orderId, action: 'already_exists' })
+                } else {
+                  logger.error("webhook-ifood", "falha ao criar o pedido placeholder", {
+                    requestId: getRequestId(req),
+                    orderId: orderId?.slice(0, 8),
+                    error: createErr.message,
+                  })
+                  results.push({ orderId, action: 'create_placeholder_error', error: createErr.message })
+                }
               }
             }
           } catch (e: any) {
@@ -286,9 +340,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // F4A-001: responder 200 com tudo falhando fazia o iFood considerar o
+    // evento entregue e nunca reenviar (pedido/placar perdido em silêncio).
+    // Agora falhas transitórias devolvem 500 → o iFood reenvia.
+    const failed = results.filter((r: any) =>
+      ["create_error", "create_placeholder_error", "fetch_error", "auth_error"].includes(r.action)
+    )
+    if (failed.length > 0) {
+      logger.error("webhook-ifood", "eventos com falha — devolvendo 500 para o iFood reenviar", {
+        requestId: getRequestId(req),
+        failed,
+      })
+      return NextResponse.json(
+        { ok: false, created, updated, failed: failed.length, results },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json({ ok: true, created, updated, results })
   } catch (err: any) {
-    console.error("[ifood webhook] error:", err.message)
+    logger.error("webhook-ifood", "falha ao processar o webhook", {
+      requestId: getRequestId(req),
+      error: err.message,
+    })
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
   }
 }

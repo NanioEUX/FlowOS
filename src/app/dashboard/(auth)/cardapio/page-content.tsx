@@ -74,7 +74,7 @@ function EmojiPickerPanel({ selected, auto, onPick }: { selected: string; auto: 
       <div className="max-h-52 space-y-2 overflow-y-auto">
         {EMOJI_SECTIONS.map((section) => (
           <div key={section.label}>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{section.label}</p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{section.label}</p>
             <div className="flex flex-wrap gap-1">
               {section.emojis.map((emoji) => (
                 <button
@@ -371,10 +371,24 @@ export default function CardapioPage() {
   const [marginCatPercent, setMarginCatPercent] = useState("")
   const [marginCatRounding, setMarginCatRounding] = useState("none")
   const [savingMarginCat, setSavingMarginCat] = useState(false)
+  // F8C-002: trava a re-entrância do cadastro de produto (duplo clique criava 2 produtos)
+  const [savingProduct, setSavingProduct] = useState(false)
 
+  // F8B-001: falha de rede não pode deixar o spinner eterno.
   async function loadData() {
     if (!establishmentId) return
     setLoading(true)
+    try {
+      await loadDataInner()
+    } catch (err) {
+      console.error("[Cardápio] Falha ao carregar dados:", err)
+      toast("Não foi possível carregar o cardápio. Verifique sua conexão.", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadDataInner() {
     const [catRes, stockRes, estRes] = await Promise.all([
       fetchAuth(`/api/categories?establishmentId=${establishmentId}`, { cache: "no-store" }),
       fetchAuth(`/api/stock?establishmentId=${establishmentId}`),
@@ -422,7 +436,6 @@ export default function CardapioPage() {
       setColorsPublished(data.colorsPublished || false)
       setEstablishmentSlug(data.slug || "")
     }
-    setLoading(false)
   }
 
   async function loadStoriesData() {
@@ -639,6 +652,18 @@ export default function CardapioPage() {
 
   async function saveProduct() {
     if (!establishmentId || !productForm.categoryId) return
+    // F8C-002: nome e preço são obrigatórios (antes o servidor era o único filtro)
+    if (!productForm.name.trim()) {
+      toast("Informe o nome do produto", "error")
+      return
+    }
+    const priceValue = parseFloat(productForm.price)
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      toast("Informe um preço maior que zero", "error")
+      return
+    }
+    if (savingProduct) return
+    setSavingProduct(true)
 
     const formData = new FormData()
     formData.append("name", productForm.name)
@@ -690,7 +715,8 @@ export default function CardapioPage() {
         })
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Erro desconhecido" }))
-          alert(`Erro ao salvar: ${err.error || res.statusText}`)
+          toast(`Erro ao salvar: ${err.error || res.statusText}`, "error")
+          setSavingProduct(false)
           return
         }
       } else {
@@ -722,14 +748,16 @@ export default function CardapioPage() {
         })
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Erro desconhecido" }))
-          alert(`Erro ao criar: ${err.error || res.statusText}`)
+          toast(`Erro ao criar: ${err.error || res.statusText}`, "error")
+          setSavingProduct(false)
           return
         }
         const data = await res.json()
         productId = data.id
       }
     } catch (e: any) {
-      alert(`Erro de rede: ${e.message}`)
+      toast(`Erro de rede: ${e.message}`, "error")
+      setSavingProduct(false)
       return
     }
 
@@ -807,6 +835,7 @@ export default function CardapioPage() {
       }
     }
     await loadData()
+    setSavingProduct(false)
   }
 
   function handleDeleteProduct(id: string, name: string) {
@@ -1701,7 +1730,7 @@ export default function CardapioPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="flex items-center gap-3 text-2xl font-bold text-zinc-900">
+      <h1 className="flex items-center gap-3 text-2xl font-bold text-zinc-900">
         Cardápio
         {establishmentSlug && (
           <>
@@ -1764,7 +1793,7 @@ export default function CardapioPage() {
             </button>
           </>
         )}
-      </h2>
+      </h1>
 
       <div className="flex gap-6">
         {/* Left — editing */}
@@ -1914,9 +1943,9 @@ export default function CardapioPage() {
                             <ArrowDown className="h-4 w-4" />
                           </button>
                         </div>
-                        <h3 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); setEditingCategoryEmoji(cat.emoji || ""); setEmojiPicker(null) }}>
+                        <h2 className="text-lg font-semibold text-zinc-900 cursor-pointer hover:text-green-600" onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); setEditingCategoryEmoji(cat.emoji || ""); setEmojiPicker(null) }}>
                           {cat.emoji || getCategoryEmoji(cat.name)} {cat.name}
-                        </h3>
+                        </h2>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -1995,7 +2024,7 @@ export default function CardapioPage() {
                         <span className="text-sm font-medium text-zinc-700">Margem de venda:</span>
                         <div className="relative">
                           <input type="number" min={0} max={100} step="0.1" placeholder="60" value={marginCatPercent} onChange={(e) => setMarginCatPercent(e.target.value)} className="h-8 w-20 rounded-lg border border-zinc-200 bg-white px-2 pr-6 text-sm focus:border-green-600 focus:outline-none" />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">%</span>
                         </div>
                         <Button size="sm" onClick={saveMarginCategory} disabled={savingMarginCat}>
                           {savingMarginCat ? "..." : "Salvar"}
@@ -2006,7 +2035,7 @@ export default function CardapioPage() {
                   )}
 
                   {sorted.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-zinc-400">
+                    <p className="py-4 text-center text-sm text-zinc-500">
                       Nenhum produto nesta categoria
                     </p>
                   ) : (
@@ -2092,7 +2121,7 @@ export default function CardapioPage() {
                                   const margem = product.price > 0 ? ((lucro / product.price) * 100) : 0
                                   return (
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                      <span className="text-[10px] text-zinc-500">CMV {formatCurrency(cmv)}</span>
                                       <span className="text-[10px] text-zinc-300">•</span>
                                       <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
                                         {margem.toFixed(0)}% lucro
@@ -2114,7 +2143,7 @@ export default function CardapioPage() {
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleIfoodPriceLock(product) }}
-                                    className="text-zinc-400 hover:text-zinc-600"
+                                    className="text-zinc-500 hover:text-zinc-600"
                                     title={(product as any).ifoodPriceLocked ? "Preço iFood automático (clique para editar)" : "Preço iFood manual (clique para travar)"}
                                   >
                                     {(product as any).ifoodPriceLocked ? (
@@ -2176,7 +2205,7 @@ export default function CardapioPage() {
                                   }`} />
                                 </span>
                               </button>
-                              <span className={`text-[9px] font-medium ${product.sendToPrep ? "text-red-600" : "text-zinc-400"}`}>
+                              <span className={`text-[9px] font-medium ${product.sendToPrep ? "text-red-600" : "text-zinc-500"}`}>
                                 {product.sendToPrep ? "Preparo" : "Sem preparo"}
                               </span>
                             </div>
@@ -2200,7 +2229,7 @@ export default function CardapioPage() {
                                   }`} />
                                 </span>
                               </button>
-                              <span className={`text-[9px] font-medium ${(product as any).onSale ? "text-amber-600" : "text-zinc-400"}`}>
+                              <span className={`text-[9px] font-medium ${(product as any).onSale ? "text-amber-600" : "text-zinc-500"}`}>
                                 {(product as any).onSale ? "Promoção" : "Sem promoção"}
                               </span>
                             </div>
@@ -2224,7 +2253,7 @@ export default function CardapioPage() {
                                   }`} />
                                 </span>
                               </button>
-                              <span className={`text-[9px] font-medium ${(product as any).featured ? "text-green-600" : "text-zinc-400"}`}>
+                              <span className={`text-[9px] font-medium ${(product as any).featured ? "text-green-600" : "text-zinc-500"}`}>
                                 {(product as any).featured ? "Destaque" : "Sem destaque"}
                               </span>
                             </div>
@@ -2268,15 +2297,15 @@ export default function CardapioPage() {
           </div>
           {categories.filter(c => c.products.some(p => p.sendToPrep)).length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
-              <Clock className="mx-auto h-8 w-8 text-zinc-400" />
+              <Clock className="mx-auto h-8 w-8 text-zinc-500" />
               <p className="mt-2 text-sm text-zinc-500">Nenhum produto com preparo configurado</p>
-              <p className="text-xs text-zinc-400 mt-1">Ative "Enviar para preparo" nos produtos</p>
+              <p className="text-xs text-zinc-500 mt-1">Ative "Enviar para preparo" nos produtos</p>
             </div>
           ) : (
             categories.filter(c => c.products.some(p => p.sendToPrep)).map(cat => (
               <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
-                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                  <h2 className="font-semibold text-zinc-800">{cat.name}</h2>
                 </div>
                 <div className="divide-y divide-zinc-100">
                   {cat.products.filter(p => p.sendToPrep).map((product: any) => (
@@ -2308,7 +2337,7 @@ export default function CardapioPage() {
                         <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -2335,7 +2364,7 @@ export default function CardapioPage() {
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           product.sendToPrep
                             ? "bg-red-100 text-red-600"
-                            : "bg-zinc-100 text-zinc-400"
+                            : "bg-zinc-100 text-zinc-500"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
@@ -2364,15 +2393,15 @@ export default function CardapioPage() {
           </div>
           {categories.filter(c => c.products.some(p => p.onSale)).length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
-              <Tag className="mx-auto h-8 w-8 text-zinc-400" />
+              <Tag className="mx-auto h-8 w-8 text-zinc-500" />
               <p className="mt-2 text-sm text-zinc-500">Nenhum produto em promoção</p>
-              <p className="text-xs text-zinc-400 mt-1">Ative "Promoção" nos produtos</p>
+              <p className="text-xs text-zinc-500 mt-1">Ative "Promoção" nos produtos</p>
             </div>
           ) : (
             categories.filter(c => c.products.some(p => p.onSale)).map(cat => (
               <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
-                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                  <h2 className="font-semibold text-zinc-800">{cat.name}</h2>
                 </div>
                 <div className="divide-y divide-zinc-100">
                   {cat.products.filter(p => p.onSale).map((product: any) => (
@@ -2381,7 +2410,7 @@ export default function CardapioPage() {
                         <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -2389,7 +2418,7 @@ export default function CardapioPage() {
                         <div className="flex items-center gap-2">
                           {product.promoPrice ? (
                             <>
-                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-xs text-zinc-500 line-through">{formatCurrency(product.price)}</span>
                               <span className="text-sm font-bold text-green-600">{formatCurrency(product.promoPrice)}</span>
                             </>
                           ) : (
@@ -2403,8 +2432,8 @@ export default function CardapioPage() {
                             const margem = finalPrice > 0 ? (((finalPrice - cmv) / finalPrice) * 100) : 0
                             return (
                               <div className="flex items-center gap-1 mt-0.5">
-                                <DollarSign className="h-3 w-3 text-zinc-400" />
-                                <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                <DollarSign className="h-3 w-3 text-zinc-500" />
+                                <span className="text-[10px] text-zinc-500">CMV {formatCurrency(cmv)}</span>
                                 <span className="text-[10px] text-zinc-300">|</span>
                                 <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
                                   {margem.toFixed(0)}%
@@ -2421,7 +2450,7 @@ export default function CardapioPage() {
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           (product as any).onSale
                             ? "bg-amber-100 text-amber-600"
-                            : "bg-zinc-100 text-zinc-400"
+                            : "bg-zinc-100 text-zinc-500"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
@@ -2451,15 +2480,15 @@ export default function CardapioPage() {
           </div>
           {categories.filter(c => c.products.some(p => (p as any).featured)).length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 p-12 text-center">
-              <Star className="mx-auto h-8 w-8 text-zinc-400" />
+              <Star className="mx-auto h-8 w-8 text-zinc-500" />
               <p className="mt-2 text-sm text-zinc-500">Nenhum produto em destaque</p>
-              <p className="text-xs text-zinc-400 mt-1">Ative "Destaque" nos produtos</p>
+              <p className="text-xs text-zinc-500 mt-1">Ative "Destaque" nos produtos</p>
             </div>
           ) : (
             categories.filter(c => c.products.some(p => (p as any).featured)).map(cat => (
               <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
-                  <h3 className="font-semibold text-zinc-800">{cat.name}</h3>
+                  <h2 className="font-semibold text-zinc-800">{cat.name}</h2>
                 </div>
                 <div className="divide-y divide-zinc-100">
                   {cat.products.filter(p => (p as any).featured).map((product: any) => (
@@ -2468,7 +2497,7 @@ export default function CardapioPage() {
                         <img src={product.image} alt="" className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          <UtensilsCrossed className="h-4 w-4 text-zinc-400" />
+                          <UtensilsCrossed className="h-4 w-4 text-zinc-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -2476,14 +2505,14 @@ export default function CardapioPage() {
                         <div className="flex items-center gap-2">
                           {product.featuredDiscountPrice ? (
                             <>
-                              <span className="text-xs text-zinc-400 line-through">{formatCurrency(product.price)}</span>
+                              <span className="text-xs text-zinc-500 line-through">{formatCurrency(product.price)}</span>
                               <span className="text-sm font-bold text-amber-600">{formatCurrency(product.featuredDiscountPrice)}</span>
                             </>
                           ) : (
                             <span className="text-sm font-bold text-amber-600">{formatCurrency(product.price)}</span>
                           )}
                           {product.badge && (
-                            <span className="text-[10px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded">{product.badge}</span>
+                            <span className="text-[10px] font-bold bg-amber-500 text-zinc-900 px-1.5 py-0.5 rounded">{product.badge}</span>
                           )}
                         </div>
                         {(() => {
@@ -2493,8 +2522,8 @@ export default function CardapioPage() {
                             const margem = finalPrice > 0 ? (((finalPrice - cmv) / finalPrice) * 100) : 0
                             return (
                               <div className="flex items-center gap-1 mt-0.5">
-                                <DollarSign className="h-3 w-3 text-zinc-400" />
-                                <span className="text-[10px] text-zinc-400">CMV {formatCurrency(cmv)}</span>
+                                <DollarSign className="h-3 w-3 text-zinc-500" />
+                                <span className="text-[10px] text-zinc-500">CMV {formatCurrency(cmv)}</span>
                                 <span className="text-[10px] text-zinc-300">|</span>
                                 <span className={`text-[10px] font-medium ${margem >= 0 ? "text-green-600" : "text-red-500"}`}>
                                   {margem.toFixed(0)}%
@@ -2511,7 +2540,7 @@ export default function CardapioPage() {
                         className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors shrink-0 ${
                           (product as any).featured
                             ? "bg-green-100 text-green-600"
-                            : "bg-zinc-100 text-zinc-400"
+                            : "bg-zinc-100 text-zinc-500"
                         }`}
                       >
                         <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
@@ -2535,12 +2564,12 @@ export default function CardapioPage() {
       {activeTab === "aparencia" && (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Aparência do Cardápio</h3>
+            <h2 className="font-semibold text-zinc-900">Aparência do Cardápio</h2>
             <p className="text-sm text-zinc-500">Personalize a visualização do seu cardápio público.</p>
             
             {/* Preview do cardápio */}
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs text-zinc-400 mb-3">Pré-visualização</p>
+              <p className="text-xs text-zinc-500 mb-3">Pré-visualização</p>
               <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm border border-white/[.04]">
                 {form.logo ? (
                   <img src={form.logo} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
@@ -2560,7 +2589,7 @@ export default function CardapioPage() {
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700">Logo do Estabelecimento</label>
               <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                   <Upload className="h-4 w-4" />
                   <span>Selecionar imagem</span>
                   <input
@@ -2587,13 +2616,13 @@ export default function CardapioPage() {
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
+              <p className="mt-1 text-xs text-zinc-500">Ou cole a URL da imagem abaixo</p>
               <input
                 type="text"
                 placeholder="https://..."
                 value={form.logo.startsWith("data:") ? "" : form.logo}
                 onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
               />
             </div>
 
@@ -2605,9 +2634,9 @@ export default function CardapioPage() {
                 placeholder="https://instagram.com/seuperfil"
                 value={form.instagramUrl}
                 onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })}
-                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
               />
-              <p className="mt-1 text-xs text-zinc-400">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
+              <p className="mt-1 text-xs text-zinc-500">Aparecerá no cardápio público como &quot;Siga-nos&quot; vinculado à logo</p>
             </div>
 
             <div className="border-t border-white/[.04] pt-4">
@@ -2619,14 +2648,14 @@ export default function CardapioPage() {
                     placeholder="Pedido enviado!"
                     value={form.confirmationTitle}
                     onChange={(e) => setForm({ ...form, confirmationTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">Título exibido ao cliente após finalizar o pedido</p>
+                  <p className="mt-1 text-xs text-zinc-500">Título exibido ao cliente após finalizar o pedido</p>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Imagem de Confirmação</label>
                   <div className="flex items-center gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                       <Upload className="h-4 w-4" />
                       <span>Selecionar imagem</span>
                       <input
@@ -2668,7 +2697,7 @@ export default function CardapioPage() {
                       </button>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-zinc-400">Imagem exibida no card de confirmação. Se vazia, usa a logo.</p>
+                  <p className="mt-1 text-xs text-zinc-500">Imagem exibida no card de confirmação. Se vazia, usa a logo.</p>
                   {form.confirmationImage && (
                     <img src={form.confirmationImage} alt="Preview" className="mt-2 h-16 w-16 rounded-xl object-cover" />
                   )}
@@ -2680,9 +2709,9 @@ export default function CardapioPage() {
                     value={form.pickupMessage}
                     onChange={(e) => setForm({ ...form, pickupMessage: e.target.value })}
                     rows={3}
-                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de retirada</p>
+                  <p className="mt-1 text-xs text-zinc-500">Mensagem exibida ao cliente ao finalizar um pedido de retirada</p>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Mensagem de Entrega</label>
@@ -2691,9 +2720,9 @@ export default function CardapioPage() {
                     value={form.deliveryMessage}
                     onChange={(e) => setForm({ ...form, deliveryMessage: e.target.value })}
                     rows={3}
-                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">Mensagem exibida ao cliente ao finalizar um pedido de entrega</p>
+                  <p className="mt-1 text-xs text-zinc-500">Mensagem exibida ao cliente ao finalizar um pedido de entrega</p>
                 </div>
               </div>
 
@@ -2710,7 +2739,7 @@ export default function CardapioPage() {
                     placeholder="Encerramos por hoje, mas {day} às {time} retornamos"
                     value={form.closedTitle}
                     onChange={(e) => setForm({ ...form, closedTitle: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -2719,12 +2748,12 @@ export default function CardapioPage() {
                     placeholder="Aguarde, estaremos de volta!"
                     value={form.closedSub}
                     onChange={(e) => setForm({ ...form, closedSub: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 {/* Preview */}
                 <div className="rounded-lg border border-amber-500/20 bg-white p-3">
-                  <p className="mb-2 text-[10px] font-medium text-zinc-400 uppercase">Preview (simula terça às 14:00)</p>
+                  <p className="mb-2 text-[10px] font-medium text-zinc-500 uppercase">Preview (simula terça às 14:00)</p>
                   <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-center">
                     <p className="text-sm font-medium text-amber-800">
                       {form.closedTitle
@@ -2757,10 +2786,10 @@ export default function CardapioPage() {
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
+                <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
                   <Palette className="h-5 w-5 text-[#FF6B35]" />
                   Personalização de Cores
-                </h3>
+                </h2>
                 <p className="text-sm text-zinc-500">Customize as cores do seu cardápio público.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -2770,7 +2799,7 @@ export default function CardapioPage() {
                     Publicado
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500">
                     <div className="h-1.5 w-1.5 rounded-full bg-zinc-400"></div>
                     Rascunho
                   </span>
@@ -2854,7 +2883,7 @@ export default function CardapioPage() {
 
               {/* Live Preview */}
               <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                <p className="text-xs text-zinc-400 mb-3">Pré-visualização ao vivo</p>
+                <p className="text-xs text-zinc-500 mb-3">Pré-visualização ao vivo</p>
                 <div
                   className="rounded-lg overflow-hidden shadow-sm"
                   style={{ backgroundColor: colors.backgroundColor }}
@@ -2956,7 +2985,7 @@ export default function CardapioPage() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => { if (previewIframeRef.current) previewIframeRef.current.src = `/${establishmentSlug}` }}
-                  className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                  className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-700 hover:text-white transition-colors"
                   title="Recarregar"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
@@ -2981,12 +3010,12 @@ export default function CardapioPage() {
 
       {/* Category Modal */}
       {showCategoryForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Nova Categoria</h3>
-                <button onClick={() => { setShowCategoryForm(false); setEmojiPicker(null) }}>
+                <h2 className="text-lg font-semibold">Nova Categoria</h2>
+                <button onClick={() => { setShowCategoryForm(false); setEmojiPicker(null) }} aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -3004,7 +3033,7 @@ export default function CardapioPage() {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   autoFocus
-                  className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 flex-1 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               {emojiPicker === "create" && (
@@ -3050,15 +3079,15 @@ export default function CardapioPage() {
 
       {/* iFood Settings Modal */}
       {showIfoodSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Settings className="h-5 w-5" />
                   Configurações iFood
-                </h3>
-                <button onClick={() => setShowIfoodSettings(false)}>
+                </h2>
+                <button onClick={() => setShowIfoodSettings(false)} aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -3128,16 +3157,16 @@ export default function CardapioPage() {
 
       {/* Product Modal */}
       {showProductForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
           <Card className="w-full max-w-lg my-8 max-h-[calc(100vh-4rem)] flex flex-col">
             <CardContent className="p-6 overflow-y-auto flex-1">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">
+                <h2 className="text-lg font-semibold">
                   {editingProduct ? (
-                    <>Editar Produto <span className="text-zinc-400 font-normal">— {editingProduct.name}</span></>
+                    <>Editar Produto <span className="text-zinc-500 font-normal">— {editingProduct.name}</span></>
                   ) : "Novo Produto"}
-                </h3>
-                <button onClick={() => { setShowProductForm(false); setEditingProduct(null) }}>
+                </h2>
+                <button onClick={() => { setShowProductForm(false); setEditingProduct(null) }} aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -3174,7 +3203,7 @@ export default function CardapioPage() {
                         placeholder="Ex: Pizza Calabresa"
                         value={productForm.name}
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -3184,7 +3213,7 @@ export default function CardapioPage() {
                         value={productForm.description}
                         onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                         rows={2}
-                        className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -3198,7 +3227,7 @@ export default function CardapioPage() {
                           placeholder="29,90"
                           value={productForm.price}
                           onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                          className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                          className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -3215,7 +3244,7 @@ export default function CardapioPage() {
                               ? (((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100) >= 0
                                 ? "text-green-600"
                                 : "text-red-500"
-                              : "text-zinc-400"
+                              : "text-zinc-500"
                           }`}>
                             {(parseFloat(productForm.price) || 0) > 0
                               ? `${(((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100).toFixed(0)}%`
@@ -3243,7 +3272,7 @@ export default function CardapioPage() {
                         Imagem do Produto
                       </label>
                       <div className="flex items-center gap-3">
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-400 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/[.08] bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-100 hover:border-green-600/50 transition-colors">
                           <Upload className="h-4 w-4" />
                           <span>Selecionar foto</span>
                           <input
@@ -3286,12 +3315,12 @@ export default function CardapioPage() {
                           </button>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-zinc-400">Ou cole a URL da imagem abaixo</p>
+                      <p className="mt-1 text-xs text-zinc-500">Ou cole a URL da imagem abaixo</p>
                       <input
                         placeholder="https://exemplo.com/foto.jpg"
                         value={productForm.image.startsWith("data:") ? "" : productForm.image}
                         onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                       {productForm.image && (
                         <img
@@ -3427,7 +3456,7 @@ export default function CardapioPage() {
                       {productForm.onSale && (
                         <div className="mt-3 flex items-center gap-2">
                           <label className="text-sm text-zinc-600">Preço original: <span className="font-semibold">{formatCurrency(parseFloat(productForm.price) || 0)}</span></label>
-                          <span className="text-zinc-400">→</span>
+                          <span className="text-zinc-500">→</span>
                           <div className="flex items-center gap-1">
                             <span className="text-sm text-zinc-500">R$</span>
                             <input
@@ -3524,7 +3553,7 @@ export default function CardapioPage() {
                                   onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                                 />
                               </div>
-                              <p className="text-[10px] text-zinc-400 text-center mt-1">{featuredModal.currentZoomEnabled ? "Passe o mouse para testar" : "Zoom desativado"}</p>
+                              <p className="text-[10px] text-zinc-500 text-center mt-1">{featuredModal.currentZoomEnabled ? "Passe o mouse para testar" : "Zoom desativado"}</p>
                             </div>
                           )}
                         </div>
@@ -3576,7 +3605,7 @@ export default function CardapioPage() {
                         Insumos da receita
                       </label>
                       {stockItems.length === 0 ? (
-                        <p className="text-xs text-zinc-400">Cadastre insumos no estoque primeiro</p>
+                        <p className="text-xs text-zinc-500">Cadastre insumos no estoque primeiro</p>
                       ) : (
                         <div className="space-y-2">
                           {productLinks.length > 0 && (
@@ -3625,13 +3654,13 @@ export default function CardapioPage() {
                                       placeholder="Unidade"
                                     />
                                     {lineCost !== null && lineCost > 0 && (
-                                      <span className="text-[10px] font-medium text-zinc-400 tabular-nums w-16 text-right">{formatCurrency(lineCost)}</span>
+                                      <span className="text-[10px] font-medium text-zinc-500 tabular-nums w-16 text-right">{formatCurrency(lineCost)}</span>
                                     )}
                                     <button
                                       type="button"
                                       onClick={() => setProductLinks(productLinks.filter((l) => l.stockItemId !== link.stockItemId))}
-                                      className="text-zinc-400 hover:text-red-500"
-                                    >
+                                      className="text-zinc-500 hover:text-red-500"
+                                     aria-label="Fechar">
                                       <X className="h-3 w-3" />
                                     </button>
                                   </div>
@@ -3702,7 +3731,7 @@ export default function CardapioPage() {
                                                     <div className={`flex h-4 w-4 items-center justify-center rounded border ${isHidden ? "border-zinc-300 bg-white" : "border-green-600 bg-green-600"}`}>
                                                       {!isHidden && <Check className="h-3 w-3 text-white" />}
                                                     </div>
-                                                    <span className={isHidden ? "text-zinc-400" : "text-zinc-700"}>{catName}</span>
+                                                    <span className={isHidden ? "text-zinc-500" : "text-zinc-700"}>{catName}</span>
                                                   </button>
                                                 )
                                               })}
@@ -3740,7 +3769,7 @@ export default function CardapioPage() {
                           <div className="flex-1">
                             <label className="text-xs text-zinc-500">Preço de venda</label>
                             <div className="relative mt-0.5">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">R$</span>
                               <input
                                 type="number"
                                 min="0.01"
@@ -3758,7 +3787,7 @@ export default function CardapioPage() {
                                 ? (((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100) >= 0
                                   ? "text-green-600"
                                   : "text-red-500"
-                                : "text-zinc-400"
+                                : "text-zinc-500"
                             }`}>
                               {(parseFloat(productForm.price) || 0) > 0 && fichaTecnicaCost > 0
                                 ? `${(((parseFloat(productForm.price) || 0) - fichaTecnicaCost) / (parseFloat(productForm.price) || 0) * 100).toFixed(0)}%`
@@ -3790,7 +3819,7 @@ export default function CardapioPage() {
                       <label className="mb-1 block text-sm font-medium text-zinc-700">
                         Itens Adicionais
                       </label>
-                      <p className="mb-3 text-xs text-zinc-400">
+                      <p className="mb-3 text-xs text-zinc-500">
                         Configure opções extras que o cliente pode selecionar ao pedir este produto.
                       </p>
                       {(() => {
@@ -3890,8 +3919,8 @@ export default function CardapioPage() {
                                         const updated = productAdditionalOptions.filter((_, i) => !items.includes(productAdditionalOptions[i]))
                                         setProductAdditionalOptions(updated)
                                       }}
-                                      className="text-zinc-400 hover:text-red-500"
-                                    >
+                                      className="text-zinc-500 hover:text-red-500"
+                                     aria-label="Fechar">
                                       <X className="h-3 w-3" />
                                     </button>
                                   </div>
@@ -3931,7 +3960,7 @@ export default function CardapioPage() {
                                             className="h-7 flex-1 rounded border border-zinc-200 bg-zinc-50 px-2 text-xs text-zinc-700 focus:border-green-600 focus:outline-none"
                                           />
                                           <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">R$</span>
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">R$</span>
                                             <input
                                               type="number"
                                               min="0"
@@ -3952,7 +3981,7 @@ export default function CardapioPage() {
                                               updated[itemIdx] = { ...item, consumesStock: !item.consumesStock }
                                               setProductAdditionalOptions(updated)
                                             }}
-                                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium border ${item.consumesStock ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600'}`}
+                                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium border ${item.consumesStock ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:text-zinc-600'}`}
                                             title="Consome estoque"
                                           >
                                             Estoque
@@ -3964,14 +3993,14 @@ export default function CardapioPage() {
                                               updated.splice(itemIdx, 1)
                                               setProductAdditionalOptions(updated)
                                             }}
-                                            className="text-zinc-400 hover:text-red-500"
-                                          >
+                                            className="text-zinc-500 hover:text-red-500"
+                                           aria-label="Fechar">
                                             <X className="h-3 w-3" />
                                           </button>
                                         </div>
                                         {item.consumesStock && (
                                           <div className="flex flex-wrap items-center gap-2 px-3 pb-2 -mt-1">
-                                            <span className="text-[10px] text-zinc-400">Consome de:</span>
+                                            <span className="text-[10px] text-zinc-500">Consome de:</span>
                                              <div className="flex-1 min-w-[120px]">
                                                <SearchableSelect
                                                  value={item.stockProductId}
@@ -3984,7 +4013,7 @@ export default function CardapioPage() {
                                                  placeholder="Selecionar item do estoque..."
                                                />
                                              </div>
-                                            <span className="text-[10px] text-zinc-400">Qtd:</span>
+                                            <span className="text-[10px] text-zinc-500">Qtd:</span>
                                             <input
                                               type="number"
                                               min="0.1"
@@ -4075,8 +4104,8 @@ export default function CardapioPage() {
                   >
                     Fechar
                   </Button>
-                  <Button className="flex-1" onClick={saveProduct}>
-                    {editingProduct ? "Salvar" : "Adicionar"}
+                  <Button className="flex-1" onClick={saveProduct} disabled={savingProduct}>
+                    {savingProduct ? "Salvando..." : editingProduct ? "Salvar" : "Adicionar"}
                   </Button>
                 </div>
               </div>
@@ -4100,10 +4129,10 @@ export default function CardapioPage() {
       />
 
       {conflictConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
             <div className="px-6 py-4">
-              <h3 className="text-lg font-semibold text-zinc-900">
+              <h2 className="text-lg font-semibold text-zinc-900">
                 {conflictConfirm.type === "promo-to-featured"
                   ? "Ativar destaque"
                   : conflictConfirm.type === "featured-to-promo"
@@ -4111,7 +4140,7 @@ export default function CardapioPage() {
                     : conflictConfirm.type === "on-sale-confirm"
                       ? "Promoção ativa"
                       : "Destaque ativo"}
-              </h3>
+              </h2>
               <p className="mt-2 text-sm text-zinc-600">
                 {conflictConfirm.type === "promo-to-featured"
                   ? `O produto "${conflictConfirm.productName}" está em promoção. Para ativar como destaque, será necessário desativar a promoção. Deseja continuar?`
@@ -4137,7 +4166,7 @@ export default function CardapioPage() {
               )}
               <button
                 onClick={confirmConflict}
-                className="flex-1 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600"
+                className="flex-1 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-amber-400"
               >
                 {(conflictConfirm.type === "on-sale-confirm" || conflictConfirm.type === "featured-confirm")
                   ? "Desativar"
@@ -4149,14 +4178,14 @@ export default function CardapioPage() {
       )}
 
       {priceUpdateModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
-                <h3 className="text-lg font-semibold text-zinc-900">Atualizar preços</h3>
+                <h2 className="text-lg font-semibold text-zinc-900">Atualizar preços</h2>
               </div>
-              <button onClick={() => setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+              <button onClick={() => setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4176,13 +4205,13 @@ export default function CardapioPage() {
                   <option value="point90">.90 (R$ 50,33 → R$ 49,90)</option>
                 </select>
               </div>
-              <div className="max-h-64 overflow-y-auto rounded-lg border border-zinc-200">
-                <table className="w-full text-sm">
+              <div className="max-h-64 overflow-auto rounded-lg border border-zinc-200">
+                <table className="w-full min-w-[480px] text-sm">
                   <thead className="sticky top-0 bg-zinc-50">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium text-zinc-600">Produto</th>
-                      <th className="px-3 py-2 text-right font-medium text-zinc-600">Atual</th>
-                      <th className="px-3 py-2 text-right font-medium text-zinc-600">Novo</th>
+                      <th scope="col" className="px-3 py-2 text-left font-medium text-zinc-600">Produto</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium text-zinc-600">Atual</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium text-zinc-600">Novo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
@@ -4199,7 +4228,7 @@ export default function CardapioPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-xs text-zinc-400">{priceUpdateModal.products.length} produto(s) serão atualizados</p>
+              <p className="mt-2 text-xs text-zinc-500">{priceUpdateModal.products.length} produto(s) serão atualizados</p>
             </div>
             <div className="flex gap-3 border-t border-zinc-200 px-6 py-4">
               <Button variant="outline" className="flex-1" onClick={() => setPriceUpdateModal({ open: false, category: null, products: [], rounding: "none" })}>
@@ -4214,16 +4243,16 @@ export default function CardapioPage() {
       )}
 
       {promoModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🔥</span>
-                <h3 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-zinc-900">
                   {promoModal.currentOnSale ? "Promoção Ativa" : "Ativar Promoção"}
-                </h3>
+                </h2>
               </div>
-              <button onClick={() => setPromoModal({ ...promoModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+              <button onClick={() => setPromoModal({ ...promoModal, open: false })} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4309,16 +4338,16 @@ export default function CardapioPage() {
       )}
 
       {featuredModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div className="flex items-center gap-2">
                 <span className="text-xl">⭐</span>
-                <h3 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-zinc-900">
                   {featuredModal.currentFeatured ? "Destaque Ativo" : "Ativar Destaque"}
-                </h3>
+                </h2>
               </div>
-              <button onClick={() => setFeaturedModal({ ...featuredModal, open: false })} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600">
+              <button onClick={() => setFeaturedModal({ ...featuredModal, open: false })} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4462,14 +4491,14 @@ export default function CardapioPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { if (previewIframeMobileRef.current) previewIframeMobileRef.current.src = `/${establishmentSlug}` }}
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-700 hover:text-white transition-colors"
                 title="Recarregar"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
               </button>
               <button
                 onClick={() => setPreviewMaximized(!previewMaximized)}
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-700 hover:text-white transition-colors"
                 title={previewMaximized ? "Minimizar" : "Maximizar"}
               >
                 {previewMaximized ? (
@@ -4480,9 +4509,9 @@ export default function CardapioPage() {
               </button>
               <button
                 onClick={() => setShowPreview(false)}
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-700 hover:text-white transition-colors"
                 title="Fechar"
-              >
+               aria-label="Fechar">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -4503,22 +4532,22 @@ export default function CardapioPage() {
 
       {/* Recommendation Modal */}
       {recommendModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 flex max-h-[80vh] w-full max-w-md flex-col rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
               <div>
-                <h3 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-zinc-900">
                   {recommendModal.type === "category" ? "Recomendar para" : "Recomendar com"}
-                </h3>
+                </h2>
                 <p className="text-sm text-zinc-500">{recommendModal.targetName}</p>
               </div>
-              <button onClick={() => setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })} className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100">
+              <button onClick={() => setRecommendModal({ open: false, type: "category", targetId: "", targetName: "", currentIds: [] })} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="px-6 py-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                 <input
                   value={recommendSearch}
                   onChange={(e) => setRecommendSearch(e.target.value)}

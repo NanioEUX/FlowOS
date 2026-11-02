@@ -34,10 +34,14 @@ export function saveTokens(token: string, refreshToken: string): void {
   } catch {}
 }
 
-export function clearAuth(): void {
+// F8B-008: o redirect era bruto (sem motivo) — o operador achava que tinha sido
+// deslogado. O motivo viaja na URL e a tela de login explica.
+export function clearAuth(reason: "expired" | "manual" = "expired"): void {
   if (typeof window === "undefined") return
   localStorage.removeItem("pedefacil-user")
-  window.location.href = "/login"
+  const params = new URLSearchParams()
+  params.set("reason", reason)
+  window.location.href = `/login?${params.toString()}`
 }
 
 let refreshPromise: Promise<string | null> | null = null
@@ -89,7 +93,7 @@ export async function fetchAuth(input: RequestInfo, init?: RequestInit): Promise
       retryHeaders.set("Authorization", `Bearer ${newToken}`)
       return fetch(input, { ...init, headers: retryHeaders, cache: "no-store" })
     } else {
-      clearAuth()
+      clearAuth("expired")
     }
   }
 

@@ -1,5 +1,5 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions, SendVerificationOptions } from "./provider"
-import { fetchExternal } from "@/lib/fetch-external"
+import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
 
 interface MetaCloudConfig {
   phoneNumberId: string
@@ -252,7 +252,8 @@ export class MetaCloudProvider implements WhatsAppProvider {
 
   async testConnection(): Promise<{ connected: boolean; error?: string; phoneInfo?: any }> {
     try {
-      const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}`, {
+      const res = await fetchExternalWithRetry(`${this.baseUrl}/${this.phoneNumberId}`, {
+        method: "GET",
         headers: { "Authorization": `Bearer ${this.accessToken}` },
       })
       const data = await res.json()
@@ -358,7 +359,7 @@ export async function getTemplateStatus(
   apiVersion: string = "v21.0"
 ): Promise<{ found: boolean; status?: string; error?: string }> {
   try {
-    const res = await fetchExternal(
+    const res = await fetchExternalWithRetry(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?name=${templateName}`,
       {
         method: "GET",
@@ -398,7 +399,7 @@ export async function findApprovedTemplate(
 ): Promise<{ found: boolean; templateName?: string; status?: string; error?: string }> {
   try {
     console.log(`[MetaTemplate] Listing templates in WABA: ${wabaId}`)
-    const res = await fetchExternal(
+    const res = await fetchExternalWithRetry(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?fields=name,status,category,language`,
       {
         method: "GET",

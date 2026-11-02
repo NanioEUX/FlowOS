@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp, Printer } from "lucide-react"
+import { Loader2, LogOut, Clock, ChefHat, Globe, ShoppingBag, Armchair, AlertTriangle, MessageCircle, Send, ChevronDown, ChevronUp, Printer, Tv } from "lucide-react"
 import { SoundControl, playKitchenBeep } from "@/components/sound-control"
 import { useVisibilityRefresh } from "@/hooks/use-visibility-refresh"
 import { printHtmlPopup } from "@/lib/print-html"
+import { useToast } from "@/components/toast"
+import { parseOrderItems } from "@/lib/items"
 
 interface OrderMessage {
   id: string
@@ -48,6 +50,7 @@ const columns = [
 
 export default function KdsScreen() {
   const router = useRouter()
+  const { toast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -77,6 +80,10 @@ export default function KdsScreen() {
   // F5D-010: null = ainda não há baseline (primeira carga não bipa; o primeiro
   // pedido real — inclusive saindo de fila zerada — passa a bipar).
   const lastCountRef = useRef<number | null>(null)
+  // F8C-012: timers comparavam o relógio do tablet com o createdAt do servidor —
+  // tablet com relógio errado marcava atraso falso ou sumia com atraso real.
+  const serverOffsetRef = useRef(0)
+  const serverNow = useCallback(() => Date.now() + serverOffsetRef.current, [])
   // F5D-002: JWT expirou no meio do turno → overlay de sessão + polling para.
   const [sessionExpired, setSessionExpired] = useState(false)
   // F5D-003: estado real de conexão (último poll com sucesso).
@@ -87,6 +94,15 @@ export default function KdsScreen() {
   const [timers, setTimers] = useState<Record<string, string>>({})
   const [completedItems, setCompletedItems] = useState<Record<string, Record<number, boolean>>>({})
   const [filter, setFilter] = useState<FilterOrigin>("all")
+  // F8A-002: modo TV — amplia o painel inteiro (zoom) para leitura a 2-3 m
+  // F8C-016: estado "Imprimindo..." no botão de impressão do card
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null)
+  const [tvMode, setTvMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pedefacil-kds-tv") === "true"
+    }
+    return false
+  })
   const estIdRef = useRef<string | null>(null)
   const [orderMessages, setOrderMessages] = useState<Record<string, OrderMessage[]>>({})
   const [expandedChat, setExpandedChat] = useState<string | null>(null)
@@ -114,6 +130,37 @@ export default function KdsScreen() {
       .catch(() => {})
   }, [router])
 
+  // F8B-007: renova o access token (24h) com o cookie de refresh (30d).
+  // Se nem o refresh funcionar, aí sim a sessão acabou de verdade.
+  const refreshKdsToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/auth/kds-refresh", { method: "POST", credentials: "include" })
+      if (!res.ok) return null
+      const data = await res.json().catch(() => null)
+      if (data?.token) {
+        localStorage.setItem("kds_token", data.token)
+        return data.token as string
+      }
+      return null
+    } catch {
+      return null
+    }
+  }, [])
+
+  // Fetch do KDS: em 401/403 tenta renovar a sessão e repete UMA vez
+  const kdsFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const token = localStorage.getItem("kds_token")
+    const headers = { ...(options.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` }
+    let res = await fetch(url, { ...options, headers })
+    if (res.status === 401 || res.status === 403) {
+      const newToken = await refreshKdsToken()
+      if (newToken) {
+        res = await fetch(url, { ...options, headers: { ...headers, Authorization: `Bearer ${newToken}` } })
+      }
+    }
+    return res
+  }, [refreshKdsToken])
+
   const fetchOrders = useCallback(async () => {
     const token = localStorage.getItem("kds_token")
     if (!token || !estIdRef.current) return
@@ -121,11 +168,8 @@ export default function KdsScreen() {
     try {
       // F5A-038: escopo de status + take — o KDS não precisa do histórico
       // inteiro a cada 5s (cancelled entra para o aviso do F5D-006).
-      const res = await fetch(
-        `/api/orders?establishmentId=${estIdRef.current}&status=new,pending,confirmed,accepted,preparing,ready,cancelled&take=300`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await kdsFetch(
+        `/api/orders?establishmentId=${estIdRef.current}&status=new,pending,confirmed,accepted,preparing,ready,cancelled&take=300`
       )
 
       // F5D-002: 401/403 = sessão JWT expirada → avisar e parar o polling
@@ -144,6 +188,13 @@ export default function KdsScreen() {
         return
       }
       setOnline(true)
+
+      // F8C-012: calibra o relógio do KDS com o do servidor (header Date)
+      const dateHeader = res.headers.get("date")
+      if (dateHeader) {
+        const serverTime = new Date(dateHeader).getTime()
+        if (!Number.isNaN(serverTime)) serverOffsetRef.current = serverTime - Date.now()
+      }
 
       const all: Order[] = data?.orders || data || []
       const filtered = all.filter((o: Order) => ["new", "pending", "confirmed", "accepted", "preparing", "ready"].includes(o.status))
@@ -186,19 +237,29 @@ export default function KdsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [soundEnabled, soundVolume])
+  }, [soundEnabled, soundVolume, kdsFetch])
 
   async function updateStatus(orderId: string, newStatus: string) {
-    const token = localStorage.getItem("kds_token")
     try {
-      await fetch(`/api/orders/${orderId}`, {
+      const res = await kdsFetch(`/api/orders/${orderId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       })
+      // F8B-007: antes o 401 era engolido — o card ficava com o status antigo
+      if (res.status === 401 || res.status === 403) {
+        setSessionExpired(true)
+        return
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        toast(data?.error || "Não foi possível atualizar o pedido", "error")
+        return
+      }
       fetchOrders()
     } catch (err) {
       console.error("[KDS] Update error:", err)
+      toast("Sem conexão com o servidor", "error")
     }
   }
 
@@ -224,9 +285,7 @@ export default function KdsScreen() {
     // req/h a cada 10-15 pedidos na tela).
     if (orderIds.length > 0) {
       try {
-        const res = await fetch(`/api/orders/messages?ids=${orderIds.join(",")}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res = await kdsFetch(`/api/orders/messages?ids=${orderIds.join(",")}`)
         if (res.ok) {
           msgsMap = await res.json()
         }
@@ -253,9 +312,9 @@ export default function KdsScreen() {
     setSendingMsg(true)
     const token = localStorage.getItem("kds_token")
     try {
-      const res = await fetch(`/api/orders/${orderId}/messages`, {
+      const res = await kdsFetch(`/api/orders/${orderId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: chatInput.trim() }),
       })
       if (res.ok) {
@@ -273,11 +332,11 @@ export default function KdsScreen() {
   }
 
   async function markMessagesRead(orderId: string, token?: string | null) {
-    const t = token || localStorage.getItem("kds_token")
     try {
-      await fetch(`/api/orders/${orderId}/messages`, {
+      // F8B-007: usa o mesmo fetch com refresh (o token pode ter expirado)
+      await kdsFetch(`/api/orders/${orderId}/messages`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        headers: { "Content-Type": "application/json" },
       })
       setOrderMessages(prev => ({
         ...prev,
@@ -313,7 +372,7 @@ export default function KdsScreen() {
   }
 
   function isOverdue(dateStr: string): boolean {
-    return (Date.now() - new Date(dateStr).getTime()) > 15 * 60 * 1000
+    return (serverNow() - new Date(dateStr).getTime()) > 15 * 60 * 1000
   }
 
   function getOrdersForColumn(colStatus: string): Order[] {
@@ -356,14 +415,14 @@ export default function KdsScreen() {
   // F5D-006: o aviso de cancelamento some sozinho após 60s
   useEffect(() => {
     const t = setInterval(() => {
-      setCancelledNotices((prev) => prev.filter((n) => Date.now() - n.at < 60000))
+      setCancelledNotices((prev) => prev.filter((n) => serverNow() - n.at < 60000))
     }, 5000)
     return () => clearInterval(t)
   }, [])
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
-      const now = Date.now()
+      const now = serverNow()
       const t: Record<string, string> = {}
       orders.forEach((o) => {
         const diff = Math.floor((now - new Date(o.createdAt).getTime()) / 1000)
@@ -378,7 +437,7 @@ export default function KdsScreen() {
 
   const totalCount = orders.length
   const avgTime = totalCount > 0
-    ? Math.round(orders.reduce((acc, o) => acc + (Date.now() - new Date(o.createdAt).getTime()), 0) / totalCount / 60000)
+    ? Math.round(orders.reduce((acc, o) => acc + (serverNow() - new Date(o.createdAt).getTime()), 0) / totalCount / 60000)
     : 0
 
   if (sessionExpired) {
@@ -391,7 +450,7 @@ export default function KdsScreen() {
         </div>
         <button
           onClick={() => router.push("/kds")}
-          className="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          className="bg-amber-700 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
         >
           Entrar novamente
         </button>
@@ -408,9 +467,13 @@ export default function KdsScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-white flex">
+    <div
+      // F8A-002: modo TV amplia tudo (zoom) — leitura a distância
+      style={{ zoom: tvMode ? 1.2 : 1 }}
+      className="min-h-screen bg-[#1a1a1a] text-white flex"
+    >
       {/* Sidebar */}
-      <aside className="w-56 bg-[#111] border-r border-zinc-800 flex flex-col p-4 shrink-0">
+      <aside className="w-56 lg:w-64 2xl:w-72 bg-[#111] border-r border-zinc-800 flex flex-col p-4 shrink-0">
         <div className="mb-6">
           <div className="flex items-start gap-3 mb-1">
             {establishment?.logo ? (
@@ -435,7 +498,7 @@ export default function KdsScreen() {
         </div>
 
         <div className="mb-6">
-          <p className="text-zinc-300 text-[10px] uppercase tracking-wider mb-2 font-semibold">Filtrar por Origem</p>
+          <p className="text-zinc-300 text-[10px] lg:text-xs uppercase tracking-wider mb-2 font-semibold">Filtrar por Origem</p>
           <div className="flex flex-col gap-1">
             {([
               { value: "all" as FilterOrigin, label: "Todos" },
@@ -472,7 +535,7 @@ export default function KdsScreen() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="bg-[#111] border-b border-zinc-800 px-6 py-3 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-bold text-white">Painel Cozinha</h2>
+          <h2 className="text-lg xl:text-2xl font-bold text-white">Painel Cozinha</h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-zinc-800/50 px-3 py-1.5 rounded-lg">
               <ChefHat className="w-4 h-4 text-amber-400" />
@@ -482,6 +545,21 @@ export default function KdsScreen() {
               <Clock className="w-4 h-4 text-amber-400" />
               <span className="text-sm text-zinc-200">Média: <strong className="text-white">{avgTime}m</strong></span>
             </div>
+            <button
+              onClick={() => {
+                const next = !tvMode
+                setTvMode(next)
+                localStorage.setItem("pedefacil-kds-tv", String(next))
+              }}
+              aria-pressed={tvMode}
+              aria-label="Alternar modo TV"
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                tvMode ? "bg-amber-500 text-zinc-900" : "bg-zinc-800/50 text-zinc-200 hover:bg-zinc-700"
+              }`}
+            >
+              <Tv className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden xl:inline">Modo TV</span>
+            </button>
             <SoundControl
               storageKey="kds_sound"
               defaultEnabled={true}
@@ -495,7 +573,7 @@ export default function KdsScreen() {
         </header>
 
         {/* Kanban Columns */}
-        <main className="flex-1 p-4 overflow-hidden flex flex-col">
+        <main className="flex-1 p-4 overflow-y-auto lg:overflow-hidden flex flex-col">
           {/* F5D-006: aviso de cancelamento (card vermelho, some em 60s) */}
           {cancelledNotices.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3 shrink-0">
@@ -511,7 +589,7 @@ export default function KdsScreen() {
               ))}
             </div>
           )}
-          <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 min-h-0">
             {columns.map(col => {
               const colOrders = getOrdersForColumn(col.status)
 
@@ -519,7 +597,7 @@ export default function KdsScreen() {
                 <div key={col.status} className="flex flex-col min-h-0">
                   {/* Column Header */}
                   <div className={`flex items-center justify-between px-4 py-2.5 rounded-t-xl ${col.bg} border ${col.border} border-b-0`}>
-                    <span className={`font-bold text-sm ${col.color}`}>{col.label}</span>
+                    <span className={`font-bold text-sm lg:text-base xl:text-lg ${col.color}`}>{col.label}</span>
                     <span className={`text-xs font-bold ${col.color} bg-white/10 px-2 py-0.5 rounded-full`}>
                       {colOrders.length}
                     </span>
@@ -533,7 +611,7 @@ export default function KdsScreen() {
                       </div>
                     ) : (
                        colOrders.map(order => {
-                        const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+                        const items = parseOrderItems(order.items)
                         const orderCompleted = completedItems[order.id] || {}
                         const overdue = isOverdue(order.createdAt)
                         const nextAction = getNextAction(order.status, order.method)
@@ -554,13 +632,13 @@ export default function KdsScreen() {
                                 </span>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-sm text-white truncate">{getOrderTitle(order)}</span>
-                                    <span className="text-[10px] text-zinc-400 font-mono">#{order.orderNumber}</span>
+                                    <span className="font-bold text-sm lg:text-base xl:text-lg 2xl:text-xl text-white truncate">{getOrderTitle(order)}</span>
+                                    <span className="text-[10px] lg:text-xs xl:text-sm text-zinc-400 font-mono">#{order.orderNumber}</span>
                                   </div>
-                                  <span className="text-[9px] text-zinc-500">{getOrderTypeLabel(order)}</span>
+                                  <span className="text-[9px] lg:text-[11px] xl:text-xs text-zinc-400">{getOrderTypeLabel(order)}</span>
                                 </div>
                                 {order.tableNumber && (
-                                  <span className="text-[10px] text-zinc-300 bg-zinc-700 px-1.5 py-0.5 rounded">
+                                  <span className="text-[10px] lg:text-xs xl:text-sm text-zinc-300 bg-zinc-700 px-1.5 py-0.5 rounded">
                                     {order.tableNumber}
                                   </span>
                                 )}
@@ -569,7 +647,7 @@ export default function KdsScreen() {
                                 {overdue && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
                                 <button
                                   onClick={() => {
-                                    const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]")
+                                    const items = parseOrderItems(order.items)
                                     const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`
                                     const statusLabels: Record<string, string> = { new: "Novo", pending: "Pendente", confirmed: "Confirmado", accepted: "Aceito", preparing: "Preparando", ready: "Pronto", out_for_delivery: "Saiu p/ Entrega", delivered: "Entregue", cancelled: "Cancelado", abandoned: "Pedido expirado" }
                                     const orderTypeLabels: Record<string, string> = { delivery: "Entrega", pickup: "Retirada", presencial: "Presencial", dineIn: "No local" }
@@ -625,14 +703,30 @@ export default function KdsScreen() {
                                         <div class="divider"></div>
                                         <p class="footer">Obrigado pela preferência!</p>
                                       </body></html>`
-                                    printHtmlPopup(html)
+                                    setPrintingOrderId(order.id)
+                                    printHtmlPopup(html, {
+                                      // F8C-016: aviso honesto quando o pop-up é bloqueado
+                                      onStatus: (status) => {
+                                        if (status === "blocked") {
+                                          setPrintingOrderId(null)
+                                          toast("Não foi possível imprimir: o navegador bloqueou o pop-up.", "error")
+                                        }
+                                        if (status === "closed") setPrintingOrderId(null)
+                                      },
+                                    })
                                   }}
-                                  className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                  disabled={printingOrderId === order.id}
+                                  aria-label="Imprimir pedido"
+                                  className="p-1 rounded hover:bg-zinc-700 transition-colors disabled:opacity-60"
                                   title="Imprimir pedido"
                                 >
-                                  <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                                  {printingOrderId === order.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />
+                                  ) : (
+                                    <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                                  )}
                                 </button>
-                                <span className={`text-xs font-mono ${overdue ? "text-red-400" : "text-zinc-300"}`}>
+                                <span className={`text-xs lg:text-sm xl:text-base font-mono ${overdue ? "text-red-400" : "text-zinc-300"}`}>
                                   {timers[order.id] || "0:00"}
                                 </span>
                               </div>
@@ -646,7 +740,11 @@ export default function KdsScreen() {
                                   <div key={i} className="flex items-start gap-2 py-1">
                                     <button
                                       onClick={() => toggleItem(order.id, i)}
-                                      className={`w-4 h-4 mt-0.5 rounded-sm border flex items-center justify-center transition-colors shrink-0 ${
+                                      aria-pressed={done}
+                                      aria-label={done ? `Desmarcar ${item.name}` : `Marcar ${item.name} como pronto`}
+                                      // F8A-003: caixa visual de 16px, mas alvo de toque
+                                      // de 44px (pseudo-elemento expande o clique).
+                                      className={`relative w-4 h-4 mt-0.5 rounded-sm border flex items-center justify-center transition-colors shrink-0 before:absolute before:-inset-3.5 before:content-[''] ${
                                         done
                                           ? "bg-green-500 border-green-500"
                                           : "border-zinc-500 hover:border-zinc-300"
@@ -655,22 +753,22 @@ export default function KdsScreen() {
                                       {done && <span className="text-white text-[10px]">✓</span>}
                                     </button>
                                     <div className="min-w-0">
-                                      <span className={`text-xs font-medium ${done ? "line-through text-zinc-500" : "text-white"}`}>
+                                      <span className={`text-xs lg:text-sm xl:text-base 2xl:text-lg font-medium ${done ? "line-through text-zinc-400" : "text-white"}`}>
                                         {item.quantity}x {item.name}
                                       </span>
                                       {item.additionalOptions && item.additionalOptions.length > 0 && (
                                         <div className="mt-0.5 ml-1">
-                                          <p className={`text-[10px] font-medium ${done ? "text-zinc-500" : "text-zinc-400"}`}>Adicionais:</p>
+                                          <p className={`text-[10px] lg:text-xs xl:text-sm font-medium ${done ? "text-zinc-400" : "text-zinc-300"}`}>Adicionais:</p>
                                           {item.additionalOptions.map((opt: any, oi: number) => (
-                                            <p key={oi} className={`text-[10px] ml-1 ${done ? "text-zinc-500" : "text-zinc-300"}`}>• {opt.name}</p>
+                                            <p key={oi} className={`text-[10px] lg:text-xs xl:text-sm ml-1 ${done ? "text-zinc-400" : "text-zinc-300"}`}>• {opt.name}</p>
                                           ))}
                                         </div>
                                       )}
                                       {item.notes && (
-                                        <p className="text-amber-400 text-[10px] mt-0.5">{item.notes}</p>
+                                        <p className="text-amber-400 text-[10px] lg:text-xs xl:text-sm mt-0.5">{item.notes}</p>
                                       )}
                                       {item.observation && (
-                                        <p className="text-amber-300 text-[10px] mt-0.5">Obs: {item.observation}</p>
+                                        <p className="text-amber-300 text-[10px] lg:text-xs xl:text-sm mt-0.5">Obs: {item.observation}</p>
                                       )}
                                     </div>
                                   </div>
@@ -679,8 +777,8 @@ export default function KdsScreen() {
 
                               {order.notes && (
                                 <div className="mt-1.5 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
-                                  <p className="text-amber-300 text-[10px] font-medium">Observação:</p>
-                                  <p className="text-amber-300 text-[10px] font-medium">{order.notes}</p>
+                                  <p className="text-amber-300 text-[10px] lg:text-xs xl:text-sm font-medium">Observação:</p>
+                                  <p className="text-amber-300 text-[10px] lg:text-xs xl:text-sm font-medium">{order.notes}</p>
                                 </div>
                               )}
                             </div>
@@ -693,12 +791,12 @@ export default function KdsScreen() {
                                   setExpandedChat(next)
                                   if (next && unreadMsgs.length > 0) markMessagesRead(order.id)
                                 }}
-                                className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                                className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-[10px] lg:text-xs xl:text-sm font-medium transition-colors ${
                                   unreadMsgs.length > 0
                                     ? "bg-red-500/20 text-red-400 border border-red-500/30"
                                     : msgs.length > 0
                                       ? "bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700"
-                                      : "bg-zinc-700/50 text-zinc-500 hover:bg-zinc-700"
+                                      : "bg-zinc-700/50 text-zinc-400 hover:bg-zinc-700"
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5">
@@ -720,22 +818,22 @@ export default function KdsScreen() {
                               <div className="border-t border-zinc-700">
                                 <div ref={chatScrollRef} className="max-h-40 overflow-y-auto px-3 py-2 space-y-1.5">
                                   {msgs.length === 0 ? (
-                                    <p className="text-zinc-500 text-[10px] text-center py-2">Nenhuma mensagem</p>
+                                    <p className="text-zinc-400 text-[10px] lg:text-xs xl:text-sm text-center py-2">Nenhuma mensagem</p>
                                   ) : (
                                     msgs.map(m => (
                                       <div key={m.id} className={`flex ${m.sender === "establishment" ? "justify-end" : "justify-start"}`}>
-                                        <div className={`max-w-[85%] rounded-lg px-2 py-1 text-[10px] ${
+                                        <div className={`max-w-[85%] rounded-lg px-2 py-1 text-[10px] lg:text-xs xl:text-sm ${
                                           m.sender === "establishment"
                                             ? "bg-green-600/20 text-green-300"
                                             : "bg-zinc-700 text-zinc-200"
                                         }`}>
-                                          <p className={`text-[9px] font-semibold mb-0.5 ${
+                                          <p className={`text-[9px] lg:text-[11px] xl:text-xs font-semibold mb-0.5 ${
                                             m.sender === "establishment" ? "text-green-400" : "text-amber-400"
                                           }`}>
                                             {m.sender === "establishment" ? "Estabelecimento" : getOrderTitle(order)}
                                           </p>
                                           <p>{m.message}</p>
-                                          <p className="text-[8px] opacity-50 mt-0.5">
+                                          <p className="text-[8px] lg:text-[10px] xl:text-xs opacity-50 mt-0.5">
                                             {new Date(m.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                                           </p>
                                         </div>
@@ -749,14 +847,16 @@ export default function KdsScreen() {
                                     onChange={e => setChatInput(e.target.value.slice(0, 500))}
                                     onKeyDown={e => e.key === "Enter" && sendKdsMessage(order.id)}
                                     placeholder="Responder..."
-                                    className="flex-1 bg-zinc-800 text-white text-[10px] rounded px-2 py-1.5 border border-zinc-600 focus:border-green-500 focus:outline-none"
+                                    className="flex-1 bg-zinc-800 text-white text-[10px] lg:text-xs xl:text-sm rounded px-2 py-1.5 border border-zinc-600 focus:border-green-500 focus:outline-none"
                                   />
                                   <button
                                     onClick={() => sendKdsMessage(order.id)}
                                     disabled={!chatInput.trim() || sendingMsg}
-                                    className="bg-green-600 hover:bg-green-500 disabled:opacity-30 text-white rounded px-2 py-1.5 transition-colors"
+                                    aria-label="Enviar resposta"
+                                    // F8A-003: alvo de toque ≥44px
+                                    className="min-h-[44px] min-w-[44px] bg-green-600 hover:bg-green-500 disabled:opacity-30 text-white rounded px-2 py-1.5 transition-colors"
                                   >
-                                    <Send className="w-3 h-3" />
+                                    <Send aria-hidden="true" className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
@@ -767,7 +867,8 @@ export default function KdsScreen() {
                               <div className="px-3 pb-2.5 pt-1">
                                 <button
                                   onClick={() => updateStatus(order.id, nextAction.next)}
-                                  className={`w-full text-white font-medium py-1.5 rounded-lg text-xs transition-colors ${col.btnColor}`}
+                                  // F8A-003: botão de ação com alvo ≥44px
+                                  className={`w-full min-h-[44px] text-white font-medium py-2.5 rounded-lg text-xs lg:text-sm xl:text-base transition-colors ${col.btnColor}`}
                                 >
                                   {nextAction.label}
                                 </button>

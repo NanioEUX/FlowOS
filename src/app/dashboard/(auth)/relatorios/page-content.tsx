@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
+import { parseOrderItems } from "@/lib/items"
 
 type Period = "all" | "today" | "7days" | "30days"
 
@@ -96,7 +97,7 @@ export default function RelatoriosPage() {
   const productSales: Record<string, { name: string; qty: number; revenue: number }> = {}
   filtered.forEach((o) => {
     try {
-      const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items
+      const items = parseOrderItems(o.items)
       if (Array.isArray(items)) {
         items.forEach((item: any) => {
           if (!productSales[item.name]) {
@@ -176,7 +177,7 @@ export default function RelatoriosPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-zinc-900">Relatórios Financeiros</h2>
+      <h1 className="text-xl font-bold text-zinc-900">Relatórios Financeiros</h1>
 
       {loadError && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -251,7 +252,7 @@ export default function RelatoriosPage() {
               <div>
                 <p className="text-[10px] text-zinc-500">Ticket Médio</p>
                 <p className="text-lg font-bold">{formatCurrency(averageTicket)}</p>
-                <p className="text-[10px] text-zinc-400">{filtered.length} pedidos</p>
+                <p className="text-[10px] text-zinc-500">{filtered.length} pedidos</p>
               </div>
             </div>
           </CardContent>
@@ -261,20 +262,20 @@ export default function RelatoriosPage() {
       {/* Chart */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Faturamento Diário (14 dias)</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Faturamento Diário (14 dias)</h2>
           <div className="flex items-end gap-1 overflow-x-auto pb-2" style={{ height: 180 }}>
             {dailyData.map((day, i) => {
               const height = (day.revenue / maxDailyRevenue) * 140
               return (
                 <div key={i} className="flex flex-1 flex-col items-center gap-0.5 min-w-[32px]">
                   {day.revenue > 0 && (
-                    <span className="text-[9px] font-medium text-zinc-400">{formatCurrency(day.revenue)}</span>
+                    <span className="text-[9px] font-medium text-zinc-500">{formatCurrency(day.revenue)}</span>
                   )}
                   <div
                     className={`w-full rounded-t transition-all ${day.revenue > 0 ? "bg-green-600" : "bg-zinc-100"}`}
                     style={{ height: Math.max(height, day.revenue > 0 ? 8 : 2) }}
                   />
-                  <span className="text-[9px] text-zinc-400">{day.shortDay}</span>
+                  <span className="text-[9px] text-zinc-500">{day.shortDay}</span>
                   <span className="text-[8px] text-zinc-300">{day.day}</span>
                 </div>
               )
@@ -287,7 +288,7 @@ export default function RelatoriosPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Formas de Pagamento</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Formas de Pagamento</h2>
             <div className="space-y-2">
               {[
                 { label: "Dinheiro", value: paymentBreakdown.money, count: paymentCount.money, icon: Banknote, color: "green" },
@@ -302,7 +303,7 @@ export default function RelatoriosPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold">{formatCurrency(pm.value)}</p>
-                    <p className="text-[10px] text-zinc-400">{pm.count} pedidos</p>
+                    <p className="text-[10px] text-zinc-500">{pm.count} pedidos</p>
                   </div>
                 </div>
               ))}
@@ -312,9 +313,9 @@ export default function RelatoriosPage() {
 
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Produtos Mais Vendidos</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Produtos Mais Vendidos</h2>
             {topProducts.length === 0 ? (
-              <p className="text-sm text-zinc-400 text-center py-4">Nenhum dado</p>
+              <p className="text-sm text-zinc-500 text-center py-4">Nenhum dado</p>
             ) : (
               <div className="space-y-2">
                 {topProducts.map((p, i) => (
@@ -325,7 +326,7 @@ export default function RelatoriosPage() {
                       </span>
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-[10px] text-zinc-400">{p.qty} vendidos</p>
+                        <p className="text-[10px] text-zinc-500">{p.qty} vendidos</p>
                       </div>
                     </div>
                     <p className="text-sm font-bold">{formatCurrency(p.revenue)}</p>
@@ -340,7 +341,7 @@ export default function RelatoriosPage() {
       {/* Recent orders */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Últimos Pedidos</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Últimos Pedidos</h2>
           <div className="space-y-1">
             {filtered.slice(0, 10).map((order) => (
               <div key={order.id} className="flex items-center justify-between rounded-lg border border-white/[.04] p-2">
@@ -362,12 +363,12 @@ export default function RelatoriosPage() {
       {/* Equipe - Entregadores */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
             <Bike className="h-4 w-4" />
             Entregadores
-          </h3>
+          </h2>
           {deliveryPeople.length === 0 ? (
-            <p className="text-sm text-zinc-400 text-center py-4">Nenhum entregador cadastrado</p>
+            <p className="text-sm text-zinc-500 text-center py-4">Nenhum entregador cadastrado</p>
           ) : (
             <div className="space-y-3">
               {deliveryPeople.map((person: any) => {
@@ -417,10 +418,10 @@ export default function RelatoriosPage() {
       {payments.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
               <History className="h-4 w-4" />
               Histórico de Pagamentos - Entregadores
-            </h3>
+            </h2>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {payments.slice(0, 20).map((p: any) => (
                 <div key={p.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
@@ -430,7 +431,7 @@ export default function RelatoriosPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-zinc-900">{p.deliveryPerson?.name}</p>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-zinc-500">
                         {new Date(p.createdAt).toLocaleString("pt-BR")}
                         {p.notes && ` • ${p.notes}`}
                       </p>
@@ -447,10 +448,10 @@ export default function RelatoriosPage() {
       {/* Garçoms */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900 flex items-center gap-2">
             <Users className="h-4 w-4" />
             Garçoms
-          </h3>
+          </h2>
           {(() => {
             const waiterOrders: Record<string, { count: number; revenue: number }> = {}
             filtered.forEach((o: any) => {
@@ -462,7 +463,7 @@ export default function RelatoriosPage() {
             })
             const waiters = Object.entries(waiterOrders)
             if (waiters.length === 0) {
-              return <p className="text-sm text-zinc-400 text-center py-4">Nenhum pedido com garçom vinculado neste período</p>
+              return <p className="text-sm text-zinc-500 text-center py-4">Nenhum pedido com garçom vinculado neste período</p>
             }
             return (
               <div className="space-y-3">

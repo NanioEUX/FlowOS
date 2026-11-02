@@ -2,7 +2,7 @@
 import { PushHeal } from "@/components/pwa/push-heal"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2, Info, Smartphone } from "lucide-react"
+import { Store, Minus, Plus, X, CreditCard, ExternalLink, Loader2, MessageCircle, ShoppingBag, ShoppingCart, CheckCircle, Banknote, User, Package, Store as StoreIcon, Bike, History, Search, Star, Sparkles, Tag, Send, Clock, MapPin, Sun, Moon, RefreshCw, AlertTriangle, Utensils, ClipboardList, Settings, Shield, ArrowLeft, Pencil, Check, Timer, Truck, Gift, Heart, Repeat, HelpCircle, ChevronRight, LogOut, Bell, Home, Trash2, Info, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 import { getCategoryEmoji } from "@/lib/category-emoji"
+import { readStorage, writeStorage, removeStorage } from "@/lib/storage"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import type { CartItem } from "@/types"
 import { useToast } from "@/components/toast"
@@ -19,6 +20,7 @@ import { GeolocationButton, type DeliveryInfo } from "@/components/delivery/geol
 import { PushSubscribe } from "@/components/pwa/push-subscribe"
 import { InstallButton } from "@/components/pwa/install-button"
 import { InstallPromptToast } from "@/components/pwa/install-prompt-toast"
+import { parseOrderItems } from "@/lib/items"
 
 interface Product {
   id: string
@@ -207,8 +209,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         bgHeader: "rgba(10,10,15,0.8)",
         bgModal: "#111",
         text: "#ffffff",
-        textMuted: "rgba(255,255,255,0.4)",
-        textMutedMore: "rgba(255,255,255,0.3)",
+        // F8D-015: alphas baixos (0,3–0,4) davam ~2,4–2,9:1 sobre o fundo
+        // escuro — abaixo de 4,5:1 (WCAG AA) em texto pequeno.
+        textMuted: "rgba(255,255,255,0.55)",
+        textMutedMore: "rgba(255,255,255,0.62)",
         textSubtle: "rgba(255,255,255,0.5)",
         borderSubtle: "rgba(255,255,255,0.06)",
         borderInputColor: "rgba(255,255,255,0.12)",
@@ -237,7 +241,8 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       bgModal: ec.backgroundColor === "#ffffff" ? "#ffffff" : ec.backgroundColor || "#ffffff",
       text: ec.textColor || "#1a1a2e",
       textMuted: ec.textColor ? `${ec.textColor}99` : "rgba(26,26,46,0.6)",
-      textMutedMore: ec.textColor ? `${ec.textColor}66` : "rgba(26,26,46,0.4)",
+      // F8D-015: 0,4 (≈2,4:1) → 0,63 (≈4,6:1) sobre fundo claro.
+      textMutedMore: ec.textColor ? `${ec.textColor}a1` : "rgba(26,26,46,0.63)",
       textSubtle: ec.textColor ? `${ec.textColor}aa` : "rgba(26,26,46,0.65)",
       borderSubtle: ec.textColor ? `${ec.textColor}10` : "rgba(0,0,0,0.06)",
       borderInputColor: ec.textColor ? `${ec.textColor}1a` : "rgba(0,0,0,0.1)",
@@ -252,18 +257,19 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   
   // Load cart from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`pedefacil-cart-${establishment.slug}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.length > 0) setCart(parsed)
-      }
-    } catch {}
+    // F8A-010: chave versionada — formato antigo incompatível não apaga o
+    // carrinho salvo silenciosamente.
+    const parsed = readStorage<CartItem[]>(
+      `pedefacil-cart-${establishment.slug}`,
+      `pedefacil-cart-${establishment.slug}`,
+      []
+    )
+    if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed)
   }, [establishment.slug])
 
   // Save cart to localStorage
   useEffect(() => {
-    localStorage.setItem(`pedefacil-cart-${establishment.slug}`, JSON.stringify(cart))
+    writeStorage(`pedefacil-cart-${establishment.slug}`, cart)
   }, [cart, establishment.slug])
 
   const [addedItemId, setAddedItemId] = useState<string | null>(null)
@@ -356,6 +362,9 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [cancelling, setCancelling] = useState(false)
   const [customer, setCustomer] = useState<{ name: string; phone: string; address: string; notes: string; cep?: string; cpf?: string; birthDate?: string; email?: string }>({ name: "", phone: "", address: "", notes: "" })
   const [addresses, setAddresses] = useState<{ id: string; label?: string; street: string; number: string; neighborhood?: string; city: string; state: string; cep: string; complement?: string; isDefault: boolean }[]>([])
+  // F8B-023: sub-fetches (curtidas/destaques/endereços) falhavam em silêncio —
+  // a tela mostrava lista vazia como se não houvesse nada
+  const [partialError, setPartialError] = useState<string | null>(null)
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
   // Clear all user data when phone changes (different user)
@@ -392,7 +401,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setActiveTab("menu")
       setOrderType("delivery")
       setPaymentMethod("pix")
-      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+      removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
       localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
@@ -936,9 +945,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
 
   useEffect(() => {
     fetch(`/api/products/likes?establishmentId=${establishment.id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("likes")
+        return r.json()
+      })
       .then((data) => { if (!data.error) setProductLikes(data) })
-      .catch(() => {})
+      .catch(() => setPartialError("Não foi possível carregar as curtidas."))
   }, [establishment.id])
 
   // Check for pending review on app open — show modal if delivered order exists
@@ -1142,7 +1154,12 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
         const data = await featuredRes.json()
         setFeaturedSections(data.sections || { trending: [], new: [], promo: [] })
       }
-    } catch {}
+      if (!storiesRes.ok || !bannersRes.ok || !featuredRes.ok) {
+        setPartialError("Não foi possível carregar todos os destaques.")
+      }
+    } catch {
+      setPartialError("Não foi possível carregar os destaques.")
+    }
   }, [establishment.id])
 
   useEffect(() => {
@@ -1290,7 +1307,10 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           }
         }
       }
-    } catch { }
+    } catch {
+      // F8B-023: falha silenciosa deixava a lista de endereços vazia sem aviso
+      setPartialError("Não foi possível carregar seus endereços.")
+    }
   }
 
   async function deleteAddress(addressId: string) {
@@ -2251,7 +2271,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
       setConfirmationLoyaltyDiscount(useLoyalty && loyaltyDiscount > 0 ? loyaltyDiscount : 0)
       setConfirmationBalanceBefore(customerData?.loyaltyPoints || customerLoyaltyPoints)
       setCart([])
-      localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+      removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
       setChangeFor("")
       setUseLoyalty(false)
 
@@ -2494,7 +2514,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
           setLastOrder(null)
           localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
           setCart([])
-          localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+          removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
           setShowCart(false)
         }
         toast("Pedido cancelado", "success")
@@ -2580,7 +2600,7 @@ const handlePaymentSuccess = useCallback(() => {
     setCart([])
     setPendingOrderItems([])
     setPendingOrderNumber(null)
-    localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+    removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
     localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
     // Clear paymentLink AND set paymentDone: true so modal closes and doesn't reopen
@@ -2618,6 +2638,35 @@ const handlePaymentSuccess = useCallback(() => {
       setTimeout(() => otpInputsRef.current[0]?.focus(), 150)
     }
   }, [showIdentifyModal, verifyStep])
+
+  // F8D-018: nenhum overlay do cardápio do cliente fechava com Escape
+  // (o arquivo não tinha nenhuma occurrence de "Escape"). Fecha sempre o
+  // overlay mais acima na pilha.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      if (selectedProduct) { setSelectedProduct(null); return }
+      if (showReviewModal) { setShowReviewModal(false); return }
+      if (showCpfModal) { setShowCpfModal(false); return }
+      if (showPaymentAddressPicker) { setShowPaymentAddressPicker(false); return }
+      if (showAddressForm) { setShowAddressForm(false); return }
+      if (showCheckout) { setShowCheckout(false); return }
+      if (showCart) { setShowCart(false); return }
+      if (showPaymentModal) { setShowPaymentModal(false); return }
+      if (showVerifyModal) { setShowVerifyModal(false); return }
+      if (showIdentifyModal) { setShowIdentifyModal(false); return }
+      if (showCustomerProfile) { setShowCustomerProfile(false); return }
+      if (showTracking) { setShowTracking(false); return }
+      if (showOrdersList) { setShowOrdersList(false); return }
+      if (showBusinessHours) { setShowBusinessHours(false); return }
+      if (showFirstPurchaseBonus) { setShowFirstPurchaseBonus(false); return }
+      if (showLoyaltyRules) { setShowLoyaltyRules(false); return }
+      if (showLogoutConfirm) { setShowLogoutConfirm(false); return }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [selectedProduct, showReviewModal, showCpfModal, showPaymentAddressPicker, showAddressForm, showCheckout, showCart, showPaymentModal, showVerifyModal, showIdentifyModal, showCustomerProfile, showTracking, showOrdersList, showBusinessHours, showFirstPurchaseBonus, showLoyaltyRules, showLogoutConfirm])
 
   // Auto-cola: quando o modal abre, tenta ler o código que o cliente copiou
   // Validação do código: usuário deve clicar "Confirmar" manualmente
@@ -3071,7 +3120,7 @@ onPaymentConfirmed={handlePaymentSuccess}
               setShowCart(false)
               setShowCheckout(false)
               setCart([])
-              localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+              removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
               setEditingAddress(false)
             }}>
               Fechar
@@ -3085,7 +3134,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
 
   return (
-    <div
+    <main
       className="min-h-screen pb-24 transition-colors duration-300"
       style={{ backgroundColor: theme.bgPage, color: theme.text }}
       onTouchStart={(e) => {
@@ -3113,6 +3162,26 @@ onPaymentConfirmed={handlePaymentSuccess}
         }
       }}
     >
+      {/* F8B-023: aviso honesto quando um sub-fetch (curtidas/destaques/endereços) falha */}
+      {partialError && (
+        <div
+          className="sticky top-0 z-40 mx-3 mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs"
+          style={{ backgroundColor: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.35)", color: "#F59E0B" }}
+          role="status"
+        >
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {partialError}
+          </span>
+          <button
+            onClick={() => { setPartialError(null); window.location.reload() }}
+            className="shrink-0 rounded-lg px-2 py-1 font-semibold"
+            style={{ border: "1px solid rgba(245,158,11,0.4)" }}
+          >
+            Recarregar
+          </button>
+        </div>
+      )}
       <style>{`@keyframes hrBlink { 0%,100%{opacity:1;color:inherit} 50%{opacity:1;color:#FBBF24} } .animate-hr-blink { animation: hrBlink 1.5s ease-in-out infinite; } @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.3s ease-out; } @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-slideDown { animation: slideDown 0.3s ease-out; }`}</style>
       {/* Pull-to-refresh indicator */}
       {pullDistance > 0 && (
@@ -3273,11 +3342,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                             <div className="flex items-center gap-2">
                               {item.originalPrice && (
                                 <span className="text-sm line-through text-white/60">
-                                  R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                                  {formatCurrency(item.originalPrice)}
                                 </span>
                               )}
                               <p className="text-xl font-bold text-white drop-shadow">
-                                R$ {item.price.toFixed(2).replace(".", ",")}
+                                {formatCurrency(item.price)}
                               </p>
                             </div>
                             <button
@@ -3365,7 +3434,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ backgroundColor: theme.bgPage }}>🍦</div>
                   )}
                   {item.originalPrice && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow overflow-hidden">
+                    <div className="absolute top-2 right-2 bg-green-500 text-zinc-900 text-[11px] font-bold px-2 py-1 rounded-lg shadow overflow-hidden">
                       <span className="relative z-10">{Math.round((1 - item.price / item.originalPrice) * 100)}% OFF</span>
                       <div className="absolute inset-0 animate-shimmer" />
                     </div>
@@ -3376,11 +3445,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <div className="flex items-center gap-2 mt-1">
                     {item.originalPrice && (
                       <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
-                        R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                        {formatCurrency(item.originalPrice)}
                       </span>
                     )}
                     <span className="text-sm font-bold" style={{ color: "#16a34a" }}>
-                      R$ {item.price.toFixed(2).replace(".", ",")}
+                      {formatCurrency(item.price)}
                     </span>
                   </div>
                 </div>
@@ -3463,11 +3532,11 @@ onPaymentConfirmed={handlePaymentSuccess}
                     <div className="flex items-center gap-2">
                       {item.originalPrice && (
                         <span className="text-xs line-through" style={{ color: theme.textMutedMore }}>
-                          R$ {item.originalPrice.toFixed(2).replace(".", ",")}
+                          {formatCurrency(item.originalPrice)}
                         </span>
                       )}
                       <span className="text-sm font-bold" style={{ color: item.originalPrice ? "#16a34a" : theme.text }}>
-                        R$ {item.price.toFixed(2).replace(".", ",")}
+                        {formatCurrency(item.price)}
                       </span>
                     </div>
                     {(productLikes[item.id]?.likes || 0) > 0 && (
@@ -3491,7 +3560,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: theme.textMutedMore }} />
               <input type="text" placeholder="Buscar no cardápio..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus className="w-full rounded-xl py-2.5 pl-10 pr-10 text-sm backdrop-blur-sm transition-all focus:outline-none" style={{ backgroundColor: theme.bgInput, color: theme.text, borderColor: theme.borderInput, borderWidth: 1 }} />
-              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }}>
+              <button onClick={() => { setSearchQuery(""); setSearchMode(false) }} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70" style={{ color: theme.textMutedMore }} aria-label="Limpar busca">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -3686,7 +3755,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             <h2 className="text-lg font-bold" style={{ color: theme.text }}>
               {currentStory.emoji} {currentStory.name}
             </h2>
-            <button onClick={() => { setActiveStory(null); setStoryProducts([]); setStoryCombos([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }}>
+            <button onClick={() => { setActiveStory(null); setStoryProducts([]); setStoryCombos([]) }} className="p-2 rounded-full" style={{ backgroundColor: theme.bgCard }} aria-label="Fechar">
               <X className="h-5 w-5" style={{ color: theme.text }} />
             </button>
           </div>
@@ -3758,14 +3827,14 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* CPF Modal — pagamento online sem CPF */}
       {showCpfModal && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
                 <Info className="h-5 w-5" style={{ color: theme.accent }} />
                 CPF necessário
               </h2>
-              <button onClick={() => { setShowCpfModal(false); setCpfModalError("") }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => { setShowCpfModal(false); setCpfModalError("") }} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -3841,7 +3910,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Identify Modal */}
       {showIdentifyModal && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -3855,7 +3924,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   Confirmar WhatsApp
                 </h2>
               </div>
-              <button onClick={() => { pendingCartOpenRef.current = false; setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => { pendingCartOpenRef.current = false; setShowIdentifyModal(false); setVerifyStep(1); setVerifyCode(""); setWhatsappSent(false); setVerifyDevCode(""); setVerifyError(""); }} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4037,11 +4106,11 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Business Hours Modal */}
       {showBusinessHours && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold" style={{ color: theme.text }}>Horários de Funcionamento</h2>
-              <button onClick={() => setShowBusinessHours(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => setShowBusinessHours(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4070,11 +4139,11 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Customer Profile Modal */}
       {showCustomerProfile && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t backdrop-blur-xl overflow-hidden" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             {/* Close button */}
             <div className="absolute top-4 right-4 z-10">
-              <button onClick={() => { setShowCustomerProfile(false); setExpandedProfileItem(null) }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgCard }}>
+              <button onClick={() => { setShowCustomerProfile(false); setExpandedProfileItem(null) }} className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: theme.bgCard }} aria-label="Fechar">
                 <X className="h-4 w-4" style={{ color: theme.textMuted }} />
               </button>
             </div>
@@ -4456,11 +4525,11 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Address form modal — independent (works from cart too) */}
       {showAddressForm && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="w-full max-w-lg rounded-t-2xl p-4 space-y-3 max-h-[85vh] overflow-y-auto" style={{ backgroundColor: theme.bgCard }}>
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold" style={{ color: theme.text }}>Novo endereço</h3>
-              <button onClick={() => { setShowAddressForm(false); setAddressForm({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" }); setAddressFormError("") }} className="p-1">
+              <button onClick={() => { setShowAddressForm(false); setAddressForm({ label: "", street: "", number: "", neighborhood: "", city: "", state: "", cep: "", complement: "" }); setAddressFormError("") }} className="p-1" aria-label="Fechar">
                 <X className="h-5 w-5" style={{ color: theme.textMuted }} />
               </button>
             </div>
@@ -4594,7 +4663,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, border: `1px solid ${theme.borderCard}` }}>
             <div className="flex flex-col items-center text-center">
               <div className="mb-4 h-14 w-14 rounded-full flex items-center justify-center" style={{ backgroundColor: "#fef2f2" }}>
@@ -4668,7 +4737,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   fetch("/api/verification", { method: "DELETE" }).catch(() => {})
                   // localStorage
                   localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
-                  localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                  removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
                   localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
@@ -4688,14 +4757,14 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* First Purchase Bonus Screen */}
       {showFirstPurchaseBonus && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg rounded-t-2xl border-t p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderColor: theme.borderCard }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.text }}>
                 <Sparkles className="h-5 w-5" style={{ color: theme.success }} />
                 Parabéns!
               </h2>
-              <button onClick={() => setShowFirstPurchaseBonus(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => setShowFirstPurchaseBonus(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4748,14 +4817,14 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Loyalty Rules Modal */}
       {showLoyaltyRules && parsedLoyalty && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                 <Star className="h-5 w-5" style={{ color: "#f59e0b" }} />
                 Regras do Cashback
               </h3>
-              <button onClick={() => setShowLoyaltyRules(false)} className="p-1 rounded-full hover:opacity-70 text-zinc-400">
+              <button onClick={() => setShowLoyaltyRules(false)} className="p-1 rounded-full hover:opacity-70 text-zinc-400" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -4809,7 +4878,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <X className="h-3 w-3" /> Cancelar
                 </button>
               )}
-              <button onClick={() => { setShowCart(false); setCartStep("cart"); setEditingAddress(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+              <button onClick={() => { setShowCart(false); setCartStep("cart"); setEditingAddress(false) }} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -5185,7 +5254,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold" style={{ color: theme.success }}>-{formatCurrency(couponDiscount)}</span>
-                          <button onClick={removeCoupon} className="p-0.5"><X className="h-3.5 w-3.5" style={{ color: theme.success }} /></button>
+                          <button onClick={removeCoupon} className="p-0.5" aria-label="Remover cupom"><X className="h-3.5 w-3.5" style={{ color: theme.success }} /></button>
                         </div>
                       </div>
                     )}
@@ -5477,7 +5546,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                                 className="flex h-9 w-full rounded-xl border px-2 text-sm focus:outline-none" style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderInput }} />
                             </div>
                             {changeFor && Number(changeFor) > 0 && Number(changeFor) >= total && (
-                              <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>Troco de R$ {(Number(changeFor) - total).toFixed(2).replace(".", ",")}</p>
+                              <p className="mt-1 text-[11px]" style={{ color: theme.textMuted }}>Troco de {formatCurrency(Number(changeFor) - total)}</p>
                             )}
                           </div>
                         </div>
@@ -5685,7 +5754,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 )}
                 <button onClick={() => {
                   setOrderResult(null); setShowCart(false); setCartStep("cart"); setEditingAddress(false); setUseLoyalty(false)
-                  setCart([]); localStorage.removeItem(`pedefacil-cart-${establishment.slug}`)
+                  setCart([]); removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
                   setCustomer(prev => { const updated = { ...prev, notes: "" }; localStorage.setItem(`pedefacil-customer-${establishment.slug}`, JSON.stringify(updated)); return updated })
                 }} className="w-full py-2.5 text-xs font-medium flex items-center justify-center" style={{ color: theme.textMutedMore }}>
                   Fechar
@@ -5708,7 +5777,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           onOpenIdentify={() => { setShowOrdersList(false); openIdentifyModal() }}
           onOpenPayment={openPaymentForOrder}
           onReorder={(order) => {
-            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+            const items = parseOrderItems(order.items)
             if (!reorderToCart(items)) {
               toast("Os itens do pedido não estão mais disponíveis no cardápio", "warning")
               return
@@ -5723,7 +5792,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Tracking modal */}
       {showTracking && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-lg max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-2xl flex flex-col backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
             <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.borderCard }}>
               <div className="flex items-center gap-2">
@@ -5744,7 +5813,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                 >
                   Ver outros
                 </button>
-                <button onClick={() => setShowTracking(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70">
+                <button onClick={() => setShowTracking(false)} style={{ color: theme.textMutedMore }} className="hover:opacity-70" aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -5954,7 +6023,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Pending order confirmation modal */}
       {pendingOrderConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
             <div className="mb-4 flex justify-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
@@ -5993,7 +6062,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Pending payment order modal */}
       {pendingOrderModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
             <div className="mb-4 flex justify-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
@@ -6044,7 +6113,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Pending order action modal - when trying to add item with pending payment */}
       {pendingOrderAction && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setPendingOrderAction(null)}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setPendingOrderAction(null)}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }} onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="flex justify-center flex-1">
@@ -6052,7 +6121,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <Clock className="h-6 w-6 text-amber-400" />
                 </div>
               </div>
-              <button onClick={() => setPendingOrderAction(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+              <button onClick={() => setPendingOrderAction(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }} aria-label="Fechar">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -6108,7 +6177,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* In-progress order notification modal */}
       {inProgressOrder && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setInProgressOrder(null)}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }} onClick={() => setInProgressOrder(null)}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }} onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="flex justify-center flex-1">
@@ -6116,7 +6185,7 @@ onPaymentConfirmed={handlePaymentSuccess}
                   <Package className="h-6 w-6 text-blue-400" />
                 </div>
               </div>
-              <button onClick={() => setInProgressOrder(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+              <button onClick={() => setInProgressOrder(null)} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }} aria-label="Fechar">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -6153,7 +6222,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Cancel order confirmation modal */}
       {cancelModalOrderId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
           <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, borderWidth: 1, borderStyle: "solid", borderColor: theme.borderCard }}>
             <div className="mb-4 flex justify-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
@@ -6208,7 +6277,7 @@ onPaymentConfirmed={handlePaymentSuccess}
             </div>
 
             {/* Close button */}
-            <button onClick={() => { const wasEditing = editingCartItemId; setSelectedProduct(null); setEditingCartItemId(null); if (wasEditing) { setShowCart(true); setCartStep("cart"); } }} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white">
+            <button onClick={() => { const wasEditing = editingCartItemId; setSelectedProduct(null); setEditingCartItemId(null); if (wasEditing) { setShowCart(true); setCartStep("cart"); } }} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white" aria-label="Fechar">
               <X className="h-4 w-4" />
             </button>
 
@@ -6867,7 +6936,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Discount Confirmation Modal */}
       {discountConfirm && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="rounded-2xl p-6 shadow-2xl w-[min(380px,95vw)]" style={{ backgroundColor: theme.bgCard }}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primary}15` }}>
@@ -6909,7 +6978,7 @@ onPaymentConfirmed={handlePaymentSuccess}
 
       {/* Review Modal — post-delivery */}
       {showReviewModal && pendingReviewOrder && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="rounded-2xl p-6 shadow-2xl w-[min(400px,95vw)]" style={{ backgroundColor: theme.bgCard }}>
             <h3 className="text-lg font-bold mb-1" style={{ color: theme.text }}>Como foi seu pedido?</h3>
             <p className="text-xs mb-4" style={{ color: theme.textMuted }}>Sua avaliação ajuda outros clientes</p>
@@ -6956,7 +7025,7 @@ onPaymentConfirmed={handlePaymentSuccess}
           </div>
         </div>
       )}
-    </div>
+    </main>
   )
 }
 
@@ -7303,7 +7372,7 @@ function PaymentModal({
 
   if (paymentSuccess) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="rounded-2xl p-8 text-center shadow-2xl" style={{ width: "min(400px, 95vw)", backgroundColor: theme.bgCard }}>
           <div className="mb-4 flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 animate-bounce">
@@ -7331,7 +7400,7 @@ function PaymentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleClose}>
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleClose}>
       <div
         className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl max-h-[90vh]"
         style={{ width: "min(480px, 95vw)", backgroundColor: theme.bgCard }}
@@ -7343,7 +7412,7 @@ function PaymentModal({
             <p className="text-sm font-semibold" style={{ color: theme.text }}>Pagamento</p>
             <p className="text-xs" style={{ color: theme.textMuted }}>Total: {formatCurrency(total)}</p>
           </div>
-          <button onClick={handleClose} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }}>
+          <button onClick={handleClose} className="flex h-8 w-8 items-center justify-center rounded-full transition-colors" style={{ color: theme.textMuted }} aria-label="Fechar">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -7464,7 +7533,7 @@ function PaymentModal({
                   onClick={onClose}
                   className="absolute top-0 right-0 flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
                   style={{ color: theme.textMuted }}
-                >
+                 aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full animate-pulse" style={{ backgroundColor: `${theme.primary}15` }}>
@@ -7601,7 +7670,20 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
     <div
       className={`rounded-2xl overflow-hidden transition-all duration-300 ${disabled ? "opacity-50" : ""}`}
       style={{ backgroundColor: theme.bgCard, borderWidth: 1, borderStyle: "solid", borderColor: isAdded ? theme.primary : theme.borderCard, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+      // F8D-001: o card era um <div onClick> — impossível de abrir por teclado
+      // ou leitor de tela. Mantido como div (há botões aninhados) mas com
+      // semântica de botão e acionamento por Enter/Espaço.
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      aria-label={onSelect ? `Ver detalhes de ${product.name}` : undefined}
       onClick={() => onSelect?.(product)}
+      onKeyDown={(e) => {
+        if (!onSelect) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect(product)
+        }
+      }}
     >
       <div className="relative">
         {product.image ? (
@@ -7634,7 +7716,7 @@ function ProductCard({ product, onAdd, theme, disabled, isAdded, onSelect, likes
           </span>
         )}
         {hasDiscount && discountPct > 0 && (
-          <span className="absolute top-2 right-2 text-[12px] font-extrabold text-white px-2.5 py-1 rounded-lg shadow-lg bg-green-500">
+          <span className="absolute top-2 right-2 text-[12px] font-extrabold text-zinc-900 px-2.5 py-1 rounded-lg shadow-lg bg-green-500">
             {discountPct}% OFF
           </span>
         )}

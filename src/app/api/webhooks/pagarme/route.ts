@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma"
 import { mapPagarmeStatus, verifyPagarmeSignature } from "@/lib/integrations/pagarme"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
+import { isClosedOrderStatus } from "@/lib/order-transitions"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
+  const requestId = getRequestId(req)
   const rawBody = await req.text()
 
   // Get webhook key from config (database or env fallback)
@@ -39,9 +42,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   }
 
-  processWebhook(eventType, orderData).catch((err) => {
-    console.error("[Pagar.me Webhook] Background error:", err.message)
-  })
+  try {
+    await processWebhook(eventType, orderData)
+  } catch (err: any) {
+    // F4A-002: antes era fire-and-forget (200 imediato) — se o banco falhasse,
+    // o "pagamento confirmado" era perdido para sempre e o pedido ficava
+    // pending. Devolvendo 500 o Pagar.me reenvia o evento.
+    logger.error("webhook-pagarme", "falha ao processar — devolvendo 500 para o provedor reenviar", {
+      requestId,
+      error: err?.message,
+    })
+    return NextResponse.json({ error: "processing failed" }, { status: 500 })
+  }
 
   return NextResponse.json({ received: true })
 }
@@ -69,7 +81,10 @@ async function processWebhook(eventType: string, orderData: any) {
   })
 
   if (!order) {
-    console.log("[Pagar.me Webhook] Order not found for paymentId:", orderId)
+    // F4B-037: pagamento sem pedido correspondente não pode sumir em silêncio
+    logger.error("webhook-pagarme", "pagamento recebido sem pedido correspondente", {
+      paymentId: orderId,
+    })
     return
   }
 
@@ -138,7 +153,20 @@ async function processWebhook(eventType: string, orderData: any) {
   if (order.paymentStatus !== paymentStatus && !(order.paymentStatus === "paid" && paymentStatus === "pending")) {
     updateData.paymentStatus = paymentStatus
   }
-  if (finalOrderStatus && order.status !== finalOrderStatus) updateData.status = finalOrderStatus
+  // F4B-035: pagamento que chega depois do cancelamento/expiração NÃO
+  // ressuscita o pedido — o dinheiro é registrado (reembolso manual) e o
+  // lojista é alertado no log.
+  const latePayment = eventStatus === "paid" && isClosedOrderStatus(order.status)
+  if (latePayment) {
+    logger.error("webhook-pagarme", "pagamento tardio em pedido cancelado/abandonado — reembolso manual necessário", {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      establishmentId: order.establishmentId,
+      orderStatus: order.status,
+    })
+  } else if (finalOrderStatus && order.status !== finalOrderStatus) {
+    updateData.status = finalOrderStatus
+  }
 
   if (Object.keys(updateData).length > 0) {
     await prisma.order.update({
@@ -150,7 +178,9 @@ async function processWebhook(eventType: string, orderData: any) {
 
   // Notifica o cliente quando o pagamento acabou de ser confirmado
   // (transição para paid — evita notificar em webhooks repetidos).
-  if (eventStatus === "paid" && updateData.paymentStatus === "paid") {
+  // Pedido cancelado/abandonado não recebe notificação de "pagamento ok"
+  // (F4B-035) — o pedido não voltou a existir.
+  if (eventStatus === "paid" && updateData.paymentStatus === "paid" && !latePayment) {
     notifyPaymentConfirmed(order.id).catch(() => {})
   }
 
@@ -166,21 +196,35 @@ async function processWebhook(eventType: string, orderData: any) {
     })
     
     // Save to financial_transactions table
-    await prisma.financialTransaction.create({
-      data: {
-        establishmentId: order.establishmentId,
+    // F4B-009: o reenvio do webhook duplicava taxa/valor líquido no relatório
+    // financeiro. Verifica se a transação já foi registrada antes de criar.
+    const existingTransaction = await prisma.financialTransaction.findFirst({
+      where: {
         orderId: order.id,
         paymentId: String(orderId),
         provider: "pagarme",
         type: "payment",
-        status: "paid",
-        grossAmount: order.total,
-        fee: totalFee,
-        netAmount: order.total - totalFee,
-        splitSaas: saasAmount,
-        splitEstablishment: establishmentAmount,
-        metadata: charges[0] || null,
       },
     })
+    if (existingTransaction) {
+      console.log("[Pagar.me Webhook] Financial transaction already recorded — skipping duplicate")
+    } else {
+      await prisma.financialTransaction.create({
+        data: {
+          establishmentId: order.establishmentId,
+          orderId: order.id,
+          paymentId: String(orderId),
+          provider: "pagarme",
+          type: "payment",
+          status: "paid",
+          grossAmount: order.total,
+          fee: totalFee,
+          netAmount: order.total - totalFee,
+          splitSaas: saasAmount,
+          splitEstablishment: establishmentAmount,
+          metadata: charges[0] || null,
+        },
+      })
+    }
   }
 }

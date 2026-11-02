@@ -41,7 +41,7 @@ export default function SaasAdminLogin() {
             <span className="text-3xl">⚡</span>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">FlowOS Admin</h1>
-          <p className="text-zinc-400">Painel de gestão do SaaS</p>
+          <p className="text-zinc-500">Painel de gestão do SaaS</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 space-y-5">

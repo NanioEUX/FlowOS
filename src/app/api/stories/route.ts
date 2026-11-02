@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
+import { parseOrderItems } from "@/lib/items"
 
 export const dynamic = "force-dynamic"
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   const productSales: Record<string, number> = {}
   for (const order of orders) {
     try {
-      const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+      const items = parseOrderItems(order.items)
       for (const item of items) {
         if (item.productId) productSales[item.productId] = (productSales[item.productId] || 0) + (item.quantity || 1)
       }

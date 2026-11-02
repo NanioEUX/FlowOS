@@ -60,7 +60,7 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Busc
           {selected ? selected.label : placeholder}
         </span>
         {selected && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setSearch("") }} className="ml-1 text-zinc-400 hover:text-zinc-600">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setSearch("") }} className="ml-1 text-zinc-400 hover:text-zinc-600" aria-label="Limpar seleção">
             <X className="h-3.5 w-3.5" />
           </button>
         )}
@@ -82,7 +82,7 @@ export function SearchableSelect({ value, onChange, options, placeholder = "Busc
               className="flex-1 bg-transparent text-xs text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
             />
             {search && (
-              <button type="button" onClick={() => setSearch("")} className="text-zinc-400 hover:text-zinc-600">
+              <button type="button" onClick={() => setSearch("")} className="text-zinc-400 hover:text-zinc-600" aria-label="Limpar busca">
                 <X className="h-3 w-3" />
               </button>
             )}

@@ -52,6 +52,19 @@ export function canTransition(from: string, to: string): boolean {
   return allowed.includes(to)
 }
 
+/**
+ * F4B-035: pagamento que chega DEPOIS do cancelamento/expiração.
+ *
+ * O cron `expire-orders` marca o pedido como `abandoned` e o cliente ainda
+ * pode pagar o PIX minutos depois. O webhook/polling confirmava o pagamento
+ * E ressuscitava o pedido (`status: "pending"`), quebrando a regra de
+ * terminal. Aqui o dinheiro é registrado como pago, mas o pedido NÃO volta
+ * — o reembolso fica como ação manual do lojista (com alerta no log).
+ */
+export function isClosedOrderStatus(status: string | undefined | null): boolean {
+  return status === "cancelled" || status === "abandoned" || status === "delivered"
+}
+
 // Regra por papel para mudanças de status via PATCH autenticado.
 export function isRoleAllowedToSetStatus(role: string | undefined | null, to: string): boolean {
   if (role === "motoboy") return false

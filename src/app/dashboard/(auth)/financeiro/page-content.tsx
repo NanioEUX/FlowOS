@@ -77,7 +77,7 @@ export default function FinanceiroPage() {
       {/* DRE Table */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Demonstração do Resultado</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Demonstração do Resultado</h2>
           <div className="space-y-1 text-sm">
             <Row label={`(+) Receita Bruta (${counts.orders} pedidos)`} value={s.receitaBruta} color="text-zinc-900" bold />
             <Row label="(-) Descontos (cupons)" value={-s.descontos} color="text-red-500" />
@@ -98,7 +98,7 @@ export default function FinanceiroPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h2>
             <div className="space-y-2">
               {[
                 { label: "Entrega", value: b.byType.delivery, icon: Bike, color: "blue" },
@@ -119,7 +119,7 @@ export default function FinanceiroPage() {
 
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h2>
             <div className="space-y-2">
               {[
                 { label: "Fixas", value: b.expensesByCategory.fixa },
@@ -142,7 +142,7 @@ export default function FinanceiroPage() {
                 </div>
               ))}
               {Object.values(b.expensesByCategory).every((v) => v === 0) && (
-                <p className="text-xs text-zinc-400 text-center py-2">Nenhuma despesa registrada</p>
+                <p className="text-xs text-zinc-500 text-center py-2">Nenhuma despesa registrada</p>
               )}
             </div>
           </CardContent>
@@ -152,7 +152,7 @@ export default function FinanceiroPage() {
       {/* Revenue by payment method */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: "Dinheiro", value: b.byPayment.money },
@@ -175,7 +175,7 @@ export default function FinanceiroPage() {
 function Row({ label, value, color, bold, large }: { label: string; value: number; color: string; bold?: boolean; large?: boolean }) {
   return (
     <div className={`flex items-center justify-between ${bold ? "font-semibold" : ""} ${large ? "text-base" : ""}`}>
-      <span className="text-zinc-400">{label}</span>
+      <span className="text-zinc-500">{label}</span>
       <span className={color}>{formatCurrency(value)}</span>
     </div>
   )

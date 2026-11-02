@@ -22,16 +22,16 @@ export default async function RespostasRapidasPage() {
         </a>
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-xl border border-zinc-200 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-200">
             <tr className="text-left text-zinc-500 uppercase text-xs">
-              <th className="py-3 px-4">Categoria</th>
-              <th className="py-3 px-4">Rótulo</th>
-              <th className="py-3 px-4">Palavras-chave</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Ordem</th>
-              <th className="py-3 px-4">Ações</th>
+              <th scope="col" className="py-3 px-4">Categoria</th>
+              <th scope="col" className="py-3 px-4">Rótulo</th>
+              <th scope="col" className="py-3 px-4">Palavras-chave</th>
+              <th scope="col" className="py-3 px-4">Status</th>
+              <th scope="col" className="py-3 px-4">Ordem</th>
+              <th scope="col" className="py-3 px-4">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -46,7 +46,7 @@ export default async function RespostasRapidasPage() {
                       <span className="w-2 h-2 rounded-full bg-green-500" /> Ativa
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-zinc-400 text-xs">
+                    <span className="inline-flex items-center gap-1 text-zinc-500 text-xs">
                       <span className="w-2 h-2 rounded-full bg-zinc-300" /> Inativa
                     </span>
                   )}

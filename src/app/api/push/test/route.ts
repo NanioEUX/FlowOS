@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import webpush from "web-push"
+import { requireEstablishment } from "@/lib/require-auth"
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
@@ -69,8 +70,16 @@ async function sendTestPush(establishmentId: string, phone?: string, title?: str
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
-    const establishmentId = url.searchParams.get("establishmentId") || "cmqpcbz3p00009mts6law5jms"
+    const establishmentId = url.searchParams.get("establishmentId") || ""
     const phone = url.searchParams.get("phone") || undefined
+
+    // F9A-004/F1A-003: sem auth, qualquer um enviava push para os clientes de
+    // QUALQUER loja (e ainda havia um establishmentId fixo no código).
+    if (!establishmentId) {
+      return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
+    }
+    const { error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     const result = await sendTestPush(establishmentId, phone)
     return NextResponse.json(result)
@@ -87,6 +96,9 @@ export async function POST(req: Request) {
     if (!establishmentId) {
       return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
     }
+    // F9A-004/F1A-003: escopo de tenant — só o dono da loja dispara o teste.
+    const { error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     const result = await sendTestPush(establishmentId, phone, title, notifBody)
     return NextResponse.json(result)

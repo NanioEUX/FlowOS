@@ -8,6 +8,25 @@ export async function POST(req: NextRequest) {
   try {
     const authResult = requireAuth(req)
     if (authResult.error) return authResult.error
+    const user = authResult.user!
+
+    // F1B-002/F4D-025: antes o merchant iFood estava HARDCODED no código —
+    // qualquer usuário logado (de qualquer loja) mexia nos pedidos de outro
+    // estabelecimento. Agora usa o merchant do tenant autenticado e exige admin.
+    if (user.role !== "admin") {
+      return NextResponse.json({ error: "Acesso restrito a admin" }, { status: 403 })
+    }
+
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: user.establishmentId },
+      select: { ifoodMerchantId: true, ifoodEnabled: true },
+    })
+    if (!establishment?.ifoodMerchantId || !establishment.ifoodEnabled) {
+      return NextResponse.json(
+        { error: "Estabelecimento sem iFood habilitado" },
+        { status: 400 }
+      )
+    }
 
     const { status, externalId } = await req.json()
     if (!externalId || !status) {
@@ -37,7 +56,7 @@ export async function POST(req: NextRequest) {
     const action = actionMap[status]
     if (!action) return NextResponse.json({ error: "no action for " + status })
 
-    const result = await updateIfoodStatus(accessToken, "bd63685a-7c57-41c0-a52f-e6332cafcbd4", externalId, action)
+    const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, externalId, action)
     return NextResponse.json({ action, ...result })
   } catch (err: any) {
     return NextResponse.json({ error: err.message })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireEstablishment } from "@/lib/require-auth"
+import { redactObject } from "@/lib/redact"
 
 const META_APP_ID = process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
@@ -59,10 +60,12 @@ export async function POST(
           { method: "GET" }
         )
         const tokenData = await tokenRes.json()
-        console.log("[Meta Discover] Token response:", JSON.stringify(tokenData))
+        // F4A-014: o access_token da Meta (longo, de todos os tenants) não pode
+      // aparecer no log — só as chaves e o status da resposta.
+      console.log("[Meta Discover] Token response:", JSON.stringify(redactObject(tokenData)))
         if (tokenRes.ok && tokenData.access_token && tokenData.access_token.length < 300) {
           shortToken = tokenData.access_token as string
-          console.log("[Meta Discover] Token OK with redirect_uri:", uri, "token length:", shortToken.length, "starts with:", shortToken.substring(0, 10))
+          console.log("[Meta Discover] Token OK with redirect_uri:", uri, "token length:", shortToken.length)
           break
         } else {
           console.log("[Meta Discover] Failed:", uri, "-", tokenData.error?.message)
@@ -75,13 +78,13 @@ export async function POST(
       }
 
       console.log("[Meta Discover] Exchanging short token for long token...")
-      console.log("[Meta Discover] Short token length:", shortToken.length, "starts with:", shortToken.substring(0, 5))
+      console.log("[Meta Discover] Short token length:", shortToken.length)
       const longTokenRes = await fetch(
         "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" + META_APP_ID + "&client_secret=" + META_APP_SECRET + "&fb_exchange_token=" + shortToken,
         { method: "GET" }
       )
       const longTokenData = await longTokenRes.json()
-      console.log("[Meta Discover] Long token response:", JSON.stringify(longTokenData))
+      console.log("[Meta Discover] Long token response:", JSON.stringify(redactObject(longTokenData)))
 
       if (longTokenData.access_token && longTokenData.access_token.length < 300) {
         accessToken = longTokenData.access_token
@@ -92,7 +95,7 @@ export async function POST(
       }
     }
 
-    console.log("[Meta Discover] Final token starts with:", accessToken.substring(0, 10), "length:", accessToken.length)
+    console.log("[Meta Discover] Final token length:", accessToken.length)
 
     const phones: Array<{ id: string; display_phone_number: string; verified_name: string; waba_id: string }> = []
 
@@ -192,7 +195,7 @@ export async function POST(
         { method: "GET" }
       )
       const debugData = await debugRes.json()
-      console.log("[Meta Discover] Token debug response:", JSON.stringify(debugData, null, 2))
+      console.log("[Meta Discover] Token debug response:", JSON.stringify(redactObject(debugData)))
 
       if (debugData.data?.grant_info?.scopes) {
         console.log("[Meta Discover] Token scopes:", debugData.data.grant_info.scopes)

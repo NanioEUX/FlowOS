@@ -19,6 +19,18 @@ export async function GET(req: NextRequest) {
   const normalizedKey = customerKey.replace(/\D/g, "")
   const keys = [customerKey, normalizedKey].filter((k, i, arr) => k && arr.indexOf(k) === i)
 
+  // F1D-003/F6A-001: o endpoint é público (o Service Worker chama sem JWT), mas
+  // só pode responder para quem TEM subscription push daquele cliente — antes,
+  // saber o telefone + o slug da loja bastava para ler nome, itens e total do
+  // pedido (enumeração por telefone).
+  const subscription = await prisma.pushSubscription.findFirst({
+    where: { establishmentId, customerKey: { in: keys } },
+    select: { id: true },
+  })
+  if (!subscription) {
+    return NextResponse.json({ error: "Sem subscription para este cliente" }, { status: 403 })
+  }
+
   const order = await prisma.order.findFirst({
     where: {
       establishmentId,

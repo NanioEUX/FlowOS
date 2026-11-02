@@ -52,7 +52,7 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
       {/* Info geral */}
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
         <h2 className="text-lg font-bold text-zinc-900 mb-4">Informações</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <Info label="Email" value={e.email} />
           <Info label="WhatsApp" value={e.whatsappNumber || "—" } />
           <Info label="Instância Evolution" value={e.evolutionInstanceName || "não conectada"} />
@@ -67,7 +67,7 @@ export default async function EstabelecimentoDetalhePage({ params }: { params: {
       {/* Pagamentos */}
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6">
         <h2 className="text-lg font-bold text-zinc-900 mb-4">Pagamentos</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
           <Info label="Receiver Stone" value={e.pagarmeSplitReceiverId || "não configurado"} />
         </div>
         <div className="flex items-center gap-4 pt-2 border-t border-zinc-100">

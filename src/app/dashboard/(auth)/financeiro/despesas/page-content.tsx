@@ -291,7 +291,15 @@ export default function DespesasPage() {
 
   async function handleDelete() {
     const res = await fetchAuth(`/api/expenses/${confirmDelete.id}`, { method: "DELETE" })
-    if (res.ok) { setExpenses(expenses.filter((e) => e.id !== confirmDelete.id)); toast("Despesa excluída", "success"); window.dispatchEvent(new Event("expenses-updated")) }
+    if (res.ok) {
+      setExpenses(expenses.filter((e) => e.id !== confirmDelete.id))
+      toast("Despesa excluída", "success")
+      window.dispatchEvent(new Event("expenses-updated"))
+    } else {
+      // F8B-019: delete falho não gerava nenhuma mensagem
+      const data = await res.json().catch(() => ({} as any))
+      toast(data?.error || "Erro ao excluir despesa", "error")
+    }
     setConfirmDelete({ open: false, id: "", description: "" })
   }
 
@@ -366,7 +374,7 @@ export default function DespesasPage() {
       {period === "custom" && (
         <div className="flex items-center gap-2">
           <input type="date" value={customDateFrom} onChange={(e) => setCustomDateFrom(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none" />
-          <span className="text-xs text-zinc-400">até</span>
+          <span className="text-xs text-zinc-500">até</span>
           <input type="date" value={customDateTo} onChange={(e) => setCustomDateTo(e.target.value)} className="h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-700 focus:border-green-600 focus:outline-none" />
         </div>
       )}
@@ -376,12 +384,12 @@ export default function DespesasPage() {
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar despesa..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />{search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2"><X className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-600" /></button>}</div>
+        <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar despesa..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-xs text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />{search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2" aria-label="Fechar"><X className="h-3.5 w-3.5 text-zinc-500 hover:text-zinc-600" /></button>}</div>
         <CustomSelect value={filterType} onChange={setFilterType} options={[{ value: "all", label: "Todos tipos" }, ...Object.entries(typeLabels).map(([k, v]) => ({ value: k, label: v }))]} />
         <CustomSelect value={filterStatus} onChange={(v) => setFilterStatus(v as StatusFilter)} options={[{ value: "all", label: "Todos status" }, ...Object.entries(statusLabels).filter(([k]) => k !== "all").map(([k, v]) => ({ value: k, label: v }))]} />
         <CustomSelect value={filterCategory} onChange={setFilterCategory} options={[{ value: "all", label: "Todas categorias" }, ...categories.map((c) => ({ value: c, label: categoryLabels[c] || c }))]} />
         <CustomSelect value={filterPayment} onChange={setFilterPayment} options={[{ value: "all", label: "Todos pagamentos" }, ...Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))]} />
-        {(filterType !== "all" || filterStatus !== "all" || filterCategory !== "all" || filterPayment !== "all" || search) && <button onClick={() => { setFilterType("all"); setFilterStatus("all"); setFilterCategory("all"); setFilterPayment("all"); setSearch("") }} className="text-xs text-zinc-400 hover:text-zinc-600">Limpar</button>}
+        {(filterType !== "all" || filterStatus !== "all" || filterCategory !== "all" || filterPayment !== "all" || search) && <button onClick={() => { setFilterType("all"); setFilterStatus("all"); setFilterCategory("all"); setFilterPayment("all"); setSearch("") }} className="text-xs text-zinc-500 hover:text-zinc-600">Limpar</button>}
       </div>
 
       {/* Table */}
@@ -389,20 +397,20 @@ export default function DespesasPage() {
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Data</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Descrição</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Categoria</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Tipo</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Venc. / Parcela</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pago em</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Status</th>
-              <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Valor</th>
-              <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Ações</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Data</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Descrição</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Categoria</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Tipo</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Venc. / Parcela</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pago em</th>
+              <th scope="col" className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Status</th>
+              <th scope="col" className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Valor</th>
+              <th scope="col" className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {expenses.length === 0 && (
-              <tr><td colSpan={9} className="px-3 py-10 text-center text-sm text-zinc-400">Nenhuma despesa registrada</td></tr>
+              <tr><td colSpan={9} className="px-3 py-10 text-center text-sm text-zinc-500">Nenhuma despesa registrada</td></tr>
             )}
             {expenses.map((expense) => (
               <tr key={expense.id} className="hover:bg-zinc-50 transition-colors">
@@ -425,10 +433,10 @@ export default function DespesasPage() {
                 <td className="px-3 py-2.5 text-right">
                   <div className="flex items-center justify-end gap-1">
                     {(expense.type === "agendada" || expense.type === "recorrente") && !expense.date && (
-                      <button onClick={() => setConfirmBaixar({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-400 hover:bg-green-50 hover:text-green-600 transition-colors" title="Baixar (pagar)"><CheckCircle className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setConfirmBaixar({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-500 hover:bg-green-50 hover:text-green-600 transition-colors" title="Baixar (pagar)"><CheckCircle className="h-3.5 w-3.5" /></button>
                     )}
-                    <button onClick={() => openEdit(expense)} className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-blue-600 transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => setConfirmDelete({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => openEdit(expense)} className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-blue-600 transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setConfirmDelete({ open: true, id: expense.id, description: expense.description })} className="rounded p-1 text-zinc-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </td>
               </tr>
@@ -442,17 +450,17 @@ export default function DespesasPage() {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3"><h3 className="font-semibold text-sm text-zinc-900">{editingId ? "Editar Despesa" : "Nova Despesa"}</h3><button onClick={() => setShowForm(false)} className="rounded-lg p-1 hover:bg-zinc-100"><X className="h-4 w-4 text-zinc-400" /></button></div>
+            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3"><h3 className="font-semibold text-sm text-zinc-900">{editingId ? "Editar Despesa" : "Nova Despesa"}</h3><button onClick={() => setShowForm(false)} className="rounded-lg p-1 hover:bg-zinc-100" aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button></div>
             <div className="space-y-3 p-4">
               {!editingId && (<div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Tipo de lançamento</label><div className="flex gap-2">{(["lancamento", "agendada", "recorrente"] as ExpenseType[]).map((t) => (<button key={t} type="button" onClick={() => setFormType(t)} className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${formType === t ? (t === "recorrente" ? "border-purple-600 bg-purple-600 text-white" : t === "agendada" ? "border-blue-600 bg-blue-600 text-white" : "border-green-600 bg-green-600 text-white") : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100"}`}>{typeLabels[t]}</button>))}</div></div>)}
-              <div><label className="mb-1 block text-xs font-medium text-zinc-600">Descrição</label><input placeholder="Ex: Compra de gás" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" /></div>
-              <div><label className="mb-1 block text-xs font-medium text-zinc-600">Valor (R$)</label><input inputMode="numeric" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: maskMoneyInput(e.target.value) })} onBlur={() => { if (form.amount) setForm({ ...form, amount: formatMoneyInput(parseMoneyInput(form.amount)) }) }} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" /></div>
+              <div><label className="mb-1 block text-xs font-medium text-zinc-600">Descrição</label><input placeholder="Ex: Compra de gás" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" /></div>
+              <div><label className="mb-1 block text-xs font-medium text-zinc-600">Valor (R$)</label><input inputMode="numeric" placeholder="0,00" value={form.amount} onChange={(e) => setForm({ ...form, amount: maskMoneyInput(e.target.value) })} onBlur={() => { if (form.amount) setForm({ ...form, amount: formatMoneyInput(parseMoneyInput(form.amount)) }) }} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" /></div>
               {formType === "lancamento" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data</label><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div>}
-              {formType === "agendada" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data de vencimento *</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /><p className="mt-0.5 text-[10px] text-zinc-400">Se não pagar até esta data, fica &quot;Atrasada&quot;</p></div>}
-              {formType === "recorrente" && (<><div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Início *</label><input type="date" value={form.recurrenceStart} onChange={(e) => setForm({ ...form, recurrenceStart: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Fim (opcional)</label><input type="date" value={form.recurrenceEnd} onChange={(e) => setForm({ ...form, recurrenceEnd: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div></div>{getRecurrencePreview() && <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-[11px] text-purple-700">{getRecurrencePreview()}</div>}</>)}
-              <div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Categoria</label><SearchableSelect value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={categories.map((c) => ({ value: c, label: categoryLabels[c] || c }))} placeholder="Selecionar..." /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Pagamento</label><SearchableSelect value={form.paymentMethod} onChange={(v) => setForm({ ...form, paymentMethod: v })} options={Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))} placeholder="Selecionar..." /></div></div>
+              {formType === "agendada" && <div><label className="mb-1 block text-xs font-medium text-zinc-600">Data de vencimento *</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /><p className="mt-0.5 text-[10px] text-zinc-500">Se não pagar até esta data, fica &quot;Atrasada&quot;</p></div>}
+              {formType === "recorrente" && (<><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Início *</label><input type="date" value={form.recurrenceStart} onChange={(e) => setForm({ ...form, recurrenceStart: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Fim (opcional)</label><input type="date" value={form.recurrenceEnd} onChange={(e) => setForm({ ...form, recurrenceEnd: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none" /></div></div>{getRecurrencePreview() && <div className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-[11px] text-purple-700">{getRecurrencePreview()}</div>}</>)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium text-zinc-600">Categoria</label><SearchableSelect value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={categories.map((c) => ({ value: c, label: categoryLabels[c] || c }))} placeholder="Selecionar..." /></div><div><label className="mb-1 block text-xs font-medium text-zinc-600">Pagamento</label><SearchableSelect value={form.paymentMethod} onChange={(v) => setForm({ ...form, paymentMethod: v })} options={Object.entries(paymentLabels).map(([k, v]) => ({ value: k, label: v }))} placeholder="Selecionar..." /></div></div>
               {cashRegister && <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-amber-200 bg-amber-50 p-2"><input type="checkbox" checked={linkToCash} onChange={(e) => setLinkToCash(e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500" /><div><span className="text-xs font-medium text-zinc-700">Vincular ao caixa aberto</span><p className="text-[10px] text-zinc-500">Aparece no fechamento do dia</p></div></label>}
               {form.category === "insumo" && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
@@ -473,7 +481,7 @@ export default function DespesasPage() {
                           if (item) { setStockUnit(item.unit || "un"); setStockUnitCost(item.unitCost ? String(item.unitCost).replace(".", ",") : "") }
                         }} options={stockItems.map((s: any) => ({ value: s.id, label: s.name, sub: `(${s.quantity} ${s.unit})` }))} placeholder="Selecionar insumo..." />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
                           <label className="mb-1 block text-[10px] font-medium text-zinc-500">Quantidade</label>
                           <input type="number" min="0.01" step="0.01" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} placeholder="0" className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-2 text-xs text-center text-zinc-700 focus:border-blue-500 focus:outline-none" />
@@ -500,18 +508,18 @@ export default function DespesasPage() {
 
       {/* Category Manager modal */}
       {showCatManager && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3"><h3 className="font-semibold text-sm text-zinc-900">Gerenciar Categorias</h3><button onClick={() => setShowCatManager(false)} className="rounded-lg p-1 hover:bg-zinc-100"><X className="h-4 w-4 text-zinc-400" /></button></div>
+            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3"><h3 className="font-semibold text-sm text-zinc-900">Gerenciar Categorias</h3><button onClick={() => setShowCatManager(false)} className="rounded-lg p-1 hover:bg-zinc-100" aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button></div>
             <div className="p-4 space-y-3">
-              <div className="flex gap-2"><input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCategory()} placeholder="Nova categoria..." className="flex-1 h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" /><Button onClick={handleAddCategory} size="sm" className="bg-green-600 hover:bg-green-700"><Plus className="h-3.5 w-3.5" /></Button></div>
+              <div className="flex gap-2"><input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCategory()} placeholder="Nova categoria..." className="flex-1 h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" /><Button onClick={handleAddCategory} size="sm" className="bg-green-600 hover:bg-green-700"><Plus className="h-3.5 w-3.5" /></Button></div>
               <div className="max-h-[300px] overflow-y-auto space-y-1">
                 {categories.map((cat) => (
                   <div key={cat} className="flex items-center gap-2 rounded-lg border border-zinc-100 px-3 py-2 hover:bg-zinc-50">
                     {editingCat === cat ? (
-                      <><input value={editCatName} onChange={(e) => setEditCatName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRenameCategory(cat)} className="flex-1 h-7 rounded border border-zinc-200 px-2 text-xs focus:border-green-600 focus:outline-none" autoFocus /><button onClick={() => handleRenameCategory(cat)} className="text-xs text-green-600 font-medium">Salvar</button><button onClick={() => { setEditingCat(null); setEditCatName("") }} className="text-xs text-zinc-400">Cancelar</button></>
+                      <><input value={editCatName} onChange={(e) => setEditCatName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRenameCategory(cat)} className="flex-1 h-7 rounded border border-zinc-200 px-2 text-xs focus:border-green-600 focus:outline-none" autoFocus /><button onClick={() => handleRenameCategory(cat)} className="text-xs text-green-600 font-medium">Salvar</button><button onClick={() => { setEditingCat(null); setEditCatName("") }} className="text-xs text-zinc-500">Cancelar</button></>
                     ) : (
-                      <><span className="flex-1 text-xs text-zinc-700">{categoryLabels[cat] || cat}</span><button onClick={() => { setEditingCat(cat); setEditCatName(categoryLabels[cat] || cat) }} className="rounded p-1 text-zinc-400 hover:text-blue-600 hover:bg-zinc-100"><Pencil className="h-3 w-3" /></button><button onClick={() => handleDeleteCategory(cat)} className="rounded p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50"><Trash2 className="h-3 w-3" /></button></>
+                      <><span className="flex-1 text-xs text-zinc-700">{categoryLabels[cat] || cat}</span><button onClick={() => { setEditingCat(cat); setEditCatName(categoryLabels[cat] || cat) }} className="rounded p-1 text-zinc-500 hover:text-blue-600 hover:bg-zinc-100"><Pencil className="h-3 w-3" /></button><button onClick={() => handleDeleteCategory(cat)} className="rounded p-1 text-zinc-500 hover:text-red-500 hover:bg-red-50"><Trash2 className="h-3 w-3" /></button></>
                     )}
                   </div>
                 ))}
@@ -523,7 +531,7 @@ export default function DespesasPage() {
 
       {/* Delete category confirmation modal */}
       {deleteCat.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-2 text-amber-600"><AlertTriangle className="h-5 w-5" /><h3 className="font-semibold text-sm">Categoria com despesas</h3></div>
@@ -540,7 +548,7 @@ export default function DespesasPage() {
               {deleteCatAction === "move" && (
                 <div className="space-y-2"><SearchableSelect value={moveToCat} onChange={setMoveToCat} options={categories.filter((c) => c !== deleteCat.cat).map((c) => ({ value: c, label: categoryLabels[c] || c }))} placeholder="Selecionar categoria..." /><div className="flex gap-2"><Button onClick={() => setDeleteCatAction(null)} variant="outline" size="sm" className="flex-1">Voltar</Button><Button onClick={() => handleMoveCategory(deleteCat.cat, moveToCat)} disabled={processing || !moveToCat} size="sm" className="flex-1 bg-green-600 hover:bg-green-700">{processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mover ${deleteCat.count} despesa(s)`}</Button></div></div>
               )}
-              <button onClick={() => { setDeleteCat({ open: false, cat: "", count: 0 }); setDeleteCatAction(null) }} className="w-full text-center text-xs text-zinc-400 hover:text-zinc-600">Cancelar</button>
+              <button onClick={() => { setDeleteCat({ open: false, cat: "", count: 0 }); setDeleteCatAction(null) }} className="w-full text-center text-xs text-zinc-500 hover:text-zinc-600">Cancelar</button>
             </div>
           </div>
         </div>
@@ -559,7 +567,7 @@ function CustomSelect({ value, onChange, options }: { value: string; onChange: (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="flex h-8 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
         <span className="truncate max-w-[120px]">{selected?.label}</span>
-        <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-3 w-3 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (<><div className="fixed inset-0 z-40" onClick={() => setOpen(false)} /><div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-zinc-200 bg-white shadow-lg py-1">{options.map((opt) => (<button key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }} className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${opt.value === value ? "bg-green-50 text-green-700 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}>{opt.label}</button>))}</div></>)}
     </div>

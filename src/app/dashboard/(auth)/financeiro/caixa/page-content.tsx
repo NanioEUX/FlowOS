@@ -219,7 +219,7 @@ export default function CaixaFinanceiroPage() {
                 placeholder="Valor inicial (R$)"
                 value={openingAmount}
                 onChange={(e) => setOpeningAmount(e.target.value)}
-                className="flex h-10 w-40 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                className="flex h-10 w-40 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
               />
               <Button onClick={openRegister} disabled={saving} className="bg-green-600 hover:bg-green-700">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlock className="h-4 w-4 mr-2" />}
@@ -284,7 +284,7 @@ export default function CaixaFinanceiroPage() {
               placeholder={`Esperado: ${formatCurrency(currentBalance)}`}
               value={closingAmount}
               onChange={(e) => setClosingAmount(e.target.value)}
-              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <Button onClick={closeRegister} disabled={saving} variant="danger">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
@@ -304,10 +304,10 @@ export default function CaixaFinanceiroPage() {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm">Registrar Despesa no Caixa</h3>
-              <button onClick={() => setShowExpenseForm(false)}><X className="h-4 w-4 text-zinc-400" /></button>
+              <button onClick={() => setShowExpenseForm(false)} aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button>
             </div>
-            <input placeholder="Descrição" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
-            <input type="number" placeholder="Valor (R$)" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+            <input placeholder="Descrição" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
+            <input type="number" placeholder="Valor (R$)" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
             <SearchableSelect
               value={expenseForm.category}
               onChange={(v) => setExpenseForm({ ...expenseForm, category: v })}
@@ -333,7 +333,7 @@ export default function CaixaFinanceiroPage() {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm">Transferir Caixa</h3>
-              <button onClick={() => setShowTransferModal(false)}><X className="h-4 w-4 text-zinc-400" /></button>
+              <button onClick={() => setShowTransferModal(false)} aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button>
             </div>
             <p className="text-xs text-zinc-500">
               Informe o valor em espécie no caixa e selecione o atendente que vai assumir.
@@ -346,7 +346,7 @@ export default function CaixaFinanceiroPage() {
               placeholder="Valor em espécie (R$)"
               value={transferAmount}
               onChange={(e) => setTransferAmount(e.target.value)}
-              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <SearchableSelect
               value={transferToUser}
@@ -358,7 +358,7 @@ export default function CaixaFinanceiroPage() {
               placeholder="Observações (opcional)"
               value={transferNotes}
               onChange={(e) => setTransferNotes(e.target.value)}
-              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+              className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <Button
               onClick={transferCashRegister}
@@ -376,7 +376,7 @@ export default function CaixaFinanceiroPage() {
         <CardContent className="p-4">
           <h3 className="mb-3 font-semibold text-sm text-zinc-900">Movimentações ({register.movements.length})</h3>
           {register.movements.length === 0 ? (
-            <p className="text-xs text-zinc-400 text-center py-4">Nenhuma movimentação</p>
+            <p className="text-xs text-zinc-500 text-center py-4">Nenhuma movimentação</p>
           ) : (
             <div className="space-y-1">
               {register.movements.map((m) => (
@@ -389,7 +389,7 @@ export default function CaixaFinanceiroPage() {
                     )}
                     <div>
                       <p className="text-sm font-medium">{m.description || m.type}</p>
-                      <p className="text-[10px] text-zinc-400">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}</p>
+                      <p className="text-[10px] text-zinc-500">{new Date(m.createdAt).toLocaleTimeString("pt-BR")}</p>
                     </div>
                   </div>
                   <span className={`text-sm font-bold ${m.amount >= 0 ? "text-green-600" : "text-red-400"}`}>

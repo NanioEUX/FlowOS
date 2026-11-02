@@ -142,7 +142,7 @@ export default function DestaquesContent() {
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-zinc-400" /></div>
+  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-zinc-500" /></div>
 
   return (
     <div className="max-w-2xl mx-auto p-4 pb-24">
@@ -160,7 +160,7 @@ export default function DestaquesContent() {
         <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-12 text-center">
           <span className="text-4xl block mb-3">🖼️</span>
           <p className="text-sm font-medium text-zinc-600">Nenhum banner configurado</p>
-          <p className="text-xs text-zinc-400 mt-1">Crie banners para o carrossel do cardápio</p>
+          <p className="text-xs text-zinc-500 mt-1">Crie banners para o carrossel do cardápio</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -169,7 +169,7 @@ export default function DestaquesContent() {
               <div className={`h-24 bg-gradient-to-br ${banner.gradientFrom} ${banner.gradientTo} relative flex items-end p-4`}>
                 {banner.image && <img src={banner.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
                 <div className="relative z-10">
-                  <h3 className="text-white font-bold text-sm drop-shadow">{banner.title}</h3>
+                  <h2 className="text-white font-bold text-sm drop-shadow">{banner.title}</h2>
                   {banner.subtitle && <p className="text-white/80 text-[11px] drop-shadow">{banner.subtitle}</p>}
                 </div>
               </div>
@@ -184,8 +184,8 @@ export default function DestaquesContent() {
                 <button onClick={() => toggleActive(banner)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${banner.active ? "bg-green-500" : "bg-zinc-300"}`}>
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${banner.active ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
-                <button onClick={() => { setEditingBanner(banner); setForm({ title: banner.title, subtitle: banner.subtitle || "", ctaText: banner.ctaText || "Ver mais", ctaType: banner.ctaType, ctaTarget: banner.ctaTarget || "", gradientFrom: banner.gradientFrom, gradientTo: banner.gradientTo, image: banner.image || "" }); setShowForm(true) }} className="text-zinc-400 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => setDeleteConfirm(banner.id)} className="text-zinc-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => { setEditingBanner(banner); setForm({ title: banner.title, subtitle: banner.subtitle || "", ctaText: banner.ctaText || "Ver mais", ctaType: banner.ctaType, ctaTarget: banner.ctaTarget || "", gradientFrom: banner.gradientFrom, gradientTo: banner.gradientTo, image: banner.image || "" }); setShowForm(true) }} className="text-zinc-500 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => setDeleteConfirm(banner.id)} className="text-zinc-500 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           ))}
@@ -194,18 +194,18 @@ export default function DestaquesContent() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 sticky top-0 bg-white z-10">
-              <h3 className="text-lg font-semibold text-zinc-900">{editingBanner ? "Editar Banner" : "Novo Banner"}</h3>
-              <button onClick={() => { setShowForm(false); setEditingBanner(null) }} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-zinc-900">{editingBanner ? "Editar Banner" : "Novo Banner"}</h2>
+              <button onClick={() => { setShowForm(false); setEditingBanner(null) }} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100" aria-label="Fechar"><X className="h-5 w-5" /></button>
             </div>
             <div className="px-6 py-4 space-y-5">
               {/* Preview */}
               <div className={`rounded-xl h-32 bg-gradient-to-br ${form.gradientFrom} ${form.gradientTo} relative flex items-end p-4 overflow-hidden`}>
                 {form.image && <img src={form.image} alt="" className="absolute inset-0 w-full h-full object-cover" />}
                 <div className="relative z-10">
-                  <h3 className="text-white font-bold drop-shadow">{form.title || "Título do banner"}</h3>
+                  <h2 className="text-white font-bold drop-shadow">{form.title || "Título do banner"}</h2>
                   {form.subtitle && <p className="text-white/80 text-xs drop-shadow">{form.subtitle}</p>}
                   {form.ctaText && <span className="inline-block mt-2 bg-white text-xs font-bold px-3 py-1 rounded-full drop-shadow" style={{ color: "#333" }}>{form.ctaText} →</span>}
                 </div>
@@ -226,7 +226,7 @@ export default function DestaquesContent() {
               {/* Gradient */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700">Cores</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {GRADIENT_OPTIONS.map((g) => (
                     <button key={g.from} type="button" onClick={() => setForm({ ...form, gradientFrom: g.from, gradientTo: g.to })} className={`h-10 rounded-lg bg-gradient-to-br ${g.from} ${g.to} transition-all ${form.gradientFrom === g.from ? "ring-2 ring-green-500 ring-offset-2 scale-105" : "hover:scale-105"}`} title={g.label} />
                   ))}
@@ -248,7 +248,7 @@ export default function DestaquesContent() {
               {/* CTA Type */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700">Ação do botão</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {CTA_TYPE_OPTIONS.map((opt) => (
                     <button key={opt.value} type="button" onClick={() => setForm({ ...form, ctaType: opt.value, ctaTarget: "" })} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left ${form.ctaType === opt.value ? "border-green-600 bg-green-50 text-green-700" : "border-zinc-200 text-zinc-500 hover:bg-zinc-50"}`}>
                       <span>{opt.icon}</span> {opt.label}
@@ -296,9 +296,9 @@ export default function DestaquesContent() {
 
       {/* Delete Confirm */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-2">Remover banner?</h3>
+            <h2 className="text-lg font-semibold text-zinc-900 mb-2">Remover banner?</h2>
             <p className="text-sm text-zinc-500 mb-6">Essa ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>

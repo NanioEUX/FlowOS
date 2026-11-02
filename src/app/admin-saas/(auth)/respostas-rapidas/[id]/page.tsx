@@ -90,7 +90,7 @@ export default function EditarQuickReplyPage({ params }: { params: { id: string 
           <label className="block text-sm font-medium text-zinc-900 mb-1">Resposta *</label>
           <textarea required rows={4} value={form.response} onChange={(e) => setForm({ ...form, response: e.target.value })} className="input" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-zinc-900 mb-1">Tipo de match</label>
             <select value={form.matchType} onChange={(e) => setForm({ ...form, matchType: e.target.value })} className="input">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { redactObject } from "@/lib/redact"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
@@ -84,8 +85,9 @@ export async function POST(
 
     console.log("[Meta Embedded Signup] ========== START ==========")
     console.log("[Meta Embedded Signup] Establishment ID:", id)
-    console.log("[Meta Embedded Signup] Code:", !!code, "len:", code?.length, "prefix:", code?.substring(0, 10))
-    console.log("[Meta Embedded Signup] existingToken:", !!existingToken, "starts:", existingToken?.substring(0, 10))
+    // F4A-014: nada de prefixo de code/token no log
+    console.log("[Meta Embedded Signup] Code:", !!code, "len:", code?.length)
+    console.log("[Meta Embedded Signup] existingToken:", !!existingToken)
 
     let accessToken: string | null = null
     let tokenSource = "none"
@@ -133,7 +135,7 @@ export async function POST(
     if (accessToken) {
       const info = await debugToken(accessToken)
       allDebug.push(`final_token: type=${info?.type} expires=${info?.expires_at} issued=${info?.issued_at}`)
-      console.log("[Meta Embedded Signup] Final token:", JSON.stringify(info, null, 2))
+      console.log("[Meta Embedded Signup] Final token info:", JSON.stringify(redactObject(info)))
     } else {
       allDebug.push("NO TOKEN OBTAINED")
     }

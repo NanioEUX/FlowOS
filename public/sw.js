@@ -1,4 +1,9 @@
-const CACHE_NAME = "pedefacil-v25"
+// F8A-008: a versão vem da URL do próprio script (?v=<build id>), gerada no
+// build. Não existe mais número hardcoded para alguém lembrar de bumpar:
+// se o build muda, a URL muda, o browser busca um SW novo e o cache antigo
+// é purged.
+const BUILD_VERSION = new URL(self.location.href).searchParams.get("v") || "dev"
+const CACHE_NAME = `pedefacil-${BUILD_VERSION}`
 
 /** Lê o contexto push (establishmentId + customerKey) do IndexedDB */
 function getPushContext() {
@@ -55,8 +60,9 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       // Se havia cache de versão anterior, é um upgrade de versão: os clients
-      // abertos estão rodando JS antigo, então força o reload deles. Na
-      // primeira visita não há cache antigo → não recarrega ninguém.
+      // abertos estão rodando JS antigo. Em vez de recarregá-los na força
+      // (F8A-004 — perdia KDS, modais, rascunhos e abortava POST em curso),
+      // avisamos os clients e o app mostra o banner "nova versão disponível".
       const oldCaches = cacheNames.filter((name) => name !== CACHE_NAME)
       const cleanup = Promise.all(oldCaches.map((name) => caches.delete(name)))
       return cleanup.then(() => oldCaches.length > 0)
@@ -66,7 +72,7 @@ self.addEventListener("activate", (event) => {
         return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
           clients.forEach((client) => {
             try {
-              client.navigate(client.url)
+              client.postMessage({ type: "new-version-available", version: BUILD_VERSION })
             } catch {}
           })
         })
@@ -225,16 +231,25 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/"
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      // 1. Find a PWA standalone window first
-      let target = clients.find((c) => c.url.includes(self.location.origin))
-      // 2. If no PWA client, find any client
-      if (!target) target = clients[0]
-      if (target) {
-        target.focus()
-        target.navigate(url)
-      } else {
-        self.clients.openWindow(url)
+      // F8A-005: não sequestra a PRIMEIRA janela aberta (que pode ser o PDV ou
+      // o KDS em operação). Só foca uma janela que já está na URL do pedido;
+      // caso contrário abre uma nova.
+      let targetPath = "/"
+      try {
+        targetPath = new URL(url, self.location.origin).pathname
+      } catch {}
+      const sameScreen = clients.find((c) => {
+        try {
+          return new URL(c.url).pathname === targetPath
+        } catch {
+          return false
+        }
+      })
+      if (sameScreen) {
+        sameScreen.focus()
+        return
       }
+      return self.clients.openWindow(url)
     })
   )
 })

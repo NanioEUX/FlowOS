@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
+import { parseOrderItems } from "@/lib/items"
 
 interface OrderItem {
   id: string
@@ -274,7 +275,7 @@ export function DeliveryPage({ token }: { token: string }) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-600"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -305,7 +306,7 @@ export function DeliveryPage({ token }: { token: string }) {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-50 p-4">
         <X className="h-12 w-12 text-red-400" />
         <p className="text-lg font-medium text-zinc-600">{error || "Link inválido"}</p>
-        <p className="text-sm text-zinc-400">Verifique o link com o estabelecimento</p>
+        <p className="text-sm text-zinc-500">Verifique o link com o estabelecimento</p>
       </div>
     )
   }
@@ -338,9 +339,9 @@ export function DeliveryPage({ token }: { token: string }) {
             </button>
             <button
               onClick={handleLogout}
-              className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+              className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600"
               title="Sair"
-            >
+             aria-label="Fechar">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -424,14 +425,14 @@ export function DeliveryPage({ token }: { token: string }) {
           <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center">
             <Bike className="mx-auto h-8 w-8 text-zinc-300" />
             <p className="mt-2 text-lg font-medium text-zinc-500">Nenhuma entrega no momento</p>
-            <p className="text-sm text-zinc-400">Seus pedidos aparecerão aqui</p>
+            <p className="text-sm text-zinc-500">Seus pedidos aparecerão aqui</p>
           </div>
         )}
 
         {/* Histórico de entregues */}
         {deliveredOrders.length > 0 && (
           <details className="group">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-400 hover:text-zinc-600">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-500 hover:text-zinc-600">
               Entregues recentes ({deliveredOrders.length})
             </summary>
             <div className="mt-3 space-y-2">
@@ -450,7 +451,7 @@ export function DeliveryPage({ token }: { token: string }) {
                         )}
                         <p className="text-sm font-medium text-zinc-900">{order.customerName}</p>
                       </div>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-zinc-500">
                         {new Date(order.deliveredAt || order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         {deliveryTime !== null && ` • ${deliveryTime}min`}
                       </p>
@@ -477,7 +478,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
 }) {
   let items: OrderItem[] = []
   try {
-    items = JSON.parse(order.items)
+    items = parseOrderItems(order.items)
   } catch {
     items = []
   }
@@ -545,7 +546,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+            <p className="text-xs text-zinc-500">{new Date(order.createdAt).toLocaleString("pt-BR")}</p>
 
             {order.customerPhone && (
               <a href={`https://wa.me/55${order.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-sm text-green-600 hover:underline">
@@ -576,7 +577,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
               ))}
             </div>
 
-            {order.notes && <p className="mt-1 text-sm text-zinc-400 italic">Obs: {order.notes}</p>}
+            {order.notes && <p className="mt-1 text-sm text-zinc-500 italic">Obs: {order.notes}</p>}
 
             {/* Payment summary — always shown so the motoboy knows how to collect. */}
             {(() => {
@@ -642,7 +643,7 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
                   <button
                     onClick={confirmHandshake}
                     disabled={handshakeLoading || handshakeCode.length !== 4}
-                    className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                    className="min-h-[44px] rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                   >
                     {handshakeLoading ? "Confirmando..." : "Confirmar"}
                   </button>
@@ -663,8 +664,10 @@ function OrderCard({ order, statusLabel, statusAction, onUpdate, updating, token
               {order.status === "ready" ? "Pronto" : "Em rota"}
             </Badge>
             {!showHandshake && (
-              <Button size="sm" onClick={() => onUpdate(order.id, statusAction)} disabled={updating} className="gap-1">
-                {updating ? "..." : <><CheckCircle className="h-4 w-4" />{statusLabel}</>}
+              // F8A-016: CTA do motoboy com no mínimo 44px de altura (uso com
+              // uma mão / luva) — antes era size="sm" (h-8 = 32px).
+              <Button onClick={() => onUpdate(order.id, statusAction)} disabled={updating} className="min-h-[44px] gap-1">
+                {updating ? "..." : <><CheckCircle aria-hidden="true" className="h-4 w-4" />{statusLabel}</>}
               </Button>
             )}
           </div>
@@ -732,7 +735,7 @@ function ChangePasswordWidget({ userId, mustChangePassword }: { userId: string |
     return (
       <button
         onClick={() => setShow(true)}
-        className="text-xs text-zinc-400 hover:text-zinc-600"
+        className="text-xs text-zinc-500 hover:text-zinc-600"
       >
         Alterar senha
       </button>

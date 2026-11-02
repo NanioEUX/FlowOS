@@ -6,6 +6,7 @@ import {
   canTransition,
   isValidStatus,
   isRoleAllowedToSetStatus,
+  isClosedOrderStatus,
 } from "@/lib/order-transitions"
 
 describe("order-transitions (máquina de estados F5A-002/F5D-008)", () => {
@@ -56,6 +57,15 @@ describe("order-transitions (máquina de estados F5A-002/F5D-008)", () => {
     expect(canTransition("pending", "hacked")).toBe(false)
     expect(ORDER_TRANSITIONS["delivered"]).toEqual([])
     expect(ORDER_STATUSES.length).toBe(12)
+  })
+
+  it("F4B-035: status fechados (cancelled/abandoned/delivered) são reconhecidos", () => {
+    expect(isClosedOrderStatus("cancelled")).toBe(true)
+    expect(isClosedOrderStatus("abandoned")).toBe(true)
+    expect(isClosedOrderStatus("delivered")).toBe(true)
+    expect(isClosedOrderStatus("pending")).toBe(false)
+    expect(isClosedOrderStatus("payment_pending")).toBe(false)
+    expect(isClosedOrderStatus(undefined)).toBe(false)
   })
 
   it("papéis: kds só aceitação/produção/pronto; motoboy não muta; staff completo", () => {

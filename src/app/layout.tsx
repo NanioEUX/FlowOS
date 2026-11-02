@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Providers } from "@/components/providers"
+import { OfflineBanner } from "@/components/offline-banner"
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
+import { UpdateBanner } from "@/components/pwa/update-banner"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -28,8 +30,7 @@ export const viewport: Viewport = {
   themeColor: "#1E7BFF",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // F8D-003: sem maximumScale/userScalable — zoom é acessibilidade (WCAG 1.4.4)
   viewportFit: "cover",
 }
 
@@ -40,7 +41,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className}><Providers>{children}</Providers><ServiceWorkerRegister /></body>
+      <body className={inter.className}>
+        {/* F8D-026: aplica o tema antes da primeira pintura (evita flash) nas
+            telas que têm toggle próprio (PDV e mesa do cliente). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=location.pathname;if(p.indexOf('/caixa')===0||p.indexOf('/mesa/')>-1){var t=localStorage.getItem('pedefacil-caixa-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}}catch(e){}})()`,
+          }}
+        />
+        <OfflineBanner />
+        <Providers>{children}</Providers>
+        <ServiceWorkerRegister />
+        <UpdateBanner />
+      </body>
     </html>
   )
 }

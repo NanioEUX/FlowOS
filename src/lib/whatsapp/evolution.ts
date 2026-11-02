@@ -1,5 +1,5 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions } from "./provider"
-import { fetchExternal } from "@/lib/fetch-external"
+import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
 
 interface EvolutionConfig {
   baseUrl: string
@@ -52,7 +52,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async getConnectionState(): Promise<ConnectionState> {
     try {
       const url = `${this.config.baseUrl}/instance/connectionState/${this.config.instanceName}`
-      const response = await fetchExternal(url, {
+      const response = await fetchExternalWithRetry(url, {
         method: "GET",
         headers: this.getHeaders(),
       })
@@ -75,7 +75,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async connectInstance(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
     try {
       const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
-      const response = await fetchExternal(url, {
+      const response = await fetchExternalWithRetry(url, {
         method: "GET",
         headers: this.getHeaders(),
       })
@@ -95,7 +95,7 @@ export class EvolutionProvider implements WhatsAppProvider {
   async getQRCode(): Promise<{ success: boolean; qrcode?: QRCodeResponse; error?: string }> {
     try {
       const url = `${this.config.baseUrl}/instance/connect/${this.config.instanceName}`
-      const response = await fetchExternal(url, {
+      const response = await fetchExternalWithRetry(url, {
         method: "GET",
         headers: this.getHeaders(),
       })

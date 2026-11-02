@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { Search, X, Minus, Plus, Trash2, Banknote, CreditCard, DollarSign, CheckCircle, LogOut, TrendingUp, Clock, Store, ShoppingBag, ArrowLeft, Package, Bike, MapPin, MessageCircle, ExternalLink, Printer, Sun, Moon, Users, MinusCircle, Eye, EyeOff, PlusCircle, Receipt, QrCode, Loader2, ArrowRightLeft } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { printHtmlPopup } from "@/lib/print-html"
+import { readStorage, writeStorage } from "@/lib/storage"
+import { applyDarkClass } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/toast"
@@ -12,6 +14,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 import { useSubmitGuard } from "@/hooks/use-submit-guard"
 import { FlowOSLogo } from "@/components/flowos-logo"
 import QRCode from "qrcode"
+import { parseOrderItems } from "@/lib/items"
 
 const ALL_PERMISSIONS = [
   { value: "dashboard", label: "Dashboard" },
@@ -98,6 +101,8 @@ export default function CaixaPOSPage() {
   })
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [showReceipt, setShowReceipt] = useState(false)
+  // F8C-016: o operador precisa ver que a impressão está em andamento
+  const [printing, setPrinting] = useState(false)
   const [activeTab, setActiveTab] = useState<"caixa" | "mesas" | "balcao" | "pedidos">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("pedefacil-caixa-tab") as any) || "caixa"
@@ -130,6 +135,10 @@ export default function CaixaPOSPage() {
   const [tableCount, setTableCount] = useState(10)
   const [serviceTaxConfig, setServiceTaxConfig] = useState<{ enabled: boolean; type: string; value: number; presencial: boolean }>({ enabled: false, type: "percent", value: 10, presencial: true })
   const [lastClosedOrder, setLastClosedOrder] = useState<{ cart: any[]; tableLabel: string; total: number; orderNumber?: number; createdAt?: string } | null>(null)
+  // F8A-001: no celular o carrinho vira drawer (bottom sheet) em vez de coluna fixa de 320px
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false)
+  // F8D-026: as classes `dark:` do Tailwind seguem o toggle do PDV
+  useEffect(() => { applyDarkClass(darkMode) }, [darkMode])
 
   // Close table modal states
   const [closeTableMode, setCloseTableMode] = useState<"single" | "split" | "custom">("single")
@@ -163,10 +172,14 @@ export default function CaixaPOSPage() {
   // Load table state from localStorage
   useEffect(() => {
     if (!user?.establishmentId) return
-    const saved = localStorage.getItem(`pedefacil-tables-${user.establishmentId}`)
-    if (saved) {
+    // F8A-010: chave versionada (migra a chave legada sem perder a mesa aberta)
+    const parsed = readStorage<any>(
+      `pedefacil-tables-${user.establishmentId}`,
+      `pedefacil-tables-${user.establishmentId}`,
+      null
+    )
+    if (parsed) {
       try {
-        const parsed = JSON.parse(saved)
         // Ensure every table entry has participants array (guard against old data)
         const rawTableData: Record<number, TableData> = parsed.tableData || {}
         const sanitizedTableData: Record<number, TableData> = {}
@@ -198,6 +211,13 @@ export default function CaixaPOSPage() {
       if (showCashRegisterModal) { setShowCashRegisterModal(false); return }
       if (closingTableModal) { setClosingTableModal(false); return }
       if (showCustomItemModal) { setShowCustomItemModal(false); return }
+      // F8D-018: os modais abaixo não eram cobertos pelo Escape.
+      if (abaterModal !== null) { setAbaterModal(null); return }
+      if (tableQRModal) { setTableQRModal(false); return }
+      if (transferModal !== null) { setTransferModal(null); return }
+      if (showStaffQr) { setShowStaffQr(false); return }
+      // F8A-001: o drawer mobile do carrinho fecha antes de limpar a busca
+      if (cartDrawerOpen) { setCartDrawerOpen(false); return }
       if (searchQuery) { setSearchQuery(""); return }
       return
     }
@@ -235,10 +255,25 @@ export default function CaixaPOSPage() {
       return
     }
 
-    // F5: pedidos externos tab
-    if (e.key === "F5") {
+    // F6: pedidos externos tab
+    // F8C-023: F5 não é mais sequestrado — continua sendo o reload do navegador
+    // (acidental em tela de venda/TV custa estado efetch).
+    if (e.key === "F6") {
       e.preventDefault()
       setActiveTab("pedidos")
+      return
+    }
+
+    // F8C-025: Enter finaliza a venda (atalho do fluxo principal)
+    if (e.key === "Enter") {
+      // não age enquanto houver modal aberto
+      if (
+        showCashRegisterModal || closingTableModal || showCustomItemModal ||
+        abaterModal !== null || tableQRModal || transferModal !== null ||
+        showStaffQr || confirmDialog.open
+      ) return
+      e.preventDefault()
+      finalizeSaleClick()
       return
     }
 
@@ -290,7 +325,7 @@ export default function CaixaPOSPage() {
       }
       return
     }
-  }, [showCashRegisterModal, closingTableModal, showCustomItemModal, searchQuery, cashRegister, activeTab, stagingCart, cart, tableCount])
+  }, [showCashRegisterModal, closingTableModal, showCustomItemModal, abaterModal, tableQRModal, transferModal, showStaffQr, searchQuery, cashRegister, activeTab, stagingCart, cart, tableCount, cartDrawerOpen, cashReceived, payment, confirmDialog.open])
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyboard)
@@ -300,16 +335,18 @@ export default function CaixaPOSPage() {
   // Save table state to localStorage
   useEffect(() => {
     if (!user?.establishmentId) return
-    localStorage.setItem(`pedefacil-tables-${user.establishmentId}`, JSON.stringify({
+    writeStorage(`pedefacil-tables-${user.establishmentId}`, {
       tableData,
       activeTable,
       activeCart: cart,
       stagingCart,
-    }))
+    })
   }, [tableData, activeTable, cart, stagingCart, user?.establishmentId])
 
   useEffect(() => {
     localStorage.setItem("pedefacil-caixa-tab", activeTab)
+    // F8A-001: trocar de aba fecha o drawer mobile do carrinho
+    setCartDrawerOpen(false)
   }, [activeTab])
 
   useEffect(() => {
@@ -392,7 +429,20 @@ export default function CaixaPOSPage() {
     } catch {}
   }
 
+  // F8B-001: wrapper com try/catch/finally — uma falha de rede não pode
+  // deixar o PDV preso no spinner nem derrubar a tela do caixa.
   async function loadData(establishmentId: string) {
+    try {
+      await loadDataInner(establishmentId)
+    } catch (err) {
+      console.error("[PDV] Falha ao carregar dados:", err)
+      toast("Não foi possível carregar os dados. Verifique sua conexão.", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadDataInner(establishmentId: string) {
     const promises: Promise<any>[] = [
       fetchAuth(`/api/categories?establishmentId=${establishmentId}`),
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
@@ -476,7 +526,6 @@ export default function CaixaPOSPage() {
         setTablePartialPaid(ppMap)
       }
     } catch {}
-    setLoading(false)
   }
 
   const filteredProducts = products.filter((p) => {
@@ -550,7 +599,7 @@ export default function CaixaPOSPage() {
       const orderItems: any[] = []
       for (const o of tableOrders) {
         try {
-          const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items
+          const items = parseOrderItems(o.items)
           for (const item of items) {
             orderItems.push({ ...item, orderId: o.id })
           }
@@ -776,6 +825,18 @@ export default function CaixaPOSPage() {
       return product?.sendToPrep === true
     })
   })()
+
+  // F8C-025: lógica compartilhada entre o botão e o atalho Enter
+  function finalizeSaleClick() {
+    if (payment === "cash" && !activeTable) {
+      if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
+        if (!cashReceived) setCashReceived(String(cartTotal))
+        document.querySelector<HTMLInputElement>('input[placeholder="R$ 0,00"]')?.focus()
+        return
+      }
+    }
+    finalizeSale()
+  }
 
   async function finalizeSale() {
     if (!user?.establishmentId || stagingCart.length === 0) return
@@ -1009,7 +1070,17 @@ export default function CaixaPOSPage() {
       </body>
       </html>
     `
-    printHtmlPopup(html)
+    setPrinting(true)
+    printHtmlPopup(html, {
+      onStatus: (status) => {
+        // F8C-016: sem alert nativo — o operador vê o aviso e pode repetir.
+        if (status === "blocked") {
+          setPrinting(false)
+          toast("Não foi possível imprimir: o navegador bloqueou o pop-up. Libere os pop-ups e tente de novo.", "error")
+        }
+        if (status === "closed") setPrinting(false)
+      },
+    })
   }
 
   async function openCashRegister() {
@@ -1141,7 +1212,7 @@ export default function CaixaPOSPage() {
   const externalOrders = orders.filter((o: any) => o.orderType !== "presencial" && ["preparing", "ready", "out_for_delivery"].includes(o.status))
 
   return (
-    <div className={`flex h-screen flex-col overflow-hidden ${darkMode ? "bg-[#0d2137]" : "bg-zinc-100"}`}>
+    <main className={`flex h-[100dvh] flex-col overflow-hidden ${darkMode ? "bg-[#0d2137]" : "bg-zinc-100"}`}>
       {/* Header */}
       <div className={`flex h-14 items-center justify-between border-b px-4 lg:h-16 lg:px-8 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
         <div className="flex items-center gap-3">
@@ -1158,7 +1229,7 @@ export default function CaixaPOSPage() {
               <div className="min-w-0">
                 <span className={`text-sm font-semibold ${darkMode ? "text-white" : "text-zinc-900"}`}>{user.establishment.name}</span>
                 {user.establishment.description && (
-                  <p className={`text-[10px] leading-tight ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{user.establishment.description}</p>
+                  <p className={`text-[10px] leading-tight ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{user.establishment.description}</p>
                 )}
               </div>
             </>
@@ -1170,7 +1241,7 @@ export default function CaixaPOSPage() {
         {cashRegister && (
           <div className="hidden items-center gap-3 lg:flex">
             <span className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{todayStats.count} vendas</span>
-            <span className={`text-sm ${darkMode ? "text-white/40" : "text-white/50"}`}>·</span>
+            <span className={`text-sm ${darkMode ? "text-white/60" : "text-zinc-500"}`}>·</span>
             <span className="text-lg font-bold text-green-500">{formatCurrency(todayStats.total)}</span>
           </div>
         )}
@@ -1210,20 +1281,20 @@ export default function CaixaPOSPage() {
 
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"}`}
+            className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600"}`}
             title={darkMode ? "Tema claro" : "Tema escuro"}
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          <span className={`hidden text-sm lg:block ${darkMode ? "text-white/50" : "text-white/40"}`}>{currentTime}</span>
+          <span className={`hidden text-sm lg:block ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{currentTime}</span>
           <div className="hidden items-center gap-1.5 lg:flex">
             <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${darkMode ? "bg-green-900/40 text-green-400" : "bg-green-100 text-green-700"}`}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </div>
             <span className={`font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>{user?.name}</span>
           </div>
-          <button onClick={handleLogout} className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"}`}>
+          <button onClick={handleLogout} className={`rounded-lg p-1.5 ${darkMode ? "text-white/50 hover:bg-[#1a3a5c] hover:text-white/90" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600"}`}>
             <LogOut className="h-4 w-4" />
           </button>
         </div>
@@ -1231,29 +1302,29 @@ export default function CaixaPOSPage() {
 
       {/* Tabs */}
       {showTabs && (
-        <div className={`flex border-b ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+        <div className={`flex overflow-x-auto border-b ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
           <button
             onClick={() => setActiveTab("caixa")}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "caixa"
                 ? "border-b-2 border-green-500 text-green-600"
                 : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
             }`}
           >
-            <div className="flex items-center justify-center gap-1.5">
+            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
               <ShoppingBag className="h-5 w-5" />
               Caixa
             </div>
           </button>
           <button
             onClick={() => setActiveTab("mesas")}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "mesas"
                 ? "border-b-2 border-green-500 text-green-600"
                 : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
             }`}
           >
-            <div className="flex items-center justify-center gap-1.5">
+            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
               <Users className="h-5 w-5" />
               Mesas
               {paymentRequests.length > 0 && (
@@ -1266,17 +1337,17 @@ export default function CaixaPOSPage() {
           {hasPedidos && (
             <button
               onClick={() => setActiveTab("balcao")}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "balcao"
                   ? "border-b-2 border-green-500 text-green-600"
                   : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
-              <div className="flex items-center justify-center gap-1.5">
+              <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <Store className="h-5 w-5" />
                 Pedidos Balcão
                 {balcaoReadyCount > 0 && (
-                  <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white animate-pulse">
+                  <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900 animate-pulse">
                     {balcaoReadyCount}
                   </span>
                 )}
@@ -1286,13 +1357,13 @@ export default function CaixaPOSPage() {
           {hasPedidos && (
             <button
               onClick={() => setActiveTab("pedidos")}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "pedidos"
                   ? "border-b-2 border-green-500 text-green-600"
                   : darkMode ? "text-white/50 hover:text-white/90" : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
-              <div className="flex items-center justify-center gap-1.5">
+              <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <Package className="h-5 w-5" />
                 Pedidos Externos
                 {externalOrders.length > 0 && (
@@ -1313,18 +1384,18 @@ export default function CaixaPOSPage() {
           <div className={`px-4 py-2 shadow-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <div className="mb-2 flex items-center gap-2">
               <div className="relative flex-1 max-w-sm">
-                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`} />
+                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? "text-white/60" : "text-zinc-500"}`} />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Buscar produto... (F2)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+                  className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
-                    <X className="h-4 w-4" />
+                  <button onClick={() => setSearchQuery("")} className={`p-1 absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-white/60" : "text-zinc-500"}`} aria-label="Fechar">
+                    <X aria-hidden="true" className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -1338,6 +1409,15 @@ export default function CaixaPOSPage() {
                 Avulso
               </button>
             </div>
+            {/* F8C-023: atalhos existem mas eram undocumented — agora ficam visíveis */}
+            <p className="mb-2 hidden text-[10px] text-zinc-500 lg:block">
+              Atalhos: <kbd className="rounded border border-zinc-300 px-1">F2</kbd> buscar ·{" "}
+              <kbd className="rounded border border-zinc-300 px-1">F3</kbd> mesas ·{" "}
+              <kbd className="rounded border border-zinc-300 px-1">F4</kbd> balcão ·{" "}
+              <kbd className="rounded border border-zinc-300 px-1">F6</kbd> externos ·{" "}
+              <kbd className="rounded border border-zinc-300 px-1">Enter</kbd> finalizar ·{" "}
+              <kbd className="rounded border border-zinc-300 px-1">+</kbd>/<kbd className="rounded border border-zinc-300 px-1">-</kbd> quantidade
+            </p>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
               <button
                 onClick={() => setActiveCategory("all")}
@@ -1364,7 +1444,8 @@ export default function CaixaPOSPage() {
           {/* Main Content */}
           <div className="flex flex-1 overflow-hidden">
             {/* Products Grid */}
-            <div className="flex-1 overflow-y-auto p-3">
+            {/* F8A-001: espaço extra no mobile para o botão flutuante do carrinho */}
+            <div className="flex-1 overflow-y-auto p-3 pb-24 lg:pb-3">
               {!cashRegister && (
                 <div className="mb-3 rounded-xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-6 py-8 text-center">
                   <Banknote className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
@@ -1378,7 +1459,7 @@ export default function CaixaPOSPage() {
                   </button>
                 </div>
               )}
-              <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-6">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
                 {filteredProducts.map((product) => (
                   <button
                     key={product.id}
@@ -1386,25 +1467,53 @@ export default function CaixaPOSPage() {
                   className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}
                 >
                   {product.image ? (
-                    <img src={product.image} alt={product.name} className="mb-2 h-20 w-20 rounded-xl object-cover" />
+                    <img src={product.image} alt={product.name} className="mb-2 h-16 w-16 rounded-xl object-cover sm:h-20 sm:w-20" />
                   ) : (
-                    <div className={`mb-2 flex h-20 w-20 items-center justify-center rounded-xl text-3xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
+                    <div className={`mb-2 flex h-16 w-16 items-center justify-center rounded-xl text-2xl sm:h-20 sm:w-20 sm:text-3xl ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-100"}`}>🍕</div>
                     )}
                     <p className={`w-full truncate text-center text-sm font-medium ${darkMode ? "text-white/90" : "text-zinc-800"}`}>{product.name}</p>
                     <p className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</p>
                   </button>
                 ))}
                 {filteredProducts.length === 0 && (
-                  <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-white/40" : "text-white/50"}`}>
+                  <div className={`col-span-full py-12 text-center text-sm ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
                     Nenhum produto encontrado
                   </div>
                 )}
               </div>
 
+              {/* F8A-001: no mobile o carrinho é um drawer — o botão flutuante abre */}
+              <button
+                onClick={() => setCartDrawerOpen(true)}
+                className={`fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold shadow-xl lg:hidden ${darkMode ? "bg-green-600 text-white" : "bg-green-600 text-white"}`}
+                aria-label={`Abrir carrinho com ${stagingCart.length} itens, total ${formatCurrency(cartTotal)}`}
+              >
+                <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+                <span>{stagingCart.length}</span>
+                <span className="font-extrabold">{formatCurrency(cartTotal)}</span>
+              </button>
             </div>
 
+            {/* F8A-001: backdrop do drawer mobile */}
+            {cartDrawerOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+                onClick={() => setCartDrawerOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+
             {/* Cart + Summary */}
-            <div className={`flex w-80 flex-col border-l ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+            <div
+              role={cartDrawerOpen ? "dialog" : undefined}
+              aria-modal={cartDrawerOpen ? true : undefined}
+              aria-label="Carrinho"
+              className={`${
+                cartDrawerOpen
+                  ? "fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] w-full flex-col rounded-t-2xl shadow-2xl"
+                  : "hidden"
+              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-l border-zinc-200 bg-white"}`}
+            >
               {/* Cart Header */}
               <div className={`border-b px-4 py-2 ${
                 activeTable
@@ -1419,14 +1528,24 @@ export default function CaixaPOSPage() {
                   }`}>
                     {activeTable ? `Mesa ${activeTable}` : "Venda Balcão"}
                   </h2>
-                  {activeTable !== null && (
+                  <div className="flex items-center gap-1">
+                    {activeTable !== null && (
+                      <button
+                        onClick={deselectTable}
+                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                      >
+                        Venda Balcão
+                      </button>
+                    )}
+                    {/* F8A-001: fechar o drawer no mobile */}
                     <button
-                      onClick={deselectTable}
-                      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                      onClick={() => setCartDrawerOpen(false)}
+                      className={`rounded-lg p-1 lg:hidden ${darkMode ? "text-white/70 hover:bg-[#162e4a]" : "text-zinc-500 hover:bg-zinc-100"}`}
+                      aria-label="Fechar carrinho"
                     >
-                      Venda Balcão
+                      <X aria-hidden="true" className="h-5 w-5" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
 
@@ -1435,6 +1554,7 @@ export default function CaixaPOSPage() {
                 {(cart.length === 0 && stagingCart.length === 0) && lastClosedOrder ? (
                   <div className="space-y-3 py-3">
                     <button
+                      disabled={printing}
                       onClick={() => printReceiptPopup({
                         orderNumber: lastClosedOrder.orderNumber,
                         id: lastClosedOrder.orderNumber?.toString() || "closed",
@@ -1451,16 +1571,16 @@ export default function CaixaPOSPage() {
                       <p className={`text-xs font-medium ${darkMode ? "text-white/90" : "text-zinc-700"}`}>
                         Pedido #{lastClosedOrder.orderNumber || "—"} enviado!
                       </p>
-                      <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-white/40"}`}>
+                      <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
                         {lastClosedOrder.tableLabel} • {formatCurrency(lastClosedOrder.total)}
                       </p>
-                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-white/50"}`}>
-                        Toque para reimprimir
+                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                        {printing ? "Imprimindo..." : "Toque para reimprimir"}
                       </p>
                     </button>
                   </div>
                 ) : stagingCart.length === 0 ? (
-                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-white/50"}`}>
+                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Toque nos produtos para adicionar</p>
                     {activeTable && committedTotal > 0 && (
@@ -1473,7 +1593,7 @@ export default function CaixaPOSPage() {
                       <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#1a3a5c]" : "bg-zinc-50"}`}>
                         <div className="flex-1 min-w-0">
                           <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.name}</p>
-                          <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-white/40"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
+                          <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)} x {item.quantity}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
@@ -1503,7 +1623,8 @@ export default function CaixaPOSPage() {
               </div>
 
               {/* Summary */}
-              <div className={`border-t px-4 py-3 ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
+              {/* F8A-015: padding extra para a home-indicator do iOS em PWA */}
+              <div className={`border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-zinc-50"}`}>
                 <div className="mb-3 flex items-center justify-between">
                   <span className={`text-sm font-medium ${darkMode ? "text-white/70" : "text-zinc-700"}`}>Total</span>
                   <span className="text-xl font-bold text-green-500">{formatCurrency(cartTotal)}</span>
@@ -1547,7 +1668,7 @@ export default function CaixaPOSPage() {
                       className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
                         payment === p.value
                           ? p.activeColor
-                          : darkMode ? "border-white/[.08] text-white/50" : "border-zinc-200 text-white/40"
+                          : darkMode ? "border-white/[.08] text-white/50" : "border-zinc-200 text-white/60"
                       }`}
                     >
                       <p.icon className="h-3 w-3" />
@@ -1571,12 +1692,15 @@ export default function CaixaPOSPage() {
                       <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        enterKeyHint="done"
                         step="0.01"
                         min="0"
                         placeholder="R$ 0,00"
+                        aria-label="Valor recebido pelo cliente"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/30" : "border-green-200 bg-white text-green-700"}`}
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/50" : "border-green-200 bg-white text-green-700"}`}
                         autoFocus
                       />
                     </div>
@@ -1587,7 +1711,7 @@ export default function CaixaPOSPage() {
                           onClick={() => setCashReceived(String(v))}
                           className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
                         >
-                          {v === cartTotal ? "Valor exato" : `R$ ${v}`}
+                          {v === cartTotal ? "Valor exato" : formatCurrency(v)}
                         </button>
                       ))}
                     </div>
@@ -1600,16 +1724,7 @@ export default function CaixaPOSPage() {
                 )}
 
                 <button
-                  onClick={() => {
-                    if (payment === "cash" && !activeTable) {
-                      if (!cashReceived || parseFloat(cashReceived) < cartTotal) {
-                        if (!cashReceived) setCashReceived(String(cartTotal))
-                        document.querySelector<HTMLInputElement>('input[placeholder="R$ 0,00"]')?.focus()
-                        return
-                      }
-                    }
-                    finalizeSale()
-                  }}
+                  onClick={finalizeSaleClick}
                   disabled={closing || stagingCart.length === 0 || (!cashRegister && !activeTable)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
                 >
@@ -1640,17 +1755,18 @@ export default function CaixaPOSPage() {
         <>
           <div className={`flex flex-1 overflow-hidden`}>
             {/* Tables Grid */}
-            <div className={`flex-1 overflow-auto p-4 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
+            {/* F8A-001: espaço extra no mobile para o botão flutuante da conta */}
+            <div className={`flex-1 overflow-auto p-4 pb-24 lg:pb-4 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Mesas</h2>
                 <div className="flex items-center gap-3">
                   <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"}`}>
                     QR Garcom
                   </button>
-                  <p className={`text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Toque na mesa para atender</p>
+                  <p className={`text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Toque na mesa para atender</p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((num) => {
                   const data = tableData[num] || { cart: [], participants: [] }
                   const tableOrdersTotal = orders
@@ -1664,11 +1780,17 @@ export default function CaixaPOSPage() {
                   const isFullyPaid = total > 0 && remaining <= 0.01
                   const isOccupied = total > 0 || committedCartTotal > 0
                   const hasBillRequest = paymentRequests.some((r: any) => r.tableNumber === num)
-                  const itemCount = data.cart.reduce((s: number, i: any) => s + i.quantity, 0) + orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status)).reduce((s: number, o: any) => { try { const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items; return s + items.reduce((a: number, b: any) => a + b.quantity, 0) } catch { return s } }, 0)
+                  const itemCount = data.cart.reduce((s: number, i: any) => s + i.quantity, 0) + orders.filter((o: any) => o.tableNumber === num && o.orderType === "presencial" && !["delivered", "cancelled"].includes(o.status)).reduce((s: number, o: any) => { try { const items = parseOrderItems(o.items); return s + items.reduce((a: number, b: any) => a + b.quantity, 0) } catch { return s } }, 0)
 
                   return (
                     <div
                       key={num}
+                      // F8D-002: o card de mesa era um <div onClick> — sem
+                      // teclado nem leitor de tela. Mantido como div (há
+                      // botões aninhados) com semântica de botão.
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Mesa ${num}${isOccupied ? " — ocupada" : " — livre"}${hasBillRequest ? " — pedido de conta" : ""}`}
                       className={`relative flex flex-col rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
                         hasBillRequest
                           ? "border-red-500 bg-red-50 shadow-lg dark:border-red-500 dark:bg-red-950"
@@ -1681,6 +1803,12 @@ export default function CaixaPOSPage() {
                           : darkMode ? "border-white/[.08] bg-[#1a3a5c] hover:border-green-500" : "border-zinc-200 bg-white hover:border-green-400"
                       }`}
                       onClick={() => selectTable(num)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          selectTable(num)
+                        }
+                      }}
                     >
                       {/* QR button top-left */}
                       <button
@@ -1718,7 +1846,7 @@ export default function CaixaPOSPage() {
                           hasBillRequest ? "text-red-600 dark:text-red-400"
                           : isActive ? "text-green-700 dark:text-green-300"
                           : isOccupied ? "text-yellow-700 dark:text-yellow-300"
-                          : darkMode ? "text-white/40" : "text-zinc-400"
+                          : darkMode ? "text-white/60" : "text-zinc-500"
                         }`}>{num}</span>
                         {hasBillRequest ? (
                           <span className="mt-2 rounded-full bg-red-100 px-3 py-1 text-xs font-extrabold text-red-700 dark:bg-red-900 dark:text-red-300">Pediu a conta</span>
@@ -1727,10 +1855,10 @@ export default function CaixaPOSPage() {
                             {isFullyPaid ? "Paga" : formatCurrency(total)}
                           </span>
                         ) : (
-                          <span className={`mt-2 text-xs ${darkMode ? "text-white/30" : "text-zinc-500"}`}></span>
+                          <span className={`mt-2 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}></span>
                         )}
                         {isOccupied && !hasBillRequest && itemCount > 0 && (
-                          <span className={`mt-1 text-[10px] ${darkMode ? "text-white/40" : "text-zinc-600"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
+                          <span className={`mt-1 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-600"}`}>{itemCount} {itemCount === 1 ? "item" : "itens"}</span>
                         )}
                         {partialPaid > 0 && remaining > 0.01 && (
                           <span className="mt-1 text-[10px] font-medium text-blue-600">Pago: {formatCurrency(partialPaid)}</span>
@@ -1776,10 +1904,40 @@ export default function CaixaPOSPage() {
                   )
                 })}
               </div>
+
+              {/* F8A-001: conta da mesa em drawer no mobile */}
+              {activeTable !== null && (
+                <button
+                  onClick={() => setCartDrawerOpen(true)}
+                  className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-xl lg:hidden"
+                  aria-label={`Abrir conta da mesa ${activeTable}`}
+                >
+                  <Receipt className="h-5 w-5" aria-hidden="true" />
+                  Mesa {activeTable}
+                </button>
+              )}
             </div>
 
+            {/* F8A-001: backdrop do drawer mobile */}
+            {cartDrawerOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+                onClick={() => setCartDrawerOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+
             {/* Cart Sidebar */}
-            <div className={`flex w-80 flex-col border-l ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-zinc-200 bg-white"}`}>
+            <div
+              role={cartDrawerOpen ? "dialog" : undefined}
+              aria-modal={cartDrawerOpen ? true : undefined}
+              aria-label="Conta da mesa"
+              className={`${
+                cartDrawerOpen
+                  ? "fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] w-full flex-col rounded-t-2xl shadow-2xl"
+                  : "hidden"
+              } lg:static lg:flex lg:h-full lg:w-80 lg:rounded-none lg:shadow-none ${darkMode ? "border-white/[.1] bg-[#1a3a5c]" : "border-l border-zinc-200 bg-white"}`}
+            >
               <div className={`border-b px-4 py-2 ${
                 activeTable
                   ? darkMode ? "border-amber-700 bg-amber-900/30" : "border-amber-200 bg-amber-50"
@@ -1789,24 +1947,34 @@ export default function CaixaPOSPage() {
                   <h2 className={`text-sm font-semibold ${
                     activeTable
                       ? darkMode ? "text-amber-200" : "text-amber-700"
-                      : darkMode ? "text-white/50" : "text-zinc-400"
+                      : darkMode ? "text-white/50" : "text-zinc-500"
                   }`}>
                     {activeTable ? `Mesa ${activeTable}` : "Selecione uma mesa"}
                   </h2>
-                  {activeTable !== null && (
+                  <div className="flex items-center gap-1">
+                    {activeTable !== null && (
+                      <button
+                        onClick={deselectTable}
+                        className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                      >
+                        Trocar mesa
+                      </button>
+                    )}
+                    {/* F8A-001: fechar o drawer no mobile */}
                     <button
-                      onClick={deselectTable}
-                      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                      onClick={() => setCartDrawerOpen(false)}
+                      className={`rounded-lg p-1 lg:hidden ${darkMode ? "text-white/70 hover:bg-[#162e4a]" : "text-zinc-500 hover:bg-zinc-100"}`}
+                      aria-label="Fechar conta da mesa"
                     >
-                      Trocar mesa
+                      <X aria-hidden="true" className="h-5 w-5" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 py-2">
                 {!activeTable ? (
-                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                  <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
                     <ShoppingBag className="mb-2 h-8 w-8" />
                     <p className="text-xs">Selecione uma mesa para ver os itens</p>
                   </div>
@@ -1816,40 +1984,40 @@ export default function CaixaPOSPage() {
                   const orderItems: any[] = []
                   for (const o of tableOrders) {
                     try {
-                      const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items
+                      const items = parseOrderItems(o.items)
                       for (const item of items) orderItems.push({ ...item, orderId: o.id, fromOrder: true })
                     } catch {}
                   }
                   const allItems = [...orderItems, ...localItems]
                   if (allItems.length === 0) return (
-                    <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                    <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
                       <ShoppingBag className="mb-2 h-8 w-8" />
                       <p className="text-xs">Nenhum item nesta mesa</p>
-                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicione itens pelo card da mesa</p>
+                      <p className={`mt-1 text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Adicione itens pelo card da mesa</p>
                     </div>
                   )
                   return (
                     <div className="space-y-2">
                       {orderItems.length > 0 && (
-                        <p className={`text-[10px] font-medium uppercase tracking-wide ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Pedidos enviados</p>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Pedidos enviados</p>
                       )}
                       {orderItems.map((item, idx) => (
                         <div key={`order-${idx}`} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]/60" : "bg-zinc-50/60"}`}>
                           <div className="flex-1 min-w-0">
                             <p className={`truncate text-xs font-medium ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{item.quantity}x {item.name}</p>
-                            <p className={`text-[10px] ${darkMode ? "text-white/30" : "text-zinc-400"}`}>{formatCurrency(item.price)}</p>
+                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
                           </div>
-                          <span className={`text-xs font-bold ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price * item.quantity)}</span>
+                          <span className={`text-xs font-bold ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
                       {localItems.length > 0 && orderItems.length > 0 && (
-                        <p className={`text-[10px] font-medium uppercase tracking-wide pt-1 ${darkMode ? "text-white/30" : "text-zinc-400"}`}>Adicionados agora</p>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide pt-1 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Adicionados agora</p>
                       )}
                       {localItems.map((item) => (
                         <div key={item.productId} className={`flex items-center gap-2 rounded-lg p-2 ${darkMode ? "bg-[#0f2942]" : "bg-zinc-50"}`}>
                           <div className="flex-1 min-w-0">
                             <p className={`truncate text-xs font-medium ${darkMode ? "text-white" : "text-zinc-800"}`}>{item.quantity}x {item.name}</p>
-                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-400"}`}>{formatCurrency(item.price)}</p>
+                            <p className={`text-[10px] ${darkMode ? "text-white/50" : "text-zinc-500"}`}>{formatCurrency(item.price)}</p>
                           </div>
                           <span className={`text-xs font-bold ${darkMode ? "text-white/90" : "text-zinc-700"}`}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
@@ -1907,11 +2075,11 @@ export default function CaixaPOSPage() {
 
       {/* Custom Item Modal */}
       {showCustomItemModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setShowCustomItemModal(false) }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setShowCustomItemModal(false) }}>
           <div className={`w-full max-w-sm rounded-2xl p-5 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className={`text-sm font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Item Avulso</h3>
-              <button onClick={() => setShowCustomItemModal(false)}><X className="h-4 w-4 text-zinc-400" /></button>
+              <button onClick={() => setShowCustomItemModal(false)} aria-label="Fechar" className="flex h-6 w-6 items-center justify-center"><X aria-hidden="true" className="h-4 w-4 text-zinc-500" /></button>
             </div>
             <div className="space-y-3">
               <input
@@ -1920,7 +2088,7 @@ export default function CaixaPOSPage() {
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 autoFocus
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
               />
               <input
                 type="number"
@@ -1928,7 +2096,7 @@ export default function CaixaPOSPage() {
                 placeholder="Preço (R$)"
                 value={customPrice}
                 onChange={(e) => setCustomPrice(e.target.value)}
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/40" : "border-zinc-200 bg-zinc-50"}`}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#0f2942] text-white placeholder:text-white/60" : "border-zinc-200 bg-zinc-50"}`}
               />
               <button
                 onClick={() => { addCustomItem(); setShowCustomItemModal(false) }}
@@ -1944,11 +2112,11 @@ export default function CaixaPOSPage() {
 
       {/* Receipt popup */}
       {showReceipt && lastOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="rounded-2xl bg-white p-6 shadow-2xl w-full max-w-sm">
             <div className="mb-4 text-center">
               <p className="text-3xl font-bold text-green-600">#{lastOrder.orderNumber}</p>
-              <p className="text-sm text-white/40">Pedido gerado com sucesso!</p>
+              <p className="text-sm text-white/60">Pedido gerado com sucesso!</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -1956,9 +2124,10 @@ export default function CaixaPOSPage() {
                   printReceiptPopup(lastOrder)
                   setShowReceipt(false)
                 }}
-                className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700"
+                disabled={printing}
+                className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-60"
               >
-                Imprimir
+                {printing ? "Imprimindo..." : "Imprimir"}
               </button>
               <button
                 onClick={() => {
@@ -1975,14 +2144,14 @@ export default function CaixaPOSPage() {
 
       {/* Cash Register Modal */}
       {showCashRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>
                 {cashRegisterAction === "open" ? "Abrir Caixa" : cashRegisterAction === "close" ? "Fechar Caixa" : "Transferir Caixa"}
               </h3>
-              <button onClick={() => setShowCashRegisterModal(false)} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}`}>
-                <X className="h-5 w-5" />
+              <button onClick={() => setShowCashRegisterModal(false)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
 
@@ -1996,7 +2165,7 @@ export default function CaixaPOSPage() {
                     placeholder="0,00"
                     value={openingAmount}
                     onChange={(e) => setOpeningAmount(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/60" : "border-zinc-200"}`}
                   />
                 </div>
                 <button onClick={openCashRegister} disabled={openRegisterGuard.busy} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50">
@@ -2024,7 +2193,7 @@ export default function CaixaPOSPage() {
                     placeholder="0,00"
                     value={closingAmount}
                     onChange={(e) => setClosingAmount(e.target.value)}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/40" : "border-zinc-200"}`}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none ${darkMode ? "border-white/[.08] bg-[#1a3a5c] text-white placeholder:text-white/60" : "border-zinc-200"}`}
                   />
                 </div>
                 <button onClick={closeCashRegister} disabled={closeRegisterGuard.busy} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
@@ -2078,7 +2247,7 @@ export default function CaixaPOSPage() {
         const customRemaining = remaining - customTotal
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className={`rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden flex flex-col ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
               {/* Header */}
               <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
@@ -2088,8 +2257,8 @@ export default function CaixaPOSPage() {
                   </h3>
                   <p className={`text-xs mt-0.5 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Confirme os itens e a forma de pagamento</p>
                 </div>
-                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"} rounded-lg p-1`}>
-                  <X className="h-5 w-5" />
+                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`rounded-lg p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                  <X aria-hidden="true" className="h-5 w-5" />
                 </button>
               </div>
 
@@ -2097,12 +2266,12 @@ export default function CaixaPOSPage() {
                 {/* Summary */}
                 <div className={`rounded-xl border p-4 space-y-1.5 ${darkMode ? "bg-white/5 border-white/10" : "bg-zinc-50 border-zinc-200"}`}>
                   <div className="flex justify-between text-sm">
-                    <span className={darkMode ? "text-white/40" : "text-zinc-500"}>Subtotal</span>
+                    <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Subtotal</span>
                     <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(subtotal)}</span>
                   </div>
                   {serviceTax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className={darkMode ? "text-white/40" : "text-zinc-500"}>Taxa de serviço ({serviceTaxConfig.type === "percent" ? `${serviceTaxConfig.value}%` : "fixo"})</span>
+                      <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Taxa de serviço ({serviceTaxConfig.type === "percent" ? `${serviceTaxConfig.value}%` : "fixo"})</span>
                       <span className={`font-medium ${darkMode ? "text-white" : "text-zinc-700"}`}>{formatCurrency(serviceTax)}</span>
                     </div>
                   )}
@@ -2120,8 +2289,8 @@ export default function CaixaPOSPage() {
 
                 {/* Mode selector */}
                 <div>
-                  <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Forma de cobrança</p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de cobrança</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
                       { id: "single", label: "Pagamento único", icon: "💳" },
                       { id: "split", label: "Dividir igual", icon: "➗" },
@@ -2146,7 +2315,7 @@ export default function CaixaPOSPage() {
                 {/* Mode: Single payment */}
                 {closeTableMode === "single" && (
                   <div>
-                    <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Forma de pagamento</p>
+                    <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
                     <div className="flex gap-2">
                       {[
                         { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2185,12 +2354,15 @@ export default function CaixaPOSPage() {
                       <label className={`text-xs font-medium mb-1 block ${darkMode ? "text-white/70" : "text-zinc-600"}`}>Valor recebido pelo cliente</label>
                       <input
                         type="number"
+                        inputMode="decimal"
+                        enterKeyHint="done"
                         step="0.01"
                         min="0"
                         placeholder="R$ 0,00"
+                        aria-label="Valor recebido pelo cliente"
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
-                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/30" : "border-green-200 bg-white text-green-700"}`}
+                        className={`w-full rounded-lg border-2 px-3 py-2 text-lg font-bold focus:border-green-500 focus:outline-none ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 placeholder:text-white/50" : "border-green-200 bg-white text-green-700"}`}
                         autoFocus
                       />
                     </div>
@@ -2201,7 +2373,7 @@ export default function CaixaPOSPage() {
                           onClick={() => setCashReceived(String(v))}
                           className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors ${darkMode ? "border-green-500/50 bg-[#0d2137] text-green-400 hover:bg-green-900/50" : "border-green-200 bg-white text-green-700 hover:bg-green-100"}`}
                         >
-                          {v === remaining ? "Valor exato" : `R$ ${v}`}
+                          {v === remaining ? "Valor exato" : formatCurrency(v)}
                         </button>
                       ))}
                     </div>
@@ -2217,7 +2389,7 @@ export default function CaixaPOSPage() {
                 {closeTableMode === "split" && (
                   <div className="space-y-3">
                     <div>
-                      <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Quantas pessoas?</label>
+                      <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Quantas pessoas?</label>
                       <input
                         type="number"
                         min="2"
@@ -2246,12 +2418,12 @@ export default function CaixaPOSPage() {
                             {splitPersonStep + 1}ª pessoa de {splitCount}
                           </p>
                           <p className="text-3xl font-extrabold text-green-600">{formatCurrency(splitValue)}</p>
-                          <p className="text-xs text-zinc-400 mt-1">{splitCount} pessoas × {formatCurrency(splitValue)} = {formatCurrency(remaining)}</p>
+                          <p className="text-xs text-zinc-500 mt-1">{splitCount} pessoas × {formatCurrency(splitValue)} = {formatCurrency(remaining)}</p>
                         </div>
                       </>
                     )}
                     <div>
-                      <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Forma de pagamento</p>
+                      <p className={`text-xs font-semibold mb-2 uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
                       <div className="flex gap-2">
                         {[
                           { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2307,8 +2479,8 @@ export default function CaixaPOSPage() {
                 {closeTableMode === "custom" && (
                   <div className="space-y-3">
                     {/* Step indicator */}
-                    <div className={`flex items-center justify-center gap-2 text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
-                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= Object.keys(eachPersonSelections).length ? "text-green-600" : "text-white/30"}`}>
+                    <div className={`flex items-center justify-center gap-2 text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
+                      <span className={`font-bold text-green-600 ${eachPersonStep + 1 <= Object.keys(eachPersonSelections).length ? "text-green-600" : darkMode ? "text-white/50" : "text-zinc-500"}`}>
                         Pessoa {eachPersonStep + 1}
                       </span>
                       <span>·</span>
@@ -2352,7 +2524,7 @@ export default function CaixaPOSPage() {
                                 >
                                   -
                                 </button>
-                                <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : darkMode ? "text-white/60" : "text-zinc-400"}`}>
+                                <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : darkMode ? "text-white/60" : "text-zinc-500"}`}>
                                   {selectedQty}/{maxQty}
                                 </span>
                                 <button
@@ -2391,7 +2563,7 @@ export default function CaixaPOSPage() {
                                 className={`flex h-7 w-7 items-center justify-center rounded-lg border-2 text-xs font-bold transition-all ${
                                   isSelected
                                     ? "border-green-500 bg-green-600 text-white"
-                                    : darkMode ? "border-white/20 text-white/40" : "border-zinc-300 text-zinc-400"
+                                    : darkMode ? "border-white/20 text-white/60" : "border-zinc-300 text-zinc-500"
                                 }`}
                               >
                                 {isSelected ? "✓" : ""}
@@ -2496,12 +2668,12 @@ export default function CaixaPOSPage() {
                 {/* Orders summary */}
                 {(pendingOrders.length > 0 || allTableItems.length > 0) && (
                   <details className={`rounded-xl border ${darkMode ? "border-white/10" : "border-zinc-200"}`}>
-                    <summary className={`px-4 py-3 text-xs font-semibold cursor-pointer uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>
+                    <summary className={`px-4 py-3 text-xs font-semibold cursor-pointer uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
                       Ver detalhes ({pendingOrders.length + allTableItems.length} itens)
                     </summary>
                     <div className={`px-4 pb-4 space-y-2 text-sm ${darkMode ? "text-white/60" : "text-zinc-600"}`}>
                       {pendingOrders.map((o: any) => {
-                        const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items
+                        const items = parseOrderItems(o.items)
                         return (
                           <div key={o.id} className={`flex justify-between py-1 border-b ${darkMode ? "border-white/10" : "border-zinc-100"}`}>
                             <span className="text-zinc-600">{items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}</span>
@@ -2571,29 +2743,32 @@ export default function CaixaPOSPage() {
         const alreadyPaid = tablePartialPaid[abaterModal] || 0
         const remainingAbater = total - alreadyPaid
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className={`rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-zinc-900">Abater valor</h3>
                   <p className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Mesa {abaterModal} · Mesa continua aberta</p>
                 </div>
-                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}`}>
-                  <X className="h-5 w-5" />
+                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                  <X aria-hidden="true" className="h-5 w-5" />
                 </button>
               </div>
 
               <div className={`rounded-xl border p-3 flex justify-between text-sm ${darkMode ? "bg-white/5 border-white/10" : "bg-zinc-50 border-zinc-200"}`}>
-                <span className={darkMode ? "text-white/40" : "text-zinc-500"}>Restante na mesa</span>
+                <span className={darkMode ? "text-white/60" : "text-zinc-500"}>Restante na mesa</span>
                 <span className={`font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>{formatCurrency(remainingAbater)}</span>
               </div>
 
               <div>
-                <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Valor a abater</label>
+                <label className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Valor a abater</label>
                 <input
                   type="number"
+                  inputMode="decimal"
+                  enterKeyHint="done"
                   step="0.01"
                   placeholder="R$ 0,00"
+                  aria-label="Valor a abater"
                   value={abaterAmount}
                   onChange={(e) => setAbaterAmount(e.target.value)}
                   className={`mt-1 w-full rounded-xl border-2 px-4 py-3 text-2xl font-bold text-center focus:border-green-500 focus:outline-none ${darkMode ? "border-white/10 bg-white/5 text-white" : "border-zinc-200 text-zinc-900"}`}
@@ -2607,7 +2782,7 @@ export default function CaixaPOSPage() {
               </div>
 
               <div>
-                <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Forma de pagamento</p>
+                <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</p>
                 <div className="flex gap-2">
                   {[
                     { value: "cash", label: "Dinheiro", icon: Banknote },
@@ -2647,12 +2822,12 @@ export default function CaixaPOSPage() {
 
       {/* Table QR Modal */}
       {tableQRModal && tableQRNumber !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTableQRModal(false) }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTableQRModal(false) }}>
           <div className={`rounded-2xl p-6 text-center shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>QR Code · Mesa {tableQRNumber}</h3>
-              <button onClick={() => setTableQRModal(false)} className={darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}>
-                <X className="h-5 w-5" />
+              <button onClick={() => setTableQRModal(false)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
             <p className={`text-xs mb-4 ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escaneie para ver o cardápio da mesa</p>
@@ -2663,7 +2838,7 @@ export default function CaixaPOSPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
               </div>
             )}
-            <p className={`mt-3 text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>{user?.establishment?.slug}/mesa/{tableQRNumber}</p>
+            <p className={`mt-3 text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{user?.establishment?.slug}/mesa/{tableQRNumber}</p>
             <a
               href={tableQrCodes[tableQRNumber] ? tableQrCodes[tableQRNumber].replace("image/png", "image/octet-stream") : "#"}
               download={`mesa-${tableQRNumber}-qr.png`}
@@ -2677,18 +2852,18 @@ export default function CaixaPOSPage() {
 
       {/* Transfer Table Modal */}
       {transferModal !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTransferModal(null) }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setTransferModal(null) }}>
           <div className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>Transferir Mesa {transferModal}</h3>
                 <p className={`text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escolha a mesa destino</p>
               </div>
-              <button onClick={() => setTransferModal(null)} className={darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}>
-                <X className="h-5 w-5" />
+              <button onClick={() => setTransferModal(null)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {Array.from({ length: tableCount }, (_, i) => i + 1).filter(t => t !== transferModal).map(t => {
                 const tData = tableData[t]
                 const tCart = tData?.cart || []
@@ -2706,9 +2881,13 @@ export default function CaixaPOSPage() {
                       updated[targetNum] = { cart: merged, participants: target.participants || [] }
                       updated[sourceNum] = { cart: [], participants: [] }
                       setTableData(updated)
-                      const saved = JSON.parse(localStorage.getItem(`pedefacil-tables-${user!.establishmentId}`) || "{}")
+                      const saved = readStorage<any>(
+                        `pedefacil-tables-${user!.establishmentId}`,
+                        `pedefacil-tables-${user!.establishmentId}`,
+                        {}
+                      )
                       saved.tableData = updated
-                      localStorage.setItem(`pedefacil-tables-${user!.establishmentId}`, JSON.stringify(saved))
+                      writeStorage(`pedefacil-tables-${user!.establishmentId}`, saved)
                       // Transfer orders in database
                       let serverOk = true
                       try {
@@ -2736,7 +2915,7 @@ export default function CaixaPOSPage() {
                 )
               })}
             </div>
-            <p className={`mt-3 text-xs text-center ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Mesas ocupadas aparecem em amarelo</p>
+            <p className={`mt-3 text-xs text-center ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Mesas ocupadas aparecem em amarelo</p>
           </div>
         </div>
       )}
@@ -2757,19 +2936,19 @@ export default function CaixaPOSPage() {
 
       {/* Staff QR Code Modal */}
       {showStaffQr && staffQrImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowStaffQr(false) }}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowStaffQr(false) }}>
           <div className={`rounded-2xl p-6 text-center shadow-2xl ${darkMode ? "bg-[#1a3a5c]" : "bg-white"}`}>
             <p className={`mb-1 text-sm font-bold ${darkMode ? "text-white" : "text-zinc-900"}`}>QR Code — Garcom</p>
-            <p className={`mb-4 text-xs ${darkMode ? "text-white/50" : "text-white/40"}`}>Escaneie com o celular do garcom</p>
+            <p className={`mb-4 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>Escaneie com o celular do garcom</p>
             <img src={staffQrImage} alt="QR Code Garcom" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
-            <p className={`mt-3 text-[10px] ${darkMode ? "text-white/40" : "text-white/50"}`}>{`/{${user?.establishment?.slug}}/staff`}</p>
+            <p className={`mt-3 text-[10px] ${darkMode ? "text-white/60" : "text-zinc-500"}`}>{`/{${user?.establishment?.slug}}/staff`}</p>
             <button onClick={() => setShowStaffQr(false)} className={`mt-4 rounded-xl px-6 py-2 text-sm font-bold ${darkMode ? "bg-[#1a3a5c] text-white/70 hover:bg-[#162e4a]" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}>
               Fechar
             </button>
           </div>
         </div>
       )}
-    </div>
+    </main>
   )
 }
 
@@ -2830,6 +3009,16 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
     onRefresh()
   }
 
+  // F8D-018: o modal de pagamento externo não fechava com Escape
+  useEffect(() => {
+    if (!payModalOrder) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPayModalOrder(null)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [payModalOrder])
+
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="mb-4 flex gap-2">
@@ -2873,7 +3062,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
       </div>
 
       {activeOrders.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-white/50"}`}>
+        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
           <Package className="mb-2 h-8 w-8" />
           <p className="text-sm">
             {filter === "all" ? "Nenhum pedido ativo" :
@@ -2886,7 +3075,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
       ) : (
         <div className="space-y-3">
           {activeOrders.map((order) => {
-            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+            const items = parseOrderItems(order.items)
             const isPickup = order.orderType === "pickup"
             const isDelivery = order.orderType === "delivery"
             const hasMotoboy = !!order.deliveryPersonId
@@ -2924,7 +3113,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                         {order.orderType === "dineIn" ? "No local" : isPickup ? "Retirada" : "Entrega"}
                       </span>
                     </div>
-                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-white/40"}`}>
+                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
                       {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                     </div>
                     <div className="mt-1 flex items-center gap-2">
@@ -2952,7 +3141,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                       {(order.paymentMethod === "online" || order.paymentMethod === "asaas") ? (
                         <button
                           onClick={() => updateStatus(order.id, "delivered")}
-                          className="rounded-lg bg-green-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-600"
+                          className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-600"
                         >
                           Entregar Pedido
                         </button>
@@ -2974,12 +3163,12 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
       )}
 
       {payModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm ${darkMode ? "bg-[#0d2137] text-white" : "bg-white text-zinc-900"}`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-zinc-900">Pagar Pedido #{payModalOrder.orderNumber}</h3>
-              <button onClick={() => setPayModalOrder(null)} className={`${darkMode ? "text-white/50 hover:text-white" : "text-zinc-400 hover:text-zinc-600"}`}>
-                <X className="h-5 w-5" />
+              <button onClick={() => setPayModalOrder(null)} className={`p-1 ${darkMode ? "text-white/50 hover:text-white" : "text-zinc-500 hover:text-zinc-600"}`} aria-label="Fechar">
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-3">
@@ -2988,7 +3177,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh, darkMo
                 <p className="text-lg font-bold text-green-600">{formatCurrency(payModalOrder.total)}</p>
               </div>
               <div>
-                <label className={`text-xs ${darkMode ? "text-white/40" : "text-zinc-400"}`}>Forma de pagamento</label>
+                <label className={`text-xs ${darkMode ? "text-white/60" : "text-zinc-500"}`}>Forma de pagamento</label>
                 <div className="flex gap-2 mt-1">
                   {[
                     { value: "cash", label: "Dinheiro" },
@@ -3071,7 +3260,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
       </div>
 
       {balcaoOrders.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/40" : "text-white/50"}`}>
+        <div className={`flex flex-col items-center justify-center py-12 ${darkMode ? "text-white/60" : "text-zinc-500"}`}>
           <Store className="mb-2 h-8 w-8" />
           <p className="text-sm">
             {filter === "delivered" ? "Nenhum pedido entregue hoje" :
@@ -3083,7 +3272,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
       ) : (
         <div className="space-y-3">
           {balcaoOrders.map((order) => {
-            const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+            const items = parseOrderItems(order.items)
             const isTable = order.tableNumber !== null
             const tableLabel = isTable ? `Mesa ${order.tableNumber}` : null
 
@@ -3113,7 +3302,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh, darkMode }: { orders: a
                         </span>
                       )}
                     </div>
-                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-white/40"}`}>
+                    <div className={`mt-1 text-xs ${darkMode ? "text-white/50" : "text-zinc-500"}`}>
                       {items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")}
                     </div>
                     <p className="mt-1 text-sm font-bold text-green-600">{formatCurrency(order.total)}</p>

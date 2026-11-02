@@ -239,7 +239,7 @@ export default function UsuariosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Usuários</h2>
+        <h1 className="text-2xl font-bold text-zinc-900">Usuários</h1>
         <Button onClick={openNew}>
           <Plus className="mr-1 h-4 w-4" />
           Novo Usuário
@@ -250,7 +250,7 @@ export default function UsuariosPage() {
         <div className="rounded-xl border border-dashed border-white/[.08] p-12 text-center">
           <Users className="mx-auto h-8 w-8 text-zinc-700" />
           <p className="mt-2 text-sm text-zinc-500">Nenhum usuário cadastrado</p>
-          <p className="text-xs text-zinc-400">Crie o primeiro atendente para começar</p>
+          <p className="text-xs text-zinc-500">Crie o primeiro atendente para começar</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -278,10 +278,10 @@ export default function UsuariosPage() {
                       <p className="text-xs text-zinc-500">{user.email}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-green-600 hover:text-green-600" : "text-zinc-400 hover:text-zinc-400"}`}>
+                      <button onClick={() => toggleActive(user)} className={`rounded p-1 ${user.isActive ? "text-green-600 hover:text-green-600" : "text-zinc-500 hover:text-zinc-500"}`}>
                         <Check className="h-4 w-4" />
                       </button>
-                      <button onClick={() => openEdit(user)} className="rounded p-1 text-zinc-400 hover:text-zinc-400">
+                      <button onClick={() => openEdit(user)} className="rounded p-1 text-zinc-500 hover:text-zinc-500">
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button onClick={() => handleDeleteUser(user)} className="rounded p-1 text-red-400 hover:text-red-400">
@@ -310,12 +310,12 @@ export default function UsuariosPage() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-lg">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{editingUser ? "Editar Usuário" : "Novo Usuário"}</h3>
-                <button onClick={() => setShowForm(false)}>
+                <h2 className="text-lg font-semibold">{editingUser ? "Editar Usuário" : "Novo Usuário"}</h2>
+                <button onClick={() => setShowForm(false)} aria-label="Fechar">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -327,7 +327,7 @@ export default function UsuariosPage() {
                     placeholder="Nome do usuário"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -337,7 +337,7 @@ export default function UsuariosPage() {
                     placeholder="email@exemplo.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -347,10 +347,10 @@ export default function UsuariosPage() {
                     placeholder={editingUser ? "Deixe vazio para manter" : "Mínimo 6 caracteres"}
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                   {!editingUser && (
-                    <p className="mt-1 text-xs text-zinc-400">
+                    <p className="mt-1 text-xs text-zinc-500">
                       O usuário deverá trocar a senha no primeiro login
                     </p>
                   )}
@@ -367,7 +367,7 @@ export default function UsuariosPage() {
                         className={`flex-1 rounded-lg border p-2 text-sm font-medium transition-colors ${
                           form.role === value
                             ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                            : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                            : "border-zinc-200 text-zinc-500 hover:bg-zinc-100"
                         }`}
                       >
                         {label}
@@ -385,7 +385,7 @@ export default function UsuariosPage() {
                         placeholder="motoboy@email.com"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -394,7 +394,7 @@ export default function UsuariosPage() {
                         placeholder="11999999999"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                   </>
@@ -403,7 +403,7 @@ export default function UsuariosPage() {
                 {form.role !== "motoboy" && (
                   <div>
                     <label className="mb-2 block text-sm font-medium text-zinc-700">Permissões</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {ALL_PERMISSIONS.map((perm) => (
                         <button
                           key={perm.value}
@@ -412,7 +412,7 @@ export default function UsuariosPage() {
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.permissions.includes(perm.value)
                               ? "border-[#FF6B35] bg-[#FFF0E6] text-[#FF6B35]"
-                              : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                              : "border-zinc-200 text-zinc-500 hover:bg-zinc-100"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${
@@ -424,7 +424,7 @@ export default function UsuariosPage() {
                           </div>
                           <div>
                             <p className="font-medium">{perm.label}</p>
-                            <p className="text-[10px] text-zinc-400">{perm.desc}</p>
+                            <p className="text-[10px] text-zinc-500">{perm.desc}</p>
                           </div>
                         </button>
                       ))}
@@ -435,7 +435,7 @@ export default function UsuariosPage() {
                           className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors ${
                             form.canCloseRegister
                               ? "border-amber-400 bg-amber-500/10 text-amber-400"
-                              : "border-zinc-200 text-zinc-400 hover:bg-zinc-100"
+                              : "border-zinc-200 text-zinc-500 hover:bg-zinc-100"
                           }`}
                         >
                           <div className={`flex h-4 w-4 items-center justify-center rounded border ${
@@ -447,13 +447,13 @@ export default function UsuariosPage() {
                           </div>
                           <div>
                             <p className="font-medium">Fecha Caixa</p>
-                            <p className="text-[10px] text-zinc-400">Fechar e transferir</p>
+                            <p className="text-[10px] text-zinc-500">Fechar e transferir</p>
                           </div>
                         </button>
                       )}
                     </div>
                     {form.role === "admin" && (
-                      <p className="mt-2 text-xs text-zinc-400">
+                      <p className="mt-2 text-xs text-zinc-500">
                         Administradores podem ter todas as permissões ou apenas algumas
                       </p>
                     )}

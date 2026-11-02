@@ -27,9 +27,25 @@
     @apply bg-white text-zinc-900 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
+
+  /* F8D-016: foco sempre visível na navegação por teclado.
+     O !important vence as classes `focus:outline-none` do Tailwind, que
+     deixavam 16 campos do cardápio sem qualquer indicação de foco. */
+  :focus-visible {
+    outline: 2px solid #1E7BFF !important;
+    outline-offset: 2px !important;
+  }
 }
 
 @layer components {
+  /* F8D-013: a classe era usada no cardápio (selos "Mais pedido", "Novo",
+     "% OFF") sem existir no CSS — o texto branco ficava sobre fundo branco. */
+  .badge-fire {
+    background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+    color: #ffffff;
+    font-weight: 700;
+  }
+
   .glass {
     background: rgba(255,255,255,.03);
     backdrop-filter: blur(20px);
@@ -206,4 +222,16 @@
 .animate-slide-in {
   animation: slide-in-bottom 0.4s ease-out forwards;
   opacity: 0;
+}
+
+/* F8D-030: respeita a preferência do sistema por menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

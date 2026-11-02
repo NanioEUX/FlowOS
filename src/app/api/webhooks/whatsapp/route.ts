@@ -15,6 +15,7 @@ import {
   detectTransferIntent,
 } from "@/lib/whatsapp/bot-rules"
 import { timingSafeEqualStr, verifyHmacSha256 } from "@/lib/webhook-signature"
+import { INTERNAL_CALL_HEADER, signInternalCall } from "@/lib/internal-call"
 
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || "flowos-meta-verify"
 const META_APP_SECRET = process.env.META_APP_SECRET || ""
@@ -474,7 +475,13 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
                   try {
                     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000"}/api/bot/create-order`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
+                      headers: {
+                        "Content-Type": "application/json",
+                        // F1A-003: token da chamada interna (HMAC do JWT_SECRET)
+                        ...(signInternalCall(establishment.id)
+                          ? { [INTERNAL_CALL_HEADER]: signInternalCall(establishment.id)! }
+                          : {}),
+                      },
                       body: JSON.stringify({
                         establishmentId: establishment.id,
                         ...args,

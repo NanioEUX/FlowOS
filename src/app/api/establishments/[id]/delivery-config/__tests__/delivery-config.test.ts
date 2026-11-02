@@ -7,12 +7,9 @@ const mockPrisma = vi.hoisted(() => ({
 const mockJwtVerify = vi.hoisted(() => vi.fn())
 
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }))
-vi.mock("jose", () => ({ jwtVerify: (...args: any[]) => mockJwtVerify(...args) }))
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(() => ({
-    get: vi.fn(() => ({ value: "test-token" })),
-  })),
-}))
+// F1B-002/F5B-004: a rota agora usa `requireEstablishment` (mesmo validador do
+// resto do app). O teste injeta o JWT pelo header Authorization.
+vi.mock("jsonwebtoken", () => ({ default: { verify: (...args: any[]) => mockJwtVerify(...args) } }))
 vi.mock("@/lib/integrations/nine-nine", () => ({
   validarCredenciais99: vi.fn(),
 }))
@@ -20,14 +17,19 @@ vi.mock("@/lib/integrations/nine-nine", () => ({
 import { validarCredenciais99 } from "@/lib/integrations/nine-nine"
 import { GET, PUT } from "../route"
 
+const AUTH_HEADERS = { Authorization: "Bearer test-token" }
+
 function makeGetRequest() {
-  return new Request("http://localhost/api/establishments/est-1/delivery-config", { method: "GET" })
+  return new Request("http://localhost/api/establishments/est-1/delivery-config", {
+    method: "GET",
+    headers: AUTH_HEADERS,
+  })
 }
 
 function makePutRequest(body: any) {
   return new Request("http://localhost/api/establishments/est-1/delivery-config", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...AUTH_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
 }
@@ -37,13 +39,20 @@ const params = { params: { id: "est-1" } }
 describe("GET /api/establishments/[id]/delivery-config", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockJwtVerify.mockResolvedValue({ payload: { establishmentId: "est-1" } })
+    mockJwtVerify.mockReturnValue({ userId: "user-1", establishmentId: "est-1", role: "admin" })
   })
 
   it("retorna 401 sem autenticação", async () => {
-    mockJwtVerify.mockRejectedValue(new Error("invalid token"))
+    mockJwtVerify.mockImplementation(() => { throw new Error("invalid token") })
     const res = await GET(makeGetRequest(), params)
     expect(res.status).toBe(401)
+  })
+
+  it("retorna 403 quando o token é de outra loja (F1B-002)", async () => {
+    mockJwtVerify.mockReturnValue({ userId: "user-2", establishmentId: "outra-loja", role: "admin" })
+    const res = await GET(makeGetRequest(), params)
+    expect(res.status).toBe(403)
+    expect(mockPrisma.establishment.findUnique).not.toHaveBeenCalled()
   })
 
   it("retorna 404 quando estabelecimento não existe", async () => {
@@ -63,21 +72,30 @@ describe("GET /api/establishments/[id]/delivery-config", () => {
 
     expect(res.status).toBe(200)
     expect(data.tipoEntregaAtiva).toBe("99entrega")
-    expect(data.api99Key).toBe("key")
-    expect(data.api99EmployeeId).toBe("emp-1")
+    // F1C-002: a chave da 99 é credencial — só devolvemos o estado
+    expect(data.api99Configured).toBe(true)
+    expect(data.api99Key).toBeUndefined()
+    expect(data.api99EmployeeId).toBeUndefined()
   })
 })
 
 describe("PUT /api/establishments/[id]/delivery-config", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockJwtVerify.mockResolvedValue({ payload: { establishmentId: "est-1" } })
+    mockJwtVerify.mockReturnValue({ userId: "user-1", establishmentId: "est-1", role: "admin" })
   })
 
   it("retorna 401 sem autenticação", async () => {
-    mockJwtVerify.mockRejectedValue(new Error("invalid token"))
+    mockJwtVerify.mockImplementation(() => { throw new Error("invalid token") })
     const res = await PUT(makePutRequest({ tipoEntregaAtiva: "99entrega", api99Key: "k", api99EmployeeId: "e" }), params)
     expect(res.status).toBe(401)
+  })
+
+  it("retorna 403 quando o token é de outra loja (F1B-002)", async () => {
+    mockJwtVerify.mockReturnValue({ userId: "user-2", establishmentId: "outra-loja", role: "admin" })
+    const res = await PUT(makePutRequest({ tipoEntregaAtiva: "99entrega", api99Key: "k", api99EmployeeId: "e" }), params)
+    expect(res.status).toBe(403)
+    expect(mockPrisma.establishment.update).not.toHaveBeenCalled()
   })
 
   it("retorna 400 quando ativa 99entrega sem credenciais", async () => {

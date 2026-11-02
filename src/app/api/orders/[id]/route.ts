@@ -8,11 +8,14 @@ import { randomTypingDelay } from "@/lib/whatsapp/bot-rules"
 import { restoreOrderStock } from "@/lib/stock"
 import { canTransition, isValidStatus, isRoleAllowedToSetStatus } from "@/lib/order-transitions"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const requestId = getRequestId(req)
+  const id = params.id
   try {
     const auth = verifyAuth(req)
     const body = await req.json().catch(() => ({} as any))
@@ -299,7 +302,7 @@ export async function PATCH(
         }
         }
       } catch (err) {
-        console.error("iFood status sync error:", err)
+        logger.error("orders-patch", "falha ao sincronizar status do iFood", { requestId, orderId: id, error: (err as any)?.message })
       }
     }
 
@@ -336,7 +339,7 @@ export async function PATCH(
           }
         }
       } catch (err) {
-        console.error("99Food status sync error:", err)
+        logger.error("orders-patch", "falha ao sincronizar status do 99Food", { requestId, orderId: id, error: (err as any)?.message })
       }
     }
 
@@ -388,11 +391,11 @@ export async function PATCH(
             })
             console.log("[99 dispatch] corrida despachada:", { orderId: order.id, rideId: result.rideId })
           } else {
-            console.error("[99 dispatch] falha ao despachar:", result.error)
+            logger.error("orders-patch", "falha ao despachar corrida na 99", { requestId, orderId: id, error: result?.error })
           }
         }
       } catch (err) {
-        console.error("[99 dispatch] error:", err)
+        logger.error("orders-patch", "erro ao despachar corrida na 99", { requestId, orderId: id, error: (err as any)?.message })
       }
     }
 
@@ -421,7 +424,7 @@ export async function PATCH(
           }
         }
       } catch (autoErr: any) {
-        console.error("auto-assign delivery person error:", autoErr.message)
+        logger.error("orders-patch", "falha ao atribuir entregante automaticamente", { requestId, orderId: id, error: autoErr?.message })
       }
     }
 
@@ -454,7 +457,7 @@ export async function PATCH(
           },
         })
       } catch (e: any) {
-        console.error("Erro ao criar notificação:", e.message)
+        logger.error("orders-patch", "erro ao criar notificação", { requestId, orderId: id, error: e?.message })
       }
     }
 
@@ -582,7 +585,7 @@ export async function PATCH(
           console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
         }
       } catch (notifyErr: any) {
-        console.error(`[Order PATCH] Falha ao notificar cliente: ${notifyErr.message}`)
+        logger.error("orders-patch", "falha ao notificar cliente", { requestId, orderId: id, error: notifyErr?.message })
       }
     }
 
@@ -631,13 +634,13 @@ export async function PATCH(
           }
         }
       } catch (schedErr: any) {
-        console.error(`[Order] Falha ao notificar agendamento: ${schedErr.message}`)
+        logger.error("orders-patch", "falha ao notificar agendamento", { requestId, orderId: id, error: schedErr?.message })
       }
     }
 
     return NextResponse.json({ success: true, order: updated })
   } catch (error: any) {
-    console.error("[Order PATCH] Error:", error.message)
+    logger.error("orders-patch", "erro ao atualizar o pedido", { requestId, orderId: id, error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar pedido" }, { status: 500 })
   }
 }

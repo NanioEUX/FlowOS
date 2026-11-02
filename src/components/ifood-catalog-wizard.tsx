@@ -190,7 +190,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <CardContent className="p-0 flex flex-col h-full">
           <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
@@ -208,7 +208,7 @@ export function IfoodCatalogWizard({ onClose }: { onClose: () => void }) {
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="rounded-full p-2 text-zinc-400 hover:bg-zinc-100">
+            <button onClick={onClose} className="rounded-full p-2 text-zinc-400 hover:bg-zinc-100" aria-label="Fechar">
               <X className="h-5 w-5" />
             </button>
           </div>

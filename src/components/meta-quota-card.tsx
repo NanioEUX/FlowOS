@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { AlertTriangle, XCircle, ExternalLink, RefreshCw } from "lucide-react"
 import { fetchAuth } from "@/lib/fetch-auth"
+import { formatCurrency } from "@/lib/utils"
 
 interface QuotaData {
   messagingLimit: number
@@ -105,7 +106,7 @@ export function MetaQuotaCard({ establishmentId }: { establishmentId: string }) 
 
       {/* Cost */}
       <p className="text-xs text-zinc-600">
-        💰 Gasto estimado no mês: <strong>R$ {quota.estimatedCost.toFixed(2)}</strong>
+        💰 Gasto estimado no mês: <strong>{formatCurrency(quota.estimatedCost)}</strong>
       </p>
 
       {/* Warning state */}

@@ -1,25 +1,12 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
+import { requireEstablishment } from "@/lib/require-auth"
 import { validarCredenciais99 } from "@/lib/integrations/nine-nine"
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "flowos-secret")
-
-async function getAuth() {
-  const token = cookies().get("auth_token")?.value
-  if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, SECRET)
-    return payload
-  } catch {
-    return null
-  }
-}
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const auth = await getAuth()
-  if (!auth) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  // F1B-002/F5B-004: escopo de tenant obrigatório (403 se o token for de outra loja)
+  const { error } = requireEstablishment(req, params.id)
+  if (error) return error
 
   const establishment = await prisma.establishment.findUnique({
     where: { id: params.id },
@@ -37,12 +24,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: "Não encontrado" }, { status: 404 })
   }
 
-  return NextResponse.json(establishment)
+  // F1C-002: a chave da 99 é credencial — devolve só o estado da configuração.
+  return NextResponse.json({
+    tipoEntregaAtiva: establishment.tipoEntregaAtiva,
+    api99Configured: !!establishment.api99Key && !!establishment.api99EmployeeId,
+    addressLat: establishment.addressLat,
+    addressLng: establishment.addressLng,
+    deliveryRadiusKm: establishment.deliveryRadiusKm,
+  })
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const auth = await getAuth()
-  if (!auth) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  // F1B-002/F5B-004: escopo de tenant obrigatório (403 se o token for de outra loja)
+  const { error } = requireEstablishment(req, params.id)
+  if (error) return error
 
   const body = await req.json()
   const { tipoEntregaAtiva, api99Key, api99EmployeeId } = body
@@ -73,8 +68,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     },
     select: {
       tipoEntregaAtiva: true,
-      api99Key: true,
-      api99EmployeeId: true,
     },
   })
 

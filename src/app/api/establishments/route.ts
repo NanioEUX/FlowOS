@@ -4,6 +4,7 @@ import { slugify } from "@/lib/utils"
 import { verifyAuth } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 // Credenciais do tenant: nunca saem daqui sem JWT do próprio estabelecimento
 // (F6A-001). Dados públicos do cardápio (horário, pix, GPS, cores…) seguem
@@ -41,8 +42,24 @@ const JWT_SECRET = process.env.JWT_SECRET!
 // Menu cache: 60s revalidation (menu rarely changes)
 export const revalidate = 60
 
+function clientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for")
+  if (forwarded) return forwarded.split(",")[0].trim()
+  return req.headers.get("x-real-ip") || "unknown"
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // F1A-007/F7A-009: cadastro é público — sem limite, um script cria
+    //lojas fake (e enche o banco/Supabase). 5 cadastros/hora por IP.
+    const ipLimit = checkRateLimit(`signup-ip:${clientIp(req)}`, 5, 60 * 60 * 1000)
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { error: "Muitas tentativas de cadastro. Tente novamente mais tarde." },
+        { status: 429 }
+      )
+    }
+
     const { name, ownerName, email, password, phone, category, address } = await req.json()
 
     if (!name || !email || !password || !phone) {

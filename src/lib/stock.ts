@@ -292,6 +292,19 @@ async function restoreAdditionalStock(
 /**
  * Restore stock for all items in a cancelled order.
  */
+// F4A-026: o `catch` do `restoreOrderStock` engolia o erro e a transação do
+// chamador seguia — o estoque ficava inconsistente sem nenhuma métrica nem
+// alerta. Agora a falha é contada e exposta no `/api/health`.
+let stockRestoreFailures = 0
+
+export function getStockRestoreFailures(): number {
+  return stockRestoreFailures
+}
+
+export function resetStockRestoreFailures(): void {
+  stockRestoreFailures = 0
+}
+
 export async function restoreOrderStock(
   tx: PrismaTx,
   itemsJson: string,
@@ -327,6 +340,10 @@ export async function restoreOrderStock(
       }
     }
   } catch (e) {
-    console.error("[restoreOrderStock] error:", e)
+    stockRestoreFailures++
+    console.error(
+      `[restoreOrderStock] FALHA ao estornar estoque (orderId=${orderId}, establishmentId=${establishmentId}):`,
+      e
+    )
   }
 }

@@ -167,7 +167,14 @@ export async function createPixTransaction({
   }
 
   console.log("[Pagar.me] Criando transação PIX:", { customerId, amount, orderId })
-  console.log("[Pagar.me] Request body:", JSON.stringify(body))
+  // F4A-014: o body do PIX carrega CPF/telefone/email do cliente — log só o
+  // essencial (sem PII).
+  console.log("[Pagar.me] Body PIX (redigido):", {
+    amount,
+    customerId,
+    items: body.items?.length ?? 0,
+    codeLength: body.code?.length ?? 0,
+  })
 
   const res = await fetchExternal(`${PAGARME_API_URL}/orders`, {
     method: "POST",
@@ -408,7 +415,14 @@ export async function createCardTransaction({
       : (Array.isArray(data.errors) ? data.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ") : "")
     const errMsg = fieldErrors || data.message || JSON.stringify(data)
     console.error("[Pagar.me] FALHA transação cartão:", errMsg)
-    console.error("[Pagar.me] Request body enviado:", JSON.stringify(body).substring(0, 1000))
+    // F9D-001: o body contém PAN/CVV — NUNCA pode ir para o log (Vercel).
+    // Logamos só o que diagnostica, sem dado de cartão.
+    console.error("[Pagar.me] Transação cartão recusada pelo gateway", {
+      customerId,
+      amount,
+      installments: installments || 1,
+      code: data.errors ? Object.keys(data.errors).join(",") : undefined,
+    })
     throw new Error(`Falha ao criar transação cartão: ${errMsg}`)
   }
 

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { formatCurrency } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -35,18 +36,18 @@ export default async function EstabelecimentosPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-xl border border-zinc-200 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-200">
             <tr className="text-left text-zinc-500 uppercase text-xs">
-              <th className="py-3 px-4">Nome</th>
-              <th className="py-3 px-4">Categoria</th>
-              <th className="py-3 px-4">Plano</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">WhatsApp</th>
-              <th className="py-3 px-4">IA (mês)</th>
-              <th className="py-3 px-4">Pedidos</th>
-              <th className="py-3 px-4">Cadastro</th>
+              <th scope="col" className="py-3 px-4">Nome</th>
+              <th scope="col" className="py-3 px-4">Categoria</th>
+              <th scope="col" className="py-3 px-4">Plano</th>
+              <th scope="col" className="py-3 px-4">Status</th>
+              <th scope="col" className="py-3 px-4">WhatsApp</th>
+              <th scope="col" className="py-3 px-4">IA (mês)</th>
+              <th scope="col" className="py-3 px-4">Pedidos</th>
+              <th scope="col" className="py-3 px-4">Cadastro</th>
             </tr>
           </thead>
           <tbody>
@@ -64,7 +65,7 @@ export default async function EstabelecimentosPage() {
                     {e.category ? (
                       <span className="bg-zinc-100 text-zinc-700 px-2 py-1 rounded text-xs">{e.category}</span>
                     ) : (
-                      <span className="text-zinc-400 text-xs">—</span>
+                      <span className="text-zinc-500 text-xs">—</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -79,12 +80,12 @@ export default async function EstabelecimentosPage() {
                     {e.evolutionInstanceName ? (
                       <span className="text-green-600">● {e.evolutionInstanceName}</span>
                     ) : (
-                      <span className="text-zinc-400">desconectado</span>
+                      <span className="text-zinc-500">desconectado</span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-xs">
                     <div>{usage?._count || 0} msgs</div>
-                    <div className="text-zinc-500">R$ {((usage?._sum.costCents || 0) / 100).toFixed(2)}</div>
+                    <div className="text-zinc-500">{formatCurrency((usage?._sum.costCents || 0) / 100)}</div>
                   </td>
                   <td className="py-3 px-4 text-zinc-600">{e._count.orders}</td>
                   <td className="py-3 px-4 text-xs text-zinc-500">

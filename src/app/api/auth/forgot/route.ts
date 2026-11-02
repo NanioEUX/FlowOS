@@ -42,9 +42,16 @@ export async function POST(req: NextRequest) {
     })
 
     // In production, send email here
-    // For now, log the reset URL
+    // F4A-016: o link com o token NUNCA vai para o log (quem lê log da
+    // Vercel assumia a conta). Só em dev (SHOW_DEV_CODE=true) ele aparece.
     const resetUrl = `${req.nextUrl.origin}/redefinir-senha?token=${token}`
-    console.log(`[PASSWORD RESET] ${user.email}: ${resetUrl}`)
+    if (process.env.SHOW_DEV_CODE === "true") {
+      console.log(`[PASSWORD RESET] ${user.email}: ${resetUrl}`)
+    } else {
+      console.log(
+        `[PASSWORD RESET] token gerado para userId=${user.id} (link não logado — SHOW_DEV_CODE desligado)`
+      )
+    }
 
     // TODO: Send email with Resend/SendGrid
     // await sendEmail({

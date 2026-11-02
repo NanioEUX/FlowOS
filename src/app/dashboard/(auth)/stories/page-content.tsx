@@ -161,7 +161,7 @@ export default function StoriesContent() {
 
   const filteredProducts = allProducts.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
 
-  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-zinc-400" /></div>
+  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-zinc-500" /></div>
 
   return (
     <div className="max-w-2xl mx-auto p-4 pb-24">
@@ -180,7 +180,7 @@ export default function StoriesContent() {
         <div className="rounded-2xl border-2 border-dashed border-zinc-200 p-12 text-center">
           <span className="text-4xl block mb-3">📱</span>
           <p className="text-sm font-medium text-zinc-600">Nenhum story configurado</p>
-          <p className="text-xs text-zinc-400 mt-1">Crie stories para aparecerem no cardápio do cliente</p>
+          <p className="text-xs text-zinc-500 mt-1">Crie stories para aparecerem no cardápio do cliente</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -195,15 +195,15 @@ export default function StoriesContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-zinc-900 truncate">{story.name}</p>
-                <p className="text-[11px] text-zinc-400">
+                <p className="text-[11px] text-zinc-500">
                   {story.type === "auto" ? `Automático: ${AUTO_TYPE_OPTIONS.find((a) => a.value === story.autoType)?.label || story.autoType}` : `${story.items.length} produto(s)`}
                 </p>
               </div>
               <button onClick={() => toggleActive(story)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${story.active ? "bg-green-500" : "bg-zinc-300"}`}>
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${story.active ? "translate-x-6" : "translate-x-1"}`} />
               </button>
-              <button onClick={() => { setEditingStory(story); setForm({ name: story.name, emoji: story.emoji, gradientFrom: story.gradientFrom, gradientTo: story.gradientTo, type: story.type, autoType: story.autoType || "" }); setShowForm(true) }} className="text-zinc-400 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
-              <button onClick={() => setDeleteConfirm(story.id)} className="text-zinc-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={() => { setEditingStory(story); setForm({ name: story.name, emoji: story.emoji, gradientFrom: story.gradientFrom, gradientTo: story.gradientTo, type: story.type, autoType: story.autoType || "" }); setShowForm(true) }} className="text-zinc-500 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
+              <button onClick={() => setDeleteConfirm(story.id)} className="text-zinc-500 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
         </div>
@@ -211,11 +211,11 @@ export default function StoriesContent() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 sticky top-0 bg-white z-10">
-              <h3 className="text-lg font-semibold text-zinc-900">{editingStory ? "Editar Story" : "Novo Story"}</h3>
-              <button onClick={() => { setShowForm(false); setEditingStory(null) }} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-zinc-900">{editingStory ? "Editar Story" : "Novo Story"}</h2>
+              <button onClick={() => { setShowForm(false); setEditingStory(null) }} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100" aria-label="Fechar"><X className="h-5 w-5" /></button>
             </div>
             <div className="px-6 py-4 space-y-5">
               {/* Name */}
@@ -237,7 +237,7 @@ export default function StoriesContent() {
               {/* Gradient */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700">Cores</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {GRADIENT_OPTIONS.map((g) => (
                     <button key={g.from} type="button" onClick={() => setForm({ ...form, gradientFrom: g.from, gradientTo: g.to })} className={`h-10 rounded-lg bg-gradient-to-br ${g.from} ${g.to} transition-all ${form.gradientFrom === g.from ? "ring-2 ring-green-500 ring-offset-2 scale-105" : "hover:scale-105"}`} title={g.label} />
                   ))}
@@ -249,7 +249,7 @@ export default function StoriesContent() {
                 <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${form.gradientFrom} ${form.gradientTo} flex items-center justify-center text-2xl shadow-md`}>{form.emoji}</div>
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">{form.name || "Nome do story"}</p>
-                  <p className="text-[11px] text-zinc-400">Preview no cardápio</p>
+                  <p className="text-[11px] text-zinc-500">Preview no cardápio</p>
                 </div>
               </div>
 
@@ -291,14 +291,14 @@ export default function StoriesContent() {
                         <div key={item.product.id} className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
                           {item.product.image ? <img src={item.product.image} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <div className="h-8 w-8 rounded-lg bg-zinc-100 flex items-center justify-center text-xs">📦</div>}
                           <span className="flex-1 text-sm font-medium text-zinc-700 truncate">{item.product.name}</span>
-                          <button onClick={() => removeProductFromStory(editingStory.id, item.product.id)} className="text-zinc-400 hover:text-red-500"><X className="h-4 w-4" /></button>
+                          <button onClick={() => removeProductFromStory(editingStory.id, item.product.id)} className="text-zinc-500 hover:text-red-500" aria-label="Fechar"><X className="h-4 w-4" /></button>
                         </div>
                       ))}
                     </div>
                   )}
                   {/* Add products */}
                   <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Buscar produto para adicionar..." className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm focus:border-green-600 focus:outline-none" />
                   </div>
                   {productSearch && (
@@ -310,7 +310,7 @@ export default function StoriesContent() {
                         </button>
                       ))}
                       {filteredProducts.filter((p) => !editingStory.items.some((i) => i.product.id === p.id)).length === 0 && (
-                        <p className="px-3 py-2 text-xs text-zinc-400">Nenhum produto encontrado</p>
+                        <p className="px-3 py-2 text-xs text-zinc-500">Nenhum produto encontrado</p>
                       )}
                     </div>
                   )}
@@ -330,9 +330,9 @@ export default function StoriesContent() {
 
       {/* Delete Confirm */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-2">Remover story?</h3>
+            <h2 className="text-lg font-semibold text-zinc-900 mb-2">Remover story?</h2>
             <p className="text-sm text-zinc-500 mb-6">Essa ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>

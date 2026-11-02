@@ -1,6 +1,7 @@
 "use client"
 
 import { CheckCircle, Gift, Sparkles, ArrowRight, MapPin, Clock, MessageCircle } from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 
 interface ConfirmationItemOption {
   name: string
@@ -233,13 +234,13 @@ export function OrderConfirmationScreen({
               </div>
               <div className="ml-7 space-y-0.5">
                 {cashbackBase != null && (
-                  <p className="text-xs" style={{ color: theme.textMuted }}>Base: +R$ {(cashbackBase / 100).toFixed(2)}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>Base: +{formatCurrency(cashbackBase / 100)}</p>
                 )}
                 {tierBonus != null && tierBonus > 0 && tierName && (
-                  <p className="text-xs" style={{ color: theme.textMuted }}>{tierEmoji} {tierName}: +R$ {(tierBonus / 100).toFixed(2)}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>{tierEmoji} {tierName}: +{formatCurrency(tierBonus / 100)}</p>
                 )}
-                <p className="text-xs font-bold" style={{ color: theme.success }}>Total: +R$ {(cashEarned / 100).toFixed(2)}</p>
-                <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: R$ {((loyaltyBalance / 100) - loyaltyDiscount + (cashEarned / 100)).toFixed(2)}</p>
+                <p className="text-xs font-bold" style={{ color: theme.success }}>Total: +{formatCurrency(cashEarned / 100)}</p>
+                <p className="text-xs" style={{ color: theme.textMuted }}>Saldo: {formatCurrency((loyaltyBalance / 100) - loyaltyDiscount + (cashEarned / 100))}</p>
               </div>
             </div>
           )}

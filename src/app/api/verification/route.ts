@@ -11,6 +11,7 @@ import {
 } from "@/lib/customer-auth"
 import bcrypt from "bcryptjs"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 const MAX_ATTEMPTS = 3
 const CODE_EXPIRY_MINUTES = 5
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
     console.log(`[VERIFICATION DEBUG] Provider created: ${provider ? 'OK (' + provider.constructor.name + ')' : 'NULL'}`)
 
     if (!provider) {
-      console.error(`[VERIFICATION] No provider configured for establishment ${establishmentId}`)
+      logger.error("verification", "nenhum provedor de WhatsApp configurado", { requestId: getRequestId(req), establishmentId })
       return NextResponse.json({
         success: true,
         whatsappSent: false,
@@ -230,7 +231,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (findErr: any) {
-        console.error(`[VERIFICATION] findApprovedTemplate failed:`, findErr.message)
+        logger.error("verification", "falha ao buscar template aprovado", { requestId: getRequestId(req), establishmentId, error: findErr?.message })
       }
 
       console.log(`[VERIFICATION] Trying template "${templateName}" first...`)
@@ -270,7 +271,7 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch (createErr: any) {
-          console.error(`[VERIFICATION] Auto-create template failed:`, createErr.message)
+          logger.error("verification", "falha ao criar template automaticamente", { requestId: getRequestId(req), establishmentId, error: createErr?.message })
         }
       }
 
@@ -291,7 +292,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!result.success) {
-      console.error("[Verification] WhatsApp send failed:", result.error)
+      logger.error("verification", "falha ao enviar a mensagem no WhatsApp", { requestId: getRequestId(req), establishmentId, error: result?.error })
       return NextResponse.json({
         success: true,
         whatsappSent: false,
@@ -308,7 +309,7 @@ export async function POST(req: NextRequest) {
       messageId: result.messageId,
     })
   } catch (error) {
-    console.error("[Verification POST]", error)
+    logger.error("verification", "falha ao iniciar a verificação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao gerar código" }, { status: 500 })
   }
 }
@@ -415,7 +416,7 @@ export async function PUT(req: NextRequest) {
     res.cookies.set(CUSTOMER_SESSION_COOKIE, sessionToken, customerSessionCookieOptions())
     return res
   } catch (error) {
-    console.error("[Verification PUT]", error)
+    logger.error("verification", "falha ao confirmar a verificação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao verificar código" }, { status: 500 })
   }
 }

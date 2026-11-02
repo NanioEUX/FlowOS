@@ -4,6 +4,7 @@ import { map99FoodOrderToFlow } from "@/lib/integrations/nine-food"
 import { upsert99FoodCustomer } from "@/lib/integrations/nine-food-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 import { verifyHmacSha256 } from "@/lib/webhook-signature"
+import { getRequestId, logger } from "@/lib/logger"
 
 function calcCashbackEarned(total: number, establishment: any): number {
   try {
@@ -150,12 +151,12 @@ export async function POST(req: NextRequest) {
             await deductOrderStock(tx, items, createdOrder.id, est.id, true)
           })
         } catch (stockErr: any) {
-          console.error("[99food webhook] stock deduction error:", stockErr.message)
+          logger.error("webhook-99food", "falha ao debitar estoque do pedido", { requestId: getRequestId(req), orderId, error: stockErr?.message })
         }
         created++
         console.log("[99food webhook] CREATED order", orderId)
       } catch (e: any) {
-        console.error("[99food webhook] CREATE ERROR", orderId, e.message)
+        logger.error("webhook-99food", "falha ao criar o pedido", { requestId: getRequestId(req), orderId, error: e?.message })
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
       }
     }
@@ -206,6 +207,18 @@ export async function POST(req: NextRequest) {
         updated++
         console.log("[99food webhook] CANCELLED order", orderId)
         }
+      } else {
+        // F4A-008: antes o `if (existing)` não tinha `else` — o evento
+        // (ex.: cancelamento que chegou antes do create) era descartado
+        // sem nenhum rastro. Agora fica registrado e devolve 500 para a
+        // 99Food reenviar depois que o pedido existir.
+        logger.warn("webhook-99food", "ORDER_CANCELLED para pedido inexistente", {
+          requestId: getRequestId(req),
+          orderId,
+          eventId: payload?.eventId || payload?.id || null,
+        })
+        results.push({ orderId, action: 'not_found_for_cancel' })
+        return NextResponse.json({ ok: false, error: "pedido não encontrado" }, { status: 500 })
       }
     }
 
@@ -264,12 +277,24 @@ export async function POST(req: NextRequest) {
         }
         updated++
         console.log("[99food webhook] STATUS_CHANGED", orderId, flowStatus)
+      } else {
+        // F4A-008: evento de status sem pedido correspondente — sem rastro
+        logger.warn("webhook-99food", "ORDER_STATUS_CHANGED para pedido inexistente", {
+          requestId: getRequestId(req),
+          orderId,
+          eventId: payload?.eventId || payload?.id || null,
+        })
+        results.push({ orderId, action: 'not_found_for_update' })
+        return NextResponse.json({ ok: false, error: "pedido não encontrado" }, { status: 500 })
       }
     }
 
     return NextResponse.json({ ok: true, created, updated })
   } catch (err: any) {
-    console.error("[99food webhook] error:", err.message)
+    logger.error("webhook-99food", "falha ao processar o evento", {
+      requestId: getRequestId(req),
+      error: err.message,
+    })
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
   }
 }

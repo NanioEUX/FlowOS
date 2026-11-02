@@ -243,16 +243,16 @@ export default function RelatoriosPage() {
         <CardContent className="p-4">
           <h3 className="mb-3 font-semibold text-sm text-zinc-900">Fluxo de Caixa por Dia</h3>
           {cf.days.length === 0 ? (
-            <p className="text-center text-sm text-zinc-400 py-4">Nenhum dado</p>
+            <p className="text-center text-sm text-zinc-500 py-4">Nenhum dado</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-zinc-200">
-                    <th className="pb-2 text-left font-medium text-zinc-500">Data</th>
-                    <th className="pb-2 text-right font-medium text-zinc-500">Entradas</th>
-                    <th className="pb-2 text-right font-medium text-zinc-500">Saídas</th>
-                    <th className="pb-2 text-right font-medium text-zinc-500">Saldo</th>
+                    <th scope="col" className="pb-2 text-left font-medium text-zinc-500">Data</th>
+                    <th scope="col" className="pb-2 text-right font-medium text-zinc-500">Entradas</th>
+                    <th scope="col" className="pb-2 text-right font-medium text-zinc-500">Saídas</th>
+                    <th scope="col" className="pb-2 text-right font-medium text-zinc-500">Saldo</th>
                   </tr>
                 </thead>
                 <tbody>

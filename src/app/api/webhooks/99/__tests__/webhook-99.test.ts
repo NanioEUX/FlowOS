@@ -225,11 +225,14 @@ describe("POST /api/webhooks/99", () => {
     mockPrisma.order.update.mockRejectedValue(new Error("DB error"))
     mockPrisma.logWebhook99.updateMany.mockResolvedValue({})
 
-    await POST(makeRequest({ rideId: "ride-1", status: "delivered" }) as any)
+    const res = await POST(makeRequest({ rideId: "ride-1", status: "delivered" }) as any)
 
     expect(mockPrisma.logWebhook99.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { statusProcessamento: "erro" } })
     )
+    // F4A-009: a falha precisa devolver 500 para o provedor reenviar
+    // (antes respondia 200 e o pedido ficava travado para sempre).
+    expect(res.status).toBe(500)
   })
 
   it("usa snake_case (ride_id, external_id, ride_status)", async () => {

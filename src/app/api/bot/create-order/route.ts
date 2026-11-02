@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { INTERNAL_CALL_HEADER, verifyInternalCall } from "@/lib/internal-call"
 
 export interface BotOrderItem {
   productId: string
@@ -47,6 +48,13 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       notes,
     } = body
+
+    // F1A-003/F1B-002: rota pública (o bot chama por self-fetch) — sem token
+    // interno, qualquer um criava pedidos em qualquer loja.
+    const internalToken = req.headers.get(INTERNAL_CALL_HEADER)
+    if (!verifyInternalCall(establishmentId, internalToken)) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
 
     if (!establishmentId || !customerName || !customerPhone || !items?.length) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })

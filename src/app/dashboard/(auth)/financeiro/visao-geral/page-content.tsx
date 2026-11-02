@@ -89,7 +89,7 @@ export default function VisaoGeralPage() {
               <span className="text-xs text-zinc-500">Receita Bruta</span>
             </div>
             <p className="mt-1 text-xl font-bold text-green-600">{formatCurrency(s.receitaBruta)}</p>
-            <p className="text-xs text-zinc-400">{dre.counts.orders} pedidos</p>
+            <p className="text-xs text-zinc-500">{dre.counts.orders} pedidos</p>
           </CardContent>
         </Card>
         <Card>
@@ -99,7 +99,7 @@ export default function VisaoGeralPage() {
               <span className="text-xs text-zinc-500">Descontos</span>
             </div>
             <p className="mt-1 text-xl font-bold text-orange-500">-{formatCurrency(s.descontos)}</p>
-            <p className="text-xs text-zinc-400">cupons aplicados</p>
+            <p className="text-xs text-zinc-500">cupons aplicados</p>
           </CardContent>
         </Card>
         <Card>
@@ -109,7 +109,7 @@ export default function VisaoGeralPage() {
               <span className="text-xs text-zinc-500">Custo Entregas</span>
             </div>
             <p className="mt-1 text-xl font-bold text-blue-500">-{formatCurrency(s.custoEntregas)}</p>
-            <p className="text-xs text-zinc-400">{dre.counts.deliveryPayments} pagamentos motoboy</p>
+            <p className="text-xs text-zinc-500">{dre.counts.deliveryPayments} pagamentos motoboy</p>
           </CardContent>
         </Card>
         <Card>
@@ -119,7 +119,7 @@ export default function VisaoGeralPage() {
               <span className="text-xs text-zinc-500">Despesas</span>
             </div>
             <p className="mt-1 text-xl font-bold text-red-500">-{formatCurrency(s.despesasOperacionais)}</p>
-            <p className="text-xs text-zinc-400">{dre.counts.expenses} despesas</p>
+            <p className="text-xs text-zinc-500">{dre.counts.expenses} despesas</p>
           </CardContent>
         </Card>
       </div>
@@ -170,7 +170,7 @@ export default function VisaoGeralPage() {
         <Card>
           <CardContent className="p-4">
             <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { label: "Dinheiro", value: b.byPayment.money, icon: Banknote },
                 { label: "Cartão", value: b.byPayment.card, icon: CreditCard },
@@ -178,7 +178,7 @@ export default function VisaoGeralPage() {
                 { label: "Online", value: b.byPayment.online, icon: Globe },
               ].map((item) => (
                 <div key={item.label} className="rounded-lg border border-zinc-200 p-2 text-center">
-                  <item.icon className="mx-auto h-3 w-3 text-zinc-400" />
+                  <item.icon className="mx-auto h-3 w-3 text-zinc-500" />
                   <p className="text-[10px] text-zinc-500">{item.label}</p>
                   <p className="text-xs font-bold">{formatCurrency(item.value)}</p>
                 </div>
@@ -214,7 +214,7 @@ export default function VisaoGeralPage() {
               </div>
             ))}
             {Object.values(b.expensesByCategory).every((v) => v === 0) && (
-              <p className="col-span-full text-center text-xs text-zinc-400 py-2">Nenhuma despesa registrada</p>
+              <p className="col-span-full text-center text-xs text-zinc-500 py-2">Nenhuma despesa registrada</p>
             )}
           </div>
         </CardContent>

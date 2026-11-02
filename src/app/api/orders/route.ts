@@ -13,6 +13,7 @@ import {
 } from "@/lib/order-input"
 
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * Build split rules for Pagar.me V5
@@ -73,12 +74,16 @@ function buildSplitRules(
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = getRequestId(req)
+  // escopo do catch (o establishmentId só é conhecido depois do buildOrderInput)
+  let estId: string | undefined
   try {
     const body = await req.json()
 
     // Servidor é a única fonte de preço/status/desconto/cupom/fidelidade
     // (F6B-001…004, F6B-013, F6B-018). `total` do body é ignorado.
     const input = await buildOrderInput(req, body)
+    estId = input.establishmentId
     const {
       establishment,
       establishmentId,
@@ -473,8 +478,8 @@ export async function POST(req: NextRequest) {
           })),
         })
       }
-    } catch (e) {
-      console.error("[Orders POST] Falha ao gravar CMV snapshot:", e)
+    } catch (e: any) {
+      logger.error("orders-post", "falha ao gravar snapshot de CMV", { requestId, establishmentId: estId, error: e?.message })
     }
 
     // Increment coupon timesUsed
@@ -536,7 +541,7 @@ export async function POST(req: NextRequest) {
             },
           })
         } catch (err: any) {
-          console.error("[Inter] ERRO ao gerar pagamento:", err.message)
+          logger.error("orders-post", "erro ao gerar pagamento Inter", { requestId, establishmentId: estId, orderId: order?.id, error: err?.message })
           // F5A-009: o pedido já debitou estoque na transação de criação —
           // apagar sem estorno inflava o estoque a cada falha de PSP.
           await prisma
@@ -630,8 +635,8 @@ export async function POST(req: NextRequest) {
                   const qrBase64 = Buffer.from(qrBuffer).toString("base64")
                   paymentLink = `data:image/png;base64,${qrBase64}`
                 }
-              } catch (e) {
-                console.error("[Pagar.me] Erro ao baixar QR code:", e)
+              } catch (e: any) {
+                logger.error("orders-post", "erro ao baixar QR code do Pagar.me", { requestId, establishmentId: estId, orderId: order?.id, error: e?.message })
                 paymentLink = qrCodeUrl
               }
             }
@@ -661,7 +666,7 @@ export async function POST(req: NextRequest) {
             })
           }
         } catch (err: any) {
-          console.error("[Pagar.me] ERRO ao gerar pagamento:", err.message)
+          logger.error("orders-post", "erro ao gerar pagamento Pagar.me", { requestId, establishmentId: estId, orderId: order?.id, error: err?.message })
           // F5A-009: estorno do estoque antes do hard delete (falha de PSP).
           await prisma
             .$transaction(async (tx) => {
@@ -693,7 +698,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof OrderInputError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
     }
-    console.error(error)
+    logger.error("orders-post", "falha ao criar o pedido", { requestId, establishmentId: estId, error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 })
   }
 }

@@ -61,24 +61,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
+      <div
+        className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm"
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {toasts.map((t) => {
           const Icon = ICONS[t.type]
           return (
             <div
               key={t.id}
+              role={t.type === "error" ? "alert" : "status"}
               className={cn(
                 "flex items-start gap-3 rounded-lg border p-3 shadow-lg animate-in slide-in-from-right-5 fade-in duration-300",
                 STYLES[t.type]
               )}
             >
-              <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", ICON_STYLES[t.type])} />
+              <Icon aria-hidden="true" className={cn("mt-0.5 h-4 w-4 shrink-0", ICON_STYLES[t.type])} />
               <p className="flex-1 text-sm font-medium">{t.message}</p>
               <button
                 onClick={() => dismiss(t.id)}
-                className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100"
+                aria-label="Fechar notificação"
+                className="shrink-0 flex h-6 w-6 items-center justify-center rounded opacity-60 hover:opacity-100"
               >
-                <X className="h-3 w-3" />
+                <X aria-hidden="true" className="h-3 w-3" />
               </button>
             </div>
           )

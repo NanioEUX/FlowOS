@@ -12,9 +12,20 @@ export interface AuthUser {
 
 export function verifyAuth(request: Request): AuthUser | null {
   const authHeader = request.headers.get("authorization")
-  if (!authHeader?.startsWith("Bearer ")) return null
+  let token: string | null = null
 
-  const token = authHeader.slice(7)
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7)
+  } else {
+    // F1B-002/F5B-004: fallback para o cookie httpOnly `auth_token` (mesmo JWT,
+    // mesmo secret). Antes, rotas que liam só o cookie (delivery-config,
+    // delivery-zones, location) aceitavam qualquer tenant logado — sem conferir
+    // o `establishmentId` do token contra o da rota.
+    token = readCookieToken(request)
+  }
+
+  if (!token) return null
+
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any
     
@@ -38,6 +49,25 @@ export function verifyAuth(request: Request): AuthUser | null {
     }
     return null
   }
+}
+
+/**
+ * Lê o cookie httpOnly `auth_token` de uma requisição (Node e Edge).
+ */
+function readCookieToken(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie") || ""
+  for (const part of cookieHeader.split(";")) {
+    const [name, ...rest] = part.trim().split("=")
+    if (name === "auth_token") {
+      const value = rest.join("=")
+      try {
+        return decodeURIComponent(value)
+      } catch {
+        return value
+      }
+    }
+  }
+  return null
 }
 
 export function jsonError(message: string, status: number = 401) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 export default function KdsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -47,7 +48,14 @@ export default function KdsLayout({ children }: { children: React.ReactNode }) {
     router.push("/kds")
   }, [router])
 
-  if (!authorized) return null
+  // F8B-018: renderizar `null` causava flash de tela branca antes do redirect.
+  if (!authorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-900">
+        <Loader2 aria-hidden="true" className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    )
+  }
 
   return <>{children}</>
 }

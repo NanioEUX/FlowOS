@@ -148,15 +148,15 @@ export default function FidelidadePageContent() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold text-zinc-900">Fidelidade</h2>
+      <h1 className="text-2xl font-bold text-zinc-900">Fidelidade</h1>
 
       {/* Loyalty Config */}
       <Card>
         <CardContent className="p-6 space-y-4">
-          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+          <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Star className="h-4 w-4" />
             Programa de Cashback
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-500">Clientes acumulam cash a cada pedido e usam como desconto.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
@@ -182,7 +182,7 @@ export default function FidelidadePageContent() {
                   onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, cashbackPercent: Number(e.target.value) })}
                   className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Ex: 10% → cliente ganha R$ 10 de volta a cada R$ 100 gasto</p>
+                <p className="mt-1 text-xs text-zinc-500">Ex: 10% → cliente ganha R$ 10 de volta a cada R$ 100 gasto</p>
               </div>
 
               <div>
@@ -195,7 +195,7 @@ export default function FidelidadePageContent() {
                   onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, maxRedeemPercent: Number(e.target.value) })}
                   className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Ex: 25% → pedido R$ 100, pode usar no máximo R$ 25 do saldo</p>
+                <p className="mt-1 text-xs text-zinc-500">Ex: 25% → pedido R$ 100, pode usar no máximo R$ 25 do saldo</p>
               </div>
 
               <div>
@@ -221,7 +221,7 @@ export default function FidelidadePageContent() {
                   onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, cashbackExpirationDays: Number(e.target.value) })}
                   className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Saldo não utilizado expira após este período</p>
+                <p className="mt-1 text-xs text-zinc-500">Saldo não utilizado expira após este período</p>
               </div>
 
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -237,10 +237,10 @@ export default function FidelidadePageContent() {
       {/* Review Config */}
       <Card>
         <CardContent className="p-6 space-y-4">
-          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+          <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Star className="h-4 w-4" />
             Avaliação Pós-Pedido
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-500">Configure quando o cliente receberá o pedido de avaliação.</p>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700">Tempo para enviar avaliação (minutos)</label>
@@ -252,7 +252,7 @@ export default function FidelidadePageContent() {
               onChange={(e) => setLoyaltyConfig({ ...loyaltyConfig, reviewPromptMinutes: Number(e.target.value) })}
               className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
             />
-            <p className="mt-1 text-xs text-zinc-400">Ex: 30 = cliente recebe pedido de avaliação 30min após a entrega</p>
+            <p className="mt-1 text-xs text-zinc-500">Ex: 30 = cliente recebe pedido de avaliação 30min após a entrega</p>
           </div>
         </CardContent>
       </Card>
@@ -260,10 +260,10 @@ export default function FidelidadePageContent() {
       {/* Tier Config */}
       <Card>
         <CardContent className="p-6 space-y-4">
-          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+          <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Award className="h-4 w-4" />
             Níveis de Fidelidade
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-500">Níveis automáticos baseados no número de pedidos. Clientes em níveis mais altos ganham mais cash.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
@@ -290,10 +290,10 @@ export default function FidelidadePageContent() {
                       onChange={(e) => setTierConfig({ ...tierConfig, periodDays: Number(e.target.value) || 90 })}
                       className="w-20 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                     />
-                    <span className="text-xs text-zinc-400">dias</span>
+                    <span className="text-xs text-zinc-500">dias</span>
                   </div>
                 </div>
-                <p className="text-[11px] text-zinc-400 flex-1">Pedidos contados nos últimos {tierConfig.periodDays} dias</p>
+                <p className="text-[11px] text-zinc-500 flex-1">Pedidos contados nos últimos {tierConfig.periodDays} dias</p>
               </div>
               {tierConfig.tiers.map((tier, index) => (
                 <div key={index} className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
@@ -302,7 +302,7 @@ export default function FidelidadePageContent() {
                       type="button"
                       onClick={() => moveTier(index, "up")}
                       disabled={index === 0}
-                      className="text-zinc-400 hover:text-zinc-600 disabled:opacity-30"
+                      className="text-zinc-500 hover:text-zinc-600 disabled:opacity-30"
                     >
                       <GripVertical className="h-3 w-3 rotate-180" />
                     </button>
@@ -310,7 +310,7 @@ export default function FidelidadePageContent() {
                       type="button"
                       onClick={() => moveTier(index, "down")}
                       disabled={index === tierConfig.tiers.length - 1}
-                      className="text-zinc-400 hover:text-zinc-600 disabled:opacity-30"
+                      className="text-zinc-500 hover:text-zinc-600 disabled:opacity-30"
                     >
                       <GripVertical className="h-3 w-3" />
                     </button>
@@ -337,7 +337,7 @@ export default function FidelidadePageContent() {
                         onChange={(e) => updateTier(index, "minOrders", Number(e.target.value))}
                         className="w-20 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                       />
-                      <span className="text-xs text-zinc-400">pedidos</span>
+                      <span className="text-xs text-zinc-500">pedidos</span>
                     </div>
                   </div>
                   <div className="w-20">
@@ -351,7 +351,7 @@ export default function FidelidadePageContent() {
                         onChange={(e) => updateTier(index, "multiplier", Number(e.target.value))}
                         className="w-14 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                       />
-                      <span className="text-xs text-zinc-400">x</span>
+                      <span className="text-xs text-zinc-500">x</span>
                     </div>
                   </div>
                   <input
@@ -398,10 +398,10 @@ export default function FidelidadePageContent() {
       {/* First Purchase */}
       <Card>
         <CardContent className="p-6 space-y-4">
-          <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+          <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
             <Shield className="h-4 w-4" />
             Bônus de Primeira Compra
-          </h3>
+          </h2>
           <p className="text-sm text-zinc-500">Cliente novo ganha desconto + cash de bônus no primeiro pedido.</p>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
             <input
@@ -416,7 +416,7 @@ export default function FidelidadePageContent() {
             </div>
           </label>
           {firstPurchaseEnabled && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700">Desconto (R$)</label>
                 <input
@@ -442,7 +442,7 @@ export default function FidelidadePageContent() {
             </div>
           )}
           {firstPurchaseEnabled && (
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-500">
               Ex: Cliente novo confirma WhatsApp → ganha R$ {firstPurchaseDiscount.toFixed(2)} de desconto + {firstPurchaseBonus} cash de bônus na primeira compra.
             </p>
           )}

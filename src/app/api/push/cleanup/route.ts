@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function GET(req: Request) {
   try {
@@ -8,6 +9,10 @@ export async function GET(req: Request) {
     if (!establishmentId) {
       return NextResponse.json({ error: "establishmentId obrigatório" }, { status: 400 })
     }
+    // F9A-004/F1A-003: sem auth, qualquer um apagava as subscriptions de push
+    // de qualquer loja (DoS no aviso de pedidos).
+    const { error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     const subs = await prisma.pushSubscription.findMany({
       where: { establishmentId },

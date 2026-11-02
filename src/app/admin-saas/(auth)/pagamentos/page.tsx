@@ -165,7 +165,7 @@ export default function PagamentosPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-zinc-700">Taxa Pagar.me</p>
-                <p className="text-xs text-zinc-400">Cobrada automaticamente por transação</p>
+                <p className="text-xs text-zinc-500">Cobrada automaticamente por transação</p>
               </div>
               <span className="text-lg font-bold text-zinc-900">{pagarmeFeePercentage.toFixed(2)}%</span>
             </div>
@@ -227,10 +227,10 @@ export default function PagamentosPage() {
                         onChange={(e) => setSaasProfitPercentage(Number(e.target.value))}
                         className="w-20 h-8 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-center"
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400">%</span>
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">%</span>
                     </div>
                   </div>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-zinc-500">
                     SaaS recebe {saasPercentage.toFixed(2)}% (taxa Pagar.me sai desse valor)
                   </p>
                 </div>

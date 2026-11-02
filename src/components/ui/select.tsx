@@ -1,4 +1,4 @@
-import { forwardRef, type SelectHTMLAttributes } from "react"
+import { forwardRef, useId, type SelectHTMLAttributes } from "react"
 import { cn } from "@/lib/utils"
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -9,16 +9,19 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, id, options, ...props }, ref) => {
+    // F8D-008: rótulo sempre associado ao campo, mesmo sem `id` explícito.
+    const generatedId = useId()
+    const fieldId = id || generatedId
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-400">
+          <label htmlFor={fieldId} className="block text-sm font-medium text-zinc-700 dark:text-zinc-400">
             {label}
           </label>
         )}
         <select
           ref={ref}
-          id={id}
+          id={fieldId}
           className={cn(
             "flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-green-600 focus:outline-none disabled:opacity-50",
             "dark:border-white/[.12] dark:bg-white/[.03] dark:text-flow-white dark:focus:border-flow-blue",

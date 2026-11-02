@@ -92,7 +92,7 @@ export default function NovaQuickReplyPage() {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Tipo de match">
             <select
               value={form.matchType}

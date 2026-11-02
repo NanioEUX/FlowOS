@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import { startOfTodayInTz, dayKeyInTz, startOfInclusiveDay } from "@/lib/finance-dates"
+import { parseOrderItems } from "@/lib/items"
 
 export const revalidate = 10
 
@@ -173,7 +174,7 @@ async function loadDashboard(establishmentId: string) {
   const productCount: Record<string, { name: string; count: number; total: number }> = {}
   for (const order of todayOrders) {
     try {
-      const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items
+      const items = parseOrderItems(order.items)
       for (const item of items) {
         if (!productCount[item.name]) productCount[item.name] = { name: item.name, count: 0, total: 0 }
         productCount[item.name].count += item.quantity

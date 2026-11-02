@@ -184,12 +184,12 @@ export default function PlanosPageContent() {
             <div className="rounded-xl bg-zinc-50 p-4">
               <p className="text-xs font-medium text-zinc-500">Plano</p>
               <p className="mt-1 text-lg font-bold text-zinc-900">{currentPlan?.name || "Starter"}</p>
-              <p className="text-sm text-zinc-400">R${currentPlan?.price || 49}/mês</p>
+              <p className="text-sm text-zinc-500">R${currentPlan?.price || 49}/mês</p>
             </div>
             <div className="rounded-xl bg-zinc-50 p-4">
               <p className="text-xs font-medium text-zinc-500">Status</p>
               <p className="mt-1 text-lg font-bold text-green-600">Ativo</p>
-              <p className="text-sm text-zinc-400">Pagamento em dia</p>
+              <p className="text-sm text-zinc-500">Pagamento em dia</p>
             </div>
             <div className="rounded-xl bg-zinc-50 p-4">
               <p className="text-xs font-medium text-zinc-500">Data de aquisição</p>
@@ -199,7 +199,7 @@ export default function PlanosPageContent() {
                   : "—"
                 }
               </p>
-              <p className="text-sm text-zinc-400">Início do trial</p>
+              <p className="text-sm text-zinc-500">Início do trial</p>
             </div>
             <div className="rounded-xl bg-zinc-50 p-4">
               <p className="text-xs font-medium text-zinc-500">Próxima cobrança</p>
@@ -209,7 +209,7 @@ export default function PlanosPageContent() {
                   : "—"
                 }
               </p>
-              <p className="text-sm text-zinc-400">Cobrança mensal</p>
+              <p className="text-sm text-zinc-500">Cobrança mensal</p>
             </div>
           </div>
 
@@ -240,7 +240,7 @@ export default function PlanosPageContent() {
             <div className="rounded-xl bg-white p-4">
               <p className="text-xs font-medium text-zinc-500">Status</p>
               <p className="mt-1 text-lg font-bold text-amber-400">Teste grátis</p>
-              <p className="text-sm text-zinc-400">{daysLeft} dia{daysLeft !== 1 ? "s" : ""} restante{daysLeft !== 1 ? "s" : ""}</p>
+              <p className="text-sm text-zinc-500">{daysLeft} dia{daysLeft !== 1 ? "s" : ""} restante{daysLeft !== 1 ? "s" : ""}</p>
             </div>
             <div className="rounded-xl bg-white p-4">
               <p className="text-xs font-medium text-zinc-500">Início</p>
@@ -301,7 +301,7 @@ export default function PlanosPageContent() {
 
               <ul className="mb-6 flex-1 space-y-3">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm text-zinc-400">
+                  <li key={feature} className="flex items-start gap-2 text-sm text-zinc-500">
                     <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
                     {feature}
                   </li>
@@ -337,7 +337,7 @@ export default function PlanosPageContent() {
         <p className="text-sm text-zinc-500">
           Pagamento processado com segurança via Asaas. Aceita Pix, cartão de crédito e boleto.
         </p>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-zinc-500">
           Cancele a qualquer momento. Sem multa ou fidelidade.
         </p>
       </div>

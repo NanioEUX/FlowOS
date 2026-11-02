@@ -8,7 +8,14 @@ const JWT_SECRET = process.env.JWT_SECRET!
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json()
+    // corpo inválido (vazio/malformado) é erro do cliente, não 500 do servidor
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: "Corpo da requisição inválido" }, { status: 400 })
+    }
+    const { email, password } = body || {}
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 })
@@ -43,12 +50,28 @@ export async function POST(req: NextRequest) {
       { expiresIn: "24h" }
     )
 
+    // F8B-007: refresh token — o KDS fica aberto horas na TV; sem isso o token
+    // de 24h expira e a tela silencia. Cookie httpOnly restrito à rota de refresh.
+    const refreshToken = jwt.sign(
+      { userId: user.id, type: "refresh" },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    )
+
     cookies().set("kds_token", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24,
+    })
+
+    cookies().set("kds_refresh", refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/api/auth/kds-refresh",
+      maxAge: 60 * 60 * 24 * 30,
     })
 
     return NextResponse.json({

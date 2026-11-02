@@ -1,24 +1,11 @@
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "flowos-secret")
-
-async function getAuth() {
-  const token = cookies().get("auth_token")?.value
-  if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, SECRET)
-    return payload
-  } catch {
-    return null
-  }
-}
+import { requireEstablishment } from "@/lib/require-auth"
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const auth = await getAuth()
-  if (!auth) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  // F1B-002/F5B-004: escopo de tenant obrigatório (403 se o token for de outra loja)
+  const { error } = requireEstablishment(req, params.id)
+  if (error) return error
 
   const body = await req.json()
   const { addressLat, addressLng, deliveryRadiusKm } = body

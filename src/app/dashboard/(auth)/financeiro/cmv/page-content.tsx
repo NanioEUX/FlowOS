@@ -109,7 +109,7 @@ export default function CmvPageContent() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500">Receita</p>
-              <DollarSign className="h-4 w-4 text-zinc-400" />
+              <DollarSign className="h-4 w-4 text-zinc-500" />
             </div>
             <p className="mt-1 text-lg font-bold text-zinc-900">{formatCurrency(s.revenueCents / 100)}</p>
           </CardContent>
@@ -118,7 +118,7 @@ export default function CmvPageContent() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500">CMV</p>
-              <Package className="h-4 w-4 text-zinc-400" />
+              <Package className="h-4 w-4 text-zinc-500" />
             </div>
             <p className="mt-1 text-lg font-bold text-zinc-900">{formatCurrency(s.costCents / 100)}</p>
           </CardContent>
@@ -127,7 +127,7 @@ export default function CmvPageContent() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500">Margem</p>
-              <TrendingUp className="h-4 w-4 text-zinc-400" />
+              <TrendingUp className="h-4 w-4 text-zinc-500" />
             </div>
             <p className={`mt-1 text-lg font-bold ${s.marginCents >= 0 ? "text-green-600" : "text-red-600"}`}>
               {formatCurrency(s.marginCents / 100)}
@@ -138,7 +138,7 @@ export default function CmvPageContent() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500">Margem %</p>
-              <Percent className="h-4 w-4 text-zinc-400" />
+              <Percent className="h-4 w-4 text-zinc-500" />
             </div>
             <p className={`mt-1 text-lg font-bold ${s.marginPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
               {s.marginPercent.toFixed(1)}%
@@ -174,12 +174,12 @@ export default function CmvPageContent() {
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase text-zinc-500">
                 <tr>
-                  <th className="py-2">Dia</th>
-                  <th>Pedidos</th>
-                  <th>Receita</th>
-                  <th>CMV</th>
-                  <th>Margem</th>
-                  <th>%</th>
+                  <th scope="col" className="py-2">Dia</th>
+                  <th scope="col">Pedidos</th>
+                  <th scope="col">Receita</th>
+                  <th scope="col">CMV</th>
+                  <th scope="col">Margem</th>
+                  <th scope="col">%</th>
                 </tr>
               </thead>
               <tbody>

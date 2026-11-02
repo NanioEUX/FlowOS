@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // F8D-026: `dark:` passa a responder à classe `dark` no <html> (controlada
+  // pelo app), não à preferência do SO — antes o dashboard claro ficava com
+  // componentes escuros num celular em dark mode.
+  darkMode: "class",
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {

@@ -68,7 +68,7 @@ export default function EditarTemplatePage({ params }: { params: { id: string } 
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-zinc-200 p-6 space-y-4">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="col-span-2">
             <label className="block text-sm font-medium text-zinc-900 mb-1">Slug *</label>
             <input type="text" required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input" />
@@ -89,7 +89,7 @@ export default function EditarTemplatePage({ params }: { params: { id: string } 
           <input type="text" value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input" />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-zinc-900 mb-1">Tom</label>
             <select value={form.tone} onChange={(e) => setForm({ ...form, tone: e.target.value })} className="input">

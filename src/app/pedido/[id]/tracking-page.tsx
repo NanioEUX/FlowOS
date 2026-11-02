@@ -5,6 +5,7 @@ import { MapPin, CreditCard, Bike, Banknote, Send, MessageCircle, Loader2, Clock
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import { parseOrderItems } from "@/lib/items"
 
 const statusLabels: Record<string, string> = {
   pending: "Pedido Recebido",
@@ -77,7 +78,7 @@ interface Props {
 export function TrackingPage({ order, statusSteps }: Props) {
   let items: any[] = []
   try {
-    items = JSON.parse(order.items)
+    items = parseOrderItems(order.items)
   } catch {
     items = []
   }
@@ -90,6 +91,9 @@ export function TrackingPage({ order, statusSteps }: Props) {
   const [hasNewMsg, setHasNewMsg] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<string>("default")
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  // F8B-014: erro de envio precisa aparecer — antes a mensagem era descartada
+  // em silêncio e o cliente achava que o establishments tinha recebido.
+  const [messageError, setMessageError] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMsgCountRef = useRef(0)
   const [orderStatus, setOrderStatus] = useState(order.status)
@@ -194,6 +198,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
   async function sendMessage() {
     if (!newMessage.trim() || sending) return
     setSending(true)
+    setMessageError("")
     try {
       const res = await fetch(`/api/orders/${order.id}/messages?token=${token}`, {
         method: "POST",
@@ -204,8 +209,13 @@ export function TrackingPage({ order, statusSteps }: Props) {
         const msg = await res.json()
         setMessages((prev) => [...prev, msg])
         setNewMessage("")
+      } else {
+        const data = await res.json().catch(() => ({} as any))
+        setMessageError(data?.error || "Não foi possível enviar a mensagem. Tente novamente.")
       }
-    } catch {} finally {
+    } catch {
+      setMessageError("Não foi possível enviar a mensagem. Verifique sua conexão.")
+    } finally {
       setSending(false)
     }
   }
@@ -229,7 +239,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
   const estimatedTime = getEstimatedTime()
 
   return (
-    <div className="min-h-screen bg-zinc-50 py-8">
+    <main className="min-h-screen bg-zinc-50 py-8">
       <div className="mx-auto max-w-lg px-4">
         {/* Close button */}
         <div className="flex justify-end mb-2">
@@ -310,7 +320,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
               )}
             </div>
             {order.notes && (
-              <p className="mt-2 text-xs text-zinc-400 italic border-t border-zinc-100 pt-2">Obs: {order.notes}</p>
+              <p className="mt-2 text-xs text-zinc-500 italic border-t border-zinc-100 pt-2">Obs: {order.notes}</p>
             )}
           </CardContent>
         </Card>
@@ -393,7 +403,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
                     <div className="pt-2">
                       <p
                         className={`font-medium ${
-                          isCompleted ? "text-zinc-900" : "text-zinc-400"
+                          isCompleted ? "text-zinc-900" : "text-zinc-500"
                         } ${isCurrent ? "text-green-700" : ""}`}
                       >
                         {step.label}
@@ -438,7 +448,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
             <CardContent className="p-0">
               <div className="max-h-80 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 && (
-                  <p className="text-center text-sm text-zinc-400 py-4">
+                  <p className="text-center text-sm text-zinc-500 py-4">
                     Envie uma mensagem para o estabelecimento
                   </p>
                 )}
@@ -455,7 +465,7 @@ export function TrackingPage({ order, statusSteps }: Props) {
                       }`}
                     >
                       <p>{msg.sender === "customer" ? "Você: " : "Estabelecimento: "}{msg.message}</p>
-                      <p className={`text-[10px] mt-1 ${msg.sender === "customer" ? "text-green-200" : "text-zinc-400"}`}>
+                      <p className={`text-[10px] mt-1 ${msg.sender === "customer" ? "text-green-200" : "text-zinc-500"}`}>
                         {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
@@ -463,21 +473,28 @@ export function TrackingPage({ order, statusSteps }: Props) {
                 ))}
                 <div ref={messagesEndRef} />
               </div>
+              {messageError && (
+                <p role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {messageError}
+                </p>
+              )}
               <div className="border-t border-zinc-200 p-3 flex gap-2">
                 <input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value.slice(0, 500))}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder="Digite sua mensagem..."
+                  aria-label="Mensagem para o estabelecimento"
                   className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
                 />
                 <Button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || sending}
                   size="sm"
+                  aria-label="Enviar mensagem"
                   className="gap-1"
                 >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
                 </Button>
               </div>
             </CardContent>
@@ -490,13 +507,13 @@ export function TrackingPage({ order, statusSteps }: Props) {
             <CardContent className="p-4 space-y-2">
               {order.customerAddress && (
                 <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="mt-0.5 h-4 w-4 text-zinc-400" />
+                  <MapPin className="mt-0.5 h-4 w-4 text-zinc-500" />
                   <span className="text-zinc-600">{order.customerAddress}</span>
                 </div>
               )}
               {order.deliveryPerson && (
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-zinc-400">🛵</span>
+                  <span className="text-zinc-500">🛵</span>
                   <span className="text-zinc-600">
                     Entregador: {order.deliveryPerson}
                   </span>
@@ -516,11 +533,11 @@ export function TrackingPage({ order, statusSteps }: Props) {
 
         {/* Payment iframe modal */}
         {showPaymentModal && order.paymentLink && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}>
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}>
             <div className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white" style={{ width: "min(480px, 95vw)", height: "min(700px, 90vh)" }} onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
                 <p className="text-sm font-semibold text-zinc-900">Pagamento</p>
-                <button onClick={() => setShowPaymentModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-600 transition-colors">
+                <button onClick={() => setShowPaymentModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 hover:text-zinc-600 transition-colors">
                   ✕
                 </button>
               </div>
@@ -529,6 +546,6 @@ export function TrackingPage({ order, statusSteps }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </main>
   )
 }

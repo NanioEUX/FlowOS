@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
 import { TrendingUp, Clock, Store, DollarSign, CreditCard, Banknote } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/components/toast"
 import { formatCurrency } from "@/lib/utils"
 import { fetchAuth } from "@/lib/fetch-auth"
 
@@ -18,21 +19,36 @@ export default function CaixaPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [cashRegister, setCashRegister] = useState<any>(null)
+  // F8B-022: falha HTTP (500/403) mostrava "R$ 0,00" como se não houvesse venda
+  const [loadError, setLoadError] = useState(false)
+  const { toast } = useToast()
 
+  // F8B-001: falha de rede não pode deixar o spinner eterno.
   async function loadAll() {
     if (!establishmentId) return
+    try {
+      await loadAllInner()
+    } catch (err) {
+      console.error("[Caixa] Falha ao carregar dados:", err)
+      toast("Não foi possível carregar o caixa. Verifique sua conexão.", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadAllInner() {
     const [orderRes, regRes] = await Promise.all([
       fetchAuth(`/api/orders?establishmentId=${establishmentId}`),
       fetchAuth(`/api/cash-register?establishmentId=${establishmentId}`),
     ])
-    if (orderRes.ok) {
-      const data = await orderRes.json()
-      setOrders(data)
+    if (!orderRes.ok || !regRes.ok) {
+      setLoadError(true)
+      return
     }
-    if (regRes.ok) {
-      setCashRegister(await regRes.json())
-    }
-    setLoading(false)
+    const data = await orderRes.json()
+    setOrders(Array.isArray(data) ? data : [])
+    setCashRegister(await regRes.json())
+    setLoadError(false)
   }
 
   useEffect(() => { loadAll() }, [establishmentId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,18 +79,18 @@ export default function CaixaPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Caixa - Gerenciamento</h2>
+        <h1 className="text-2xl font-bold text-zinc-900">Caixa - Gerenciamento</h1>
         <p className="text-sm text-zinc-500">Vendas são feitas na Frente de Caixa</p>
       </div>
 
       {/* Resumo do dia */}
       <Card className="border-green-600/20 bg-green-600/10">
         <CardContent className="p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-green-600 mb-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-green-600 mb-3">
             <TrendingUp className="h-4 w-4" />
             Resumo do Dia
-          </h3>
-          <div className="grid grid-cols-4 gap-3 text-center">
+          </h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
             <div>
               <p className="text-lg font-bold text-green-600">{formatCurrency(todayTotal)}</p>
               <p className="text-xs text-green-600">Total</p>
@@ -96,14 +112,24 @@ export default function CaixaPage() {
         </CardContent>
       </Card>
 
+      {/* F8B-022: não mostrar "R$ 0,00" quando a carga falhou */}
+      {loadError && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span>Não foi possível carregar o caixa. Os valores abaixo podem estar incompletos.</span>
+          <button onClick={() => loadAll()} className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold hover:bg-red-100">
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* Caixa status */}
       {cashRegister ? (
         <Card className="border-green-600/20">
           <CardContent className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-green-600 mb-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-green-600 mb-2">
               <DollarSign className="h-4 w-4" />
               Caixa Aberto
-            </h3>
+            </h2>
             <p className="text-xs text-zinc-500">Valor em caixa: <span className="font-bold text-zinc-900">{formatCurrency(cashRegister.openingAmount)}</span></p>
             <p className="text-xs text-zinc-500">Movimentações: <span className="font-bold text-zinc-900">{cashRegister.movements?.length || 0}</span></p>
           </CardContent>
@@ -120,10 +146,10 @@ export default function CaixaPage() {
       {Object.keys(mesaGroups).length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 mb-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 mb-3">
               <Store className="h-4 w-4" />
               Mesas Ativas ({Object.keys(mesaGroups).length})
-            </h3>
+            </h2>
             <div className="space-y-2">
               {Object.entries(mesaGroups).sort(([a], [b]) => Number(a) - Number(b)).map(([num, mesaOrders]) => {
                 const total = mesaOrders.reduce((s: number, o: any) => s + o.total, 0)
@@ -146,13 +172,13 @@ export default function CaixaPage() {
       {todayOrders.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold text-zinc-900 mb-3">Vendas de Hoje ({todayOrders.length})</h3>
+            <h2 className="font-semibold text-zinc-900 mb-3">Vendas de Hoje ({todayOrders.length})</h2>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {todayOrders.map((o) => (
                 <div key={o.id} className="flex items-center justify-between rounded-lg border border-white/[.04] bg-zinc-50 p-3">
                   <div>
                     <p className="text-sm font-medium text-zinc-900">{o.customerName}</p>
-                    <p className="text-xs text-zinc-400">{new Date(o.createdAt).toLocaleTimeString("pt-BR")} • {paymentLabels[o.paymentMethod] || o.paymentMethod || "Pendente"}</p>
+                    <p className="text-xs text-zinc-500">{new Date(o.createdAt).toLocaleTimeString("pt-BR")} • {paymentLabels[o.paymentMethod] || o.paymentMethod || "Pendente"}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-green-600">{formatCurrency(o.total)}</p>

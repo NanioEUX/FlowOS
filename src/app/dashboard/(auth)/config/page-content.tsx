@@ -403,7 +403,7 @@ function MetaConfig({
             <div className="space-y-3">
               {metaBusinessName && (
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-zinc-400" />
+                  <Building2 className="h-4 w-4 text-zinc-500" />
                   <div>
                     <p className="text-[10px] text-zinc-500">Empresa</p>
                     <p className="text-sm font-semibold text-zinc-900">{metaBusinessName}</p>
@@ -411,14 +411,14 @@ function MetaConfig({
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-zinc-400" />
+                <Phone className="h-4 w-4 text-zinc-500" />
                 <div>
                   <p className="text-[10px] text-zinc-500">Phone ID</p>
                   <p className="text-xs font-mono text-zinc-700">{metaPhoneNumberId}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-zinc-400" />
+                <MessageCircle className="h-4 w-4 text-zinc-500" />
                 <div>
                   <p className="text-[10px] text-zinc-500">WABA ID</p>
                   <p className="text-xs font-mono text-zinc-700">{metaBusinessAccountId}</p>
@@ -452,7 +452,7 @@ function MetaConfig({
                 {preview ? (
                   <img src={preview} alt="Preview" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-zinc-400 text-xl">
+                  <div className="flex h-full w-full items-center justify-center text-zinc-500 text-xl">
                     <Camera className="h-6 w-6" />
                   </div>
                 )}
@@ -480,7 +480,7 @@ function MetaConfig({
                     />
                   </label>
                 </div>
-                <p className="text-[10px] text-zinc-400">Formato aceito: JPG ou PNG | Tamanho máximo: 5MB | Dimensões mínimas: 640 x 640 px</p>
+                <p className="text-[10px] text-zinc-500">Formato aceito: JPG ou PNG | Tamanho máximo: 5MB | Dimensões mínimas: 640 x 640 px</p>
               </div>
             </div>
           </div>
@@ -488,7 +488,7 @@ function MetaConfig({
           {/* Consumption Card */}
           <div className="rounded-xl border border-zinc-200 bg-white p-4">
             <h4 className="text-sm font-semibold text-zinc-900 mb-3">Consumo Mensal</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1">
                   <Mail className="h-3.5 w-3.5" />
@@ -501,7 +501,7 @@ function MetaConfig({
                     style={{ width: `${Math.min((templatesSent / 2500) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-zinc-400 mt-1">0 de 2.500 templates</p>
+                <p className="text-[10px] text-zinc-500 mt-1">0 de 2.500 templates</p>
               </div>
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1">
@@ -550,7 +550,7 @@ function MetaConfig({
                     placeholder="1234"
                     value={cardLast4}
                     onChange={(e) => setCardLast4(e.target.value.replace(/\D/g, ""))}
-                    className="w-32 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-mono text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+                    className="w-32 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-mono text-zinc-900 placeholder:text-zinc-500 focus:border-zinc-900 focus:outline-none"
                   />
                 </div>
               )}
@@ -619,7 +619,7 @@ function MetaConfig({
                 <MessageCircle className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h3>
+                <h2 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h2>
                 <p className="text-sm text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
               </div>
             </div>
@@ -631,7 +631,7 @@ function MetaConfig({
 
             <EmbeddedSignupButton onComplete={onComplete} />
 
-            <p className="text-[10px] text-zinc-400 text-center">
+            <p className="text-[10px] text-zinc-500 text-center">
               Você será redirecionado para o Facebook para autorizar a conexão. Não precisa criar conta na Meta.
             </p>
           </div>
@@ -1146,7 +1146,7 @@ export default function ConfigPage() {
     
     return (
             <div className="mx-auto max-w-5xl">
-            <h2 className="mb-6 text-2xl font-bold text-zinc-900">Configurações</h2>
+            <h1 className="mb-6 text-2xl font-bold text-zinc-900">Configurações</h1>
             
             {/* Tabs horizontais */}
             <div className="mb-6 overflow-x-auto scrollbar-hide">
@@ -1167,7 +1167,7 @@ export default function ConfigPage() {
                                 <p className={`text-sm font-medium ${activeGroup === g.id ? "text-white" : "text-zinc-900"}`}>
                                 {g.label}
                                 </p>
-                                <p className={`text-[10px] ${activeGroup === g.id ? "text-zinc-400" : "text-zinc-500"}`}>
+                                <p className={`text-[10px] ${activeGroup === g.id ? "text-zinc-500" : "text-zinc-500"}`}>
                                 {g.desc}
                                 </p>
                                 </div>
@@ -1180,7 +1180,7 @@ export default function ConfigPage() {
             {/* Dados do Estabelecimento */}
             <Card id="section-dados" className={activeGroup !== "geral" ? "hidden" : ""}>
             <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Dados do Estabelecimento</h3>
+            <h2 className="font-semibold text-zinc-900">Dados do Estabelecimento</h2>
             <div className="space-y-1">
             <label className="block text-sm font-medium text-zinc-700">Nome</label>
             <input
@@ -1197,7 +1197,7 @@ export default function ConfigPage() {
             placeholder="11999999999"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             </div>
             <div className="space-y-1">
@@ -1223,9 +1223,9 @@ export default function ConfigPage() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Ex: Os melhores sorvetes da cidade!"
             rows={2}
-            className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none resize-none"
+            className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none resize-none"
             />
-            <p className="text-xs text-zinc-400">Aparece no cardápio, mesa e frente de caixa</p>
+            <p className="text-xs text-zinc-500">Aparece no cardápio, mesa e frente de caixa</p>
             </div>
             </CardContent>
             </Card>
@@ -1234,7 +1234,7 @@ export default function ConfigPage() {
             <Card id="section-asaas" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
             <CardContent className="p-6 space-y-5">
             <div>
-            <h3 className="font-semibold text-zinc-900">Pagamentos</h3>
+            <h2 className="font-semibold text-zinc-900">Pagamentos</h2>
             <p className="text-sm text-zinc-500">
             Configure como deseja receber pagamentos no cardápio online.
             </p>
@@ -1254,7 +1254,7 @@ export default function ConfigPage() {
                 </div>
                 {recipientData && recipientData.configured && (
                   <div className="rounded-lg bg-white border border-green-200 p-3 text-sm space-y-1">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div><span className="text-zinc-500">Nome:</span> <span className="font-medium">{recipientData.name}</span></div>
                       <div><span className="text-zinc-500">E-mail:</span> <span className="font-medium">{recipientData.email}</span></div>
                       <div><span className="text-zinc-500">CPF/CNPJ:</span> <span className="font-medium">{recipientData.document}</span></div>
@@ -1262,7 +1262,7 @@ export default function ConfigPage() {
                     </div>
                     {recipientData.bank && (
                       <div className="border-t border-green-100 pt-2 mt-2">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div><span className="text-zinc-500">Banco:</span> <span className="font-medium">{recipientData.bank}</span></div>
                           <div><span className="text-zinc-500">Agência:</span> <span className="font-medium">{recipientData.branchNumber}</span></div>
                           <div><span className="text-zinc-500">Conta:</span> <span className="font-medium">{recipientData.accountNumber}-{recipientData.accountCheckDigit}</span></div>
@@ -1293,23 +1293,23 @@ export default function ConfigPage() {
 
             {!form.pagarmeSplitReceiverId && (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Nome / Razão Social</label>
                     <input type="text" placeholder="João da Silva" id="recipientName"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">E-mail</label>
                     <input type="email" placeholder="email@email.com" id="recipientEmail"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">CPF / CNPJ</label>
                     <input type="text" placeholder="000.000.000-00" id="recipientDocument"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Banco</label>
@@ -1343,21 +1343,21 @@ export default function ConfigPage() {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Agência</label>
                     <input type="text" placeholder="0001" id="recipientBranch"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Conta</label>
                     <input type="text" placeholder="12345" id="recipientAccount"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Dígito</label>
                     <input type="text" placeholder="6" id="recipientDigit"
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none" />
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -1435,7 +1435,7 @@ export default function ConfigPage() {
             placeholder="Chave PIX onde receberá o líquido (ex: 551199999999@email)"
             value={form.flowChavePix}
             onChange={(e) => setForm({ ...form, flowChavePix: e.target.value })}
-            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+            className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
             />
             <label className="block text-sm font-medium text-zinc-700">Ativar Modelo Flow</label>
             <div className="flex items-center">
@@ -1469,7 +1469,7 @@ export default function ConfigPage() {
                     placeholder="Client ID do Inter"
                     value={form.interClientId}
                     onChange={(e) => setForm({ ...form, interClientId: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1479,7 +1479,7 @@ export default function ConfigPage() {
                     placeholder="Client Secret do Inter"
                     value={form.interClientSecret}
                     onChange={(e) => setForm({ ...form, interClientSecret: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1489,7 +1489,7 @@ export default function ConfigPage() {
                     placeholder="CPF, CNPJ, email ou aleatória"
                     value={form.interPixKey}
                     onChange={(e) => setForm({ ...form, interPixKey: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1515,9 +1515,9 @@ export default function ConfigPage() {
                       Certificado carregado e pronto para salvar
                     </p>
                   ) : (
-                    <p className="text-xs text-zinc-400">Nenhum certificado selecionado</p>
+                    <p className="text-xs text-zinc-500">Nenhum certificado selecionado</p>
                   )}
-                  <p className="text-xs text-zinc-400">Baixe no Internet Banking → Soluções → Nova Integração</p>
+                  <p className="text-xs text-zinc-500">Baixe no Internet Banking → Soluções → Nova Integração</p>
                 </div>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">Senha do Certificado</label>
@@ -1526,7 +1526,7 @@ export default function ConfigPage() {
                     placeholder="Senha do .p12"
                     value={form.interCertificatePassword}
                     onChange={(e) => setForm({ ...form, interCertificatePassword: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
               </div>
@@ -1536,7 +1536,7 @@ export default function ConfigPage() {
         {/* Aceitar Pedidos Automaticamente */}
         <Card id="section-auto-accept" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Aceite Automático</h3>
+            <h2 className="font-semibold text-zinc-900">Aceite Automático</h2>
             <p className="text-sm text-zinc-500">Quando ativado, todo pedido já fica com status de aceito no cliente.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
               <input
@@ -1556,7 +1556,7 @@ export default function ConfigPage() {
         {/* Pedido Abandonado */}
         <Card id="section-abandoned" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Pedido Expirado</h3>
+            <h2 className="font-semibold text-zinc-900">Pedido Expirado</h2>
             <p className="text-sm text-zinc-500">Tempo (em minutos) para marcar automaticamente um pedido como "expirado" se não for aceito pelo estabelecimento.</p>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-zinc-700">Minutos:</label>
@@ -1576,14 +1576,14 @@ export default function ConfigPage() {
         {/* Tipos de Pedido */}
         <Card id="section-tipos" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Tipos de Pedido</h3>
+            <h2 className="font-semibold text-zinc-900">Tipos de Pedido</h2>
             <p className="text-sm text-zinc-500">Habilite ou desabilite os tipos de pedido disponíveis no cardápio.</p>
             <div className="space-y-3">
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                 <input type="checkbox" checked={orderConfig.delivery} onChange={(e) => setOrderConfig({ ...orderConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Bike className="h-4 w-4 text-zinc-400" />
+                    <Bike className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Entrega</span>
                   </div>
                   <p className="text-xs text-zinc-500"></p>
@@ -1593,7 +1593,7 @@ export default function ConfigPage() {
                 <input type="checkbox" checked={orderConfig.pickup} onChange={(e) => setOrderConfig({ ...orderConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Store className="h-4 w-4 text-zinc-400" />
+                    <Store className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500"></p>
@@ -1603,7 +1603,7 @@ export default function ConfigPage() {
                 <input type="checkbox" checked={orderConfig.dineIn} onChange={(e) => setOrderConfig({ ...orderConfig, dineIn: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-zinc-400" />
+                    <Utensils className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Consumir no local</span>
                   </div>
                   <p className="text-xs text-zinc-500"></p>
@@ -1617,7 +1617,7 @@ export default function ConfigPage() {
         <Card id="section-ifood" className={activeGroup !== "ifood" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-zinc-900">iFood</h3>
+              <h2 className="font-semibold text-zinc-900">iFood</h2>
             </div>
             <p className="text-sm text-zinc-500">Integração com iFood para receber pedidos automaticamente.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -1638,10 +1638,10 @@ export default function ConfigPage() {
                     placeholder="bd63685a-7c57-41c0-a52f-e6332cafcbd4"
                     value={form.ifoodMerchantId || ""}
                     onChange={(e) => setForm({ ...form, ifoodMerchantId: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-orange-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-orange-600 focus:outline-none"
                   />
                 </div>
-                <p className="text-xs text-zinc-400">Encontre o Merchant ID no painel do desenvolvedor iFood.</p>
+                <p className="text-xs text-zinc-500">Encontre o Merchant ID no painel do desenvolvedor iFood.</p>
               </div>
             )}
           </CardContent>
@@ -1651,7 +1651,7 @@ export default function ConfigPage() {
         <Card id="section-99food" className={activeGroup !== "99food" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-zinc-900">99Food</h3>
+              <h2 className="font-semibold text-zinc-900">99Food</h2>
             </div>
             <p className="text-sm text-zinc-500">Integração com 99Food marketplace para receber pedidos automaticamente.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -1672,7 +1672,7 @@ export default function ConfigPage() {
                     placeholder="ID da loja no 99Food"
                     value={form.nineFoodMerchantId || ""}
                     onChange={(e) => setForm({ ...form, nineFoodMerchantId: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-yellow-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1682,10 +1682,10 @@ export default function ConfigPage() {
                     placeholder="Chave de API do 99Food"
                     value={form.nineFoodApiKey || ""}
                     onChange={(e) => setForm({ ...form, nineFoodApiKey: e.target.value })}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-yellow-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
-                <p className="text-xs text-zinc-400">Webhook: https://flowoshub.com/api/orders/99food-webhook</p>
+                <p className="text-xs text-zinc-500">Webhook: https://flowoshub.com/api/orders/99food-webhook</p>
               </div>
             )}
           </CardContent>
@@ -1694,7 +1694,7 @@ export default function ConfigPage() {
         {/* Pedido Mínimo */}
         <Card id="section-pedido-minimo" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Pedido Mínimo</h3>
+            <h2 className="font-semibold text-zinc-900">Pedido Mínimo</h2>
             <p className="text-sm text-zinc-500">Defina o valor mínimo para que o pedido possa ser realizado no cardápio online.</p>
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
               <input
@@ -1719,7 +1719,7 @@ export default function ConfigPage() {
                     placeholder="30,00"
                     value={minimumOrderValue}
                     onChange={(e) => setMinimumOrderValue(e.target.value)}
-                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1732,7 +1732,7 @@ export default function ConfigPage() {
                       className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
                     />
                     <div className="flex items-center gap-1.5">
-                      <Bike className="h-3.5 w-3.5 text-zinc-400" />
+                      <Bike className="h-3.5 w-3.5 text-zinc-500" />
                       <span className="text-sm text-zinc-700">Entrega</span>
                     </div>
                   </label>
@@ -1744,7 +1744,7 @@ export default function ConfigPage() {
                       className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
                     />
                     <div className="flex items-center gap-1.5">
-                      <Store className="h-3.5 w-3.5 text-zinc-400" />
+                      <Store className="h-3.5 w-3.5 text-zinc-500" />
                       <span className="text-sm text-zinc-700">Retirada</span>
                     </div>
                   </label>
@@ -1757,7 +1757,7 @@ export default function ConfigPage() {
         {/* Configuração de Mesas */}
         <Card id="section-mesas" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Mesas</h3>
+            <h2 className="font-semibold text-zinc-900">Mesas</h2>
             <p className="text-sm text-zinc-500">Quantidade de mesas fixas disponíveis no caixa. As mesas são numeradas de 1 a N.</p>
             <div>
               <label className="text-sm font-medium text-zinc-700">Número de Mesas</label>
@@ -1776,7 +1776,7 @@ export default function ConfigPage() {
         {/* Taxa de Serviço */}
         <Card id="section-taxa-servico" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Taxa de Serviço</h3>
+            <h2 className="font-semibold text-zinc-900">Taxa de Serviço</h2>
             <p className="text-sm text-zinc-500">Cobrança adicional sobre o subtotal. Só se aplica a vendas presenciais em mesa.</p>
             
             <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
@@ -1865,7 +1865,7 @@ export default function ConfigPage() {
         {/* Descontos e Promoções */}
         <Card id="section-descontos" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Descontos e Promoções</h3>
+            <h2 className="font-semibold text-zinc-900">Descontos e Promoções</h2>
             <p className="text-sm text-zinc-500">Controle como os descontos de produtos em promoção se comportam no pedido.</p>
 
             <div className="space-y-3">
@@ -1939,7 +1939,7 @@ export default function ConfigPage() {
         {/* Taxa de Entrega */}
         <Card id="section-taxa-entrega" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900"> Entrega do Pedido</h3>
+            <h2 className="font-semibold text-zinc-900"> Entrega do Pedido</h2>
             <p className="text-sm text-zinc-500">Se aplica somente para entregas pelo estabelecimento, não vale para 99 entrega e ifood.</p>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1976,7 +1976,7 @@ export default function ConfigPage() {
                       placeholder="5,00"
                       value={form.deliveryFeeAmount}
                       onChange={(e) => setForm({ ...form, deliveryFeeAmount: e.target.value })}
-                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                      className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                     />
                   </div>
                   {form.deliveryFeeType === "free_above" && (
@@ -1989,7 +1989,7 @@ export default function ConfigPage() {
                         placeholder="50,00"
                         value={form.deliveryFreeAbove}
                         onChange={(e) => setForm({ ...form, deliveryFreeAbove: e.target.value })}
-                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
                   )}
@@ -2002,9 +2002,9 @@ export default function ConfigPage() {
         {/* Tempo Estimado de Entrega */}
         <Card id="section-tempo-entrega" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Tempo de Entrega do Pedido</h3>
+            <h2 className="font-semibold text-zinc-900">Tempo de Entrega do Pedido</h2>
             <p className="text-sm text-zinc-500">Tempo exibido no cardápio para o cliente.</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-zinc-700">Mínimo (min)</label>
                 <input
@@ -2014,7 +2014,7 @@ export default function ConfigPage() {
                   placeholder="30"
                   value={form.estimatedDeliveryMin || ""}
                   onChange={(e) => setForm({ ...form, estimatedDeliveryMin: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
@@ -2026,7 +2026,7 @@ export default function ConfigPage() {
                   placeholder="45"
                   value={form.estimatedDeliveryMax || ""}
                   onChange={(e) => setForm({ ...form, estimatedDeliveryMax: e.target.value })}
-                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                  className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -2036,14 +2036,14 @@ export default function ConfigPage() {
         {/* Formas de Pagamento */}
         <Card id="section-formas" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Formas de Pagamento</h3>
+            <h2 className="font-semibold text-zinc-900">Formas de Pagamento</h2>
             <p className="text-sm text-zinc-500">Quais formas de pagamento o cliente vê na hora de fechar o pedido.</p>
             <div className="space-y-3">
               <label className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                 <input type="checkbox" checked={paymentConfig.online} onChange={(e) => setPaymentConfig({ ...paymentConfig, online: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-zinc-400" />
+                    <CreditCard className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Online (Pix / Cartão)</span>
                   </div>
                   <p className="text-xs text-zinc-500"></p>
@@ -2053,7 +2053,7 @@ export default function ConfigPage() {
                 <input type="checkbox" checked={paymentConfig.delivery} onChange={(e) => setPaymentConfig({ ...paymentConfig, delivery: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-zinc-400" />
+                    <Banknote className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Pagar na Entrega</span>
                   </div>
                   <p className="text-xs text-zinc-500"> </p>
@@ -2063,7 +2063,7 @@ export default function ConfigPage() {
                 <input type="checkbox" checked={paymentConfig.pickup} onChange={(e) => setPaymentConfig({ ...paymentConfig, pickup: e.target.checked })} className="h-5 w-5 rounded border-white/[.08] text-green-600 focus:ring-green-500" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-zinc-400" />
+                    <Banknote className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Pagar na Retirada</span>
                   </div>
                   <p className="text-xs text-zinc-500"></p>
@@ -2076,7 +2076,7 @@ export default function ConfigPage() {
         {/* Limite de Pagamento na Entrega */}
         <Card id="section-limite" className={activeGroup !== "pagamentos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Limite de Pagamento na Entrega</h3>
+            <h2 className="font-semibold text-zinc-900">Limite de Pagamento na Entrega</h2>
             <p className="text-sm text-zinc-500">Defina um valor máximo para pedidos pagos na entrega. Pedidos acima desse valor só podem ser pagos online.</p>
             <div className="space-y-3">
               <div>
@@ -2089,10 +2089,10 @@ export default function ConfigPage() {
                     step={10}
                     value={deliveryLimit}
                     onChange={(e) => setDeliveryLimit(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
-                <p className="mt-1 text-xs text-zinc-400">Use 0 para desabilitar a entrega.</p>
+                <p className="mt-1 text-xs text-zinc-500">Use 0 para desabilitar a entrega.</p>
               </div>
               <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                 <input
@@ -2103,7 +2103,7 @@ export default function ConfigPage() {
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-zinc-400" />
+                    <Shield className="h-4 w-4 text-zinc-500" />
                     <span className="font-medium text-zinc-900">Bloquear segundo pedido na entrega</span>
                   </div>
                   <p className="text-xs text-zinc-500">Quando o pedido está em andamento, o cliente só pode fazer novos pedidos com pagamento online.</p>
@@ -2116,7 +2116,7 @@ export default function ConfigPage() {
         {/* Bloqueio por cancelamentos */}
         <Card id="section-bloqueio" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">Bloqueio por Cancelamentos</h3>
+            <h2 className="font-semibold text-zinc-900">Bloqueio por Cancelamentos</h2>
             <p className="text-sm text-zinc-500">Quando um cliente cancela pedidos com frequência, o pagamento na entrega é bloqueado automaticamente. Pedidos online (PIX/Cartão) continuam liberados.</p>
             <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
               <input
@@ -2127,7 +2127,7 @@ export default function ConfigPage() {
               />
               <div>
                 <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-zinc-400" />
+                  <Shield className="h-4 w-4 text-zinc-500" />
                   <span className="font-medium text-zinc-900">Ativar bloqueio automático</span>
                 </div>
                 <p className="text-xs text-zinc-500">Recomendado para reduzir cancelamentos abusivos no pagamento na entrega.</p>
@@ -2144,7 +2144,7 @@ export default function ConfigPage() {
                   onChange={(e) => setCancellationBlockThreshold(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Quantos cancelamentos disparam o bloqueio.</p>
+                <p className="mt-1 text-xs text-zinc-500">Quantos cancelamentos disparam o bloqueio.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Janela (X dias)</label>
@@ -2156,7 +2156,7 @@ export default function ConfigPage() {
                   onChange={(e) => setCancellationBlockWindowDays(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Período em que os cancelamentos são contados.</p>
+                <p className="mt-1 text-xs text-zinc-500">Período em que os cancelamentos são contados.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Bloqueio (Y dias)</label>
@@ -2168,7 +2168,7 @@ export default function ConfigPage() {
                   onChange={(e) => setCancellationBlockDurationDays(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Por quantos dias o pagamento na entrega fica bloqueado.</p>
+                <p className="mt-1 text-xs text-zinc-500">Por quantos dias o pagamento na entrega fica bloqueado.</p>
               </div>
             </div>
             <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3 text-xs text-zinc-600">
@@ -2182,7 +2182,7 @@ export default function ConfigPage() {
         {/* WhatsApp + Bot */}
         <Card id="section-whatsapp-bot" className={activeGroup !== "whatsapp" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="font-semibold text-zinc-900">WhatsApp &   Atendimento</h3>
+            <h2 className="font-semibold text-zinc-900">WhatsApp &   Atendimento</h2>
 
             <SaasOnly>
             <div className={`rounded-lg border p-4 ${whatsappAutomationEnabled ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
@@ -2240,7 +2240,7 @@ export default function ConfigPage() {
                   onChange={(e) => setAiMessagesLimit(Number(e.target.value) || 1000)}
                   className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                 />
-                <p className="text-xs text-zinc-400">Quando atingido, o bot volta pro menu fixo. Reset automático todo dia 1º.</p>
+                <p className="text-xs text-zinc-500">Quando atingido, o bot volta pro menu fixo. Reset automático todo dia 1º.</p>
               </div>
             )}
             </SaasOnly>
@@ -2255,7 +2255,7 @@ export default function ConfigPage() {
                   <MessageCircle className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h3>
+                  <h2 className="text-lg font-bold text-zinc-900">WhatsApp Business API</h2>
                   <p className="text-xs text-zinc-500">Conecte seu WhatsApp pelo Embedded Signup da Meta</p>
                 </div>
               </div>
@@ -2306,7 +2306,7 @@ export default function ConfigPage() {
                     placeholder="https://sua-evolution.up.railway.app"
                     value={evolutionBaseUrl}
                     onChange={(e) => setEvolutionBaseUrl(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -2316,7 +2316,7 @@ export default function ConfigPage() {
                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                     value={evolutionApiKey}
                     onChange={(e) => setEvolutionApiKey(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -2326,10 +2326,10 @@ export default function ConfigPage() {
                     placeholder="minha-loja"
                     value={evolutionInstanceName}
                     onChange={(e) => setEvolutionInstanceName(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                    className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                   />
                 </div>
-                <p className="text-xs text-zinc-400">Webhook para configurar na Evolution: <code>https://seu-dominio.com/api/webhooks/whatsapp</code></p>
+                <p className="text-xs text-zinc-500">Webhook para configurar na Evolution: <code>https://seu-dominio.com/api/webhooks/whatsapp</code></p>
 
                 {(() => {
                   if (!establishmentId) return null
@@ -2395,7 +2395,7 @@ export default function ConfigPage() {
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <MessageCircle className="h-4 w-4 text-zinc-400" />
+                        <MessageCircle className="h-4 w-4 text-zinc-500" />
                         <span className="font-medium text-zinc-900">Ativar bot automático</span>
                       </div>
                       <p className="text-xs text-zinc-500">Quando ativado, o bot responde clientes automaticamente com o menu de opções.</p>
@@ -2410,7 +2410,7 @@ export default function ConfigPage() {
                         placeholder="Atendente"
                         value={botAgentName}
                         onChange={(e) => setBotAgentName(e.target.value)}
-                        className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                        className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                       />
                     </div>
 
@@ -2422,9 +2422,9 @@ export default function ConfigPage() {
                           value={botGreeting}
                           onChange={(e) => setBotGreeting(e.target.value)}
                           rows={6}
-                          className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                          className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                         />
-                        <p className="mt-1 text-xs text-zinc-400">
+                        <p className="mt-1 text-xs text-zinc-500">
                           Use <code className="bg-zinc-100 px-1 rounded">{"{nome}"}</code>, <code className="bg-zinc-100 px-1 rounded">{"{link}"}</code> e <code className="bg-zinc-100 px-1 rounded">{"{cliente}"}</code> (nome do cliente). Opções numeradas (1 -, 2 -) viram menu.
                         </p>
                       </div>
@@ -2459,7 +2459,7 @@ export default function ConfigPage() {
                               const response = saved?.response || "mensagem"
                               return (
                                 <div key={opt.num} className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
-                                  <span className="text-xs font-bold text-zinc-400 w-4">{opt.num}</span>
+                                  <span className="text-xs font-bold text-zinc-500 w-4">{opt.num}</span>
                                   <span className="flex-1 text-sm text-zinc-700 truncate">{opt.label}</span>
                                   <select
                                     value={response}
@@ -2476,7 +2476,7 @@ export default function ConfigPage() {
                                       value={saved?.message || ""}
                                       onChange={(e) => updateOption(opt.num, response, e.target.value)}
                                       placeholder="Mensagem que o bot envia..."
-                                      className="flex-1 h-7 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                                      className="flex-1 h-7 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                                     />
                                   )}
                                 </div>
@@ -2517,7 +2517,7 @@ export default function ConfigPage() {
                       />
                       <div>
                         <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4 text-zinc-400" />
+                          <MessageCircle className="h-4 w-4 text-zinc-500" />
                           <span className="font-medium text-zinc-900">Usar IA pra mensagens livres</span>
                         </div>
                         <p className="text-xs text-zinc-500">Quando ligado, o bot usa IA pra responder perguntas em linguagem natural. Menu numerado continua funcionando como atalho.</p>
@@ -2546,7 +2546,7 @@ export default function ConfigPage() {
                             value={botFAQ}
                             onChange={(e) => setBotFAQ(e.target.value)}
                             rows={6}
-                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                           />
                           <p className="mt-1 text-xs text-zinc-500">
                             Tudo que você escrever aqui vira instrução que o atendente segue no WhatsApp. Escreva em linguagem simples, como se estivesse explicando para um funcionário novo.
@@ -2561,9 +2561,9 @@ export default function ConfigPage() {
                             value={botSystemPrompt}
                             onChange={(e) => setBotSystemPrompt(e.target.value)}
                             rows={3}
-                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                            className="mt-1 flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                           />
-                          <p className="mt-1 text-xs text-zinc-400">Adicionado ao final do prompt do sistema. Use com cuidado.</p>
+                          <p className="mt-1 text-xs text-zinc-500">Adicionado ao final do prompt do sistema. Use com cuidado.</p>
                         </div>
                         </SaasOnly>
                       </div>
@@ -2602,7 +2602,7 @@ export default function ConfigPage() {
                             onChange={(e) => setBotInactivityMessage(e.target.value)}
                             rows={2}
                             placeholder="Mensagem de despedida..."
-                            className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none"
+                            className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none"
                           />
                         </>
                       )}
@@ -2649,7 +2649,7 @@ export default function ConfigPage() {
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
                       <h5 className="text-sm font-semibold text-zinc-700">⌨️ Delay entre mensagens</h5>
                       <p className="text-xs text-zinc-500">Simula tempo de digitação pra não correr risco de ban e parecer mais humano.</p>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-zinc-600">Mínimo (ms)</label>
                           <input
@@ -2799,7 +2799,7 @@ export default function ConfigPage() {
                       onChange={(e) => setVerifyReminderDelayMin(e.target.value)}
                       className="flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 focus:border-green-600 focus:outline-none"
                     />
-                    <p className="text-xs text-zinc-400">Tempo após a solicitação do código para enviar o lembrete.</p>
+                    <p className="text-xs text-zinc-500">Tempo após a solicitação do código para enviar o lembrete.</p>
                   </div>
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-zinc-700">Mensagem do lembrete</label>
@@ -2809,7 +2809,7 @@ export default function ConfigPage() {
                       rows={3}
                       className="flex w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
                     />
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-zinc-500">
                       Use <code className="rounded bg-zinc-100 px-1">{"{{nome}}"}</code> e{" "}
                       <code className="rounded bg-zinc-100 px-1">{"{{estabelecimento}}"}</code> para personalizar.
                     </p>
@@ -2824,11 +2824,11 @@ export default function ConfigPage() {
         <Card id="section-99entregas" className={activeGroup !== "99entregas" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-zinc-900">Disponíveis</h3>
+              <h2 className="font-semibold text-zinc-900">Disponíveis</h2>
             </div>
             <p className="text-sm text-zinc-500">Selecione como suas entregas serão realizadas.</p>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Entrega Própria */}
               <button
                 type="button"
@@ -2852,7 +2852,7 @@ export default function ConfigPage() {
                 <span className="text-xs text-zinc-500">Use seus próprios motoboys</span>
                 {tipoEntregaAtiva === "propria" && (
                   <div className="absolute top-2 right-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">✓</span>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs">✓</span>
                   </div>
                 )}
               </button>
@@ -2933,9 +2933,9 @@ export default function ConfigPage() {
         {/* Agendamento de Pedidos (Encomendas) */}
         <Card id="section-agendamento" className={activeGroup !== "pedidos" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
               📦 Agendamento de Pedidos
-            </h3>
+            </h2>
             <p className="text-sm text-zinc-500">
               Defina as regras para pedidos agendados (encomendas para eventos/datas futuras). O bot vai validar esses limites ao conduzir o cliente pelo agendamento.
             </p>
@@ -2949,7 +2949,7 @@ export default function ConfigPage() {
                   onChange={(e) => setScheduledMinHours(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Cliente deve agendar com pelo menos esse tempo de antecedência.</p>
+                <p className="mt-1 text-xs text-zinc-500">Cliente deve agendar com pelo menos esse tempo de antecedência.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Tempo médio de preparo (min)</label>
@@ -2960,7 +2960,7 @@ export default function ConfigPage() {
                   onChange={(e) => setScheduledPrepMinutes(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Informativo. Use pra definir janelas de entrega.</p>
+                <p className="mt-1 text-xs text-zinc-500">Informativo. Use pra definir janelas de entrega.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700">Antecedência máxima (dias)</label>
@@ -2971,7 +2971,7 @@ export default function ConfigPage() {
                   onChange={(e) => setScheduledMaxAdvanceDays(e.target.value)}
                   className="mt-1 flex h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Cliente não pode agendar pra mais do que esse prazo.</p>
+                <p className="mt-1 text-xs text-zinc-500">Cliente não pode agendar pra mais do que esse prazo.</p>
               </div>
             </div>
           </CardContent>
@@ -2980,10 +2980,10 @@ export default function ConfigPage() {
         {/* Horário de Funcionamento */}
         <Card id="section-horarios" className={activeGroup !== "geral" ? "hidden" : ""}>
           <CardContent className="p-6 space-y-4">
-            <h3 className="flex items-center gap-2 font-semibold text-zinc-900">
+            <h2 className="flex items-center gap-2 font-semibold text-zinc-900">
               <Clock className="h-4 w-4" />
               Horário de Funcionamento
-            </h3>
+            </h2>
             <p className="text-sm text-zinc-500">Configure os horários. Fora desse horário, o cardápio informa que está fechado.</p>
             <div className="space-y-2">
               {businessHours.map((h, i) => (
@@ -2999,7 +2999,7 @@ export default function ConfigPage() {
                       }}
                       className="h-4 w-4 rounded border-white/[.08] text-green-600 focus:ring-green-500"
                     />
-                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-400"}`}>{h.day?.trim()}</span>
+                    <span className={`text-sm font-medium ${h.active ? "text-zinc-900" : "text-zinc-500"}`}>{h.day?.trim()}</span>
                   </label>
                   {h.active ? (
                     <div className="flex items-center gap-2">
@@ -3013,7 +3013,7 @@ export default function ConfigPage() {
                         }}
                         className="rounded-lg border border-zinc-300 bg-zinc-50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                       />
-                      <span className="text-xs text-zinc-400">até</span>
+                      <span className="text-xs text-zinc-500">até</span>
                       <input
                         type="time"
                         value={h.close}
@@ -3026,7 +3026,7 @@ export default function ConfigPage() {
                       />
                     </div>
                   ) : (
-                    <span className="text-xs text-zinc-400">Fechado</span>
+                    <span className="text-xs text-zinc-500">Fechado</span>
                   )}
                 </div>
               ))}
