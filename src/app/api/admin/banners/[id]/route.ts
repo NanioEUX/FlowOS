@@ -12,6 +12,15 @@ export async function PATCH(
     const authUser = await verifyAuth(req)
     if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
+    // F1B/F2-001: banner precisa pertencer ao tenant do token
+    const existing = await prisma.banner.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!existing || existing.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Banner não encontrado" }, { status: 404 })
+    }
+
     const body = await req.json()
     const data: any = {}
 
@@ -44,6 +53,15 @@ export async function DELETE(
   try {
     const authUser = await verifyAuth(req)
     if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    // F1B/F2-001: banner precisa pertencer ao tenant do token
+    const existing = await prisma.banner.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!existing || existing.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Banner não encontrado" }, { status: 404 })
+    }
 
     await prisma.banner.delete({ where: { id: params.id } })
 

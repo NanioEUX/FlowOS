@@ -2,8 +2,22 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import { getRequestId, logger } from "@/lib/logger"
+import { pickUpdateData } from "@/lib/safe-update"
 
 export const dynamic = "force-dynamic"
+
+// F2-001 — mass assignment: só escalares do modelo Product entram no update.
+// De fora: id/establishmentId/createdAt/updatedAt (identidade e tenant) e
+// relações (stockLinks/likes/… — nested write). likes também fica de fora:
+// curte via POST /api/products/[id]/like.
+const PRODUCT_PATCH_FIELDS = [
+  "name", "description", "price", "image", "isAvailable", "sendToPrep",
+  "availableOnline", "availablePresencial", "availableWhatsapp", "onSale",
+  "promoPrice", "isNew", "newUntil", "order", "badge", "featured",
+  "featuredOrder", "featuredDiscountPrice", "zoomEnabled", "ifoodItemId",
+  "ifoodGroupId", "ifoodProductId", "syncToIfood", "ifoodPrice",
+  "ifoodPriceLocked", "categoryId", "stockItemId", "recommendedProductIds",
+] as const
 
 export async function GET(
   req: NextRequest,
@@ -80,12 +94,13 @@ export async function PATCH(
       data = await req.json()
     }
 
-    // Prevent client from changing establishmentId
-    delete data.establishmentId
+    // F2-001: whitelist de escalares — o restante (id, establishmentId,
+    // campos alheios e nested writes) nunca chega ao Prisma.
+    const updateData = pickUpdateData(data, PRODUCT_PATCH_FIELDS)
 
     const product = await prisma.product.update({
       where: { id },
-      data,
+      data: updateData,
     })
 
     return NextResponse.json(product)

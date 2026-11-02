@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import { getRequestId, logger } from "@/lib/logger"
+import { pickUpdateData } from "@/lib/safe-update"
 
 export const dynamic = "force-dynamic"
+
+// F2-001 — mass assignment: só escalares do modelo AdditionalOption.
+// De fora: id/establishmentId/createdAt/updatedAt e productId (mover opção
+// para produto de outro tenant); nenhum cliente usa este PATCH — o cardápio
+// recria a opção via DELETE + POST.
+const OPTION_PATCH_FIELDS = [
+  "name", "price", "selectionType", "inputType", "groupName", "headerText",
+  "maxSelection", "minSelection", "order", "groupOrder", "consumesStock",
+  "stockProductId", "stockQuantity", "stockUnit",
+] as const
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -93,7 +104,7 @@ export async function PATCH(req: NextRequest) {
     if (error) return error
 
     const body = await req.json()
-    const { id, ...data } = body
+    const { id } = body
 
     if (!id) {
       return NextResponse.json({ error: "id obrigatório" }, { status: 400 })
@@ -108,8 +119,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Opção não encontrada" }, { status: 404 })
     }
 
-    // Prevent client from changing tenant
-    delete data.establishmentId
+    // F2-001: whitelist de escalares (establishmentId/nested write fora)
+    const data = pickUpdateData(body, OPTION_PATCH_FIELDS)
 
     const option = await prisma.additionalOption.update({
       where: { id },

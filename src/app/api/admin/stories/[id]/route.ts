@@ -12,6 +12,15 @@ export async function PATCH(
     const authUser = await verifyAuth(req)
     if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
+    // F1B/F2-001: story precisa pertencer ao tenant do token
+    const existing = await prisma.story.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!existing || existing.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Story não encontrado" }, { status: 404 })
+    }
+
     const body = await req.json()
     const data: any = {}
 
@@ -42,6 +51,16 @@ export async function DELETE(
   try {
     const authUser = await verifyAuth(req)
     if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    // F1B/F2-001: story precisa pertencer ao tenant do token (o deleteMany dos
+    // itens viria junto — cross-tenant delete em cascata sem este check)
+    const existing = await prisma.story.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!existing || existing.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Story não encontrado" }, { status: 404 })
+    }
 
     await prisma.storyItem.deleteMany({ where: { storyId: params.id } })
     await prisma.story.delete({ where: { id: params.id } })

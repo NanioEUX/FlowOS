@@ -15,6 +15,24 @@ export async function POST(
     const { productId } = await req.json()
     if (!productId) return NextResponse.json({ error: "productId obrigatório" }, { status: 400 })
 
+    // F1B/F2-001: story e produto precisam pertencer ao tenant do token
+    // (senão um token adicionava produto alheio ao próprio story, ou insería
+    // item em story de outra loja)
+    const story = await prisma.story.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!story || story.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Story não encontrado" }, { status: 404 })
+    }
+    const product = await prisma.product.findFirst({
+      where: { id: productId, establishmentId: authUser.establishmentId },
+      select: { id: true },
+    })
+    if (!product) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
+    }
+
     const existing = await prisma.storyItem.findUnique({
       where: { storyId_productId: { storyId: params.id, productId } },
     })
@@ -52,6 +70,15 @@ export async function DELETE(
     const { searchParams } = new URL(req.url)
     const productId = searchParams.get("productId")
     if (!productId) return NextResponse.json({ error: "productId obrigatório" }, { status: 400 })
+
+    // F1B/F2-001: story precisa pertencer ao tenant do token
+    const story = await prisma.story.findUnique({
+      where: { id: params.id },
+      select: { establishmentId: true },
+    })
+    if (!story || story.establishmentId !== authUser.establishmentId) {
+      return NextResponse.json({ error: "Story não encontrado" }, { status: 404 })
+    }
 
     await prisma.storyItem.deleteMany({
       where: { storyId: params.id, productId },

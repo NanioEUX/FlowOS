@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyAuth } from "@/lib/auth"
+import { requireEstablishment } from "@/lib/require-auth"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-
     const establishmentId = req.nextUrl.searchParams.get("establishmentId")
     if (!establishmentId) return NextResponse.json({ error: "establishmentId required" }, { status: 400 })
+
+    // F1B/F2-001: escopo de tenant (o front sempre envia o próprio id)
+    const { error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     // Manual stories from DB
     const manualStories = await prisma.story.findMany({
@@ -76,15 +77,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = await verifyAuth(req)
-    if (!authUser) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-
     const body = await req.json()
     const { name, emoji, gradientFrom, gradientTo, type, autoType, establishmentId } = body
 
     if (!name || !establishmentId) {
       return NextResponse.json({ error: "Nome e establishmentId obrigatórios" }, { status: 400 })
     }
+
+    // F1B/F2-001: establishmentId do body precisa bater com o do JWT
+    const { error } = requireEstablishment(req, establishmentId)
+    if (error) return error
 
     const maxOrder = await prisma.story.findFirst({
       where: { establishmentId },

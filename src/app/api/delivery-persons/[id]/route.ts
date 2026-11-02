@@ -15,9 +15,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const body = await req.json()
+    // F2-001 — mass assignment: só escalares do DeliveryPerson. establishmentId
+    // fica de fora (mudaria o tenant) e token/createdAt/id também. Nenhum front
+    // usa este PATCH hoje — allowlist preventiva.
+    const data: Record<string, unknown> = {}
+    for (const key of ["name", "phone", "userId", "isActive"] as const) {
+      if (key in body && body[key] !== undefined && (body[key] === null || typeof body[key] !== "object")) {
+        data[key] = body[key]
+      }
+    }
     const updated = await prisma.deliveryPerson.update({
       where: { id: params.id },
-      data: body,
+      data,
     })
     return NextResponse.json(updated)
   } catch (error) {
