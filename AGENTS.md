@@ -304,9 +304,14 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   **F8D-022** — hierarquia de headings: 11 telas do dashboard passaram a ter `h1` como
   título e os 72 `h3` dessas páginas viraram `h2` (sem salto de nível; visualmente
   neutro pelo preflight do Tailwind).
-  **Restam da Fase 8**: F8C-013/F8C-014 (adoção de `ui/Button`/`ui/Input` no PDV e
-  dashboard + remover os 69 hex hardcoded — refactor visual, faz por tela com revisão
-  do dono), 2ª via da impressão em PDF (feature).
+  **F8C-013/F8C-014 — CONCLUÍDOS (02/11, no working tree)**: tema do PDV/mesa via
+  classes `dark:` (215+ ternários) + tokens `colors.pdv.*` (60 usos; hex restantes só
+  em QR/impressão); **52 `<input>` crus canônicos → `<Input>`** em 10 telas do dashboard
+  (delta de estilo mantido no `className` — `cn()` com `twMerge` garante que a tela
+  vence). `ui/input`/`ui/select` adoption-safe (wrapper só com label/error).
+  **Restam da Fase 8**: variantes de input (128 — exigiria `size="sm"` no `ui/Input`,
+  decisão de design), `ui/Button` no PDV, 2ª via da impressão em PDF (feature).
+  Gate dos 3 commits: tsc 0, 183 testes, build OK.
 
 - **Fase 4 — 1º lote (26/10, no working tree)**: **F4A-001** (iFood devolve 500 em
   falha, não 200), **F4B-002** (P2002 = já existe; loja sem iFood não duplica),
@@ -374,8 +379,11 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
    not exist` (ou qualquer coluna antiga), rode `npx prisma generate` — o
    `node_modules/.prisma` estava defasado (gerado antes da remoção do Asaas/Efi).
    `prisma generate` **não** escreve no banco.
-1. **Fase 8 restante**: F8C-013/F8C-014 (design system no PDV/dashboard — refactor
-   visual, por tela), F8D-022 (hierarquia de headings), 2ª via da impressão em PDF.
+1. **Fase 8 restante**: F8C-014 parcial (adoção de `ui/Input` nos 52 inputs canônicos
+   do dashboard **feita**; faltam as 128 variantes `h-8/h-9`/`bg-white` — exigiria
+   `size="sm"` no `ui/Input`, decisão de design) + `ui/Button` no PDV; 2ª via da
+   impressão em PDF (feature). **F8C-013 e F8D-022 CONCLUÍDOS** (commits `6a4ee3f`,
+   `85d7983`, `3473693`).
    **Fase 4 (em andamento)**: F4B-019 (`Idempotency-Key` no `POST /api/orders` —
    exige coluna `clientRequestId`/`db push`, decisão do dono), F4A-019 (APM —
    Sentry é decisão do dono), F4C-022 (CI já roda lint+tsc+`npm test`+build;
