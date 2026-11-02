@@ -333,6 +333,7 @@ profile picture, template, quota, status) ·
 | `redact.ts` | Redação de segredos/PII nos logs |
 | `logger.ts` | Log estruturado JSON + request-id |
 | `items.ts` | `parseOrderItems` — parse seguro de `Order.items` |
+| `order-idempotency.ts` | Chave `Idempotency-Key` do `POST /api/orders` (helper pronto; falta aplicar o SQL — `docs/DB-CHANGES-PENDENTES.md`) |
 | `fetch-external.ts` | Timeout 15s + retry exponencial (só método idempotente) |
 | `webhook-99.ts` | Processamento de eventos da 99 (compartilhado entre webhook e replay) |
 | `webhook-signature.ts` | Comparação em tempo constante de assinaturas |
@@ -519,9 +520,11 @@ typecheck → `npm test` → build. Placeholders de env no CI (nenhum segredo re
 
 ### Riscos conhecidos / pendências do dono
 
-1. `Idempotency-Key` no `POST /api/orders` (exige coluna + `db push`).
+1. `Idempotency-Key` no `POST /api/orders` (exige coluna + `db push`) — SQL,
+   helper e passo a passo prontos em `docs/DB-CHANGES-PENDENTES.md`.
 2. APM/error tracking (Sentry) — decisão de dependência.
 3. Gate de status check do CI no deploy (config no painel da Vercel).
 4. `WEBHOOK_99_SECRET` e `IFOOD_WEBHOOK_SECRET` — sem eles o webhook é *fail-open*.
 5. Fechar a sandbox de ativação de plano sem pagamento (decisão de produto).
-6. LGPD: delete de `Customer` e base legal de retenção.
+6. LGPD: delete de `Customer` e base legal de retenção — o aceite/consentimento
+   (F9C-005) tem SQL pronto em `docs/DB-CHANGES-PENDENTES.md`.

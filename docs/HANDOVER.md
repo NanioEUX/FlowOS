@@ -207,20 +207,27 @@ banco**, por estabelecimento. As de ambiente estão listadas em `docs/SISTEMA.md
 ## 9. Pendências abertas (com dono)
 
 **Bloqueiam decisão do dono**
-1. `Idempotency-Key` no `POST /api/orders` — exige coluna `clientRequestId` + `db push`
+1. `Idempotency-Key` no `POST /api/orders` — exige coluna `clientRequestId` + `db push`.
+   **Já preparado (SQL + helper testado + passo a passo) em
+   `docs/DB-CHANGES-PENDENTES.md`** — falta só o dono aplicar o SQL e ligar.
 2. APM/error tracking (Sentry) — dependência nova
 3. Gate de status check do CI no painel da Vercel
 4. Ativação de plano sem pagamento (sandbox) — decisão de produto
-5. LGPD: delete de `Customer` e base legal de retenção
+5. LGPD: delete de `Customer` e base legal de retenção — o **consentimento/aceite**
+   (F9C-005) já tem SQL pronto em `docs/DB-CHANGES-PENDENTES.md`; falta o checkbox
+   no cadastro e o texto dos Termos de Uso (jurídico)
 
 **Pode fazer sem decisão (sprint)**
 6. Fase 8: `ui/Button`/`ui/Input` no PDV e dashboard + remover hex hardcoded
    (F8C-013/F8C-014) — refactor visual, fazer por tela
 7. Fase 8: 2ª via de impressão em PDF (feature)
-8. Fase 4: migrar os ~570 `console.*` restantes para `src/lib/logger.ts`
-9. Fase 4: webhook de eventos **idempotente por `eventId`** (tabela `WebhookEvent`
+8. Fase 4: webhook de eventos **idempotente por `eventId`** (tabela `WebhookEvent`
    com `@@unique([provider, eventId])`) + dead-letter
-10. Fase 7: fallback SMS/e-mail no OTP (F7B-012)
+9. Fase 7: fallback SMS/e-mail no OTP (F7B-012)
+
+> ✅ **F4A-018 (logs estruturados) está CONCLUÍDO** — o servidor inteiro usa
+> `src/lib/logger.ts` (0 `console.*` em `src/app/api/**` e `src/lib/**`), com
+> request-id e PII redigida. Não sobrou migração de log para o dev fazer.
 
 **Testes manuais que o dono ainda precisa rodar**
 - Pedido PIX/cartão no cardápio real · abertura do link de tracking

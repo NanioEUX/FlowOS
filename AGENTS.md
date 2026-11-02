@@ -389,6 +389,14 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
    documentação — nada usa `migrate deploy`). **Atenção**: a working tree de schema já foi
    regenerada 1x com Efi/Asaas de volta (provável `db pull` do SQLite local antigo) — foi
    revertida; não regenerar sem conferir contra o prod.
+   **Mudanças de banco PREPARADAS (01/11, não aplicadas)**: novo
+   `docs/DB-CHANGES-PENDENTES.md` + `scripts/migration_client_request_id.sql`
+   (F4B-019 — coluna `Order.clientRequestId` + índice único parcial) +
+   `scripts/migration_lgpd_consent.sql` (F9C-005 — aceite de termos e
+   consentimento em `Establishment`/`Customer`) + `src/lib/order-idempotency.ts`
+   (helper testado, 10 testes). **Não aplicar sem o dono**: enquanto a coluna
+   não existir no banco, mexer no `schema.prisma` quebra todas as queries de
+   `Order` em produção.
 3. Testar fluxo real: pedido PIX/cartão + mesa + PDV balcão + bot WhatsApp em ambiente de teste.
 4. F6B restantes: **ADIADOS pelo usuário (14/10)** — idempotência (F6B-006) e `/api/coupons`
    CRUD+validate (F6B-012; prod tem o shape novo `name/type/conditionValue` com 0 linhas, mas
