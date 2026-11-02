@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useEstablishmentId } from "@/hooks/use-establishment-id"
-import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle, Utensils } from "lucide-react"
+import { Save, Loader2, Eye, EyeOff, CreditCard, Banknote, Bike, Store, Clock, Plug, CheckCircle, XCircle, Shield, MessageCircle, ArrowUp, Unplug, Building2, Phone, Camera, Mail, MessageSquare, AlertTriangle, Utensils, Download } from "lucide-react"
 import { EmbeddedSignupButton } from "@/components/meta-embedded-signup"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { fetchAuth } from "@/lib/fetch-auth"
 import { formatCurrency } from "@/lib/utils"
+import { useToast } from "@/components/toast"
 
 const categories = [
   { value: "restaurante", label: "Restaurante" },
@@ -716,6 +717,7 @@ export default function ConfigPage() {
     const SaasOnly = ({ children }: { children: React.ReactNode }) => isSaasAdmin ? <>{children}</> : null
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
+    const { toast } = useToast()
     const [showKey, setShowKey] = useState(false)
     const [recipientData, setRecipientData] = useState<any>(null)
     const [loadingRecipient, setLoadingRecipient] = useState(false)
@@ -980,6 +982,30 @@ export default function ConfigPage() {
             })
             }
     
+    async function exportData() {
+        if (!establishmentId) return
+        try {
+            const res = await fetchAuth(`/api/establishments/${establishmentId}/export?establishmentId=${establishmentId}`)
+            if (!res.ok) {
+                toast("Erro ao exportar dados", "error")
+                return
+            }
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            const filename = `flowos-export-${establishmentId}-${new Date().toISOString().split("T")[0]}.json`
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            toast("Dados exportados com sucesso", "success")
+        } catch (err) {
+            toast("Erro ao exportar dados", "error")
+        }
+    }
+
     useEffect(() => {
         if (!establishmentId) return
             reloadData()
@@ -1226,6 +1252,13 @@ export default function ConfigPage() {
             className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none resize-none"
             />
             <p className="text-xs text-zinc-500">Aparece no cardápio, mesa e frente de caixa</p>
+            <button
+              onClick={exportData}
+              className="mt-3 w-full flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Exportar meus dados (LGPD)
+            </button>
             </div>
             </CardContent>
             </Card>

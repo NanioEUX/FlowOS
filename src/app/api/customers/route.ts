@@ -189,6 +189,43 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  // F7B-014: cliente exclui seu próprio cadastro (LGPD art. 18 V).
+  // Só com sessão do cliente (cookie), nunca por id no body/URL.
+  const session = await verifyCustomerSession(req)
+  if (!session) return customerSessionRequired()
+
+  try {
+    // Anonimiza os dados pessoais (soft delete LGPD): remove PII e registra
+    // o pedido de exclusão + data de anonimização.
+    const customer = await prisma.customer.update({
+      where: { id: session.customerId },
+      data: {
+        name: null,
+        cpf: null,
+        email: null,
+        address: null,
+        cep: null,
+        birthDate: null,
+        dataDeletionRequestedAt: new Date(),
+        anonymizedAt: new Date(),
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: "Seus dados foram anonimizados. Não é mais possível recuperar esta conta.",
+    })
+  } catch (error) {
+    logger.error("customers-delete", "falha ao anonimizar o cliente", {
+      requestId: getRequestId(req),
+      customerId: session.customerId,
+      error: (error as any)?.message,
+    })
+    return NextResponse.json({ error: "Erro ao excluir o cadastro" }, { status: 500 })
+  }
+}
+
 export async function PUT(req: NextRequest) {
   try {
     // Perfil do cliente final: só com sessão do cookie; o id vem do token,

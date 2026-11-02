@@ -36,6 +36,8 @@ export default function CadastroPage() {
     phone: "",
     category: "",
     address: "",
+    termsAccepted: false,
+    privacyAccepted: false,
   })
 
   const slug = slugify(form.name)
@@ -64,10 +66,18 @@ export default function CadastroPage() {
     setError("")
 
     try {
+      if (!form.termsAccepted || !form.privacyAccepted) {
+        throw new Error("É necessário aceitar os Termos de Uso e a Política de Privacidade")
+      }
+
       const res = await fetch("/api/establishments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, phone: form.phone.replace(/\D/g, "") }),
+        body: JSON.stringify({
+          ...form,
+          phone: form.phone.replace(/\D/g, ""),
+          termsVersion: "2026-11-02",
+        }),
       })
 
       if (!res.ok) {
@@ -291,6 +301,32 @@ export default function CadastroPage() {
               <div className="flex items-start gap-2 rounded-input bg-white/[0.03] p-3 border border-white/[.06]">
                 <svg className="h-4 w-4 mt-0.5 flex-shrink-0 text-flow-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 <p className="text-[12px] text-flow-gray">7 dias grátis. Sem cartão de crédito. Cancele quando quiser.</p>
+              </div>
+
+              {/* Aceite de termos e privacidade */}
+              <div className="flex items-start gap-3 rounded-input bg-white/[0.03] p-3 border border-white/[.06]">
+                <input
+                  id="cadastro-terms"
+                  type="checkbox"
+                  checked={form.termsAccepted}
+                  onChange={(e) => setForm({ ...form, termsAccepted: e.target.checked })}
+                  className="mt-1 rounded border-white/[.2] bg-transparent text-flow-blue focus:ring-flow-blue"
+                />
+                <label htmlFor="cadastro-terms" className="text-[12px] text-flow-gray leading-relaxed cursor-pointer">
+                  Li e aceito os <Link href="/termos-de-uso" className="text-flow-blue underline hover:text-flow-cyan transition-colors">Termos de Uso</Link>
+                </label>
+              </div>
+              <div className="flex items-start gap-3 rounded-input bg-white/[0.03] p-3 border border-white/[.06]">
+                <input
+                  id="cadastro-privacy"
+                  type="checkbox"
+                  checked={form.privacyAccepted}
+                  onChange={(e) => setForm({ ...form, privacyAccepted: e.target.checked })}
+                  className="mt-1 rounded border-white/[.2] bg-transparent text-flow-blue focus:ring-flow-blue"
+                />
+                <label htmlFor="cadastro-privacy" className="text-[12px] text-flow-gray leading-relaxed cursor-pointer">
+                  Li e aceito a <Link href="/politica-de-privacidade" className="text-flow-blue underline hover:text-flow-cyan transition-colors">Política de Privacidade</Link>
+                </label>
               </div>
 
               <div className="flex gap-3 mt-2">

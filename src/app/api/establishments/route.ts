@@ -61,10 +61,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { name, ownerName, email, password, phone, category, address } = await req.json()
+    const { name, ownerName, email, password, phone, category, address, termsAccepted, privacyAccepted, termsVersion } = await req.json()
 
     if (!name || !email || !password || !phone) {
       return NextResponse.json({ error: "Nome, email, senha e WhatsApp são obrigatórios" }, { status: 400 })
+    }
+
+    if (!termsAccepted || !privacyAccepted) {
+      return NextResponse.json({ error: "É necessário aceitar os Termos de Uso e a Política de Privacidade" }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -112,6 +116,9 @@ export async function POST(req: NextRequest) {
         botSystemPrompt,
         botAgentName,
         botTone,
+        termsAcceptedAt: termsAccepted ? now : null,
+        privacyPolicyAcceptedAt: privacyAccepted ? now : null,
+        termsVersion: termsVersion || "2026-11-02",
       },
     })
 

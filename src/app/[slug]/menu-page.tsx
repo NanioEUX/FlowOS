@@ -422,6 +422,7 @@ export function MenuPage({ establishment, paymentConfig, orderConfig, minimumOrd
   const [editingProfile, setEditingProfile] = useState(false)
   const [expandedProfileItem, setExpandedProfileItem] = useState<string | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false)
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false)
   const [cpfError, setCpfError] = useState("")
 
@@ -4520,6 +4521,20 @@ onPaymentConfirmed={handlePaymentSuccess}
                     </button>
                   </div>
                 )}
+
+                {/* Excluir meu cadastro (LGPD) */}
+                {(customer.phone || customerData?.phone) && (
+                  <div className="mx-4 mt-2">
+                    <button
+                      onClick={() => setShowDeleteAccountConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors border"
+                      style={{ color: "#ef4444", backgroundColor: "#fef2f2", borderColor: "#fecaca" }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir meu cadastro
+                    </button>
+                  </div>
+                )}
               </div>
           </div>
         </div>
@@ -4751,6 +4766,106 @@ onPaymentConfirmed={handlePaymentSuccess}
                 style={{ backgroundColor: "#ef4444" }}
               >
                 Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal (LGPD) */}
+      {showDeleteAccountConfirm && (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 backdrop-blur-xl" style={{ backgroundColor: theme.bgModal, border: `1px solid ${theme.borderCard}` }}>
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 h-14 w-14 rounded-full flex items-center justify-center" style={{ backgroundColor: "#fef2f2" }}>
+                <svg className="h-7 w-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold" style={{ color: theme.text }}>Excluir meu cadastro?</h3>
+              <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
+                Seus dados pessoais serão anonimizados permanentemente. Não será possível desfazer.
+              </p>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowDeleteAccountConfirm(false)}
+                className="flex-1 rounded-xl py-3 text-sm font-medium border transition-colors hover:opacity-80"
+                style={{ backgroundColor: theme.bgCard, color: theme.text, borderColor: theme.borderCard }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  const res = await fetch("/api/customers", { method: "DELETE" })
+                  if (res.ok) {
+                    // User data
+                    setCustomerData(null)
+                    setPhoneInput("")
+                    setCustomer({ name: "", phone: "", address: "", notes: "" })
+                    // Cart & addresses
+                    setCart([])
+                    setAddresses([])
+                    setSelectedAddressId(null)
+                    setAddressSaved(false)
+                    setAddressLabel("")
+                    setEditingAddress(false)
+                    setShowAddressForm(false)
+                    // CEP
+                    setCep("")
+                    setCepAddress(null)
+                    setCepError("")
+                    // Loyalty & coupons
+                    setUseLoyalty(false)
+                    setCustomerLoyaltyPoints(0)
+                    setCustomerTier("bronze")
+                    setCouponData(null)
+                    setCouponCode("")
+                    setCouponError("")
+                    // Orders
+                    setLastOrder(null)
+                    setCustomerOrders([])
+                    setPendingOrderConfirm(null)
+                    setInProgressOrder(null)
+                    setPendingOrderItems([])
+                    setPendingOrderNumber(null)
+                    setPendingOrderModal(null)
+                    setPendingOrderAction(null)
+                    // Cart UI
+                    setCartStep("cart")
+                    setOrderResult(null)
+                    setEditingCartItemId(null)
+                    setShowCart(false)
+                    setShowOrdersList(false)
+                    setActiveTab("menu")
+                    // Payment
+                    setOrderType("delivery")
+                    setPaymentMethod("pix")
+                     setCashSubMethod(null)
+                     setChangeFor("")
+                     setOrderError("")
+                    // Session
+                    clearSessionVerified()
+                    // Cookie de sessão do cliente (httpOnly): limpar via API
+                    fetch("/api/verification", { method: "DELETE" }).catch(() => {})
+                    // localStorage
+                    localStorage.removeItem(`pedefacil-customer-${establishment.slug}`)
+                    removeStorage(`pedefacil-cart-${establishment.slug}`, `pedefacil-cart-${establishment.slug}`)
+                    localStorage.removeItem(`pedefacil-last-order-${establishment.slug}`)
+                    localStorage.removeItem(`pedefacil-countdown-${establishment.slug}`)
+                    localStorage.removeItem(`pedefacil-countdown-time-${establishment.slug}`)
+              localStorage.removeItem(`pedefacil-review-dismissed-${establishment.slug}`)
+                    setShowCustomerProfile(false)
+                    setShowDeleteAccountConfirm(false)
+                  } else {
+                    const data = await res.json().catch(() => ({}))
+                    alert(data.error || "Erro ao excluir o cadastro")
+                  }
+                }}
+                className="flex-1 rounded-xl py-3 text-sm font-medium text-white transition-colors hover:opacity-90"
+                style={{ backgroundColor: "#ef4444" }}
+              >
+                Excluir
               </button>
             </div>
           </div>
