@@ -13,7 +13,7 @@ rm -rf .next/types && npx tsc --noEmit && npx vitest run && npm run build
 Aspas em paths com `[slug]`/`[id]` no zsh. Atual: tsc limpo, 187 testes, build OK.
 
 ## Sequência da auditoria (não seguir ordem H1 cegamente)
-Fase 1 ✅ → Fase 2 ✅ → **Fase 6 (cardápio público) EM ANDAMENTO** → Fase 5/3/4/7/8/9/10 pendentes.
+Fase 1 ✅ → Fase 2 ✅ → **Fase 6 (cardápio público) ✅ CONCLUÍDA** → Fase 5/3/4/7/8/9/10 pendentes.
 
 Auditoria: `auditoria/PROGRESSO.md`, `auditoria/RELATORIO-FINAL.md` (H1 = linhas 375-396; ordem sugerida `0→1→2→6→7→5→3→4→8→9→10`).
 
@@ -47,6 +47,13 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
 - Também no working tree: **F6B-005** (`isOpen` com tick de 60s + `isOpenOverride` no
   `menu-page.tsx`) e **F6B-007** (`GeolocationButton` reativado no checkout de delivery quando
   a loja tem GPS → taxa por zona/distância + `customerLat/Lng` fluindo pro pedido).
+- **F6B-021 — CONCLUÍDO (commit e96cb0d)**: SEO do cardápio público —
+  `src/app/robots.txt` (permite `/` e `/[slug]`, bloqueia `/api`, `/dashboard`,
+  `/caixa`, `/kds`, `/admin*`, `/login*`, `/pedido/*`), `src/app/sitemap.xml`
+  (home, cadastro, política de privacidade + cardápios de lojas ativas; nunca
+  500 se o banco estiver indisponível) e `src/app/[slug]/page.tsx` (canonical
+  por tenant, JSON-LD tipo Restaurant com anti-XSS, `og:image` com fallback
+  para `icons/icon-512.png` sem dims fixas).
 - **Regressão corrigida**: `staff-page.tsx` chamava `GET/PATCH /api/payment-request` sem JWT
   (401 desde o hardening `6559fb5`) → agora usa `fetchAuth` (opera com sessão do dashboard).
 - **F6B-010 / F6A-018 / document.write (14/10)**: `middleware.ts` movido para `src/middleware.ts`
