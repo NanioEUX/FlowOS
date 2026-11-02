@@ -1231,9 +1231,9 @@ export default function CaixaPOSPage() {
       {/* Header */}
       <div className={`flex h-14 items-center justify-between border-b px-4 lg:h-16 lg:px-8 border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}>
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/dashboard/home")} className={`rounded-lg p-1 lg:hidden hover:bg-zinc-100 dark:hover:bg-pdv-card`}>
+          <Button onClick={() => router.push("/dashboard/home")} className={`rounded-lg p-1 lg:hidden hover:bg-zinc-100 dark:hover:bg-pdv-card`}>
             <ArrowLeft className={`h-5 w-5 text-zinc-600 dark:text-white/70`} />
-          </button>
+          </Button>
           {user.establishment ? (
             <>
               {user.establishment.logo ? (
@@ -1268,39 +1268,39 @@ export default function CaixaPOSPage() {
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                 Caixa Aberto
               </span>
-              <button
+              <Button
                 onClick={() => { setCashRegisterAction("transfer"); setShowCashRegisterModal(true) }}
                 className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
               >
                 Transferir
-              </button>
+              </Button>
               {user?.canCloseRegister && (
-                <button
+                <Button
                   onClick={() => { setCashRegisterAction("close"); setShowCashRegisterModal(true) }}
                   className="rounded-lg bg-red-500 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-red-600"
                 >
                   Fechar Caixa
-                </button>
+                </Button>
               )}
             </>
           ) : (
-            <button
+            <Button
               onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
               className="rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-green-700"
             >
               Abrir Caixa
-            </button>
+            </Button>
           )}
 
           <div className={`h-4 w-px hidden lg:block bg-zinc-200 dark:bg-pdv-card-alt`} />
 
-          <button
+          <Button
             onClick={() => setDarkMode(!darkMode)}
             className={`rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:text-white/50 dark:hover:bg-pdv-card dark:hover:text-white/90`}
             title={"Tema escuro dark:Tema dark:claro"}
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          </Button>
 
           <span className={`hidden text-sm lg:block text-zinc-500 dark:text-white/50`}>{currentTime}</span>
           <div className="hidden items-center gap-1.5 lg:flex">
@@ -1309,16 +1309,16 @@ export default function CaixaPOSPage() {
             </div>
             <span className={`font-medium text-zinc-700 dark:text-white/70`}>{user?.name}</span>
           </div>
-          <button onClick={handleLogout} className={`rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:text-white/50 dark:hover:bg-pdv-card dark:hover:text-white/90`}>
+          <Button onClick={handleLogout} className={`rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:text-white/50 dark:hover:bg-pdv-card dark:hover:text-white/90`}>
             <LogOut className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
       {showTabs && (
         <div className={`flex overflow-x-auto border-b border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}>
-          <button
+          <Button
             onClick={() => setActiveTab("caixa")}
             className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "caixa"
@@ -1330,8 +1330,8 @@ export default function CaixaPOSPage() {
               <ShoppingBag className="h-5 w-5" />
               Caixa
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setActiveTab("mesas")}
             className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
               activeTab === "mesas"
@@ -1348,9 +1348,9 @@ export default function CaixaPOSPage() {
                 </span>
               )}
             </div>
-          </button>
+          </Button>
           {hasPedidos && (
-            <button
+            <Button
               onClick={() => setActiveTab("balcao")}
               className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "balcao"
@@ -1367,10 +1367,10 @@ export default function CaixaPOSPage() {
                   </span>
                 )}
               </div>
-            </button>
+            </Button>
           )}
           {hasPedidos && (
-            <button
+            <Button
               onClick={() => setActiveTab("pedidos")}
               className={`flex-1 whitespace-nowrap py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "pedidos"
@@ -1387,7 +1387,7 @@ export default function CaixaPOSPage() {
                   </span>
                 )}
               </div>
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -1409,12 +1409,12 @@ export default function CaixaPOSPage() {
                   className={`w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:border-green-500 focus:outline-none border-zinc-200 bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white dark:placeholder:text-white/60`}
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className={`p-1 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-white/60`} aria-label="Fechar">
+                  <Button onClick={() => setSearchQuery("")} className={`p-1 absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-white/60`} aria-label="Fechar">
                     <X aria-hidden="true" className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
-              <button
+              <Button
                 onClick={() => setShowCustomItemModal(true)}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                   "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white/70 dark:hover:bg-pdv-card"
@@ -1422,7 +1422,7 @@ export default function CaixaPOSPage() {
               >
                 <Plus className="h-4 w-4" />
                 Avulso
-              </button>
+              </Button>
             </div>
             {/* F8C-023: atalhos existem mas eram undocumented — agora ficam visíveis */}
             <p className="mb-2 hidden text-[10px] text-zinc-500 lg:block">
@@ -1434,16 +1434,16 @@ export default function CaixaPOSPage() {
               <kbd className="rounded border border-zinc-300 px-1">+</kbd>/<kbd className="rounded border border-zinc-300 px-1">-</kbd> quantidade
             </p>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-              <button
+              <Button
                 onClick={() => setActiveCategory("all")}
                 className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   activeCategory === "all" ? "bg-green-600 text-white" : "bg-zinc-100 text-zinc-600 dark:bg-pdv-card dark:text-white/70"
                 }`}
               >
                 Todos
-              </button>
+              </Button>
               {categories.map((cat) => (
-                <button
+                <Button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
                   className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -1451,7 +1451,7 @@ export default function CaixaPOSPage() {
                   }`}
                 >
                   {cat.name}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -1466,17 +1466,17 @@ export default function CaixaPOSPage() {
                   <Banknote className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
                   <p className="text-sm font-semibold text-yellow-800">Nenhum caixa aberto</p>
                   <p className="mt-1 text-xs text-yellow-600">Abra o caixa para começar a vender</p>
-                  <button
+                  <Button
                     onClick={() => { setCashRegisterAction("open"); setShowCashRegisterModal(true) }}
                     className="mt-4 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-green-700 shadow-lg shadow-green-600/20"
                   >
                     Abrir Caixa
-                  </button>
+                  </Button>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
                 {filteredProducts.map((product) => (
-                  <button
+                  <Button
                     key={product.id}
                     onClick={() => addToCart(product)}
                   className={`flex flex-col items-center rounded-xl border p-4 transition-all hover:border-green-400 hover:shadow-md active:scale-95 border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}
@@ -1488,7 +1488,7 @@ export default function CaixaPOSPage() {
                     )}
                     <p className={`w-full truncate text-center text-sm font-medium text-zinc-800 dark:text-white/90`}>{product.name}</p>
                     <p className="text-sm font-bold text-green-600">{formatCurrency(product.price)}</p>
-                  </button>
+                  </Button>
                 ))}
                 {filteredProducts.length === 0 && (
                   <div className={`col-span-full py-12 text-center text-sm text-zinc-500 dark:text-white/60`}>
@@ -1498,7 +1498,7 @@ export default function CaixaPOSPage() {
               </div>
 
               {/* F8A-001: no mobile o carrinho é um drawer — o botão flutuante abre */}
-              <button
+              <Button
                 onClick={() => setCartDrawerOpen(true)}
                 className={`fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold shadow-xl lg:hidden bg-green-600 text-white dark:bg-green-600 dark:text-white`}
                 aria-label={`Abrir carrinho com ${stagingCart.length} itens, total ${formatCurrency(cartTotal)}`}
@@ -1506,7 +1506,7 @@ export default function CaixaPOSPage() {
                 <ShoppingBag className="h-5 w-5" aria-hidden="true" />
                 <span>{stagingCart.length}</span>
                 <span className="font-extrabold">{formatCurrency(cartTotal)}</span>
-              </button>
+              </Button>
             </div>
 
             {/* F8A-001: backdrop do drawer mobile */}
@@ -1545,21 +1545,21 @@ export default function CaixaPOSPage() {
                   </h2>
                   <div className="flex items-center gap-1">
                     {activeTable !== null && (
-                      <button
+                      <Button
                         onClick={deselectTable}
                         className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       >
                         Venda Balcão
-                      </button>
+                      </Button>
                     )}
                     {/* F8A-001: fechar o drawer no mobile */}
-                    <button
+                    <Button
                       onClick={() => setCartDrawerOpen(false)}
                       className={`rounded-lg p-1 lg:hidden text-zinc-500 hover:bg-zinc-100 dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       aria-label="Fechar carrinho"
                     >
                       <X aria-hidden="true" className="h-5 w-5" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1568,7 +1568,7 @@ export default function CaixaPOSPage() {
               <div className="flex-1 overflow-y-auto px-4 py-2">
                 {(cart.length === 0 && stagingCart.length === 0) && lastClosedOrder ? (
                   <div className="space-y-3 py-3">
-                    <button
+                    <Button
                       disabled={printing}
                       onClick={() => printReceiptPopup({
                         orderNumber: lastClosedOrder.orderNumber,
@@ -1592,7 +1592,7 @@ export default function CaixaPOSPage() {
                       <p className={`mt-1 text-[10px] text-zinc-500 dark:text-white/60`}>
                         {printing ? "Imprimindo..." : "Toque para reimprimir"}
                       </p>
-                    </button>
+                    </Button>
                   </div>
                 ) : stagingCart.length === 0 ? (
                   <div className={`flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-white/60`}>
@@ -1611,25 +1611,25 @@ export default function CaixaPOSPage() {
                           <p className={`text-[10px] text-zinc-500 dark:text-white/50`}>{formatCurrency(item.price)} x {item.quantity}</p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button
+                          <Button
                             onClick={() => updateQuantity(item.productId, -1)}
                             className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] bg-zinc-200 hover:bg-zinc-300 dark:bg-pdv-card-alt dark:hover:bg-zinc-500`}
                           >
                             <Minus className="h-2.5 w-2.5" />
-                          </button>
+                          </Button>
                           <span className={`w-5 text-center text-xs font-medium dark:text-white/90`}>{item.quantity}</span>
-                          <button
+                          <Button
                             onClick={() => updateQuantity(item.productId, 1)}
                             className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] bg-zinc-200 hover:bg-zinc-300 dark:bg-pdv-card-alt dark:hover:bg-zinc-500`}
                           >
                             <Plus className="h-2.5 w-2.5" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => removeItem(item.productId)}
                             className="ml-1 text-red-400 hover:text-red-600"
                           >
                             <Trash2 className="h-3 w-3" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1677,7 +1677,7 @@ export default function CaixaPOSPage() {
                     { value: "card", icon: CreditCard, label: "Cartão", activeColor: "border-blue-500 bg-blue-50 text-blue-700" },
                     { value: "pix", icon: DollarSign, label: "Pix", activeColor: "border-purple-500 bg-purple-50 text-purple-700" },
                   ].map((p) => (
-                    <button
+                    <Button
                       key={p.value}
                       onClick={() => setPayment(p.value)}
                       className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-colors ${
@@ -1688,7 +1688,7 @@ export default function CaixaPOSPage() {
                     >
                       <p.icon className="h-3 w-3" />
                       {p.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
 
@@ -1721,13 +1721,13 @@ export default function CaixaPOSPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       {[cartTotal, 10, 20, 50, 100].map((v) => (
-                        <button
+                        <Button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
                           className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors border-green-200 bg-white text-green-700 hover:bg-green-100 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:hover:bg-green-900/50`}
                         >
                           {v === cartTotal ? "Valor exato" : formatCurrency(v)}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < cartTotal && (
@@ -1738,7 +1738,7 @@ export default function CaixaPOSPage() {
                   </div>
                 )}
 
-                <button
+                <Button
                   onClick={finalizeSaleClick}
                   disabled={closing || stagingCart.length === 0 || (!cashRegister && !activeTable)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 text-base font-bold text-white transition-colors hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]"
@@ -1758,7 +1758,7 @@ export default function CaixaPOSPage() {
                       {activeTable ? `ADICIONAR À MESA ${activeTable}` : "FINALIZAR VENDA"}
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1775,9 +1775,9 @@ export default function CaixaPOSPage() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-lg font-bold text-zinc-900 dark:text-white`}>Mesas</h2>
                 <div className="flex items-center gap-3">
-                  <button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
+                  <Button onClick={generateStaffQr} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
                     QR Garcom
-                  </button>
+                  </Button>
                   <p className={`text-xs text-zinc-500 dark:text-white/60`}>Toque na mesa para atender</p>
                 </div>
               </div>
@@ -1826,17 +1826,17 @@ export default function CaixaPOSPage() {
                       }}
                     >
                       {/* QR button top-left */}
-                      <button
+                      <Button
                         onClick={(e) => { e.stopPropagation(); openTableQr(num) }}
                         className={`absolute top-2 left-2 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors ${
                           "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/60 dark:text-purple-300 dark:hover:bg-purple-800"
                         }`}
                       >
                         QR
-                      </button>
+                      </Button>
                       {/* Transfer button */}
                       {isOccupied && (
-                        <button
+                        <Button
                           onClick={(e) => { e.stopPropagation(); openTransferModal(num) }}
                           className={`absolute top-10 left-2 rounded-full p-1.5 transition-colors ${
                             "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-800"
@@ -1844,7 +1844,7 @@ export default function CaixaPOSPage() {
                           title="Transferir mesa"
                         >
                           <ArrowRightLeft className="h-3 w-3" />
-                        </button>
+                        </Button>
                       )}
                       {/* Status badge top-right */}
                       <div className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
@@ -1882,7 +1882,7 @@ export default function CaixaPOSPage() {
 
                       {isOccupied && (
                         <div className={`flex border-t border-zinc-200 dark:border-white/[.08]`}>
-                          <button
+                          <Button
                             onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors border-r ${
                               "text-green-600 hover:bg-green-50 active:bg-green-100 border-zinc-200 dark:text-green-400 dark:hover:bg-green-950 dark:active:bg-green-900 dark:border-white/[.08]"
@@ -1890,8 +1890,8 @@ export default function CaixaPOSPage() {
                           >
                             <PlusCircle className="h-5 w-5 mb-1" />
                             Adicionar
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={(e) => { e.stopPropagation(); closeTable(num, [...data.cart, ...(isActive ? stagingCart : [])]) }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
                               "text-red-600 hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-950 dark:active:bg-red-900"
@@ -1899,12 +1899,12 @@ export default function CaixaPOSPage() {
                           >
                             <Receipt className="h-5 w-5 mb-1" />
                             Conta
-                          </button>
+                          </Button>
                         </div>
                       )}
                       {!isOccupied && (
                         <div className={`flex border-t border-zinc-200 dark:border-white/[.08]`}>
-                          <button
+                          <Button
                             onClick={(e) => { e.stopPropagation(); setActiveTable(num); setActiveTab("caixa") }}
                             className={`flex flex-1 flex-col items-center justify-center py-2.5 text-xs font-semibold transition-colors ${
                               "text-green-600 hover:bg-green-50 active:bg-green-100 dark:text-green-400 dark:hover:bg-green-950 dark:active:bg-green-900"
@@ -1912,7 +1912,7 @@ export default function CaixaPOSPage() {
                           >
                             <PlusCircle className="h-5 w-5 mb-1" />
                             Adicionar
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -1922,14 +1922,14 @@ export default function CaixaPOSPage() {
 
               {/* F8A-001: conta da mesa em drawer no mobile */}
               {activeTable !== null && (
-                <button
+                <Button
                   onClick={() => setCartDrawerOpen(true)}
                   className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-xl lg:hidden"
                   aria-label={`Abrir conta da mesa ${activeTable}`}
                 >
                   <Receipt className="h-5 w-5" aria-hidden="true" />
                   Mesa {activeTable}
-                </button>
+                </Button>
               )}
             </div>
 
@@ -1968,21 +1968,21 @@ export default function CaixaPOSPage() {
                   </h2>
                   <div className="flex items-center gap-1">
                     {activeTable !== null && (
-                      <button
+                      <Button
                         onClick={deselectTable}
                         className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       >
                         Trocar mesa
-                      </button>
+                      </Button>
                     )}
                     {/* F8A-001: fechar o drawer no mobile */}
-                    <button
+                    <Button
                       onClick={() => setCartDrawerOpen(false)}
                       className={`rounded-lg p-1 lg:hidden text-zinc-500 hover:bg-zinc-100 dark:text-white/70 dark:hover:bg-pdv-card-alt`}
                       aria-label="Fechar conta da mesa"
                     >
                       <X aria-hidden="true" className="h-5 w-5" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -2058,7 +2058,7 @@ export default function CaixaPOSPage() {
                       <span className="text-sm font-bold text-blue-500">{formatCurrency(pp)}</span>
                     </div>
                   ) : null })()}
-                  <button
+                  <Button
                     onClick={() => closeTable(activeTable, [...cart, ...stagingCart])}
                     disabled={closing}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-base font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50 active:scale-[0.98]"
@@ -2069,7 +2069,7 @@ export default function CaixaPOSPage() {
                         FECHAR CONTA
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
                 )
               })()}
@@ -2094,7 +2094,7 @@ export default function CaixaPOSPage() {
           <div className={`w-full max-w-sm rounded-2xl p-5 shadow-2xl bg-white dark:bg-pdv-card`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className={`text-sm font-bold text-zinc-900 dark:text-white`}>Item Avulso</h3>
-              <button onClick={() => setShowCustomItemModal(false)} aria-label="Fechar" className="flex h-6 w-6 items-center justify-center"><X aria-hidden="true" className="h-4 w-4 text-zinc-500" /></button>
+              <Button onClick={() => setShowCustomItemModal(false)} aria-label="Fechar" className="flex h-6 w-6 items-center justify-center"><X aria-hidden="true" className="h-4 w-4 text-zinc-500" /></Button>
             </div>
             <div className="space-y-3">
               <input
@@ -2113,13 +2113,13 @@ export default function CaixaPOSPage() {
                 onChange={(e) => setCustomPrice(e.target.value)}
                 className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:border-green-500 focus:outline-none border-zinc-200 bg-zinc-50 dark:border-white/[.08] dark:bg-pdv-elevated dark:text-white dark:placeholder:text-white/60`}
               />
-              <button
+              <Button
                 onClick={() => { addCustomItem(); setShowCustomItemModal(false) }}
                 disabled={!customName || !customPrice}
                 className="w-full rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
               >
                 Adicionar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2134,7 +2134,7 @@ export default function CaixaPOSPage() {
               <p className="text-sm text-white/60">Pedido gerado com sucesso!</p>
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => {
                   printReceiptPopup(lastOrder)
                   setShowReceipt(false)
@@ -2143,15 +2143,15 @@ export default function CaixaPOSPage() {
                 className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-60"
               >
                 {printing ? "Imprimindo..." : "Imprimir"}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   setShowReceipt(false)
                 }}
                 className="flex-1 rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
               >
                 Fechar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2165,9 +2165,9 @@ export default function CaixaPOSPage() {
               <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>
                 {cashRegisterAction === "open" ? "Abrir Caixa" : cashRegisterAction === "close" ? "Fechar Caixa" : "Transferir Caixa"}
               </h3>
-              <button onClick={() => setShowCashRegisterModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+              <Button onClick={() => setShowCashRegisterModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
 
             {cashRegisterAction === "open" && (
@@ -2183,9 +2183,9 @@ export default function CaixaPOSPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none border-zinc-200 dark:border-white/[.08] dark:bg-pdv-card dark:text-white dark:placeholder:text-white/60`}
                   />
                 </div>
-                <button onClick={openCashRegister} disabled={openRegisterGuard.busy} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                <Button onClick={openCashRegister} disabled={openRegisterGuard.busy} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50">
                   {openRegisterGuard.busy ? "Abrindo..." : "Abrir Caixa"}
-                </button>
+                </Button>
               </div>
             )}
 
@@ -2211,9 +2211,9 @@ export default function CaixaPOSPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-green-500 focus:outline-none border-zinc-200 dark:border-white/[.08] dark:bg-pdv-card dark:text-white dark:placeholder:text-white/60`}
                   />
                 </div>
-                <button onClick={closeCashRegister} disabled={closeRegisterGuard.busy} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
+                <Button onClick={closeCashRegister} disabled={closeRegisterGuard.busy} className="w-full rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
                   {closeRegisterGuard.busy ? "Fechando..." : "Fechar Caixa"}
-                </button>
+                </Button>
               </div>
             )}
 
@@ -2232,9 +2232,9 @@ export default function CaixaPOSPage() {
                     ))}
                   </select>
                 </div>
-                <button onClick={transferCashRegister} disabled={!transferUserId} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+                <Button onClick={transferCashRegister} disabled={!transferUserId} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
                   Transferir Caixa
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -2272,9 +2272,9 @@ export default function CaixaPOSPage() {
                   </h3>
                   <p className={`text-xs mt-0.5 text-zinc-500 dark:text-white/50`}>Confirme os itens e a forma de pagamento</p>
                 </div>
-                <button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`rounded-lg p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+                <Button onClick={() => { setClosingTableModal(false); setClosingTableNumber(null); setClosingTableCart([]); setAllTableItems([]); setCloseTableMode("single"); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }} className={`rounded-lg p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                   <X aria-hidden="true" className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
@@ -2311,7 +2311,7 @@ export default function CaixaPOSPage() {
                       { id: "split", label: "Dividir igual", icon: "➗" },
                       { id: "custom", label: "Cada um paga", icon: "👥" },
                     ].map((m) => (
-                      <button
+                      <Button
                         key={m.id}
                         onClick={() => { setCloseTableMode(m.id as any); setSplitCount(""); setCustomPayments([{ amount: "", method: "cash" }]); setEachPersonStep(0); setEachPersonSelections({}); setEachPersonPixUrl(null); setSplitPersonStep(0) }}
                         className={`flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
@@ -2322,7 +2322,7 @@ export default function CaixaPOSPage() {
                       >
                         <span className="text-lg">{m.icon}</span>
                         <span className="text-center leading-tight">{m.label}</span>
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -2337,7 +2337,7 @@ export default function CaixaPOSPage() {
                         { value: "card", label: "Cartão", icon: CreditCard },
                         { value: "pix", label: "Pix", icon: DollarSign },
                       ].map((p) => (
-                        <button
+                        <Button
                           key={p.value}
                           onClick={() => setClosingTablePayment(p.value)}
                           className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
@@ -2348,7 +2348,7 @@ export default function CaixaPOSPage() {
                         >
                           <p.icon className="h-4 w-4" />
                           {p.label}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -2383,13 +2383,13 @@ export default function CaixaPOSPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       {[remaining, 10, 20, 50, 100].map((v) => (
-                        <button
+                        <Button
                           key={v}
                           onClick={() => setCashReceived(String(v))}
                           className={`flex-1 min-w-[60px] rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-colors border-green-200 bg-white text-green-700 hover:bg-green-100 dark:border-green-500/50 dark:bg-pdv-bg dark:text-green-400 dark:hover:bg-green-900/50`}
                         >
                           {v === remaining ? "Valor exato" : formatCurrency(v)}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                     {cashReceived && parseFloat(cashReceived) < remaining && (
@@ -2445,7 +2445,7 @@ export default function CaixaPOSPage() {
                           { value: "card", label: "Cartão", icon: CreditCard },
                           { value: "pix", label: "Pix", icon: DollarSign },
                         ].map((p) => (
-                          <button
+                          <Button
                             key={p.value}
                             onClick={() => setClosingTablePayment(p.value)}
                             className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-xs font-medium transition-all ${
@@ -2456,12 +2456,12 @@ export default function CaixaPOSPage() {
                           >
                             <p.icon className="h-4 w-4" />
                             {p.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
                     {splitValue !== null && splitValue > 0 && (
-                      <button
+                      <Button
                         onClick={() => {
                           if (splitPersonStep + 1 < (parseInt(splitCount) || 0)) {
                             setSplitPersonStep(prev => prev + 1)
@@ -2485,7 +2485,7 @@ export default function CaixaPOSPage() {
                           ? `Confirmar pagamento ${splitPersonStep + 1} de ${splitCount}`
                           : `Fechar mesa · ${formatCurrency(splitValue)}`
                         }
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -2519,7 +2519,7 @@ export default function CaixaPOSPage() {
                           >
                             {maxQty > 1 ? (
                               <>
-                                <button
+                                <Button
                                   onClick={() => {
                                     setEachPersonSelections(prev => {
                                       const next = { ...prev }
@@ -2538,11 +2538,11 @@ export default function CaixaPOSPage() {
                                   }`}
                                 >
                                   -
-                                </button>
+                                </Button>
                                 <span className={`min-w-[28px] text-center text-sm font-bold ${isSelected ? "text-green-700" : "text-zinc-500 dark:text-white/60"}`}>
                                   {selectedQty}/{maxQty}
                                 </span>
-                                <button
+                                <Button
                                   onClick={() => {
                                     setEachPersonSelections(prev => {
                                       const next = { ...prev }
@@ -2561,10 +2561,10 @@ export default function CaixaPOSPage() {
                                   }`}
                                 >
                                   +
-                                </button>
+                                </Button>
                               </>
                             ) : (
-                              <button
+                              <Button
                                 onClick={() => {
                                   setEachPersonSelections(prev => {
                                     const next = { ...prev }
@@ -2582,7 +2582,7 @@ export default function CaixaPOSPage() {
                                 }`}
                               >
                                 {isSelected ? "✓" : ""}
-                              </button>
+                              </Button>
                             )}
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium text-zinc-900 dark:text-white`}>{item.quantity}x {item.name}</span>
@@ -2623,7 +2623,7 @@ export default function CaixaPOSPage() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => {
                           if (eachPersonStep > 0) {
                             setEachPersonStep(prev => prev - 1)
@@ -2634,8 +2634,8 @@ export default function CaixaPOSPage() {
                         className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40 border-zinc-200 text-zinc-600 dark:border-white/10 dark:text-white/60 dark:hover:bg-white/5`}
                       >
                         Voltar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={async () => {
                           const selected = eachPersonSelections[eachPersonStep] || {}
                           const personTotal = Object.entries(selected).reduce((s, [idx, qty]) => s + (allTableItems[parseInt(idx)]?.price || 0) * qty, 0)
@@ -2665,8 +2665,8 @@ export default function CaixaPOSPage() {
                         className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
                       >
                         {eachPersonGenerating ? "Gerando..." : "Gerar Pix"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => {
                           setEachPersonSelections(prev => ({ ...prev, [(eachPersonStep + 1)]: {} }))
                           setEachPersonStep(prev => prev + 1)
@@ -2675,7 +2675,7 @@ export default function CaixaPOSPage() {
                         className={`rounded-xl border-2 border-dashed px-4 py-2.5 text-sm font-medium hover:border-green-400 hover:text-green-600 border-zinc-300 text-zinc-600 dark:border-white/10 dark:text-white/60`}
                       >
                         Próxima pessoa
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -2709,7 +2709,7 @@ export default function CaixaPOSPage() {
 
               {/* Footer */}
               <div className={`px-6 pb-5 pt-3 border-t border-zinc-200 dark:border-white/10`}>
-                <button
+                <Button
                   onClick={() => {
                     if (closingTablePayment === "cash" && closeTableMode === "single") {
                       if (!cashReceived || parseFloat(cashReceived) < remaining) {
@@ -2745,7 +2745,7 @@ export default function CaixaPOSPage() {
                     : closingTablePayment === "cash" && closeTableMode === "single"
                     ? `Fechar Mesa · Pagar em Dinheiro`
                     : `Fechar Mesa · ${formatCurrency(remaining)}`}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -2765,9 +2765,9 @@ export default function CaixaPOSPage() {
                   <h3 className="text-lg font-bold text-zinc-900">Abater valor</h3>
                   <p className={`text-xs text-zinc-500 dark:text-white/50`}>Mesa {abaterModal} · Mesa continua aberta</p>
                 </div>
-                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+                <Button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                   <X aria-hidden="true" className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
 
               <div className={`rounded-xl border p-3 flex justify-between text-sm bg-zinc-50 border-zinc-200 dark:bg-white/5 dark:border-white/10`}>
@@ -2804,7 +2804,7 @@ export default function CaixaPOSPage() {
                     { value: "card", label: "Cartão", icon: CreditCard },
                     { value: "pix", label: "Pix", icon: DollarSign },
                   ].map((p) => (
-                    <button
+                    <Button
                       key={p.value}
                       onClick={() => setAbaterMethod(p.value)}
                       className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-2.5 text-xs font-medium transition-all ${
@@ -2813,22 +2813,22 @@ export default function CaixaPOSPage() {
                     >
                       <p.icon className="h-4 w-4" />
                       {p.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`flex-1 rounded-xl border py-3 text-sm font-medium hover:bg-zinc-50 border-zinc-300 text-zinc-700 dark:border-white/10 dark:text-white/60`}>
+                <Button onClick={() => { setAbaterModal(null); setAbaterAmount("") }} className={`flex-1 rounded-xl border py-3 text-sm font-medium hover:bg-zinc-50 border-zinc-300 text-zinc-700 dark:border-white/10 dark:text-white/60`}>
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={processAbater}
                   disabled={!abaterAmount || parseFloat(abaterAmount) <= 0 || abaterGuard.busy}
                   className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-40"
                 >
                   {abaterGuard.busy ? "Registrando..." : "Registrar Abate"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -2841,9 +2841,9 @@ export default function CaixaPOSPage() {
           <div className={`rounded-2xl p-6 text-center shadow-2xl w-full max-w-sm bg-white dark:bg-pdv-card`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>QR Code · Mesa {tableQRNumber}</h3>
-              <button onClick={() => setTableQRModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+              <Button onClick={() => setTableQRModal(false)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             <p className={`text-xs mb-4 text-zinc-500 dark:text-white/50`}>Escaneie para ver o cardápio da mesa</p>
             {tableQrCodes[tableQRNumber] ? (
@@ -2874,9 +2874,9 @@ export default function CaixaPOSPage() {
                 <h3 className={`text-lg font-bold text-zinc-900 dark:text-white`}>Transferir Mesa {transferModal}</h3>
                 <p className={`text-xs text-zinc-500 dark:text-white/50`}>Escolha a mesa destino</p>
               </div>
-              <button onClick={() => setTransferModal(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+              <Button onClick={() => setTransferModal(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {Array.from({ length: tableCount }, (_, i) => i + 1).filter(t => t !== transferModal).map(t => {
@@ -2884,7 +2884,7 @@ export default function CaixaPOSPage() {
                 const tCart = tData?.cart || []
                 const isOccupied = tCart.length > 0
                 return (
-                  <button
+                  <Button
                     key={t}
                     onClick={async () => {
                       const sourceNum = transferModal!
@@ -2926,7 +2926,7 @@ export default function CaixaPOSPage() {
                   >
                     <span>{t}</span>
                     {isOccupied && <span className="text-[9px] font-normal mt-0.5">{tCart.length} itens</span>}
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -2957,9 +2957,9 @@ export default function CaixaPOSPage() {
             <p className={`mb-4 text-xs text-zinc-500 dark:text-white/50`}>Escaneie com o celular do garcom</p>
             <img src={staffQrImage} alt="QR Code Garcom" className="mx-auto rounded-xl border-4 border-white shadow-lg" />
             <p className={`mt-3 text-[10px] text-zinc-500 dark:text-white/60`}>{`/{${user?.establishment?.slug}}/staff`}</p>
-            <button onClick={() => setShowStaffQr(false)} className={`mt-4 rounded-xl px-6 py-2 text-sm font-bold bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
+            <Button onClick={() => setShowStaffQr(false)} className={`mt-4 rounded-xl px-6 py-2 text-sm font-bold bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-pdv-card dark:text-white/70 dark:hover:bg-pdv-card-alt`}>
               Fechar
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -3056,7 +3056,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
             ? externalOrders.filter((o: any) => o.status === "delivered" && new Date(o.deliveredAt || o.createdAt).toDateString() === new Date().toDateString()).length
             : 0
           return (
-            <button
+            <Button
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -3071,7 +3071,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
                   {count}
                 </span>
               )}
-            </button>
+            </Button>
           )
         })}
       </div>
@@ -3154,19 +3154,19 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
                   {filter === "ready" && order.status === "ready" && (isPickup || order.orderType === "dineIn") && (
                     <div className="flex flex-col gap-2">
                       {(order.paymentMethod === "online" || order.paymentMethod === "asaas") ? (
-                        <button
+                        <Button
                           onClick={() => updateStatus(order.id, "delivered")}
                           className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-600"
                         >
                           Entregar Pedido
-                        </button>
+                        </Button>
                       ) : (
-                        <button
+                        <Button
                           onClick={() => { setPayModalOrder(order); setPayMethod("cash") }}
                           className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
                         >
                           Pagar
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
@@ -3182,9 +3182,9 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
           <div className={`rounded-2xl p-6 shadow-2xl w-full max-w-sm bg-white text-zinc-900 dark:bg-pdv-bg dark:text-white`}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-zinc-900">Pagar Pedido #{payModalOrder.orderNumber}</h3>
-              <button onClick={() => setPayModalOrder(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
+              <Button onClick={() => setPayModalOrder(null)} className={`p-1 text-zinc-500 hover:text-zinc-600 dark:text-white/50 dark:hover:text-white`} aria-label="Fechar">
                 <X aria-hidden="true" className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3">
               <div className={`rounded-lg p-3 text-sm bg-zinc-50 dark:bg-white/5`}>
@@ -3199,7 +3199,7 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
                     { value: "card", label: "Cartão" },
                     { value: "pix", label: "Pix" },
                   ].map((p) => (
-                    <button
+                    <Button
                       key={p.value}
                       onClick={() => setPayMethod(p.value)}
                       className={`flex-1 rounded-lg border p-2 text-xs font-medium transition-colors ${
@@ -3209,13 +3209,13 @@ function PedidosTab({ orders, deliveryPeople, establishmentId, onRefresh }: { or
                       }`}
                     >
                       {p.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
-              <button onClick={handlePayOrder} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
+              <Button onClick={handlePayOrder} className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-700">
                 Pagar e Entregar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3255,7 +3255,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh }: { orders: any[]; esta
           { value: "ready", label: "Prontos", count: activeBalcao.filter((o: any) => o.status === "ready").length },
           { value: "delivered", label: "Entregue", count: deliveredBalcao.length },
         ].map((f) => (
-          <button
+          <Button
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -3270,7 +3270,7 @@ function BalcaoTab({ orders, establishmentId, onRefresh }: { orders: any[]; esta
                 {f.count}
               </span>
             )}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -3324,12 +3324,12 @@ function BalcaoTab({ orders, establishmentId, onRefresh }: { orders: any[]; esta
                   </div>
                   <div className="flex flex-col gap-2">
                     {order.status === "ready" && !isTable && (
-                      <button
+                      <Button
                         onClick={() => updateStatus(order.id, "delivered")}
                         className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
                       >
                         Entregar Pedido
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
