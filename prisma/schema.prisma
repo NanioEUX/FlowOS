@@ -218,6 +218,11 @@ model Establishment {
   banners                       Banner[]
   users                         User[]
   financialTransactions         FinancialTransaction[]
+
+  // F9C-005 — aceite de termos / consentimento LGPD
+  termsAcceptedAt          DateTime?
+  privacyPolicyAcceptedAt  DateTime?
+  termsVersion             String?
 }
 
 model Customer {
@@ -244,6 +249,13 @@ model Customer {
   establishmentId   String
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
+
+  // F9C-005 — consentimento LGPD
+  marketingConsent         Boolean      @default(false)
+  marketingConsentAt       DateTime?
+  dataDeletionRequestedAt  DateTime?
+  anonymizedAt             DateTime?
+
   establishment     Establishment          @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   orders            Order[]
   reviews           Review[]
@@ -466,6 +478,7 @@ model Order {
   deliveryCode       String?
   couponId           String?
   trackingToken      String?         @unique
+  clientRequestId    String?         // F4B-019 — chave de idempotência (header Idempotency-Key)
   assignedAt         DateTime?
   deliveredAt        DateTime?
   cancellationReason String?
@@ -495,6 +508,7 @@ model Order {
 
   @@unique([establishmentId, orderNumber])
   @@unique([establishmentId, externalId])
+  @@unique([establishmentId, clientRequestId])
   @@index([establishmentId, createdAt])
   @@index([establishmentId, status])
   @@index([establishmentId, tableNumber, orderType])
