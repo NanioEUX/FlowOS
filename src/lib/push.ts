@@ -1,5 +1,7 @@
 import webpush from "web-push"
 import { prisma } from "@/lib/prisma"
+import { logger } from "@/lib/logger"
+import { maskPhone } from "@/lib/phone"
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
@@ -10,7 +12,7 @@ let configured = false
 function ensureConfigured() {
   if (configured) return
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
-    console.warn("[Push] VAPID keys não configuradas")
+    logger.warn("push", "chaves VAPID não configuradas")
     return
   }
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
@@ -71,7 +73,8 @@ export async function sendPush(
   })
 
   if (subscriptions.length === 0) {
-    console.log(`[Push] Nenhuma subscription p/ establishment=${establishmentId} keys=${JSON.stringify(keys)}`)
+    // F4A-014: a customerKey pode ser o telefone do cliente — não vai para o log.
+    logger.info("push", "nenhuma subscription encontrada", { establishmentId, keys: keys.map((k) => (k === "anonymous" ? k : maskPhone(k))) })
     await logPush(establishmentId, customerKey, payload, "no_subs", 0, 0, `keys=${JSON.stringify(keys)}`)
     return { sent: 0, failed: 0 }
   }
@@ -99,7 +102,8 @@ export async function sendPush(
   const errors: string[] = []
 
   const payloadStr = JSON.stringify(safePayload)
-  console.log(`[Push] Enviando payload (${payloadStr.length} bytes): ${payloadStr.slice(0, 200)}`)
+  // F4A-014: o payload pode conter o nome do cliente — só o tamanho vai para o log.
+  logger.info("push", "enviando payload", { establishmentId, bytes: payloadStr.length })
 
   await Promise.all(
     subscriptions.map(async (sub) => {
@@ -121,7 +125,7 @@ export async function sendPush(
         const sc = e?.statusCode ?? "?"
         const body = e?.body ? JSON.stringify(e.body).slice(0, 200) : e?.message || ""
         errors.push(`sc=${sc} ${body}`.slice(0, 180))
-        console.log(`[Push] Envio falhou (${sc}) p/ ${sub.endpoint.slice(0, 50)}... body=${body}`)
+        logger.warn("push", "envio falhou", { establishmentId, statusCode: sc, endpoint: sub.endpoint?.slice(0, 50), body })
         // Subscription expirou: remove
         if (sc === 404 || sc === 410) {
           await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {})

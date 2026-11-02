@@ -67,3 +67,37 @@ describe("redactObject (F4A-014 — token não pode vazar no log)", () => {
     expect(redactObject("texto")).toBe("texto")
   })
 })
+
+describe("redactObject — chaves diagnósticas (F4A-018)", () => {
+  it("mantém legíveis statusCode/eventCode/codeLength e flags has*", () => {
+    const redacted = redactObject({
+      statusCode: 429,
+      eventCode: "PLACED",
+      codeLength: 6,
+      hasMetaAccessToken: true,
+      hasApiKey: false,
+    })
+
+    expect(redacted.statusCode).toBe(429)
+    expect(redacted.eventCode).toBe("PLACED")
+    expect(redacted.codeLength).toBe(6)
+    expect(redacted.hasMetaAccessToken).toBe(true)
+    expect(redacted.hasApiKey).toBe(false)
+  })
+
+  it("continua redigindo o OTP em `code` e segredos reais", () => {
+    const redacted = redactObject({
+      code: "123456",
+      codeHash: "abc",
+      accessToken: "EAAabc",
+      paymentLink: "https://pagarme/x",
+      resetUrl: "https://app/redefinir?token=abc",
+    })
+
+    expect(redacted.code).toBe("[redacted]")
+    expect(redacted.codeHash).toBe("[redacted]")
+    expect(redacted.accessToken).toBe("[redacted]")
+    expect(redacted.paymentLink).toBe("[redacted]")
+    expect(redacted.resetUrl).toBe("[redacted]")
+  })
+})

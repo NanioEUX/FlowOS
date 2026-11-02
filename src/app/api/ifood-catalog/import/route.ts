@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
+import { getRequestId, logger } from "@/lib/logger"
 
 interface ImportOption {
   id: string
@@ -186,7 +187,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(results)
   } catch (error: any) {
-    console.error("[ifood-catalog-import] error:", error.message)
+    logger.error("ifood-catalog-import", "erro ao importar o catálogo do iFood", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json(
       { error: "Erro ao importar catálogo" },
       { status: 500 }

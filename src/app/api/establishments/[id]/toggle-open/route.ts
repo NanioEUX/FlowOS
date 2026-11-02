@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { createInterruption, deleteInterruption } from "@/lib/integrations/ifood-catalog-write"
+import { getRequestId, logger } from "@/lib/logger"
 
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
 
@@ -75,7 +76,7 @@ export async function PATCH(
 
     return await toggleDireto(params.id)
   } catch (error) {
-    console.error(error)
+    logger.error("establishments/toggle-open", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao alterar status" }, { status: 500 })
   }
 }

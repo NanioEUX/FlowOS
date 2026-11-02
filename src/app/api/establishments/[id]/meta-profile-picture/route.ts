@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
 
@@ -48,14 +49,14 @@ export async function POST(
     const fileLength = buffer.length
     const fileName = `profile.${file.type === "image/png" ? "png" : "jpg"}`
 
-    console.log("[Meta Profile] Step 1: Creating upload session...")
+    logger.info("meta-profile-picture", "criando sessão de upload", { requestId: getRequestId(req), establishmentId: id, fileLength })
 
     const sessionRes = await fetch(
       `https://graph.facebook.com/v21.0/${META_APP_ID}/uploads?file_name=${fileName}&file_length=${fileLength}&file_type=${file.type}&access_token=${accessToken}`,
       { method: "POST" }
     )
     const sessionData = await sessionRes.json()
-    console.log("[Meta Profile] Session response:", JSON.stringify(sessionData))
+    logger.info("meta-profile-picture", "sessão de upload criada", { requestId: getRequestId(req), establishmentId: id, ok: !!sessionData?.id, error: sessionData?.error?.message })
 
     if (!sessionData.id) {
       return NextResponse.json({
@@ -67,7 +68,7 @@ export async function POST(
     const uploadId = sessionData.id
     const cleanId = uploadId.startsWith("upload:") ? uploadId : `upload:${uploadId}`
 
-    console.log("[Meta Profile] Step 2: Uploading image binary...")
+    logger.info("meta-profile-picture", "enviando imagem", { requestId: getRequestId(req), establishmentId: id })
 
     const uploadRes = await fetch(
       `https://graph.facebook.com/v21.0/${cleanId}`,
@@ -81,7 +82,7 @@ export async function POST(
       }
     )
     const uploadData = await uploadRes.json()
-    console.log("[Meta Profile] Upload response:", JSON.stringify(uploadData))
+    logger.info("meta-profile-picture", "resposta do upload", { requestId: getRequestId(req), establishmentId: id, ok: !!uploadData?.h, error: uploadData?.error?.message })
 
     if (!uploadData.h) {
       return NextResponse.json({
@@ -91,9 +92,9 @@ export async function POST(
     }
 
     const handle = uploadData.h
-    console.log("[Meta Profile] Got handle:", handle)
+    logger.info("meta-profile-picture", "handle do upload obtido", { requestId: getRequestId(req), establishmentId: id })
 
-    console.log("[Meta Profile] Step 3: Updating business profile...")
+    logger.info("meta-profile-picture", "atualizando o perfil do negócio", { requestId: getRequestId(req), establishmentId: id })
 
     const profileRes = await fetch(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/whatsapp_business_profile`,
@@ -110,7 +111,7 @@ export async function POST(
       }
     )
     const profileData = await profileRes.json()
-    console.log("[Meta Profile] Profile response:", JSON.stringify(profileData))
+    logger.info("meta-profile-picture", "resposta da atualização do perfil", { requestId: getRequestId(req), establishmentId: id, success: profileData?.success, error: profileData?.error?.message })
 
     if (profileRes.ok && profileData.success) {
       return NextResponse.json({ success: true })
@@ -122,7 +123,7 @@ export async function POST(
       details: profileData,
     })
   } catch (error: any) {
-    console.error("[Meta Profile] ERROR:", error.message)
+    logger.error("meta-profile-picture", "erro ao atualizar a foto de perfil", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

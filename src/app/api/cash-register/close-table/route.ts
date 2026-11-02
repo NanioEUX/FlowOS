@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
       partialPaid: partialPaidTotal,
     })
   } catch (error) {
-    console.error("Error closing table:", error)
+    logger.error("cash-register/close-table", "Error closing table", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao fechar mesa" }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
@@ -89,7 +90,7 @@ export async function PATCH(
 
     return NextResponse.json(product)
   } catch (error: any) {
-    console.error("[PRODUCT PATCH]", error)
+    logger.error("product-patch", "falha em PRODUCT PATCH", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json(
       { error: error.message || "Erro ao atualizar produto" },
       { status: 500 }

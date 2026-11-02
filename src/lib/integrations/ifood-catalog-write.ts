@@ -1,4 +1,5 @@
 import https from "https"
+import { logger } from "@/lib/logger"
 
 const IFOOD_API = "merchant-api.ifood.com.br"
 
@@ -209,13 +210,14 @@ export async function createOrUpdateItem(
     options,
   }
 
-  console.log("[ifood-catalog-write] PUT items body:", JSON.stringify(body, null, 2))
+  // F4A-014: o body do PUT traz o catálogo inteiro — não vai para o log.
+  logger.info("ifood-catalog-write", "PUT items", { items: body?.products?.length ?? 0 })
   const result = await httpsRequest("PUT", `/catalog/v2.0/merchants/${merchantId}/items`, token, body)
   const parsedBody = JSON.parse(result.body || "{}")
   if (parsedBody?.error?.details) {
-    console.error("[ifood-catalog-write] VALIDATION DETAILS:", JSON.stringify(parsedBody.error.details, null, 2))
+    logger.error("ifood-catalog-write", "detalhes da validação", { details: parsedBody?.error?.details })
   }
-  console.log("[ifood-catalog-write] PUT items response:", result.status, result.body.slice(0, 500))
+  logger.info("ifood-catalog-write", "resposta do PUT items", { status: result?.status, body: result?.body?.slice(0, 500) })
   return { success: result.status >= 200 && result.status < 300, status: result.status, data: parsedBody }
 }
 

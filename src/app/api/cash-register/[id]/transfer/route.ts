@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -78,7 +79,7 @@ export async function POST(
       newCashier: toUser.name,
     })
   } catch (error) {
-    console.error("[CASH REGISTER TRANSFER]", error)
+    logger.error("cash-register-transfer", "falha em CASH REGISTER TRANSFER", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao transferir caixa" }, { status: 500 })
   }
 }

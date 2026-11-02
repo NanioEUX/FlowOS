@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { convertQuantity } from "@/lib/units"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ updated: updates.length, updates })
   } catch (error: any) {
-    console.error("[UPDATE-PRICES]", error)
+    logger.error("update-prices", "falha em UPDATE-PRICES", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message || "Erro ao atualizar preços" }, { status: 500 })
   }
 }

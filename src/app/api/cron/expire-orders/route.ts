@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { restoreOrderStock } from "@/lib/stock"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * GET /api/cron/expire-orders — expurgo de pedidos não confirmados (abandoned).
@@ -92,7 +93,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (expired > 0) {
-    console.log(`[Expire Orders Cron] ${expired} pedidos expirados em ${establishments.length} estabelecimentos`)
+    logger.info("cron-expire-orders", "pedidos expirados", { requestId: getRequestId(req), expired, establishments: establishments.length })
   }
 
   return NextResponse.json({ success: true, expired, establishments: establishments.length })

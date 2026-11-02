@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 // F3A-044/F4A-010: fetch para chamadas EXTERNAS com timeout — provedor mudo
 // (iFood/99/Meta/Evolution/gateways) não segura a função serverless até o kill
 // da Vercel. Usar só em chamadas fora do próprio app; fetch interno não precisa.
@@ -66,17 +67,25 @@ export async function fetchExternalWithRetry(
         /* body já consumido */
       }
       lastError = new Error(`HTTP ${res.status}`)
-      console.warn(
-        `[fetchExternalWithRetry] ${init.method || "GET"} ${String(input).slice(0, 120)} → ${res.status}; retry ${attempt}/${attempts - 1}`
-      )
+      logger.warn("fetch-external", "retry após resposta retryable", {
+        method: init.method || "GET",
+        url: String(input).slice(0, 120),
+        status: res.status,
+        attempt,
+        maxAttempts: attempts,
+      })
     } catch (err: any) {
       lastError = err
       // Timeout/abort explícito do chamador não é retentável
       if (init.signal?.aborted) throw err
       if (!canRetry || attempt === attempts) throw err
-      console.warn(
-        `[fetchExternalWithRetry] ${init.method || "GET"} ${String(input).slice(0, 120)} → ${err?.message}; retry ${attempt}/${attempts - 1}`
-      )
+      logger.warn("fetch-external", "retry após erro de rede", {
+        method: init.method || "GET",
+        url: String(input).slice(0, 120),
+        error: err?.message,
+        attempt,
+        maxAttempts: attempts,
+      })
     }
 
     await sleep(backoffMs * Math.pow(2, attempt - 1))

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { refreshQuotaFromMeta } from "@/lib/meta-quota"
+import { getRequestId, logger } from "@/lib/logger"
 
 // GET /api/cron/meta-quota — called by Vercel Cron every hour
 // Also callable manually for testing
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  console.log(`[Meta Quota Cron] Checking ${establishments.length} establishments`)
+  logger.info("cron-meta-quota", "verificando cotas", { requestId: getRequestId(req), establishments: establishments.length })
 
   const results: { id: string; name: string; status: string; usage?: number; limit?: number }[] = []
 
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
         results.push({ id: est.id, name: est.name || "unknown", status: "error" })
       }
     } catch (err: any) {
-      console.error(`[Meta Quota Cron] Error for ${est.id}:`, err.message)
+      logger.error("cron-meta-quota", "erro ao consultar a cota da Meta", { requestId: getRequestId(req), establishmentId: est.id, error: err?.message })
       results.push({ id: est.id, name: est.name || "unknown", status: "error" })
     }
   }

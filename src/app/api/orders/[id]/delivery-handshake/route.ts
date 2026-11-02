@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -96,7 +97,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, message: "Entrega confirmada com sucesso" })
   } catch (err: any) {
-    console.error("[delivery handshake] error:", err.message)
+    logger.error("delivery-handshake", "falha no handshake de entrega", { requestId: getRequestId(req), orderId: params.id, error: err?.message })
     return NextResponse.json(
       { error: "Erro interno ao processar confirmação" },
       { status: 500 }

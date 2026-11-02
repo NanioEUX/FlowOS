@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { SignJWT } from "jose"
+import { getRequestId, logger } from "@/lib/logger"
 
 const prisma = new PrismaClient()
 const JWT_SECRET = new TextEncoder().encode(
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
       mustChangePassword: user.mustChangePassword,
     })
   } catch (e: any) {
-    console.error("[SAAS Admin Login]", e)
+    logger.error("saas-admin-login", "falha no login do admin SaaS", { requestId: getRequestId(req), error: (e as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

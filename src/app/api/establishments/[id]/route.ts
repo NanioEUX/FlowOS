@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 // Credenciais que nunca saem para roles sem permissão de config (F7B-006):
 // um JWT de kds/motoboy/atendente não baixa mais tokens/chaves/senhas.
@@ -110,7 +111,7 @@ export async function PATCH(
     })
     return NextResponse.json(establishment)
   } catch (error) {
-    console.error(error)
+    logger.error("establishments", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 })
   }
 }

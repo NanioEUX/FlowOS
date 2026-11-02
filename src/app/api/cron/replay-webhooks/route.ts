@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { process99Event } from "@/lib/webhook-99"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -52,14 +53,14 @@ export async function GET(req: NextRequest) {
         results.push({ id: log.id, rideId: log.rideId, status: result.status, detail: result.detail })
       }
     } catch (err: any) {
-      console.error(`[Replay Webhooks] Falha ao reprocessar ${log.id}:`, err?.message)
+      logger.error("cron-replay-webhooks", "falha ao reprocessar o webhook", { requestId: getRequestId(req), webhookLogId: log.id, error: err?.message })
       results.push({ id: log.id, rideId: log.rideId, status: "error", detail: err?.message })
     }
   }
 
   const replayed = pending.length - results.filter((r) => r.status === "error").length
 
-  console.log(`[Replay Webhooks] ${pending.length} eventos verificados, ${replayed} reprocessados`)
+  logger.info("cron-replay-webhooks", "replay concluído", { requestId: getRequestId(req), checked: pending.length, replayed })
 
   return NextResponse.json({
     checked: pending.length,

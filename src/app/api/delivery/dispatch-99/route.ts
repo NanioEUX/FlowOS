@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { despacharCorrida99 } from "@/lib/integrations/nine-nine"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * Despacha corrida para 99Entrega
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       pinCode: entregaPinCode,
     })
   } catch (error) {
-    console.error("[dispatch-99] error:", error)
+    logger.error("delivery/dispatch-99", "[dispatch-99] error", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (webhookKey) {
     const signature = req.headers.get("x-hub-signature-256") || req.headers.get("x-pagarme-signature") || ""
     if (!verifyPagarmeSignature(rawBody, signature, webhookKey)) {
-      console.warn("[Pagar.me Webhook] Invalid signature")
+      logger.warn("webhook-pagarme", "assinatura inválida", { requestId: getRequestId(req) })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
   }
@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   }
 
-  console.log("[Pagar.me Webhook] Event:", body?.event || body?.type, "| data:", JSON.stringify(body?.data || body).substring(0, 200))
+  // F4A-014: o data do webhook pode conter dados do cliente — só o tipo do evento.
+  logger.info("webhook-pagarme", "evento recebido", { requestId, event: body?.event || body?.type, dataKeys: Object.keys(body?.data || {}) })
 
   // Pagar.me v5 webhook format: { event: "order.paid", data: { ... } }
   const eventType = body?.event || body?.type
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await processWebhook(eventType, orderData)
+    await processWebhook(eventType, orderData, requestId)
   } catch (err: any) {
     // F4A-002: antes era fire-and-forget (200 imediato) — se o banco falhasse,
     // o "pagamento confirmado" era perdido para sempre e o pedido ficava
@@ -58,15 +59,15 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
-async function processWebhook(eventType: string, orderData: any) {
+async function processWebhook(eventType: string, orderData: any, requestId?: string) {
   const orderId = orderData?.id as string
 
   if (!orderId) {
-    console.log("[Pagar.me Webhook] No order ID in webhook data")
+    logger.warn("webhook-pagarme", "evento sem order ID", { requestId })
     return
   }
 
-  console.log("[Pagar.me Webhook] Processing:", orderId, eventType)
+  logger.info("webhook-pagarme", "processando evento", { requestId, orderId, eventType })
 
   // Find order by paymentId. Card payments store the charge id (ch_...),
   // but webhook order events send the order id (or_...). Check both.
@@ -173,7 +174,7 @@ async function processWebhook(eventType: string, orderData: any) {
       where: { id: order.id },
       data: updateData,
     })
-    console.log("[Pagar.me Webhook] Order #", order.orderNumber, "updated:", updateData)
+    logger.info("webhook-pagarme", "pedido atualizado", { requestId, orderId: order.id, orderNumber: order.orderNumber, fields: Object.keys(updateData) })
   }
 
   // Notifica o cliente quando o pagamento acabou de ser confirmado
@@ -186,7 +187,8 @@ async function processWebhook(eventType: string, orderData: any) {
 
   // Log financial data for paid transactions
   if (eventStatus === "paid" && totalFee > 0) {
-    console.log("[Pagar.me Webhook] Financial log:", {
+    logger.info("webhook-pagarme", "transação financeira registrada", {
+      requestId,
       orderId: order.id,
       orderNumber: order.orderNumber,
       totalAmount: order.total,
@@ -207,7 +209,7 @@ async function processWebhook(eventType: string, orderData: any) {
       },
     })
     if (existingTransaction) {
-      console.log("[Pagar.me Webhook] Financial transaction already recorded — skipping duplicate")
+      logger.info("webhook-pagarme", "transação financeira já registrada — duplicata ignorada", { requestId, orderId: order.id })
     } else {
       await prisma.financialTransaction.create({
         data: {

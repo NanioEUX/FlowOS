@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 const PLAN_PRICES: Record<string, number> = {
   starter: 49,
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       message: "Assinatura ativada",
     })
   } catch (error) {
-    console.error("Subscription error:", error)
+    logger.error("subscription/create", "Subscription error", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

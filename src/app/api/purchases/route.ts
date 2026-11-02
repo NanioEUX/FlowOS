@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(purchase)
   } catch (error: any) {
-    console.error("[PURCHASE]", error)
+    logger.error("purchase", "falha em PURCHASE", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json(
       { error: error.message || "Erro ao criar compra" },
       { status: 500 }

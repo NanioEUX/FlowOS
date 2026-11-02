@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import crypto from "crypto"
 import bcrypt from "bcryptjs"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Não devolve a senha em claro na resposta (F5B-006)
     return NextResponse.json(person)
   } catch (error) {
-    console.error(error)
+    logger.error("delivery-persons", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar" }, { status: 500 })
   }
 }

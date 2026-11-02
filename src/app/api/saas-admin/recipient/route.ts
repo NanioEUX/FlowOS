@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSaasAdmin } from "@/lib/saas-admin-auth"
 import { prisma } from "@/lib/prisma"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { getRequestId, logger } from "@/lib/logger"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = await getSaasAdmin()
   if (!admin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
@@ -31,7 +32,7 @@ export async function GET() {
       transferSettings: data.transfer_settings || null,
     })
   } catch (error: any) {
-    console.error("[SaasAdmin Recipient GET]", error)
+    logger.error("saasadmin-recipient-get", "falha em SaasAdmin Recipient GET", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao buscar recipient" }, { status: 500 })
   }
 }
@@ -98,7 +99,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, recipientId: data.id, status: data.status })
   } catch (error: any) {
-    console.error("[SaasAdmin Recipient PATCH]", error)
+    logger.error("saasadmin-recipient-patch", "falha em SaasAdmin Recipient PATCH", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar recipient" }, { status: 500 })
   }
 }

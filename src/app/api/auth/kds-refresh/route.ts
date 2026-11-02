@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import jwt from "jsonwebtoken"
+import { getRequestId, logger } from "@/lib/logger"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ token })
   } catch (error) {
-    console.error("[KDS Refresh]", error)
+    logger.error("kds-refresh", "falha em KDS Refresh", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao renovar a sessão" }, { status: 500 })
   }
 }

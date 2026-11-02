@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function PATCH(
   req: NextRequest,
@@ -71,7 +72,7 @@ export async function PATCH(
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error(error)
+    logger.error("users", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 })
   }
 }
@@ -94,7 +95,7 @@ export async function DELETE(
     await prisma.user.delete({ where: { id: params.id } })
     return NextResponse.json({ deleted: true })
   } catch (error) {
-    console.error(error)
+    logger.error("users", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao deletar" }, { status: 500 })
   }
 }

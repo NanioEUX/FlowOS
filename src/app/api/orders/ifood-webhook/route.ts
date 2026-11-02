@@ -19,7 +19,7 @@ function calcCashbackEarned(total: number, establishment: any): number {
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
-    console.log("[ifood webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
+    logger.info("webhook-ifood", "webhook recebido", { requestId: getRequestId(req), bodyLength: raw.length })
 
     // iFood NÃO envia header de assinatura na prática (aceitamos sem assinatura
     // desde sempre). Só valida se um header estiver presente — exigir a assinatura
@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
 
     if (signature && secret) {
       if (!verifyHmacSha256(raw, signature, secret)) {
-        console.warn("[ifood webhook] invalid signature — rejecting")
+        logger.warn("webhook-ifood", "assinatura inválida — rejeitando", { requestId: getRequestId(req) })
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
     } else {
-      console.warn("[ifood webhook] no signature header — accepting unsigned webhook (iFood does not sign)")
+      logger.warn("webhook-ifood", "sem header de assinatura — aceitando webhook sem assinatura (o iFood não assina)", { requestId: getRequestId(req) })
     }
 
     const payload = JSON.parse(raw)
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, msg: "noop" })
     }
 
-    console.log("[ifood webhook] received", events.length, "events:", events.map((e: any) => ({ code: e.code || e.fullCode, orderId: (e.orderId || e.id || "").slice(0, 8) })).slice(0, 5))
+    logger.info("webhook-ifood", "eventos recebidos", { requestId: getRequestId(req), count: events.length, events: events.map((e: any) => ({ code: e.code || e.fullCode, orderId: (e.orderId || e.id || "").slice(0, 8) })).slice(0, 5) })
 
     const establishments = await prisma.establishment.findMany({
       where: { ifoodEnabled: true, ifoodMerchantId: { not: null } },
@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
         // F4B-002: o pedido existe numa loja que não está na lista (iFood
         // desativado). Cair no primeiro tenant criaria pedido duplicado na
         // loja errada — melhor não tocar em nada.
-        console.warn("[ifood webhook] order belongs to an establishment without iFood enabled — skipping", {
+        logger.warn("webhook-ifood", "pedido de loja sem iFood habilitado — ignorando", {
+          requestId: getRequestId(req),
           orderId: orderId?.slice(0, 8),
           establishmentId: existingOrder.establishmentId,
         })
@@ -93,17 +94,17 @@ export async function POST(req: NextRequest) {
       const code = event.code || event.fullCode
       const orderId = event.orderId || event.id
 
-      console.log("[ifood webhook] processing event", { code, orderId: orderId?.slice(0, 8), fullEvent: JSON.stringify(event).slice(0, 300) })
+      logger.info("webhook-ifood", "processando evento", { requestId: getRequestId(req), code, orderId: orderId?.slice(0, 8) })
 
       if (!orderId) {
-        console.log("[ifood webhook] no orderId, skipping")
+        logger.info("webhook-ifood", "evento sem orderId — ignorado", { requestId: getRequestId(req), code })
         continue
       }
 
       // iFood sends KEEPALIVE events to verify the webhook is alive.
       // We acknowledge them with 200 OK but do nothing.
       if (code === "KEEPALIVE") {
-        console.log("[ifood webhook] keepalive received, ok")
+        logger.info("webhook-ifood", "keepalive recebido", { requestId: getRequestId(req) })
         continue
       }
 
@@ -164,8 +165,8 @@ export async function POST(req: NextRequest) {
               continue
             }
             const order = await getIfoodOrder(auth.accessToken, est.ifoodMerchantId!, orderId)
-            console.log("[ifood webhook] fetched order", orderId, "items=", order?.items?.length, "hasCustomer=", !!order?.customer, "orderType=", order?.orderType)
-            console.log("[ifood webhook] full iFood payload:", JSON.stringify(order).slice(0, 500))
+            // F4A-014: o payload do iFood traz nome/telefone do cliente — fora do log.
+            logger.info("webhook-ifood", "pedido do iFood buscado", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8), items: order?.items?.length || 0, hasCustomer: !!order?.customer, orderType: order?.orderType })
             if (order && order.items && order.items.length > 0) {
               const mapped = mapIfoodOrderToFlow(order, est.id, code)
               try {
@@ -188,11 +189,11 @@ export async function POST(req: NextRequest) {
                 }
                 created++
                 results.push({ orderId, action: 'created' })
-                console.log("[ifood webhook] SAVED order", orderId, "id=", mapped.establishmentId)
+                logger.info("webhook-ifood", "pedido salvo", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8), establishmentId: mapped.establishmentId })
               } catch (createErr: any) {
                 // F4B-002: corrida de dedup — tratar como "já existe"
                 if (createErr?.code === "P2002") {
-                  console.warn("[ifood webhook] duplicate externalId — order already created", orderId)
+                  logger.warn("webhook-ifood", "externalId duplicado — pedido já criado", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8) })
                   results.push({ orderId, action: 'already_exists' })
                 } else {
                   logger.error("webhook-ifood", "falha ao criar o pedido", {
@@ -206,7 +207,7 @@ export async function POST(req: NextRequest) {
             } else {
               // PLC pode vir com items vazios. Salva o pedido com dados básicos
               // e depois atualiza quando chegar CFM com items completos.
-              console.log("[ifood webhook] PLC without items, saving with placeholders", orderId)
+              logger.info("webhook-ifood", "PLC sem itens — salvando com placeholders", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8) })
               try {
                 const placeholder = {
                   establishmentId: est.id,
@@ -223,10 +224,10 @@ export async function POST(req: NextRequest) {
                 await prisma.order.create({ data: { ...placeholder, externalId: orderId } })
                 created++
                 results.push({ orderId, action: 'created_placeholder' })
-                console.log("[ifood webhook] SAVED placeholder order", orderId)
+                logger.info("webhook-ifood", "pedido placeholder salvo", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8) })
               } catch (createErr: any) {
                 if (createErr?.code === "P2002") {
-                  console.warn("[ifood webhook] duplicate externalId — order already created", orderId)
+                  logger.warn("webhook-ifood", "externalId duplicado — pedido já criado", { requestId: getRequestId(req), orderId: orderId?.slice(0, 8) })
                   results.push({ orderId, action: 'already_exists' })
                 } else {
                   logger.error("webhook-ifood", "falha ao criar o pedido placeholder", {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSaasAdmin } from "@/lib/saas-admin-auth"
 import { prisma } from "@/lib/prisma"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET() {
   const admin = await getSaasAdmin()
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, message: "Configuração salva com sucesso!" })
   } catch (error: any) {
-    console.error("[SaasAdmin Pagamentos]", error)
+    logger.error("saasadmin-pagamentos", "falha em SaasAdmin Pagamentos", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao salvar" }, { status: 500 })
   }
 }

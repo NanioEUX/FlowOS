@@ -19,6 +19,7 @@ import {
   deleteInterruption,
   listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * POST /api/ifood-catalog/sync
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest) {
         )
     }
   } catch (error: any) {
-    console.error("[ifood-catalog-sync] error:", error.message)
+    logger.error("ifood-catalog-sync", "erro ao sincronizar o catálogo do iFood", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json(
       { error: `Erro ao sincronizar com iFood: ${error.message}` },
       { status: 500 }

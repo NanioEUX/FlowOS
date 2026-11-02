@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -43,7 +44,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, count: links.length })
   } catch (error: any) {
-    console.error("[stock-links/reset]", error)
+    logger.error("stock-links-reset", "falha em stock-links/reset", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message || "Erro" }, { status: 500 })
   }
 }

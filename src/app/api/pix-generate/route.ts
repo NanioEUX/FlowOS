@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       amount,
     })
   } catch (error) {
-    console.error("Erro ao gerar Pix:", error)
+    logger.error("pix-generate", "Erro ao gerar Pix", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao gerar pagamento" }, { status: 500 })
   }
 }

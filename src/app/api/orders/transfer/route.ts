@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, transferred: result.count })
   } catch (error) {
-    console.error("Transfer table error:", error)
+    logger.error("orders/transfer", "Transfer table error", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao transferir mesa" }, { status: 500 })
   }
 }

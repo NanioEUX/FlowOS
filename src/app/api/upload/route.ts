@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyAuth } from "@/lib/auth"
 import { compressAndUploadImage } from "@/lib/image-upload"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: result.url })
   } catch (error) {
-    console.error("[UPLOAD]", error)
+    logger.error("upload", "falha em UPLOAD", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro no upload" }, { status: 500 })
   }
 }

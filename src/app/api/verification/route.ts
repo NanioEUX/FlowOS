@@ -12,6 +12,7 @@ import {
 import bcrypt from "bcryptjs"
 import crypto from "crypto"
 import { getRequestId, logger } from "@/lib/logger"
+import { redactObject } from "@/lib/redact"
 
 const MAX_ATTEMPTS = 3
 const CODE_EXPIRY_MINUTES = 5
@@ -185,7 +186,7 @@ export async function POST(req: NextRequest) {
 
     // establishment já foi validado no topo do handler (F7A-018)
 
-    console.log(`[VERIFICATION DEBUG] Provider config: whatsappProvider=${establishment.whatsappProvider}, metaPhoneNumberId=${establishment.metaPhoneNumberId}, metaAccessToken=${establishment.metaAccessToken ? "SET" : "NULL"}`)
+    logger.info("verification", "configuração do provedor", { requestId: getRequestId(req), establishmentId, whatsappProvider: establishment.whatsappProvider, metaPhoneNumberId: establishment.metaPhoneNumberId, hasMetaAccessToken: !!establishment.metaAccessToken })
 
     // Send via WhatsApp (establishment's own or SaaS fallback)
     const provider = getWhatsAppProvider({
@@ -198,7 +199,7 @@ export async function POST(req: NextRequest) {
       metaAccessToken: establishment.metaAccessToken,
     })
 
-    console.log(`[VERIFICATION DEBUG] Provider created: ${provider ? 'OK (' + provider.constructor.name + ')' : 'NULL'}`)
+    logger.info("verification", "provedor de WhatsApp criado", { requestId: getRequestId(req), establishmentId, hasProvider: !!provider })
 
     if (!provider) {
       logger.error("verification", "nenhum provedor de WhatsApp configurado", { requestId: getRequestId(req), establishmentId })
@@ -225,27 +226,27 @@ export async function POST(req: NextRequest) {
           const found = await findApprovedTemplate(establishment.metaBusinessAccountId, establishment.metaAccessToken)
           if (found.found && found.templateName) {
             templateName = found.templateName
-            console.log(`[VERIFICATION] Using approved template: ${templateName}`)
+            logger.info("verification", "usando template aprovado", { requestId: getRequestId(req), establishmentId, templateName })
           } else {
-            console.log(`[VERIFICATION] No approved template found, trying default: ${templateName}`)
+            logger.info("verification", "nenhum template aprovado — usando o padrão", { requestId: getRequestId(req), establishmentId, templateName })
           }
         }
       } catch (findErr: any) {
         logger.error("verification", "falha ao buscar template aprovado", { requestId: getRequestId(req), establishmentId, error: findErr?.message })
       }
 
-      console.log(`[VERIFICATION] Trying template "${templateName}" first...`)
+      logger.info("verification", "tentando o template primeiro", { requestId: getRequestId(req), establishmentId, templateName })
       let templateResult = await (provider as any).sendTemplate(
         phoneDigits,
         templateName,
         "pt_BR",
         [code]
       )
-      console.log(`[VERIFICATION] sendTemplate result:`, JSON.stringify(templateResult))
+      logger.info("verification", "resultado do sendTemplate", { requestId: getRequestId(req), establishmentId, result: redactObject(templateResult) })
 
       // If template not found, create and retry
       if (!templateResult.success && templateResult.error?.includes("does not exist")) {
-        console.log(`[VERIFICATION] Template not found, creating automatically...`)
+        logger.info("verification", "template não encontrado — criando automaticamente", { requestId: getRequestId(req), establishmentId })
         try {
           const { createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
           const est = await prisma.establishment.findUnique({
@@ -257,7 +258,7 @@ export async function POST(req: NextRequest) {
               est.metaBusinessAccountId,
               est.metaAccessToken
             )
-            console.log(`[VERIFICATION] Template created:`, JSON.stringify(createResult))
+            logger.info("verification", "template criado", { requestId: getRequestId(req), establishmentId, result: redactObject(createResult) })
 
             if (createResult.success) {
               await new Promise(resolve => setTimeout(resolve, 3000))
@@ -267,7 +268,7 @@ export async function POST(req: NextRequest) {
                 "pt_BR",
                 [code]
               )
-              console.log(`[VERIFICATION] Retry sendTemplate result:`, JSON.stringify(templateResult))
+              logger.info("verification", "resultado do sendTemplate na segunda tentativa", { requestId: getRequestId(req), establishmentId, result: redactObject(templateResult) })
             }
           }
         } catch (createErr: any) {
@@ -282,10 +283,10 @@ export async function POST(req: NextRequest) {
 
     // 2) If template failed, try text (only works if customer has messaged before)
     if (!result.success) {
-      console.log(`[VERIFICATION] Template failed, trying text...`)
+      logger.info("verification", "template falhou — tentando texto", { requestId: getRequestId(req), establishmentId })
       const message = `🔐 *${establishment.name}* - Verificação\n\nSeu código de confirmação é:\n\n*${code}*\n\n1️⃣ Toque e segure no código acima para copiar\n\n⏱️ Expira em ${CODE_EXPIRY_MINUTES} minutos.\n\nSe você não fez esse pedido, ignore esta mensagem.`
       const textResult = await provider.sendText(phoneDigits, message, { delay: 1000 })
-      console.log(`[VERIFICATION] sendText result:`, JSON.stringify(textResult))
+      logger.info("verification", "resultado do envio por texto", { requestId: getRequestId(req), establishmentId, result: redactObject(textResult) })
       if (textResult.success) {
         result = textResult
       }
@@ -302,7 +303,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    console.log(`[VERIFICATION OK] Code sent via WhatsApp to ${maskPhone(phoneDigits)}`)
+    logger.info("verification", "código enviado via WhatsApp", { requestId: getRequestId(req), establishmentId, phone: maskPhone(phoneDigits) })
     return NextResponse.json({
       success: true,
       whatsappSent: true,

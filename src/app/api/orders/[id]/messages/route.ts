@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { sendPush } from "@/lib/push"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(
   req: NextRequest,
@@ -116,7 +117,7 @@ export async function POST(
         await sendPush(order.establishmentId, order.customerPhone, pushPayload)
       }
     } catch (notifyErr: any) {
-      console.error(`[Order Message] Falha ao notificar cliente:`, notifyErr.message)
+      logger.error("orders-messages", "falha ao notificar o cliente", { requestId: getRequestId(req), orderId: params.id, error: notifyErr?.message })
     }
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getWhatsAppProvider } from "@/lib/whatsapp"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * GET /api/cron/verify-reminder (Bearer CRON_SECRET)
@@ -93,6 +94,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log(`[Verify Reminder] sent=${sent} skipped=${skipped}`)
+  logger.info("cron-verify-reminder", "lembretes enviados", { requestId: getRequestId(req), sent, skipped })
   return NextResponse.json({ success: true, sent, skipped })
 }

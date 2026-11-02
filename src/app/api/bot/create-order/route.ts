@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { INTERNAL_CALL_HEADER, verifyInternalCall } from "@/lib/internal-call"
+import { getRequestId, logger } from "@/lib/logger"
 
 export interface BotOrderItem {
   productId: string
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error("[Bot Create Order] Erro:", error.message)
+    logger.error("bot-create-order", "falha ao criar o pedido pelo bot", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

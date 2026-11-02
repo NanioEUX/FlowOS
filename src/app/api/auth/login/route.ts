@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit"
+import { getRequestId, logger } from "@/lib/logger"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -130,7 +131,8 @@ export async function POST(req: NextRequest) {
       subscriptionExpired,
     })
   } catch (error: any) {
-    console.error("LOGIN ERROR:", error?.message, error?.code, error?.meta)
+    // F4A-014: error.meta pode echoing o input do usuário — fora do log.
+    logger.error("auth-login", "falha ao autenticar", { requestId: getRequestId(req), error: error?.message, code: error?.code })
     return NextResponse.json({ error: "Erro ao fazer login" }, { status: 500 })
   }
 }

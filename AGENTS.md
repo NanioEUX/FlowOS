@@ -328,13 +328,28 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
   `/api/health`), **F4B-035** (pagamento tardio NÃO ressuscita pedido
   cancelado/abandonado — `isClosedOrderStatus()` no polling Inter/Pagar.me e no
   webhook Pagar.me; registra o pago + alerta de reembolso manual),
-  **F4A-018 parcial** (novo `src/lib/logger.ts` com log estruturado JSON e
+  **F4A-018** (novo `src/lib/logger.ts` com log estruturado JSON e
   request-id `x-request-id` gerado/propagado pelo middleware; webhooks iFood/99/
   99Food/Pagar.me com `orderId`/`establishmentId`/`requestId`; migrados os
   `console.error` de orders POST/PATCH, payment-status, verification e webhooks),
   **F4D-001**
   (novo `docs/RUNBOOK.md`: incidente p/ 5 cenários + política de rotação de
   chaves). Testes novos: 15 → **165 testes**. Gate: tsc + 165 testes + build OK.
+
+- **F4A-018 — CONCLUÍDO (01/11, no working tree)**: **todos** os `console.*` do
+  servidor migraram para `src/lib/logger.ts` — `src/app/api/**` (0 restantes;
+  exceto o `console.log` **deliberado** de `auth/forgot`, link de reset só com
+  `SHOW_DEV_CODE=true`) e `src/lib/**` (0 restantes). Restam `console.log` só em
+  componentes **client** e nos **scripts CLI** (comportamento correto).
+  **PII em claro eliminada** (F4A-014): telefone mascarado com `maskPhone`
+  (WhatsApp/Meta/Evolution/push/orders), nome/CPF/email do cliente fora do log
+  (Pagar.me), mensagem do cliente no webhook do WhatsApp loga só o **tamanho**,
+  payload do push só o **tamanho**, body iFood/99Food só **chaves/contagens**,
+  `resetUrl` só em dev. `src/lib/redact.ts` refinado: chaves diagnósticas
+  (`statusCode`, `eventCode`, `codeLength`, flags `has*`) voltaram a ficar
+  legíveis sem afrouxar a redação de token/segredo/OTP/link. Testes novos:
+  `logger.test.ts` (4) + 2 em `items-redact.test.ts` → **173 testes**.
+  Gate: tsc limpo, lint 0 erros, **173 testes**, build OK.
 
 - **Fase 10 — Go-live (28/10, no working tree)**: novo `auditoria/10-go-live.md` +
   script `auditoria/testes/10-01-golive-estatico.sh` re-verificam os **30 itens**
@@ -364,8 +379,8 @@ Servidor virou fonte de verdade do `POST /api/orders` (F6B-001/002/003/004 + 013
    **Fase 4 (em andamento)**: F4B-019 (`Idempotency-Key` no `POST /api/orders` —
    exige coluna `clientRequestId`/`db push`, decisão do dono), F4A-019 (APM —
    Sentry é decisão do dono), F4C-022 (CI já roda lint+tsc+`npm test`+build;
-   falta o gate de status check no painel da Vercel), F4A-018 (migração
-   incremental dos ~570 `console.*` das rotas não críticas).
+   falta o gate de status check no painel da Vercel). **F4A-018 está CONCLUÍDO**
+   (logs estruturados no servidor todo — ver o lote de 01/11 acima).
 2. **Introspecção feita (SELECT read-only em produção,14/10)**: prod é **`db push`** (sem
    tabela `_prisma_migrations`; 47 tabelas); colunas Efi/Asaas **já não existem** em prod;
    `Coupon` está no **shape novo** (`name/type/conditionValue/usageLimit/timesUsed/available`)

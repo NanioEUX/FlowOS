@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import { getRequestId, logger } from "@/lib/logger"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       establishment,
     })
   } catch (error) {
-    console.error("[KDS Login]", error)
+    logger.error("kds-login", "falha em KDS Login", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao fazer login" }, { status: 500 })
   }
 }

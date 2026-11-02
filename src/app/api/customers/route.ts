@@ -8,6 +8,7 @@ import {
   customerSessionRequired,
   type CustomerSession,
 } from "@/lib/customer-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 // Campos seguros para consulta pública (pré-OTP / auto-relogin): sem PII
 // sensível (address/cep/cpf/birthDate/email) — F7A-006/017. O registro completo
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(customer)
   } catch (error) {
-    console.error(error)
+    logger.error("customers", "falha ao operar o cliente", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar cliente" }, { status: 500 })
   }
 }
@@ -224,7 +225,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(customer)
   } catch (error) {
-    console.error(error)
+    logger.error("customers", "falha ao operar o cliente", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar cliente" }, { status: 500 })
   }
 }

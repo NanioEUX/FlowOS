@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { convertQuantity } from "@/lib/units"
+import { logger } from "@/lib/logger"
 
 type PrismaTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0]
 
@@ -339,11 +340,12 @@ export async function restoreOrderStock(
         await restoreAdditionalStock(tx, productId, optionNames, item.quantity, orderId)
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     stockRestoreFailures++
-    console.error(
-      `[restoreOrderStock] FALHA ao estornar estoque (orderId=${orderId}, establishmentId=${establishmentId}):`,
-      e
-    )
+    logger.error("stock", "falha ao estornar o estoque", {
+      orderId,
+      establishmentId,
+      error: e?.message,
+    })
   }
 }

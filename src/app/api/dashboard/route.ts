@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import { startOfTodayInTz, dayKeyInTz, startOfInclusiveDay } from "@/lib/finance-dates"
 import { parseOrderItems } from "@/lib/items"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const revalidate = 10
 
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
   try {
     return await withRetry(() => loadDashboard(establishmentId))
   } catch (error: any) {
-    console.error("DASHBOARD ERROR:", error?.message, error?.code)
+    logger.error("dashboard", "falha ao montar o dashboard", { requestId: getRequestId(req), error: error?.message, code: error?.code })
     return NextResponse.json({ error: "Erro ao carregar dashboard" }, { status: 500 })
   }
 }

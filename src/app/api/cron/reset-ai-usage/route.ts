@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getRequestId, logger } from "@/lib/logger"
 
 // F3D-002: o cron do Vercel chama GET — antes o GET só respondia {status:"ok"}
 // e o reset mensal do contador de IA (aiMessagesUsed) nunca rodava de verdade
@@ -30,7 +31,7 @@ async function runReset(req: NextRequest) {
       },
     })
 
-    console.log(`[Cron] Reset IA usage para ${result.count} estabelecimentos`)
+    logger.info("cron-reset-ai-usage", "uso de IA resetado", { requestId: getRequestId(req), count: result.count })
 
     return NextResponse.json({
       success: true,
@@ -38,7 +39,7 @@ async function runReset(req: NextRequest) {
       resetAt: now.toISOString(),
     })
   } catch (error: any) {
-    console.error("[Cron Reset AI Usage] Erro:", error.message)
+    logger.error("cron-reset-ai-usage", "falha ao resetar o uso de IA", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

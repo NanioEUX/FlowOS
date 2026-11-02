@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { EvolutionProvider } from "@/lib/whatsapp/evolution"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(
   req: NextRequest,
@@ -54,7 +55,7 @@ export async function GET(
       profileName: state.profileName,
     })
   } catch (error: any) {
-    console.error("[WhatsApp Status] Erro:", error.message)
+    logger.error("whatsapp-status", "falha ao consultar o status do WhatsApp", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

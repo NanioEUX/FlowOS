@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
 import { redactObject } from "@/lib/redact"
+import { getRequestId, logger } from "@/lib/logger"
+import { maskPhone } from "@/lib/phone"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || process.env.META_APP_ID
 const META_APP_SECRET = process.env.META_APP_SECRET
@@ -27,7 +29,7 @@ async function exchangeCodeForToken(code: string, redirectUri?: string): Promise
       const data = await res.json()
       const msg = `URI="${uri}" status=${res.status} ok=${res.ok} hasToken=${!!data.access_token} error=${data.error?.message || "none"}`
       debug.push(msg)
-      console.log("[Token Exchange]", msg)
+      logger.info("meta-embedded-signup", "troca de token", { detail: msg })
       if (res.ok && data.access_token && data.access_token.startsWith("EAA")) {
         return { token: data.access_token, debug }
       }
@@ -47,7 +49,7 @@ async function exchangeForLongLivedToken(shortToken: string): Promise<{ token: s
     )
     const data = await res.json()
     const debug = `status=${res.status} hasToken=${!!data.access_token} error=${data.error?.message || "none"}`
-    console.log("[Token Exchange] Long token:", debug)
+    logger.info("meta-embedded-signup", "troca pelo token longo", { detail: debug })
     if (data.access_token && data.access_token.startsWith("EAA")) {
       return { token: data.access_token, debug }
     }
@@ -83,11 +85,9 @@ export async function POST(
     const body = await req.json()
     const { code, phoneNumberId, wabaId, businessId: clientBusinessId, redirectUri, accessToken: existingToken } = body
 
-    console.log("[Meta Embedded Signup] ========== START ==========")
-    console.log("[Meta Embedded Signup] Establishment ID:", id)
+    logger.info("meta-embedded-signup", "início do embedded signup", { requestId: getRequestId(req), establishmentId: id })
     // F4A-014: nada de prefixo de code/token no log
-    console.log("[Meta Embedded Signup] Code:", !!code, "len:", code?.length)
-    console.log("[Meta Embedded Signup] existingToken:", !!existingToken)
+    logger.info("meta-embedded-signup", "parâmetros recebidos", { requestId: getRequestId(req), establishmentId: id, hasCode: !!code, codeLength: code?.length || 0, hasExistingToken: !!existingToken })
 
     let accessToken: string | null = null
     let tokenSource = "none"
@@ -135,7 +135,7 @@ export async function POST(
     if (accessToken) {
       const info = await debugToken(accessToken)
       allDebug.push(`final_token: type=${info?.type} expires=${info?.expires_at} issued=${info?.issued_at}`)
-      console.log("[Meta Embedded Signup] Final token info:", JSON.stringify(redactObject(info)))
+      logger.info("meta-embedded-signup", "info do token final", { requestId: getRequestId(req), establishmentId: id, info: redactObject(info) })
     } else {
       allDebug.push("NO TOKEN OBTAINED")
     }
@@ -216,25 +216,25 @@ export async function POST(
     // Create default verification template (only if none approved exists)
     if (accessToken && wabaId) {
       try {
-        console.log(`[Meta Embedded Signup] Checking for existing approved templates in WABA: ${wabaId}`)
+        logger.info("meta-embedded-signup", "verificando templates aprovados", { requestId: getRequestId(req), establishmentId: id, wabaId })
         const { findApprovedTemplate, createDefaultVerificationTemplate } = await import("@/lib/whatsapp/meta")
 
         const existing = await findApprovedTemplate(wabaId, accessToken)
         if (existing.found) {
-          console.log(`[Meta Embedded Signup] Template already exists: ${existing.templateName} (${existing.status})`)
+          logger.info("meta-embedded-signup", "template já existe", { requestId: getRequestId(req), establishmentId: id, templateName: existing.templateName, status: existing.status })
         } else {
-          console.log(`[Meta Embedded Signup] No approved template found, creating...`)
+          logger.info("meta-embedded-signup", "nenhum template aprovado — criando", { requestId: getRequestId(req), establishmentId: id })
           const templateResult = await createDefaultVerificationTemplate(wabaId, accessToken)
-          console.log(`[Meta Embedded Signup] Template creation result:`, JSON.stringify(templateResult))
+          logger.info("meta-embedded-signup", "resultado da criação do template", { requestId: getRequestId(req), establishmentId: id, result: redactObject(templateResult) })
         }
       } catch (templateErr: any) {
-        console.error(`[Meta Embedded Signup] Template creation failed (non-blocking):`, templateErr.message)
+        logger.error("meta-embedded-signup", "falha ao criar o template (não bloqueia)", { requestId: getRequestId(req), error: templateErr?.message })
       }
     } else {
-      console.log(`[Meta Embedded Signup] Skipping template creation - accessToken: ${!!accessToken}, wabaId: ${!!wabaId}`)
+      logger.info("meta-embedded-signup", "criação de template ignorada", { requestId: getRequestId(req), establishmentId: id, hasAccessToken: !!accessToken, hasWabaId: !!wabaId })
     }
 
-    console.log(`[Meta Embedded Signup] SUCCESS - source: ${tokenSource} phone: ${displayPhone}`)
+    logger.info("meta-embedded-signup", "embedded signup concluído", { requestId: getRequestId(req), establishmentId: id, source: tokenSource, phone: maskPhone(displayPhone) })
 
     return NextResponse.json({
       success: true,
@@ -244,7 +244,7 @@ export async function POST(
       _debug: allDebug,
     })
   } catch (error: any) {
-    console.error("[Meta Embedded Signup] ERROR:", error.message, error.stack)
+    logger.error("meta-embedded-signup", "erro no embedded signup da Meta", { requestId: getRequestId(req), error: error?.message, stack: error?.stack })
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

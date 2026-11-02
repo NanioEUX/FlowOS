@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,9 +49,7 @@ export async function POST(req: NextRequest) {
     if (process.env.SHOW_DEV_CODE === "true") {
       console.log(`[PASSWORD RESET] ${user.email}: ${resetUrl}`)
     } else {
-      console.log(
-        `[PASSWORD RESET] token gerado para userId=${user.id} (link não logado — SHOW_DEV_CODE desligado)`
-      )
+      logger.info("forgot-password", "token de redefinição gerado", { requestId: getRequestId(req), userId: user.id })
     }
 
     // TODO: Send email with Resend/SendGrid
@@ -64,7 +63,7 @@ export async function POST(req: NextRequest) {
       message: "Se o email estiver cadastrado, você receberá um link de redefinição.",
     })
   } catch (error) {
-    console.error("[FORGOT PASSWORD]", error)
+    logger.error("forgot-password", "falha em FORGOT PASSWORD", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao processar solicitação" }, { status: 500 })
   }
 }

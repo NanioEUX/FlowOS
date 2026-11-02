@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { buscarStatusCorrida99 } from "@/lib/integrations/nine-nine"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * Polling de status das corridas 99
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
       results,
     })
   } catch (error) {
-    console.error("[poll-99] error:", error)
+    logger.error("delivery/poll-99", "[poll-99] error", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

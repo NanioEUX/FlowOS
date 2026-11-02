@@ -1,5 +1,7 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions, SendVerificationOptions } from "./provider"
 import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
+import { logger } from "@/lib/logger"
+import { maskPhone } from "@/lib/phone"
 
 interface MetaCloudConfig {
   phoneNumberId: string
@@ -35,7 +37,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
   async sendText(phone: string, text: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)
-      console.log(`[MetaCloud] Sending to: ${phoneDigits} (original: ${phone})`)
+      logger.info("meta-cloud", "enviando mensagem", { to: maskPhone(phoneDigits) })
 
       const body: any = {
         messaging_product: "whatsapp",
@@ -60,13 +62,13 @@ export class MetaCloudProvider implements WhatsAppProvider {
       const data = await res.json()
 
       if (!res.ok) {
-        console.error("[MetaCloud] sendText error:", data)
+        logger.error("meta-cloud", "erro no envio de texto", { error: data?.error?.message })
         return { success: false, error: data.error?.message || "Failed to send message" }
       }
 
       return { success: true, messageId: data.messages?.[0]?.id }
     } catch (err: any) {
-      console.error("[MetaCloud] sendText exception:", err)
+      logger.error("meta-cloud", "exceção no envio de texto", { error: err?.message })
       return { success: false, error: err.message }
     }
   }
@@ -74,7 +76,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
   async sendTemplate(phone: string, templateName: string, languageCode: string = "pt_BR", variables: string[] = [], options?: { copyCode?: boolean }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)
-      console.log(`[MetaCloud] Sending template "${templateName}" to: ${phoneDigits}`)
+      logger.info("meta-cloud", "enviando template", { to: maskPhone(phoneDigits), templateName })
 
       const components: any[] = []
 
@@ -99,7 +101,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
       }
 
       // Nunca logar o payload completo: contém o código OTP (F4A-016)
-      console.log(`[MetaCloud] Template payload: to=${phoneDigits} template=${templateName} lang=${languageCode}`)
+      logger.info("meta-cloud", "payload do template", { to: maskPhone(phoneDigits), templateName, languageCode })
 
       const res = await fetchExternal(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
@@ -113,13 +115,13 @@ export class MetaCloudProvider implements WhatsAppProvider {
       const data = await res.json()
 
       if (!res.ok) {
-        console.error("[MetaCloud] sendTemplate error:", data)
+        logger.error("meta-cloud", "erro no envio de template", { error: data?.error?.message })
         return { success: false, error: data.error?.message || "Failed to send template" }
       }
 
       return { success: true, messageId: data.messages?.[0]?.id }
     } catch (err: any) {
-      console.error("[MetaCloud] sendTemplate exception:", err)
+      logger.error("meta-cloud", "exceção no envio de template", { error: err?.message })
       return { success: false, error: err.message }
     }
   }
@@ -127,7 +129,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
   async sendVerificationCode(phone: string, options: SendVerificationOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)
-      console.log(`[MetaCloud] Sending verification code to: ${phoneDigits}`)
+      logger.info("meta-cloud", "enviando código de verificação", { to: maskPhone(phoneDigits) })
 
       const body: any = {
         messaging_product: "whatsapp",
@@ -157,13 +159,13 @@ export class MetaCloudProvider implements WhatsAppProvider {
       const data = await res.json()
 
       if (!res.ok) {
-        console.error("[MetaCloud] sendVerificationCode error:", data)
+        logger.error("meta-cloud", "erro no envio do código de verificação", { error: data?.error?.message })
         return { success: false, error: data.error?.message || "Failed to send verification code" }
       }
 
       return { success: true, messageId: data.messages?.[0]?.id }
     } catch (err: any) {
-      console.error("[MetaCloud] sendVerificationCode exception:", err)
+      logger.error("meta-cloud", "exceção no envio do código de verificação", { error: err?.message })
       return { success: false, error: err.message }
     }
   }
@@ -171,7 +173,7 @@ export class MetaCloudProvider implements WhatsAppProvider {
   async sendInteractiveUrlButton(phone: string, text: string, buttonText: string, url: string, options?: SendTextOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       const phoneDigits = this.formatPhone(phone)
-      console.log(`[MetaCloud] Sending URL button to: ${phoneDigits}`)
+      logger.info("meta-cloud", "enviando botão de URL", { to: maskPhone(phoneDigits) })
 
       const body: any = {
         messaging_product: "whatsapp",
@@ -206,13 +208,13 @@ export class MetaCloudProvider implements WhatsAppProvider {
       const data = await res.json()
 
       if (!res.ok) {
-        console.error("[MetaCloud] sendInteractiveUrlButton error:", data)
+        logger.error("meta-cloud", "erro no envio do botão de URL", { error: data?.error?.message })
         return { success: false, error: data.error?.message || "Failed to send interactive message" }
       }
 
       return { success: true, messageId: data.messages?.[0]?.id }
     } catch (err: any) {
-      console.error("[MetaCloud] sendInteractiveUrlButton exception:", err)
+      logger.error("meta-cloud", "exceção no envio do botão de URL", { error: err?.message })
       return { success: false, error: err.message }
     }
   }
@@ -298,7 +300,7 @@ export async function createDefaultVerificationTemplate(
   apiVersion: string = "v21.0"
 ): Promise<{ success: boolean; templateId?: string; status?: string; error?: string }> {
   try {
-    console.log(`[MetaTemplate] Creating verification template in WABA: ${wabaId}`)
+    logger.info("meta-template", "criando template de verificação", { wabaId })
 
     const templateName = "atualizacao_suporte_v1"
     const body = {
@@ -328,23 +330,23 @@ export async function createDefaultVerificationTemplate(
     const data = await res.json()
 
     if (!res.ok) {
-      console.error("[MetaTemplate] Create error:", data)
+      logger.error("meta-template", "erro ao criar o template", { error: data?.error?.message })
       // If template already exists, that's OK
       if (data.error?.message?.includes("already exists")) {
-        console.log("[MetaTemplate] Template already exists, checking status...")
+        logger.info("meta-template", "template já existe — verificando status", { wabaId })
         return { success: true, status: "already_exists" }
       }
       return { success: false, error: data.error?.message || "Failed to create template" }
     }
 
-    console.log("[MetaTemplate] Template created:", data)
+    logger.info("meta-template", "template criado", { templateId: data?.id, status: data?.status })
     return {
       success: true,
       templateId: data.id,
       status: data.status || "PENDING",
     }
   } catch (err: any) {
-    console.error("[MetaTemplate] Exception:", err)
+    logger.error("meta-template", "exceção ao criar o template", { error: err?.message })
     return { success: false, error: err.message }
   }
 }
@@ -398,7 +400,7 @@ export async function findApprovedTemplate(
   apiVersion: string = "v21.0"
 ): Promise<{ found: boolean; templateName?: string; status?: string; error?: string }> {
   try {
-    console.log(`[MetaTemplate] Listing templates in WABA: ${wabaId}`)
+    logger.info("meta-template", "listando templates", { wabaId })
     const res = await fetchExternalWithRetry(
       `https://graph.facebook.com/${apiVersion}/${wabaId}/message_templates?fields=name,status,category,language`,
       {
@@ -413,8 +415,11 @@ export async function findApprovedTemplate(
     }
 
     const templates = data.data || []
-    console.log(`[MetaTemplate] Found ${templates.length} templates:`,
-      templates.map((t: any) => `${t.name}(${t.status}/${t.category})`).join(", "))
+    logger.info("meta-template", "templates encontrados", {
+        wabaId,
+        count: templates.length,
+        templates: templates.map((t: any) => `${t.name}(${t.status}/${t.category})`),
+      })
 
     // Prefere template de categoria AUTHENTICATION (ou nome de OTP/verificação,
     // F7A-013) e só então qualquer aprovado em pt_BR
@@ -427,7 +432,7 @@ export async function findApprovedTemplate(
       ) || templates.find(isApprovedPtBr)
 
     if (approved) {
-      console.log(`[MetaTemplate] Using approved template: ${approved.name} (${approved.category || "?"})`)
+      logger.info("meta-template", "usando template aprovado", { wabaId, templateName: approved.name, category: approved.category || "?" })
       return { found: true, templateName: approved.name, status: approved.status }
     }
 

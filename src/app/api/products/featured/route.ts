@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error("[Featured Products]", error)
+    logger.error("featured-products", "falha em Featured Products", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

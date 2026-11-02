@@ -1,5 +1,6 @@
 import { verifyHmacSha256 } from "@/lib/webhook-signature"
 import { fetchExternal } from "@/lib/fetch-external"
+import { logger } from "@/lib/logger"
 
 const PAGARME_API_URL =
   process.env.PAGARME_ENVIRONMENT === "sandbox"
@@ -96,7 +97,8 @@ export async function createPagarmeCustomer({
     body.type = rawDoc.length === 11 ? "individual" : "company"
   }
 
-  console.log("[Pagar.me] Criando cliente:", { name, hasEmail: !!email, hasPhone: !!phone })
+  // F4A-014: o nome do cliente não vai para o log.
+  logger.info("pagarme", "criando cliente", { hasEmail: !!email, hasPhone: !!phone })
 
   const res = await fetchExternal(`${PAGARME_API_URL}/customers`, {
     method: "POST",
@@ -105,10 +107,10 @@ export async function createPagarmeCustomer({
   })
 
   const data = await res.json()
-  console.log("[Pagar.me] Resposta cliente:", JSON.stringify({ ok: res.ok, id: data.id, errors: data.errors }))
+  logger.info("pagarme", "resposta da criação do cliente", { ok: res.ok, id: data.id })
 
   if (!res.ok || !data.id) {
-    console.error("[Pagar.me] FALHA cliente:", JSON.stringify(data))
+    logger.error("pagarme", "falha ao criar o cliente", { message: data?.message, errorFields: data?.errors ? Object.keys(data.errors) : [] })
     throw new Error(`Falha ao criar cliente Pagar.me: ${data.message || data.errors?.[0]?.message || JSON.stringify(data)}`)
   }
 
@@ -166,10 +168,10 @@ export async function createPixTransaction({
     }))
   }
 
-  console.log("[Pagar.me] Criando transação PIX:", { customerId, amount, orderId })
+  logger.info("pagarme", "criando transação PIX", { customerId, amount, orderId })
   // F4A-014: o body do PIX carrega CPF/telefone/email do cliente — log só o
   // essencial (sem PII).
-  console.log("[Pagar.me] Body PIX (redigido):", {
+  logger.info("pagarme", "body da transação PIX (redigido)", {
     amount,
     customerId,
     items: body.items?.length ?? 0,
@@ -187,13 +189,13 @@ export async function createPixTransaction({
   try {
     data = JSON.parse(text)
   } catch {
-    console.error("[Pagar.me] Resposta não-JSON:", text.substring(0, 500))
+    logger.error("pagarme", "resposta não-JSON", { body: text?.substring(0, 500) })
     throw new Error(`Pagar.me retornou erro: ${text.substring(0, 200)}`)
   }
-  console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status }))
+  logger.info("pagarme", "resposta da transação", { ok: res.ok, id: data.id, status: data.status })
 
   if (!res.ok || !data.id) {
-    console.error("[Pagar.me] FALHA transação:", JSON.stringify(data))
+    logger.error("pagarme", "falha na transação", { message: data?.message, errorFields: data?.errors ? Object.keys(data.errors) : [] })
     throw new Error(`Falha ao criar transação PIX: ${data.message || data.errors?.[0]?.message || JSON.stringify(data)}`)
   }
 
@@ -213,7 +215,7 @@ export async function createPixTransaction({
       errors: charge.last_transaction?.gateway_response?.errors,
       paymentMethod: charge.payment_method,
     })
-    console.error("[Pagar.me] Cobrança PIX falhou:", details)
+    logger.error("pagarme", "cobrança PIX falhou", { chargeId: charge.id, status: charge.status, lastStatus: charge.last_transaction_status, acquirerMsg: charge.last_transaction?.acquirer_message })
     throw new Error(`Cobrança PIX recusada: ${reason} | ${details}`)
   }
 
@@ -398,7 +400,7 @@ export async function createCardTransaction({
     }))
   }
 
-  console.log("[Pagar.me] Criando transação cartão:", { customerId, amount, installments: installments || 1 })
+  logger.info("pagarme", "criando transação de cartão", { customerId, amount, installments: installments || 1 })
 
   const res = await fetchExternal(`${PAGARME_API_URL}/orders`, {
     method: "POST",
@@ -407,17 +409,17 @@ export async function createCardTransaction({
   })
 
   const data = await res.json()
-  console.log("[Pagar.me] Resposta transação:", JSON.stringify({ ok: res.ok, id: data.id, status: data.status, charges: data.charges?.map((c: any) => ({ id: c.id, status: c.status, last_transaction_status: c.last_transaction_status })) }))
+  logger.info("pagarme", "resposta da transação de cartão", { ok: res.ok, id: data.id, status: data.status, charges: data.charges?.map((c: any) => ({ id: c.id, status: c.status, last_transaction_status: c.last_transaction_status })) })
 
   if (!res.ok || !data.id) {
     const fieldErrors = data.errors && typeof data.errors === "object" && !Array.isArray(data.errors)
       ? Object.entries(data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("; ")
       : (Array.isArray(data.errors) ? data.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ") : "")
     const errMsg = fieldErrors || data.message || JSON.stringify(data)
-    console.error("[Pagar.me] FALHA transação cartão:", errMsg)
+    logger.error("pagarme", "falha na transação de cartão", { errorFields: data?.errors ? Object.keys(data.errors) : [], message: data?.message })
     // F9D-001: o body contém PAN/CVV — NUNCA pode ir para o log (Vercel).
     // Logamos só o que diagnostica, sem dado de cartão.
-    console.error("[Pagar.me] Transação cartão recusada pelo gateway", {
+    logger.error("pagarme", "transação de cartão recusada pelo gateway", {
       customerId,
       amount,
       installments: installments || 1,
@@ -451,7 +453,7 @@ export async function createCardTransaction({
       throw new Error(`Cartao nao autorizado: ${reason}`)
     }
     // If approved but charge status is "failed", continue - webhook will update
-    console.log("[Pagar.me] Charge status 'failed' but acquirer approved:", acquirerMsg)
+    logger.info("pagarme", "charge com status failed mas aprovador aprovou", { acquirerMsg })
   }
 
   return data as PagarmeTransactionResponse

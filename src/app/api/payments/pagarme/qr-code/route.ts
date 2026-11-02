@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
           })
         }
       } catch (e) {
-        console.error("[Pagar.me QR] Erro ao baixar imagem:", e)
+        logger.error("pagarme-qr-code", "falha ao baixar a imagem do QR", { requestId: getRequestId(req), error: (e as any)?.message })
       }
     }
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "QR Code não disponível ainda. Aguarde alguns segundos." }, { status: 404 })
   } catch (error: any) {
-    console.error("[Pagar.me QR Code] Error:", error.message)
+    logger.error("pagar-me-qr-code", "falha em Pagar.me QR Code", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao buscar QR Code", details: error.message }, { status: 500 })
   }
 }

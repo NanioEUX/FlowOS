@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function PATCH(
   req: NextRequest,
@@ -29,7 +30,7 @@ export async function PATCH(
     })
     return NextResponse.json(updated)
   } catch (error) {
-    console.error(error)
+    logger.error("categories", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar categoria" }, { status: 500 })
   }
 }
@@ -52,7 +53,7 @@ export async function DELETE(
     await prisma.category.delete({ where: { id: params.id } })
     return NextResponse.json({ deleted: true })
   } catch (error) {
-    console.error(error)
+    logger.error("categories", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao deletar categoria" }, { status: 500 })
   }
 }

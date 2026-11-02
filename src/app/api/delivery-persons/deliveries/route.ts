@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { canTransition, isValidStatus } from "@/lib/order-transitions"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 // F5B-019: o token pode vir em header (novo) ou no body/query (legado,
 // mantido para não quebrar páginas já abertas).
@@ -122,7 +123,7 @@ export async function PATCH(req: NextRequest) {
     })
     return NextResponse.json(updated)
   } catch (error) {
-    console.error(error)
+    logger.error("delivery-persons/deliveries", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 })
   }
 }

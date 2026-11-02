@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getRequestId, logger } from "@/lib/logger"
 
 function getDeviceKey(request: NextRequest): string {
   const ua = request.headers.get("user-agent") || ""
@@ -33,7 +34,7 @@ export async function GET(
       liked: !!existingLike,
     })
   } catch (error) {
-    console.error("[like:GET]", error)
+    logger.error("like-get", "falha em like:GET", { requestId: getRequestId(request), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }
@@ -77,7 +78,7 @@ export async function POST(
       return NextResponse.json({ liked: true, likes: product.likes + 1 })
     }
   } catch (error) {
-    console.error("[like:POST]", error)
+    logger.error("like-post", "falha em like:POST", { requestId: getRequestId(request), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

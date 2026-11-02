@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { createPagarmeCustomer, createCardTransaction } from "@/lib/integrations/pagarme"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
 import { notifyPaymentConfirmed } from "@/lib/payment-notifications"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   let orderId: string | undefined
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
       status: transaction.status,
     })
   } catch (error: any) {
-    console.error("[Pagar.me Card] Error:", error.message)
+    logger.error("pagar-me-card", "falha em Pagar.me Card", { requestId: getRequestId(req), error: (error as any)?.message })
     // Se o cartão foi recusado (negativa da adquirente), mantém o pedido
     // para o cliente tentar outro cartão. Cancela só em erro de API.
     const isDeclined = error.message?.startsWith("Cartao nao autorizado")

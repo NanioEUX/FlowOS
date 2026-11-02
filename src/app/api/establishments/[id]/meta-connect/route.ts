@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { MetaCloudProvider } from "@/lib/whatsapp/meta"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -48,7 +49,7 @@ export async function POST(
 
       // Register phone number with WhatsApp Cloud API using App Access Token
       if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
-        console.error("[Meta Connect] META_APP_ID or META_APP_SECRET not configured - skipping register")
+        logger.warn("meta-connect", "META_APP_ID ou META_APP_SECRET não configurados — register ignorado", { requestId: getRequestId(req) })
       } else {
         const appAccessToken = `${process.env.META_APP_ID}|${process.env.META_APP_SECRET}`
         try {
@@ -67,9 +68,9 @@ export async function POST(
             }
           )
           const regData = await regRes.json()
-          console.log("[Meta Connect] Register response:", JSON.stringify(regData))
+          logger.info("meta-connect", "resposta do registro do app", { requestId: getRequestId(req), establishmentId: id, success: regData?.success, error: regData?.error?.message })
         } catch (regErr: any) {
-          console.error("[Meta Connect] Register error:", regErr.message)
+          logger.error("meta-connect", "falha ao registrar o app na Meta", { requestId: getRequestId(req), error: regErr?.message })
         }
       }
 
@@ -84,7 +85,7 @@ export async function POST(
       { status: 400 }
     )
   } catch (error: any) {
-    console.error("[Meta Connect] Error:", error.message)
+    logger.error("meta-connect", "falha em Meta Connect", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json(
       { connected: false, error: error.message },
       { status: 500 }
@@ -111,7 +112,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("[Meta Disconnect] Error:", error.message)
+    logger.error("meta-disconnect", "falha em Meta Disconnect", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

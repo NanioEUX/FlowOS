@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   try {
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
       orders: activeOrders,
     })
   } catch (error) {
-    console.error("Erro ao verificar mesa:", error)
+    logger.error("table-status", "Erro ao verificar mesa", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

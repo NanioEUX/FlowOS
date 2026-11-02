@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, payment })
   } catch (error) {
-    console.error("Erro ao registrar pagamento parcial:", error)
+    logger.error("partial-payment", "Erro ao registrar pagamento parcial", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao registrar pagamento" }, { status: 500 })
   }
 }
@@ -70,7 +71,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Erro ao deletar pagamentos parciais:", error)
+    logger.error("partial-payment", "Erro ao deletar pagamentos parciais", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao deletar" }, { status: 500 })
   }
 }

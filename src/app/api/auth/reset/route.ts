@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       message: "Senha redefinida com sucesso. Você pode fazer login.",
     })
   } catch (error) {
-    console.error("[RESET PASSWORD]", error)
+    logger.error("reset-password", "falha em RESET PASSWORD", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao redefinir senha" }, { status: 500 })
   }
 }

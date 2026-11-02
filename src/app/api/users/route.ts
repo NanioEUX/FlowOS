@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(req: NextRequest) {
   const auth = verifyAuth(req)
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(user)
   } catch (error) {
-    console.error(error)
+    logger.error("users", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 })
   }
 }

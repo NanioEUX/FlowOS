@@ -1,4 +1,5 @@
 import https from "https"
+import { logger } from "@/lib/logger"
 
 const NINE_NINE_API_BASE = "https://api.99app.com"
 
@@ -39,7 +40,7 @@ export async function validarCredenciais99(
       res.on("end", () => {
         try {
           if (res.statusCode && res.statusCode >= 400) {
-            console.error("[99 ping] HTTP", res.statusCode, body.slice(0, 300))
+            logger.error("99-ping", "resposta HTTP inesperada", { statusCode: res.statusCode, body: body?.slice(0, 300) })
             resolve({
               success: false,
               error: `HTTP ${res.statusCode}: ${body.slice(0, 200)}`,
@@ -49,14 +50,14 @@ export async function validarCredenciais99(
           const parsed = JSON.parse(body)
           resolve({ success: true, message: parsed.message || "Credenciais válidas" })
         } catch {
-          console.error("[99 ping] parse error, status=", res.statusCode, "body=", body.slice(0, 200))
+          logger.error("99-ping", "resposta não-JSON", { statusCode: res.statusCode, body: body?.slice(0, 200) })
           resolve({ success: false, error: "Erro ao processar resposta da 99" })
         }
       })
     })
 
     req.on("error", (err) => {
-      console.error("[99 ping] request error:", err.message)
+      logger.error("99-ping", "erro na requisição", { error: err?.message })
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
 
@@ -99,7 +100,7 @@ export async function buscarEstimativa99(
       res.on("end", () => {
         try {
           if (res.statusCode && res.statusCode >= 400) {
-            console.error("[99 estimate] HTTP", res.statusCode, body.slice(0, 300))
+            logger.error("99-estimate", "resposta HTTP inesperada", { statusCode: res.statusCode, body: body?.slice(0, 300) })
             resolve({
               success: false,
               error: `HTTP ${res.statusCode}: ${body.slice(0, 200)}`,
@@ -114,14 +115,14 @@ export async function buscarEstimativa99(
             estimatedTime: parsed.estimatedTime || parsed.duration || 0,
           })
         } catch {
-          console.error("[99 estimate] parse error, status=", res.statusCode, "body=", body.slice(0, 200))
+          logger.error("99-estimate", "resposta não-JSON", { statusCode: res.statusCode, body: body?.slice(0, 200) })
           resolve({ success: false, error: "Erro ao processar estimativa da 99" })
         }
       })
     })
 
     req.on("error", (err) => {
-      console.error("[99 estimate] request error:", err.message)
+      logger.error("99-estimate", "erro na requisição", { error: err?.message })
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
 
@@ -168,7 +169,7 @@ export async function despacharCorrida99(
       res.on("end", () => {
         try {
           if (res.statusCode && res.statusCode >= 400) {
-            console.error("[99 dispatch] HTTP", res.statusCode, body.slice(0, 300))
+            logger.error("99-dispatch", "resposta HTTP inesperada", { statusCode: res.statusCode, body: body?.slice(0, 300) })
             resolve({
               success: false,
               error: `HTTP ${res.statusCode}: ${body.slice(0, 200)}`,
@@ -183,14 +184,14 @@ export async function despacharCorrida99(
             estimatedTime: parsed.estimatedTime || parsed.duration || 0,
           })
         } catch {
-          console.error("[99 dispatch] parse error, status=", res.statusCode, "body=", body.slice(0, 200))
+          logger.error("99-dispatch", "resposta não-JSON", { statusCode: res.statusCode, body: body?.slice(0, 200) })
           resolve({ success: false, error: "Erro ao despachar corrida na 99" })
         }
       })
     })
 
     req.on("error", (err) => {
-      console.error("[99 dispatch] request error:", err.message)
+      logger.error("99-dispatch", "erro na requisição", { error: err?.message })
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
 
@@ -224,7 +225,7 @@ export async function buscarStatusCorrida99(
       res.on("end", () => {
         try {
           if (res.statusCode && res.statusCode >= 400) {
-            console.error("[99 status] HTTP", res.statusCode, body.slice(0, 300))
+            logger.error("99-status", "resposta HTTP inesperada", { statusCode: res.statusCode, body: body?.slice(0, 300) })
             resolve({ success: false, error: `HTTP ${res.statusCode}` })
             return
           }
@@ -241,7 +242,7 @@ export async function buscarStatusCorrida99(
     })
 
     req.on("error", (err) => {
-      console.error("[99 status] request error:", err.message)
+      logger.error("99-status", "erro na requisição", { error: err?.message })
       resolve({ success: false, error: `Erro de conexão: ${err.message}` })
     })
 

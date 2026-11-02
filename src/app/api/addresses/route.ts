@@ -5,6 +5,7 @@ import {
   customerSessionRequired,
   type CustomerSession,
 } from "@/lib/customer-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 // Todas as operações exigem o cookie de sessão do cliente (F7A-005/F7B-016):
 // customerId/establishmentId vêm do token, nunca do request.
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ addresses })
   } catch (error) {
-    console.error("[Addresses GET]", error)
+    logger.error("addresses-get", "falha na operação de endereços", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao buscar endereços" }, { status: 500 })
   }
 }
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ address })
   } catch (error) {
-    console.error("[Addresses POST]", error)
+    logger.error("addresses-post", "falha na operação de endereços", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar endereço" }, { status: 500 })
   }
 }
@@ -140,7 +141,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ address })
   } catch (error) {
-    console.error("[Addresses PATCH]", error)
+    logger.error("addresses-patch", "falha na operação de endereços", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao atualizar endereço" }, { status: 500 })
   }
 }
@@ -184,7 +185,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[Addresses DELETE]", error)
+    logger.error("addresses-delete", "falha na operação de endereços", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao excluir endereço" }, { status: 500 })
   }
 }

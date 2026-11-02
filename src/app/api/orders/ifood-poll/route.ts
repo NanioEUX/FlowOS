@@ -4,6 +4,7 @@ import { getIfoodAuth, getIfoodEvents, getIfoodOrder, mapIfoodOrderToFlow } from
 import { upsertIfoodCustomer } from "@/lib/integrations/ifood-customer"
 import { deductOrderStock, restoreOrderStock } from "@/lib/stock"
 import { requireAuth } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -243,7 +244,7 @@ export async function POST(req: NextRequest) {
                 await deductOrderStock(tx, items, createdOrder.id, est.id, true)
               })
             } catch (stockErr: any) {
-              console.error("[ifood poll] stock deduction error:", stockErr.message)
+              logger.error("ifood-poll", "falha na baixa de estoque do pedido", { requestId: getRequestId(req), orderId: createdOrder.id, error: stockErr?.message })
             }
             created++
           } else {
@@ -274,7 +275,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, created, updated, skipped, errors, details: showDetail ? details : undefined, establishmentsCount: establishments.length })
   } catch (err: any) {
-    console.error(err)
+    logger.error("ifood-poll", "erro ao sincronizar os pedidos do iFood", { requestId: getRequestId(req), error: err?.message })
     return NextResponse.json({ error: String(err?.message || err), stack: err?.stack }, { status: 500 })
   }
 }

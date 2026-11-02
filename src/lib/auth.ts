@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken"
+import { logger } from "@/lib/logger"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -43,9 +44,9 @@ export function verifyAuth(request: Request): AuthUser | null {
     const error = e as any
     // Log different error types
     if (error.name === "TokenExpiredError") {
-      console.error("[verifyAuth] token expired")
+      logger.warn("auth", "token expirado")
     } else {
-      console.error("[verifyAuth] failed:", error.message)
+      logger.error("auth", "falha ao verificar o token", { error: error?.message })
     }
     return null
   }

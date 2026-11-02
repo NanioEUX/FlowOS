@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -25,10 +26,10 @@ export async function POST(
       },
     })
 
-    console.log(`[Meta Consumption] Reset for ${id}, period: ${periodo}`)
+    logger.info("meta-consumption-reset", "consumo da Meta resetado", { requestId: getRequestId(req), establishmentId: id, periodo })
     return NextResponse.json({ success: true, periodo })
   } catch (error: any) {
-    console.error("[Meta Consumption] Reset error:", error.message)
+    logger.error("meta-consumption-reset", "erro ao resetar o consumo da Meta", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

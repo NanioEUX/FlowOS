@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { sendPush } from "@/lib/push"
+import { logger } from "@/lib/logger"
 
 /**
  * Notifica o cliente quando o pagamento (Pix ou cartão) é CONFIRMADO.
@@ -50,12 +51,12 @@ export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
           url: order.establishment?.slug ? `/${order.establishment.slug}?orders=1` : `/`,
           tag: `order-${order.id}`,
         })
-        console.log("[PaymentNotify] Push:", { orderId: order.id, sent: pushResult.sent, failed: pushResult.failed })
+        logger.info("payment-notify", "push de pagamento enviado", { orderId: order.id, sent: pushResult.sent, failed: pushResult.failed })
       } catch (e: any) {
-        console.warn("[PaymentNotify] Push falhou:", e.message)
+        logger.warn("payment-notify", "push de pagamento falhou", { error: e?.message })
       }
     }
   } catch (e: any) {
-    console.error("[PaymentNotify] Erro geral:", e.message)
+    logger.error("payment-notify", "erro ao notificar o pagamento", { error: e?.message })
   }
 }

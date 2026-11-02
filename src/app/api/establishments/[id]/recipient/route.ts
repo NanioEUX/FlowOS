@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import { getPagarmeConfig } from "@/lib/pagarme-config"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(
   req: NextRequest,
@@ -58,7 +59,7 @@ export async function GET(
       status: data.status,
     })
   } catch (error: any) {
-    console.error("[Recipient GET] Error:", error.message)
+    logger.error("recipient-get", "falha em Recipient GET", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao buscar dados" }, { status: 500 })
   }
 }
@@ -132,7 +133,8 @@ export async function POST(
     const data = await res.json()
 
     if (!res.ok) {
-      console.error("[Recipient] Erro Pagar.me:", JSON.stringify(data))
+      // F4A-014: a resposta de erro do Pagar.me pode conter dados do titular — loga só o status.
+      logger.error("pagarme-recipient", "erro do Pagar.me ao criar o recipient", { requestId: getRequestId(req), status: res?.status })
       return NextResponse.json({ error: data.message || data.errors?.[0]?.message || "Erro ao criar recipient" }, { status: 400 })
     }
 
@@ -143,7 +145,7 @@ export async function POST(
 
     return NextResponse.json({ recipientId: data.id, status: data.status })
   } catch (error: any) {
-    console.error("[Recipient] Error:", error.message)
+    logger.error("recipient", "falha em Recipient", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao criar recipient" }, { status: 500 })
   }
 }

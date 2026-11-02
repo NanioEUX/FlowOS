@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(option)
   } catch (error: any) {
-    console.error("[ADDITIONAL-OPTION POST]", error)
+    logger.error("additional-option-post", "falha em ADDITIONAL-OPTION POST", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message || "Erro ao criar opção" }, { status: 500 })
   }
 }
@@ -117,7 +118,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(option)
   } catch (error: any) {
-    console.error("[ADDITIONAL-OPTION PATCH]", error)
+    logger.error("additional-option-patch", "falha em ADDITIONAL-OPTION PATCH", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message || "Erro ao atualizar opção" }, { status: 500 })
   }
 }
@@ -147,7 +148,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("[ADDITIONAL-OPTION DELETE]", error)
+    logger.error("additional-option-delete", "falha em ADDITIONAL-OPTION DELETE", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message || "Erro ao deletar opção" }, { status: 500 })
   }
 }

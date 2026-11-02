@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       req.nextUrl.searchParams.get("key") ||
       ""
     if (!timingSafeEqualStr(provided, webhookSecret)) {
-      console.warn("[99 Webhook] missing/invalid WEBHOOK_99_SECRET")
+      logger.warn("webhook-99", "WEBHOOK_99_SECRET ausente ou inválido", { requestId: getRequestId(req) })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
   }
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err) {
-    console.error("[99 Webhook] Erro ao salvar log:", err)
+    logger.error("webhook-99", "falha ao salvar o log do webhook", { requestId: getRequestId(req), error: (err as any)?.message })
   }
 
   const requestId = getRequestId(req)

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createInterPixCharge, getInterPixQrCode, generateInterTxId } from "@/lib/integrations/inter"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
     const { orderId, establishmentId } = await req.json()
 
-    console.log("[Inter QR Code] Request received:", { orderId })
+    logger.info("inter-qr-code", "requisição recebida", { requestId: getRequestId(req), orderId })
 
     if (!orderId || !establishmentId) {
       return NextResponse.json({ error: "orderId e establishmentId obrigatórios" }, { status: 400 })
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!order) {
-      console.log("[Inter QR Code] Order not found:", orderId)
+      logger.warn("inter-qr-code", "pedido não encontrado", { requestId: getRequestId(req), orderId })
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
     }
 
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
     // Get QR Code
     const qrCode = await getInterPixQrCode(config, charge.txid)
 
-    console.log("[Inter QR Code] Success:", { txid: charge.txid, hasImage: !!qrCode.image })
+    logger.info("inter-qr-code", "QR Code gerado", { requestId: getRequestId(req), orderId, txid: charge?.txid, hasImage: !!qrCode?.image })
 
     return NextResponse.json({
       encodedImage: qrCode.image,
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
       expiration: 3600,
     })
   } catch (error: any) {
-    console.error("[Inter QR Code] Error:", error.message)
+    logger.error("inter-qr-code", "falha em Inter QR Code", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao buscar QR Code", details: error.message }, { status: 500 })
   }
 }

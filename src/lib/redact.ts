@@ -7,6 +7,17 @@
 
 const SENSITIVE_KEY = /(access[_-]?token|refresh[_-]?token|token|secret|password|passwd|api[_-]?key|apikey|authorization|client[_-]?secret|certificate|webhook[_-]?verify|code|otp|link|url)/i
 
+/**
+ * F4A-018: chaves que CASAM com SENSITIVE_KEY ("code", "url", "token") mas
+ * carregam apenas diagnóstico — escondê-las tornaria o log inútil (o dev
+ * perderia statusCode, eventCode, hasApiKey...).
+ *
+ * Regra: `has*` é sempre flag booleana; a lista abaixo é fechada e cada item
+ * já foi revisado. Qualquer chave nova sensível NÃO entra aqui — o padrão
+ * seguro é seguir redigida.
+ */
+const DIAGNOSTIC_KEY = /^(?:has[A-Z]\w*|statusCode|errorCode|httpCode|eventCode|reasonCode|codeLength|baseUrl|requestUrl|finalUrl|publicUrl)$/
+
 export function redactValue(value: unknown): string {
   if (value === null || value === undefined) return "[null]"
   if (typeof value === "string") return "[redacted]"
@@ -25,7 +36,7 @@ export function redactObject<T>(input: T): any {
 
   const out: Record<string, any> = {}
   for (const [key, value] of Object.entries(input as Record<string, any>)) {
-    if (SENSITIVE_KEY.test(key)) {
+    if (SENSITIVE_KEY.test(key) && !DIAGNOSTIC_KEY.test(key)) {
       out[key] = redactValue(value)
     } else if (value && typeof value === "object") {
       out[key] = redactObject(value)

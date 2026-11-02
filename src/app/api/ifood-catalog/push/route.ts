@@ -12,6 +12,7 @@ import {
   listCatalogs,
 } from "@/lib/integrations/ifood-catalog-write"
 import crypto from "crypto"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * Generate a deterministic UUID v4 from a cuid string.
@@ -37,6 +38,7 @@ function cuidToUUIDv4(cuid: string): string {
  *   - dryRun?: boolean — return what would be sent without actually sending
  */
 export async function POST(req: NextRequest) {
+  const requestId = getRequestId(req)
   try {
     const auth = verifyAuth(req)
     if (!auth) {
@@ -122,13 +124,13 @@ export async function POST(req: NextRequest) {
       )
     }
     const catalogId = catalogsResult.data[0].catalogId || catalogsResult.data[0].id
-    console.log("[ifood-catalog-push] using catalogId:", catalogId)
+    logger.info("ifood-catalog-push", "catálogo do iFood em uso", { requestId, establishmentId: auth.establishmentId, catalogId })
 
-    console.log("[ifood-catalog-push] start:", {
+    logger.info("ifood-catalog-push", "início do push do catálogo", {
+      requestId,
       establishmentId: auth.establishmentId,
       merchantId: mid,
       categoriesFound: categories.length,
-      categoryNames: categories.map((c) => c.name),
     })
 
     const results = {
@@ -160,12 +162,12 @@ export async function POST(req: NextRequest) {
     for (const category of categories) {
       try {
         let ifoodCategoryId = category.ifoodCategoryId
-        console.log("[ifood-catalog-push] processing category:", category.name, "ifoodCategoryId:", ifoodCategoryId, "products:", category.products.length)
+        logger.info("ifood-catalog-push", "processando categoria", { requestId, establishmentId: auth.establishmentId, category: category.name, ifoodCategoryId, products: category.products.length })
 
         // Create category on iFood if it doesn't have an ID yet
         if (!ifoodCategoryId) {
           const catResult = await createCategory(token, mid, catalogId, category.name)
-          console.log("[ifood-catalog-push] createCategory result:", catResult.status, catResult.data?.id || "no id")
+          logger.info("ifood-catalog-push", "resultado da criação da categoria", { requestId, establishmentId: auth.establishmentId, status: catResult?.status, id: catResult?.data?.id || null })
           if (catResult.success && catResult.data?.id) {
             ifoodCategoryId = catResult.data.id
             await prisma.category.update({
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
             results.categoriesCreated++
           } else {
             const errMsg = `Falha ao criar: ${catResult.status} ${catResult.data?.message || ""}`
-            console.error("[ifood-catalog-push] category create failed:", category.name, errMsg, catResult)
+            logger.error("ifood-catalog-push", "falha ao criar categoria no iFood", { requestId, category: category?.name, error: errMsg })
             results.errors.push({
               entity: "category",
               name: category.name,
@@ -226,7 +228,7 @@ export async function POST(req: NextRequest) {
                 if (uploadResult.success && uploadResult.data?.imagePath) {
                   imagePath = uploadResult.data.imagePath
                 } else {
-                  console.error("[ifood-catalog-push] falha upload imagem iFood:", product.name, uploadResult.status, uploadResult.data)
+                  logger.error("ifood-catalog-push", "falha no upload de imagem para o iFood", { requestId, product: product?.name, status: uploadResult?.status })
                 }
               }
             }
@@ -339,8 +341,8 @@ export async function POST(req: NextRequest) {
               results.itemsUpdated++
             } else {
               const errMsg = `Falha: ${itemResult.status} ${JSON.stringify(itemResult.data).slice(0, 300)}`
-              console.error("[ifood-catalog-push] product create/update failed:", product.name, errMsg)
-              console.error("[ifood-catalog-push] full iFood response:", JSON.stringify(itemResult))
+              logger.error("ifood-catalog-push", "falha ao criar/atualizar produto no iFood", { requestId, product: product?.name, error: errMsg })
+              logger.error("ifood-catalog-push", "resposta do iFood ao processar item", { requestId, product: product?.name, status: itemResult?.status })
               results.errors.push({
                 entity: "product",
                 name: product.name,
@@ -348,7 +350,7 @@ export async function POST(req: NextRequest) {
               })
             }
           } catch (e: any) {
-            console.error("[ifood-catalog-push] product exception:", product.name, e.message)
+            logger.error("ifood-catalog-push", "exceção ao processar produto", { requestId, product: product?.name, error: e?.message })
             results.errors.push({
               entity: "product",
               name: product.name,
@@ -357,7 +359,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (e: any) {
-        console.error("[ifood-catalog-push] category exception:", category.name, e.message)
+        logger.error("ifood-catalog-push", "exceção ao processar categoria", { requestId, category: category?.name, error: e?.message })
         results.errors.push({
           entity: "category",
           name: category.name,
@@ -368,7 +370,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(results)
   } catch (error: any) {
-    console.error("[ifood-catalog-push] error:", error.message)
+    logger.error("ifood-catalog-push", "erro no push do catálogo", { requestId, error: error?.message })
     return NextResponse.json(
       { error: `Erro ao enviar cardápio: ${error.message}` },
       { status: 500 }

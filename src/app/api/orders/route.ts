@@ -30,7 +30,7 @@ function buildSplitRules(
   if (!establishmentRecipientId) return undefined
 
   if (!saasRecipientId) {
-    console.warn("[Orders] saasRecipientId not configured, skipping split")
+    logger.warn("orders", "saasRecipientId não configurado — split ignorado")
     return undefined
   }
 
@@ -39,7 +39,7 @@ function buildSplitRules(
 
   // If SaaS profit is 0, no split needed - establishment gets 100% (Pagar.me deducts its fee automatically)
   if (saasProfit <= 0) {
-    console.log("[Orders] SaaS profit is 0, no split configured")
+    logger.info("orders", "lucro do SaaS é 0 — split não configurado")
     return undefined
   }
 
@@ -47,7 +47,7 @@ function buildSplitRules(
   const saasPercentage = Math.max(1, Math.round(saasProfit))
   const establishmentPercentage = 100 - saasPercentage
 
-  console.log("[Orders] Split rules:", { saasPercentage, establishmentPercentage, saasRecipientId, establishmentRecipientId })
+  logger.info("orders", "regras de split definidas", { saasPercentage, establishmentPercentage, hasSaasRecipient: !!saasRecipientId, hasEstablishmentRecipient: !!establishmentRecipientId })
 
   return [
     {
@@ -117,8 +117,8 @@ export async function POST(req: NextRequest) {
       initialStatus,
     } = input
 
-    console.log("[Orders POST] paymentMethod:", paymentMethod, "| orderType:", orderType, "| method:", method, "| status:", initialStatus)
-    console.log("[Orders POST] totals (server):", { subtotal, deliveryFeeValue })
+    logger.info("orders-post", "parâmetros do pedido", { requestId, paymentMethod, orderType, method, status: initialStatus })
+    logger.info("orders-post", "totais calculados no servidor", { requestId, subtotal, deliveryFee: deliveryFeeValue })
 
     // Regra: cliente bloqueado por excesso de cancelamentos (config por
     // estabelecimento: cancellationBlockEnabled). Se bloqueado, só permite
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     }
 
     const trackingToken = crypto.randomBytes(12).toString("hex")
-    console.log("[Orders POST] autoAccept:", { autoAcceptOrders: establishment.autoAcceptOrders, paymentMethod, isOnlinePaymentMethod, isMesa, initialStatus })
+    logger.info("orders-post", "decisão de auto-aceite", { requestId, autoAcceptOrders: establishment.autoAcceptOrders, paymentMethod, isOnlinePaymentMethod, isMesa, status: initialStatus })
 
     // Find or create customer - CPF is unique identifier
     let customerId: string | undefined
@@ -501,7 +501,7 @@ export async function POST(req: NextRequest) {
     // não no Asaas. Não deve gerar cobrança online.
     const isPayOnDeliveryCard =
       paymentMethod === "card_delivery" || paymentMethod === "card_pickup"
-    console.log("[Orders POST] willCreatePayment:", isOnlinePayment, "| provider:", establishment.paymentProvider, "| method:", paymentMethod)
+    logger.info("orders-post", "decisão de cobrança online", { requestId, willCreatePayment: isOnlinePayment, provider: establishment.paymentProvider, paymentMethod })
 
     if (isOnlinePayment) {
       const useInter = establishment.paymentProvider === "inter" && paymentMethod === "pix"
@@ -522,7 +522,7 @@ export async function POST(req: NextRequest) {
           const txid = generateInterTxId(order.id, order.orderNumber ?? 0)
           const description = `Pedido #${order.orderNumber} - ${establishment.name}`
 
-          console.log("[Inter] Criando cobrança PIX:", { txid, value: order.total })
+          logger.info("orders-post", "criando cobrança PIX no Inter", { requestId, establishmentId: estId, orderId: order?.id, txid, value: order?.total })
 
           await createInterPixCharge(config, {
             value: order.total,
@@ -560,16 +560,33 @@ export async function POST(req: NextRequest) {
         const { getPagarmeConfig } = await import("@/lib/pagarme-config")
         const pagarmeConfig = await getPagarmeConfig()
         const pagarmeApiKey = pagarmeConfig.apiKey
-        console.log("[Pagar.me] API Key loaded:", pagarmeApiKey ? pagarmeApiKey.substring(0, 10) + "..." : "NOT FOUND")
+        // F4A-014: prefixo da API key NUNCA no log
+        logger.info("orders-post", "chave do Pagar.me carregada", {
+          requestId,
+          configured: !!pagarmeApiKey,
+        })
         if (!pagarmeApiKey) {
           return NextResponse.json({ error: "Pagamento Pagar.me não configurado no servidor. Contate o administrador." }, { status: 400 })
         }
         try {
-          console.log("[Pagar.me] Criando pagamento:", { customerName, customerPhone, value: order.total })
+          logger.info("orders-post", "criando pagamento Pagar.me", {
+            requestId,
+            establishmentId: estId,
+            orderId: order?.id,
+            value: order?.total,
+          })
 
           const { createPagarmeCustomer, createPixTransaction } = await import("@/lib/integrations/pagarme")
           
-          console.log("[Pagar.me] Dados cliente:", { customerName, customerPhone, customerEmail, customerCpf })
+          // F4A-014: CPF/telefone/email do cliente não vão para o log
+          logger.info("orders-post", "dados do cliente enviados ao gateway (redigido)", {
+            requestId,
+            establishmentId: estId,
+            orderId: order?.id,
+            hasCpf: !!customerCpf,
+            hasEmail: !!customerEmail,
+            hasPhone: !!customerPhone,
+          })
           
           // Create customer first
           const customer = await createPagarmeCustomer({
@@ -593,7 +610,7 @@ export async function POST(req: NextRequest) {
               pagarmeConfig
             )
             if (isSandbox && establishment.pagarmeSplitReceiverId) {
-              console.log("[Pagar.me] Sandbox detectado — split desabilitado para PIX (simulador não suporta)")
+              logger.info("orders-post", "sandbox do Pagar.me detectado — split desabilitado no PIX", { requestId, establishmentId: estId, orderId: order?.id })
             }
 
             let pixPayment
@@ -609,7 +626,12 @@ export async function POST(req: NextRequest) {
             } catch (splitErr: any) {
               // Fallback: retry without split if it still fails
               if (splitRules) {
-                console.log("[Pagar.me] Com split falhou, tentando sem split:", splitErr.message)
+                logger.warn("orders-post", "split do Pagar.me falhou — tentando sem split", {
+                requestId,
+                establishmentId: estId,
+                orderId: order?.id,
+                error: splitErr?.message,
+              })
                 pixPayment = await createPixTransaction({
                   apiKey: pagarmeApiKey,
                   customerId: customer.id,
@@ -641,7 +663,7 @@ export async function POST(req: NextRequest) {
               }
             }
             
-            console.log("[Pagar.me] QR Code URL:", qrCodeUrl ? "OK" : "VAZIO")
+            logger.info("orders-post", "QR Code do Pagar.me", { requestId, establishmentId: estId, orderId: order?.id, hasQrCode: !!qrCodeUrl })
             
             pixPayload = (tx as any)?.qr_code || ""
             
@@ -679,7 +701,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log("[Orders POST] Resultado final - paymentLink:", paymentLink ? "SIM" : "NAO")
+    logger.info("orders-post", "resultado final do pedido", { requestId, establishmentId: estId, orderId: order?.id, hasPaymentLink: !!paymentLink })
 
     const fullOrder = await prisma.order.findUnique({
       where: { id: order.id },

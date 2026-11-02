@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { createInterruption, deleteInterruption, getInterruptions } from "@/lib/integrations/ifood-catalog-write"
+import { getRequestId, logger } from "@/lib/logger"
 
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
 
@@ -131,11 +132,11 @@ export async function GET(req: NextRequest) {
       errors++
       // F3D-003: não engolir o erro por loja — loga com identificação e devolve
       // os detalhes (capped) na resposta do cron para o debug em produção.
-      console.error(`[Sync iFood] erro na loja ${est.name} (${est.id}):`, e?.message)
+      logger.error("cron-sync-ifood-status", "erro ao sincronizar a loja no iFood", { requestId: getRequestId(req), establishmentId: est.id, error: e?.message })
       if (errorDetails.length < 10) errorDetails.push(`${est.name}: ${e?.message}`)
     }
   }
 
-  console.log(`[Sync iFood] opened=${opened} closed=${closed} skipped=${skipped} errors=${errors} total=${establishments.length}`)
+  logger.info("cron-sync-ifood-status", "sincronização concluída", { requestId: getRequestId(req), opened, closed, skipped, errors, total: establishments.length })
   return NextResponse.json({ success: true, opened, closed, skipped, errors, total: establishments.length, errorDetails })
 }

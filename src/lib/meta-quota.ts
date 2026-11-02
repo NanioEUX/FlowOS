@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { logger } from "@/lib/logger"
 
 // Meta Brazil pricing per conversation (BRL)
 const META_PRICING = {
@@ -80,7 +81,7 @@ export async function refreshQuotaFromMeta(establishmentId: string): Promise<Quo
     const data = await res.json()
 
     if (!res.ok || !data.messaging_limit_tier) {
-      console.error("[Meta Quota] Failed to fetch:", data.error?.message)
+      logger.error("meta-quota", "falha ao consultar a cota", { error: data?.error?.message })
       return null
     }
 
@@ -121,7 +122,7 @@ export async function refreshQuotaFromMeta(establishmentId: string): Promise<Quo
       needsVerification: usagePercent >= 80,
     }
   } catch (err: any) {
-    console.error("[Meta Quota] Error:", err.message)
+    logger.error("meta-quota", "erro na consulta de cota", { error: err?.message })
     return null
   }
 }

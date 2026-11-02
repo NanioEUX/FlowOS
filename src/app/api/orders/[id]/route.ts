@@ -257,7 +257,7 @@ export async function PATCH(
           process.env.IFOOD_CLIENT_SECRET!
         )
         if (!auth?.accessToken) {
-          console.warn("[ifood sync] auth failed, skipping iFood status push")
+          logger.warn("orders-patch", "falha de auth no sync do iFood — push de status ignorado", { requestId: getRequestId(req) })
         } else {
         const accessToken = auth.accessToken
         const establishment = await prisma.establishment.findUnique({
@@ -290,14 +290,15 @@ export async function PATCH(
             // OU pending → preparing.
             if (action === "startPreparation" && (order.status === "pending" || order.status === "new" || order.status === "accepted" || order.status === "confirmed")) {
               const confirmResult = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, "confirm", order.ifoodDeliveryBy ?? undefined)
-              console.log("[ifood status update] auto-confirm on startPreparation:", { orderId: order.externalId, success: confirmResult.success, status: confirmResult.status })
+              logger.info("orders-patch", "auto-confirm no iFood ao iniciar o preparo", { requestId: getRequestId(req), orderId: id, externalId: order.externalId, success: confirmResult?.success, status: confirmResult?.status })
             }
             const result = await updateIfoodStatus(accessToken, establishment.ifoodMerchantId, order.externalId, action, order.ifoodDeliveryBy ?? undefined, action === "cancel" ? (cancellationReason || undefined) : undefined)
-            console.log("[ifood status update]", { orderId: order.externalId, action, status: result.status, body: result.body, success: result.success, isMerchantDelivery })
+            // F4A-014: o body da resposta do iFood pode conter dados do cliente — fora do log.
+            logger.info("orders-patch", "status atualizado no iFood", { requestId: getRequestId(req), orderId: id, externalId: order.externalId, action, status: result?.status, success: result?.success, isMerchantDelivery })
           } else if (status === "delivered" && !isMerchantDelivery) {
-            console.log("[ifood sync] iFood delivery: skipping (iFood auto-concludes after dispatch)", { orderId: order.externalId })
+            logger.info("orders-patch", "sync do iFood ignorado (delivery concluída pelo iFood)", { requestId: getRequestId(req), orderId: id, externalId: order.externalId })
           } else {
-            console.log("[ifood sync] skipped:", { hasExternalId: !!order.externalId, status, action, isMerchantDelivery })
+            logger.info("orders-patch", "sync do iFood ignorado", { requestId: getRequestId(req), orderId: id, hasExternalId: !!order.externalId, status, action, isMerchantDelivery })
           }
         }
         }
@@ -335,7 +336,7 @@ export async function PATCH(
               action,
               status === "cancel" ? (cancellationReason || undefined) : undefined
             )
-            console.log("[99food status update]", { orderId: order.externalId, action, success: result.success, status: result.status })
+            logger.info("orders-patch", "status atualizado no 99Food", { requestId: getRequestId(req), orderId: id, externalId: order.externalId, action, success: result?.success, status: result?.status })
           }
         }
       } catch (err) {
@@ -389,7 +390,7 @@ export async function PATCH(
                 entregaStatusProvedor: "pending",
               },
             })
-            console.log("[99 dispatch] corrida despachada:", { orderId: order.id, rideId: result.rideId })
+            logger.info("orders-patch", "corrida despachada na 99", { requestId: getRequestId(req), orderId: id, rideId: result?.rideId })
           } else {
             logger.error("orders-patch", "falha ao despachar corrida na 99", { requestId, orderId: id, error: result?.error })
           }
@@ -463,7 +464,7 @@ export async function PATCH(
 
     // Notificar cliente via WhatsApp quando o status mudar (templates do bot v2)
     if (status && status !== order.status && order.customerPhone) {
-      console.log(`[Order PATCH] Status mudou de "${order.status}" para "${status}" - notificando ${order.customerPhone}`)
+      logger.info("orders-patch", "status do pedido alterado — notificando o cliente", { requestId: getRequestId(req), orderId: id, from: order.status, to: status })
       try {
         const establishment = await prisma.establishment.findUnique({
           where: { id: order.establishmentId },
@@ -499,7 +500,7 @@ export async function PATCH(
           cancelled: establishment?.botTemplateOrderCancelled,
         }
         const template = templateMap[status]
-        console.log(`[Order PATCH] Template for "${status}": ${template ? template.substring(0, 50) : 'EMPTY/NULL'} | provider: ${establishment?.whatsappProvider} | baseUrl: ${establishment?.evolutionBaseUrl ? 'SET' : 'MISSING'}`)
+        logger.info("orders-patch", "template de WhatsApp selecionado", { requestId: getRequestId(req), orderId: id, status, hasTemplate: !!template, provider: establishment?.whatsappProvider, hasBaseUrl: !!establishment?.evolutionBaseUrl })
         // WhatsApp falhando NUNCA pode impedir o push PWA de rodar.
         try {
           if (template && establishment) {
@@ -512,19 +513,19 @@ export async function PATCH(
               metaPhoneNumberId: establishment.metaPhoneNumberId,
               metaAccessToken: establishment.metaAccessToken,
             })
-            console.log(`[Order PATCH] Provider: ${provider ? 'OK' : 'NULL'}`)
+            logger.info("orders-patch", "provedor de WhatsApp resolvido", { requestId: getRequestId(req), orderId: id, hasProvider: !!provider })
             if (provider) {
               const delay = randomTypingDelay(
                 establishment.botTypingDelayMinMs || 1500,
                 establishment.botTypingDelayMaxMs || 3500
               )
-              console.log(`[Order PATCH] Enviando WhatsApp "${status}" para ${order.customerPhone} com delay ${delay}ms...`)
+              logger.info("orders-patch", "enviando WhatsApp", { requestId: getRequestId(req), orderId: id, status, delay })
               const result = await provider.sendText(order.customerPhone, template, { delay })
-              console.log(`[Order PATCH] WhatsApp "${status}" resultado:`, JSON.stringify(result))
+              logger.info("orders-patch", "resultado do envio por WhatsApp", { requestId: getRequestId(req), orderId: id, status, success: result?.success })
             }
           }
         } catch (waErr: any) {
-          console.warn(`[Order PATCH] WhatsApp "${status}" falhou (não bloqueia push):`, waErr.message)
+          logger.warn("orders-patch", "falha no envio do WhatsApp (não bloqueia o push)", { requestId: getRequestId(req), orderId: params.id, status, error: waErr?.message })
         }
 
         // Push notification PWA (sempre, independente de template)
@@ -560,7 +561,8 @@ export async function PATCH(
             : ""
           const pushTitle = `Pedido #${orderNum} · ${statusLabel}`
           const pushBody = `Olá ${customerName}! Seu pedido #${orderNum} ${statusVerbMap[status] || "foi atualizado"}${itemsSummary ? ` · ${itemsSummary}` : ""}${orderTotalStr ? ` · ${orderTotalStr}` : ""}`
-          console.log(`[Order PATCH] Push "${status}": title="${pushTitle}" body="${pushBody}" phone=${order.customerPhone}`)
+          // F4A-014: title/body do push carregam o nome do cliente — fora do log.
+          logger.info("orders-patch", "enviando push", { requestId: getRequestId(req), orderId: id, status, titleLength: pushTitle?.length || 0, bodyLength: pushBody?.length || 0 })
           const pushResult = await sendPush(order.establishmentId, order.customerPhone, {
             title: pushTitle,
             body: pushBody,
@@ -568,7 +570,7 @@ export async function PATCH(
             url: establishment?.slug ? `/${establishment.slug}?orders=1` : `/`,
             tag: `order-${order.id}`,
           })
-          console.log(`[Order PATCH] Push "${status}" resultado: sent=${pushResult.sent} failed=${pushResult.failed}`)
+          logger.info("orders-patch", "resultado do push", { requestId: getRequestId(req), orderId: id, status, sent: pushResult?.sent, failed: pushResult?.failed })
           await prisma.pushLog
             .create({
               data: {
@@ -582,7 +584,7 @@ export async function PATCH(
             })
             .catch(() => {})
         } catch (pushErr: any) {
-          console.warn(`[Order PATCH] Push falhou:`, pushErr.message)
+          logger.warn("orders-patch", "falha no envio do push", { requestId: getRequestId(req), orderId: params.id, error: pushErr?.message })
         }
       } catch (notifyErr: any) {
         logger.error("orders-patch", "falha ao notificar cliente", { requestId, orderId: id, error: notifyErr?.message })
@@ -630,7 +632,7 @@ export async function PATCH(
               establishment.botTypingDelayMaxMs || 3500
             )
             await provider.sendText(order.customerPhone, msg, { delay })
-            console.log(`[Order] Notificação de agendamento enviada para ${order.customerPhone}`)
+            logger.info("orders-patch", "notificação de agendamento enviada", { requestId: getRequestId(req), orderId: id })
           }
         }
       } catch (schedErr: any) {

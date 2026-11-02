@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { verifyAuth } from "@/lib/auth"
 import bcrypt from "bcryptjs"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
       message: "Senha alterada com sucesso",
     })
   } catch (error) {
-    console.error("[CHANGE PASSWORD]", error)
+    logger.error("change-password", "falha em CHANGE PASSWORD", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao alterar senha" }, { status: 500 })
   }
 }

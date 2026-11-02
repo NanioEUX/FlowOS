@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getQuotaInfo, refreshQuotaFromMeta, getMetaManagerUrl } from "@/lib/meta-quota"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function GET(
   req: NextRequest,
@@ -41,7 +42,7 @@ export async function GET(
       quota: { ...quota, metaManagerUrl: getMetaManagerUrl(est?.metaBusinessAccountId || "") },
     })
   } catch (error: any) {
-    console.error("[Meta Quota GET]", error.message)
+    logger.error("meta-quota", "falha ao consultar a cota da Meta", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
@@ -63,7 +64,7 @@ export async function POST(
       quota: quota ? { ...quota, metaManagerUrl: getMetaManagerUrl(est?.metaBusinessAccountId || "") } : null,
     })
   } catch (error: any) {
-    console.error("[Meta Quota POST]", error.message)
+    logger.error("meta-quota", "falha ao atualizar a cota da Meta", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

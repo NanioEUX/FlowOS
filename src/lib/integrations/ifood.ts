@@ -1,4 +1,5 @@
 import https from "https"
+import { logger } from "@/lib/logger"
 
 const IFOOD_API = "merchant-api.ifood.com.br"
 const IFOOD_AUTH = "/authentication/v1.0/oauth/token"
@@ -25,7 +26,7 @@ export async function getIfoodAuth(clientId: string, clientSecret: string): Prom
         try {
           const parsed = JSON.parse(body)
           if (res.statusCode && res.statusCode >= 400) {
-            console.error("[ifood auth] HTTP", res.statusCode, body.slice(0, 200))
+            logger.error("ifood-auth", "resposta HTTP inesperada", { statusCode: res.statusCode, body: body?.slice(0, 200) })
             resolve(null)
             return
           }
@@ -39,12 +40,12 @@ export async function getIfoodAuth(clientId: string, clientSecret: string): Prom
           }
           resolve(parsed)
         } catch {
-          console.error("[ifood auth] parse error, status=", res.statusCode, "body=", body.slice(0, 200))
+          logger.error("ifood-auth", "resposta não-JSON", { statusCode: res.statusCode, body: body?.slice(0, 200) })
           resolve(null)
         }
       })
     })
-    req.on("error", (err) => { console.error("[ifood auth] request error:", err.message); resolve(null) })
+    req.on("error", (err) => { logger.error("ifood-auth", "erro na requisição", { error: err?.message }); resolve(null) })
     req.write(data)
     req.setTimeout(15000, () => req.destroy(new Error("ifood timeout")))
     req.end()

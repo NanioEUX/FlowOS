@@ -16,6 +16,8 @@ import {
 } from "@/lib/whatsapp/bot-rules"
 import { timingSafeEqualStr, verifyHmacSha256 } from "@/lib/webhook-signature"
 import { INTERNAL_CALL_HEADER, signInternalCall } from "@/lib/internal-call"
+import { maskPhone } from "@/lib/phone"
+import { getRequestId, logger } from "@/lib/logger"
 
 const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || "flowos-meta-verify"
 const META_APP_SECRET = process.env.META_APP_SECRET || ""
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get("hub.challenge")
 
   if (mode === "subscribe" && token === META_WEBHOOK_VERIFY_TOKEN && challenge) {
-    console.log("[WhatsApp Webhook] Meta verification OK")
+    logger.info("webhook-whatsapp", "verificação do webhook Meta concluída", { requestId: getRequestId(req) })
     return new Response(challenge, { status: 200 })
   }
 
@@ -82,6 +84,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = getRequestId(req)
   const bodyText = await req.text()
   let jsonBody: any
   try {
@@ -95,11 +98,11 @@ export async function POST(req: NextRequest) {
     if (META_APP_SECRET) {
       const metaSignature = req.headers.get("x-hub-signature-256") || ""
       if (!verifyHmacSha256(bodyText, metaSignature, META_APP_SECRET, { stripPrefix: "sha256=" })) {
-        console.warn("[WhatsApp Webhook] Meta: invalid X-Hub-Signature-256")
+        logger.warn("webhook-whatsapp", "assinatura Meta inválida", { requestId })
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
       }
     } else {
-      console.error("[WhatsApp Webhook] META_APP_SECRET not set — accepting unsigned Meta webhook (configure META_APP_SECRET to enforce)")
+      logger.error("webhook-whatsapp", "META_APP_SECRET não configurado — aceitando webhook Meta sem assinatura", { requestId })
     }
   }
 
@@ -108,13 +111,13 @@ export async function POST(req: NextRequest) {
   // resposta) roda DEPOIS da resposta, segurando o contexto com waitUntil em
   // vez de duas funções serverless em cascata síncrona dentro do request.
   const evolutionApiKeyHeader = req.headers.get("apikey") || req.headers.get("x-api-key") || ""
-  waitUntil(handleIncomingMessage(jsonBody, evolutionApiKeyHeader))
+  waitUntil(handleIncomingMessage(jsonBody, evolutionApiKeyHeader, requestId))
   return NextResponse.json({ success: true })
 }
 
 // F3A-048: processamento de verdade. Os `return` abaixo são só saídas de
 // fluxo — o ACK ao provedor já foi enviado no POST.
-async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: string) {
+async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: string, requestId?: string) {
   try {
     const isMetaWebhook = jsonBody.object === "whatsapp_business_account"
     let parsed: any = null
@@ -152,16 +155,16 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
                 periodo,
                 phoneNumberId
               )
-              console.log(`[Meta Webhook] Consumption tracked: ${category} for ${phoneNumberId}`)
+              logger.info("webhook-whatsapp", "consumo da Meta registrado", { requestId, category, phoneNumberId })
             }
           } catch (e: any) {
-            console.error("[Meta Webhook] Consumption tracking error:", e.message)
+            logger.error("webhook-whatsapp", "erro ao registrar consumo da Meta", { requestId, error: e?.message })
           }
         }
 
         // Error 131048: messaging limit reached
         if (status.errors?.[0]?.code === 131048 && phoneNumberId) {
-          console.warn(`[Meta Webhook] Quota limit error 131048 for phone ${phoneNumberId}`)
+          logger.warn("webhook-whatsapp", "cota da Meta esgotada (131048)", { requestId, phoneNumberId })
           // Find establishment and update usage status
           const est = await prisma.establishment.findFirst({
             where: { metaPhoneNumberId: phoneNumberId },
@@ -204,7 +207,7 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
       })
 
       if (!establishment) {
-        console.warn(`[WhatsApp Webhook] Meta: establishment not found for phone_number_id=${phoneNumberId}`)
+        logger.warn("webhook-whatsapp", "estabelecimento não encontrado para o phone_number_id da Meta", { requestId, phoneNumberId })
         return
       }
     } else {
@@ -234,17 +237,17 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
       })
 
       if (!establishment) {
-        console.warn(`[WhatsApp Webhook] Instance not found: ${instanceName}`)
+        logger.warn("webhook-whatsapp", "instância Evolution não encontrada", { requestId, instanceName })
         return
       }
 
       if (webhookKey) {
         if (!establishment.evolutionApiKey || !timingSafeEqualStr(webhookKey, establishment.evolutionApiKey)) {
-          console.warn(`[WhatsApp Webhook] Evolution: invalid apikey for instance ${instanceName}`)
+          logger.warn("webhook-whatsapp", "apikey inválida da Evolution", { requestId, instanceName })
           return
         }
       } else {
-        console.warn(`[WhatsApp Webhook] Evolution: no apikey header for instance ${instanceName} — accepting`)
+        logger.warn("webhook-whatsapp", "Evolution sem header de apikey — aceitando", { requestId, instanceName })
       }
 
       // Parse via provider to normalize message format
@@ -279,15 +282,22 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
       return
     }
 
-    console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Message from ${parsed.phone}: "${parsed.text}"`)
+    // F4A-014: a mensagem do cliente pode conter CPF/endereço — loga só o
+    // tamanho e o telefone mascarado.
+    logger.info("webhook-whatsapp", "mensagem recebida", {
+      requestId,
+      establishmentId: establishment.id,
+      phone: maskPhone(parsed.phone),
+      textLength: parsed.text?.length || 0,
+    })
 
     if (!establishment.whatsappAutomationEnabled) {
-      console.log(`[WhatsApp] [${establishment.id.slice(0, 8)}] Automation disabled`)
+      logger.info("webhook-whatsapp", "automação desativada para a loja", { requestId, establishmentId: establishment.id })
       return
     }
 
     if (!establishment.botEnabled) {
-      console.log(`[WhatsApp] Bot disabled for ${establishment.id}`)
+      logger.info("webhook-whatsapp", "bot desativado para a loja", { requestId, establishmentId: establishment.id })
       return
     }
 
@@ -328,7 +338,7 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
           establishment.botTypingDelayMaxMs || 3500
         )
         await provider.sendText(parsed.phone, transferMsg, { delay })
-        console.log(`[WhatsApp] Transferred to human (keyword in "${parsed.text}")`)
+        logger.info("webhook-whatsapp", "transferido para atendimento humano", { requestId, establishmentId: establishment.id })
         return
       }
     }
@@ -356,7 +366,7 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
           establishment.botTypingDelayMaxMs || 3500
         )
         await provider.sendText(parsed.phone, outsideMsg, { delay })
-        console.log(`[WhatsApp] Outside hours - sent default message`)
+        logger.info("webhook-whatsapp", "fora do horário — mensagem padrão enviada", { requestId, establishmentId: establishment.id })
         return
       }
     }
@@ -391,7 +401,14 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
         select: { id: true, name: true, needsHuman: true },
       })
     }
-    console.log(`[WhatsApp] Customer lookup: phone=${parsed.phone}, noCountry=${phoneNoCountry}, withNine=${phoneWithNine}, found=${!!customer}, name=${customer?.name || "none"}`)
+    // F4A-014: telefone e nome do cliente não vão para o log em claro
+    logger.info("webhook-whatsapp", "busca de cliente", {
+      requestId,
+      establishmentId: establishment.id,
+      phone: maskPhone(parsed.phone),
+      found: !!customer,
+      hasName: !!customer?.name,
+    })
 
     // 3. Inactivity: customer asked for human
     if (establishment.botInactivityEnabled && customer?.needsHuman) {
@@ -407,13 +424,13 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
       const filledText = await fillQuickReplyPlaceholders(quickReply.text, establishment.id)
       responseMessage = filledText
       usedAI = false
-      console.log(`[WhatsApp] Quick reply: ${quickReply.label}`)
+      logger.info("webhook-whatsapp", "resposta rápida usada", { requestId, establishmentId: establishment.id, label: quickReply.label })
     } else if (establishment.botUseAI && isAIAvailable()) {
       const aiLimitReached = establishment.aiMessagesUsed >= establishment.aiMessagesLimit
       const needsAI = !isMenuOption(parsed.text, establishment.botMenuOptions) && !isGreeting(parsed.text)
 
       if (aiLimitReached && needsAI) {
-        console.log(`[WhatsApp] AI limit reached (${establishment.aiMessagesUsed}/${establishment.aiMessagesLimit})`)
+        logger.info("webhook-whatsapp", "limite mensal de IA atingido", { requestId, establishmentId: establishment.id, used: establishment.aiMessagesUsed, limit: establishment.aiMessagesLimit })
         const botConfig = await loadMenuConfig(establishment)
         if (botConfig) {
           botConfig.customerName = customer?.name || null
@@ -430,14 +447,14 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
           : parseMenuOptions(establishment.botMenuOptions).find((o) => o.id === parsed.text.trim())
 
         if (isGreetingMatch && establishment.botGreeting) {
-          console.log(`[WhatsApp] Greeting path: customerName="${customer?.name || "null"}", slug="${establishment.slug}"`)
+          logger.info("webhook-whatsapp", "saudação do bot", { requestId, establishmentId: establishment.id, hasName: !!customer?.name, slug: establishment.slug })
           responseMessage = formatMenuGreeting(establishment.botAgentName || "Atendente", establishment.botGreeting, establishment.botMenuOptions, establishment.slug, customer?.name)
-          console.log(`[WhatsApp] Greeting result: "${responseMessage.substring(0, 100)}..."`)
+          logger.info("webhook-whatsapp", "texto de saudação montado", { requestId, length: responseMessage?.length || 0 })
           // Check if original greeting had {link} to use URL button
           const hasLink = establishment.botGreeting.includes("{link}")
           const hasSlug = !!establishment.slug
           const hasButton = typeof provider.sendInteractiveUrlButton === "function"
-          console.log(`[WhatsApp] URL button check: hasLink=${hasLink}, hasSlug=${hasSlug}, hasButton=${hasButton}`)
+          logger.info("webhook-whatsapp", "verificação do botão de URL", { requestId, hasLink, hasSlug, hasButton })
           if (hasLink && hasSlug && hasButton) {
             const cardapioUrl = `https://flowoshub.com/${establishment.slug}`
             // Remove lines containing the cardápio URL from text for button approach
@@ -453,7 +470,7 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
             )
             const sendResult = await provider!.sendInteractiveUrlButton!(parsed.phone, textCleaned, "Ver Cardápio", cardapioUrl, { delay })
             if (sendResult.success) {
-              console.log(`[WhatsApp] ✓ Greeting with URL button sent to ${parsed.phone}`)
+              logger.info("webhook-whatsapp", "greeting com botão de URL enviado", { requestId, establishmentId: establishment.id, phone: maskPhone(parsed.phone) })
               return
             }
             // Fallback to plain text if button fails
@@ -496,9 +513,9 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
               responseMessage = aiResult.text
               usedAI = true
               if (aiResult.toolCalls?.length) {
-                console.log(`[WhatsApp] AI used ${aiResult.toolCalls.length} tool call(s):`, aiResult.toolCalls.map((t) => t.name).join(", "))
+                logger.info("webhook-whatsapp", "IA chamou ferramentas", { requestId, toolCalls: aiResult.toolCalls.map((t) => t.name) })
               }
-              console.log(`[WhatsApp] AI responded (${aiResult.totalTokens} tokens, R$ ${(aiResult.costCents / 100).toFixed(4)})`)
+              logger.info("webhook-whatsapp", "resposta da IA", { requestId, totalTokens: aiResult.totalTokens, cost: (aiResult.costCents / 100).toFixed(4) })
 
               await prisma.$transaction([
                 prisma.establishment.update({
@@ -524,7 +541,7 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
               ])
             }
           } catch (aiErr: any) {
-            console.error(`[WhatsApp] AI error:`, aiErr.message)
+            logger.error("webhook-whatsapp", "erro na IA do bot", { requestId, error: aiErr?.message })
             if (establishment.botGreeting) {
               responseMessage = establishment.botGreeting
             }
@@ -541,20 +558,20 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
     }
 
     if (!responseMessage) {
-      console.log(`[WhatsApp] No response for "${parsed.text}"`)
+      logger.info("webhook-whatsapp", "nenhuma resposta gerada", { requestId, establishmentId: establishment.id })
       if (establishment.botFallbackMessage) {
         const delay = randomTypingDelay(
           establishment.botTypingDelayMinMs || 1500,
           establishment.botTypingDelayMaxMs || 3500
         )
         await provider.sendText(parsed.phone, establishment.botFallbackMessage, { delay })
-        console.log(`[WhatsApp] Fallback sent`)
+        logger.info("webhook-whatsapp", "mensagem de fallback enviada", { requestId, establishmentId: establishment.id })
         return
       }
       return
     }
 
-    console.log(`[WhatsApp] Responding (${usedAI ? "AI" : "menu"}): "${responseMessage.substring(0, 50)}..."`)
+    logger.info("webhook-whatsapp", "respondendo", { requestId, establishmentId: establishment.id, source: usedAI ? "AI" : "menu", length: responseMessage?.length || 0 })
 
     const sendResult = await provider.sendText(parsed.phone, responseMessage, {
       delay: randomTypingDelay(
@@ -564,15 +581,15 @@ async function handleIncomingMessage(jsonBody: any, evolutionApiKeyHeader: strin
     })
 
     if (!sendResult.success) {
-      console.error(`[WhatsApp] Send error:`, sendResult.error)
+      logger.error("webhook-whatsapp", "erro ao enviar a resposta no WhatsApp", { requestId, error: sendResult?.error })
       return
     }
 
-    console.log(`[WhatsApp] ✓ Response sent to ${parsed.phone}`)
+    logger.info("webhook-whatsapp", "resposta enviada", { requestId, establishmentId: establishment.id, phone: maskPhone(parsed.phone) })
 
     return
   } catch (error: any) {
-    console.error("[WhatsApp Webhook] Error:", error.message)
+    logger.error("webhook-whatsapp", "erro ao processar o webhook", { requestId, error: error?.message })
   }
 }
 

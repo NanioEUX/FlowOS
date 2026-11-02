@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 /**
  * Parse seguro da coluna `Order.items` (F4A-025).
  *
@@ -30,7 +31,7 @@ export function parseOrderItems(raw: unknown): any[] {
     const parsed = JSON.parse(trimmed)
     return Array.isArray(parsed) ? parsed : []
   } catch (err: any) {
-    console.error("[parseOrderItems] items inválido (JSON corrompido):", err?.message)
+    logger.error("items", "items inválido (JSON corrompido)", { error: err?.message })
     return []
   }
 }

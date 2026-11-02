@@ -5,6 +5,7 @@ import { verifyAuth } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { getRequestId, logger } from "@/lib/logger"
 
 // Credenciais do tenant: nunca saem daqui sem JWT do próprio estabelecimento
 // (F6A-001). Dados públicos do cardápio (horário, pix, GPS, cores…) seguem
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ establishment, token, refreshToken })
   } catch (error) {
-    console.error(error)
+    logger.error("establishments", "falha na operação", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import jwt from "jsonwebtoken"
+import { getRequestId, logger } from "@/lib/logger"
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
       refreshToken: newRefreshToken,
     })
   } catch (error) {
-    console.error("[refresh-token]", error)
+    logger.error("refresh-token", "falha em refresh-token", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao renovar token" }, { status: 500 })
   }
 }

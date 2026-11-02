@@ -66,9 +66,12 @@ export async function GET(
         // ressuscita o pedido — o dinheiro é registrado (para o reembolso
         // manual) e o lojista é alertado.
         if (isClosedOrderStatus(order.status)) {
-          console.error(
-            `[Inter Payment Status] Pagamento recebido para pedido ${order.status} (id=${params.id}) — reembolso manual necessário`,
-          )
+          logger.error("payment-status", "pagamento recebido para pedido já fechado — reembolso manual necessário", {
+            requestId: getRequestId(req),
+            orderId: params.id,
+            status: order.status,
+            gateway: "inter",
+          })
           await prisma.order.update({
             where: { id: params.id },
             data: { paymentStatus: "paid" },
@@ -124,9 +127,12 @@ export async function GET(
             // F4B-035: pagamento tardio em pedido cancelado/abandonado não
             // ressuscita o pedido (registra o pago + alerta para reembolso).
             if (isClosedOrderStatus(order.status)) {
-              console.error(
-                `[Pagar.me Payment Status] Pagamento recebido para pedido ${order.status} (id=${params.id}) — reembolso manual necessário`,
-              )
+              logger.error("payment-status", "pagamento recebido para pedido já fechado — reembolso manual necessário", {
+                requestId: getRequestId(req),
+                orderId: params.id,
+                status: order.status,
+                gateway: "pagarme",
+              })
               await prisma.order.update({
                 where: { id: params.id },
                 data: { paymentStatus: "paid" },

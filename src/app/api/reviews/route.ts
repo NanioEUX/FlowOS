@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "Pedido já avaliado" }, { status: 409 })
     }
-    console.error("[reviews:POST]", error)
+    logger.error("reviews-post", "falha em reviews:POST", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: "Erro ao salvar avaliação" }, { status: 500 })
   }
 }

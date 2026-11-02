@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createDefaultVerificationTemplate, getTemplateStatus } from "@/lib/whatsapp/meta"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * POST /api/establishments/[id]/meta-create-template
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       establishment.metaAccessToken,
       "atualizacao_suporte_v1"
     )
-    console.log(`[META TEMPLATE] Existing template status:`, existing)
+    logger.info("meta-create-template", "status do template existente", { requestId: getRequestId(req), establishmentId: id, found: existing?.found, status: existing?.status })
 
     if (existing.found) {
       return NextResponse.json({
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       establishment.metaBusinessAccountId,
       establishment.metaAccessToken
     )
-    console.log(`[META TEMPLATE] Creation result:`, result)
+    logger.info("meta-create-template", "resultado da criação do template", { requestId: getRequestId(req), establishmentId: id, success: result?.success })
 
     return NextResponse.json({
       success: result.success,
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       error: result.error,
     })
   } catch (error: any) {
-    console.error("[META TEMPLATE] Error:", error)
+    logger.error("establishments/meta-create-template", "[META TEMPLATE] Error", { requestId: getRequestId(req), error: (error as any)?.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

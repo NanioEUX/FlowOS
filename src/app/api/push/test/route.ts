@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import webpush from "web-push"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
@@ -44,7 +45,8 @@ async function sendTestPush(establishmentId: string, phone?: string, title?: str
   }
 
   const payloadStr = JSON.stringify(payload)
-  console.log(`[Push Test] Payload (${payloadStr.length} bytes): ${payloadStr}`)
+  // F4A-014: o payload pode conter o nome do cliente — só o tamanho vai para o log.
+  logger.info("push-test", "payload de teste montado", { payloadLength: payloadStr.length })
 
   const results: any[] = []
   for (const sub of subs.slice(0, 5)) {

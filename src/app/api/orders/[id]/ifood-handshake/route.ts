@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { ifoodHandshake } from "@/lib/integrations/ifood-status"
 import { verifyAuth } from "@/lib/auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 export async function POST(
   req: NextRequest,
@@ -108,12 +109,13 @@ export async function POST(
       handshakeCode
     )
 
-    console.log("[ifood handshake]", {
-      orderId: order.externalId,
-      handshakeCode,
-      status: result.status,
-      success: result.success,
-      body: result.body,
+    // F4A-014: o código de handshake e o body da resposta ficam fora do log.
+    logger.info("ifood-handshake", "handshake do iFood", {
+      requestId: getRequestId(req),
+      orderId: params.id,
+      externalId: order.externalId,
+      status: result?.status,
+      success: result?.success,
     })
 
     if (result.success) {
@@ -146,7 +148,7 @@ export async function POST(
       { status: 502 }
     )
   } catch (err: any) {
-    console.error("[ifood handshake] error:", err.message)
+    logger.error("ifood-handshake", "falha no handshake do iFood", { requestId: getRequestId(req), orderId: params.id, error: err?.message })
     return NextResponse.json(
       { error: "Erro interno ao processar handshake" },
       { status: 500 }

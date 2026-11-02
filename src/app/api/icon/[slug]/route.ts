@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
+import { getRequestId, logger } from "@/lib/logger"
 
 /**
  * Retorna o ícone PWA dinâmico do estabelecimento.
@@ -56,7 +57,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       throw new Error("invalid logo path")
     }
   } catch (e) {
-    console.warn(`[Icon] falha ao carregar logo ${logo}:`, e)
+    logger.warn("icon", "falha ao carregar o logo", { requestId: getRequestId(req), logo, error: (e as any)?.message })
     return serveFallback()
   }
 

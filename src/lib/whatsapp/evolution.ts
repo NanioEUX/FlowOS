@@ -1,5 +1,7 @@
 import type { WhatsAppProvider, ParsedWhatsAppMessage, SendTextOptions } from "./provider"
 import { fetchExternal, fetchExternalWithRetry } from "@/lib/fetch-external"
+import { logger } from "@/lib/logger"
+import { maskPhone } from "@/lib/phone"
 
 interface EvolutionConfig {
   baseUrl: string
@@ -134,7 +136,7 @@ export class EvolutionProvider implements WhatsAppProvider {
       const normalizedPhone = this.normalizePhone(phone)
       const url = `${this.config.baseUrl}/message/sendText/${this.config.instanceName}`
 
-      console.log(`[Evolution] Sending to ${normalizedPhone} via ${this.config.baseUrl}`)
+      logger.info("evolution", "enviando mensagem", { to: maskPhone(normalizedPhone), baseUrl: this.config.baseUrl })
 
       const response = await fetchExternal(url, {
         method: "POST",
@@ -149,7 +151,7 @@ export class EvolutionProvider implements WhatsAppProvider {
       const responseText = await response.text()
 
       if (!response.ok) {
-        console.error(`[Evolution] Error ${response.status}:`, responseText)
+        logger.error("evolution", "erro na resposta da Evolution", { status: response.status, body: responseText?.slice(0, 300) })
         return { success: false, error: `Evolution API error: ${response.status} - ${responseText}` }
       }
 
@@ -157,15 +159,15 @@ export class EvolutionProvider implements WhatsAppProvider {
       try {
         data = JSON.parse(responseText)
       } catch {
-        console.warn(`[Evolution] Non-JSON response:`, responseText.slice(0, 200))
+        logger.warn("evolution", "resposta não-JSON da Evolution", { body: responseText?.slice(0, 200) })
       }
-      console.log(`[Evolution] Success, messageId:`, data?.key?.id || data?.messageId)
+      logger.info("evolution", "mensagem enviada", { messageId: data?.key?.id || data?.messageId })
       return {
         success: true,
         messageId: data?.key?.id || data?.messageId,
       }
     } catch (error: any) {
-      console.error(`[Evolution] Exception:`, error.message)
+      logger.error("evolution", "exceção ao enviar mensagem", { error: error?.message })
       return { success: false, error: error.message }
     }
   }

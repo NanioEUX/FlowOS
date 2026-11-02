@@ -32,7 +32,7 @@ function calcCashbackEarned(total: number, establishment: any): number {
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text()
-    console.log("[99food webhook] HIT", new Date().toISOString(), "body-len=", raw.length)
+    logger.info("webhook-99food", "webhook recebido", { requestId: getRequestId(req), bodyLength: raw.length })
 
     // --- HMAC-SHA256 signature validation (Open Delivery: X-App-Signature) ---
     const signature =
@@ -53,23 +53,24 @@ export async function POST(req: NextRequest) {
     if (signature && secrets.length > 0) {
       const valid = secrets.some((s) => verifyHmacSha256(raw, signature, s))
       if (!valid) {
-        console.warn("[99food webhook] invalid signature — rejecting")
+        logger.warn("webhook-99food", "assinatura inválida — rejeitando", { requestId: getRequestId(req) })
         return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 401 })
       }
     } else {
-      console.warn("[99food webhook] no signature header — accepting unsigned webhook")
+      logger.warn("webhook-99food", "sem header de assinatura — aceitando webhook sem assinatura", { requestId: getRequestId(req) })
     }
     // --- End HMAC validation ---
 
     const payload = JSON.parse(raw)
-    console.log("[99food webhook] payload:", JSON.stringify(payload).slice(0, 500))
+    // F4A-014: o payload do 99Food traz dados do cliente — fora do log.
+    logger.info("webhook-99food", "payload recebido", { requestId: getRequestId(req), keys: Object.keys(payload || {}) })
 
     const eventType = payload.eventType || payload.event || ""
     const orderId = payload.orderId || payload.id || ""
     const shopId = payload.shopId || ""
     const eventDate = payload.createdAt || ""
 
-    console.log("[99food webhook] event:", { eventType, orderId, shopId })
+    logger.info("webhook-99food", "evento recebido", { requestId: getRequestId(req), eventType, orderId, shopId })
 
     // Acknowledge non-order events
     if (!eventType || !orderId) {
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
 
       const orderData = payload.order
       if (!orderData) {
-        console.warn("[99food webhook] ORDER_CREATED without order object")
+        logger.warn("webhook-99food", "ORDER_CREATED sem objeto de pedido", { requestId: getRequestId(req) })
         return NextResponse.json({ ok: true, msg: "no_order_data" })
       }
 
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
           logger.error("webhook-99food", "falha ao debitar estoque do pedido", { requestId: getRequestId(req), orderId, error: stockErr?.message })
         }
         created++
-        console.log("[99food webhook] CREATED order", orderId)
+        logger.info("webhook-99food", "pedido criado", { requestId: getRequestId(req), orderId })
       } catch (e: any) {
         logger.error("webhook-99food", "falha ao criar o pedido", { requestId: getRequestId(req), orderId, error: e?.message })
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
       })
       if (existing) {
         if (existing.status === "cancelled") {
-          console.log("[99food webhook] already cancelled", orderId)
+          logger.info("webhook-99food", "pedido já cancelado", { requestId: getRequestId(req), orderId })
         } else {
         const reason = payload.reason || payload.cancellationReason || null
         const cancelledBy = payload.cancelledBy || "customer"
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
           })
         })
         updated++
-        console.log("[99food webhook] CANCELLED order", orderId)
+        logger.info("webhook-99food", "pedido cancelado", { requestId: getRequestId(req), orderId })
         }
       } else {
         // F4A-008: antes o `if (existing)` não tinha `else` — o evento
@@ -241,15 +242,15 @@ export async function POST(req: NextRequest) {
         const flowStatus = statusMap[newStatus] || null
 
         if (!flowStatus) {
-          console.log("[99food webhook] unknown status, skipped", orderId, newStatus)
+          logger.info("webhook-99food", "status desconhecido — ignorado", { requestId: getRequestId(req), orderId, newStatus })
           return NextResponse.json({ ok: true, msg: "skipped" })
         }
         if (existing.status === "cancelled") {
-          console.log("[99food webhook] cancelled is terminal, skipped", orderId)
+          logger.info("webhook-99food", "cancelado é terminal — ignorado", { requestId: getRequestId(req), orderId })
           return NextResponse.json({ ok: true, msg: "skipped" })
         }
         if (existing.status === "delivered" && flowStatus !== "delivered") {
-          console.log("[99food webhook] skipping downgrade", orderId)
+          logger.info("webhook-99food", "downgrade de status ignorado", { requestId: getRequestId(req), orderId })
           return NextResponse.json({ ok: true, msg: "skipped" })
         }
 
@@ -276,7 +277,7 @@ export async function POST(req: NextRequest) {
           })
         }
         updated++
-        console.log("[99food webhook] STATUS_CHANGED", orderId, flowStatus)
+        logger.info("webhook-99food", "status do pedido alterado", { requestId: getRequestId(req), orderId, flowStatus })
       } else {
         // F4A-008: evento de status sem pedido correspondente — sem rastro
         logger.warn("webhook-99food", "ORDER_STATUS_CHANGED para pedido inexistente", {

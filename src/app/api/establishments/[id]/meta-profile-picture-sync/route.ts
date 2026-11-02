@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireEstablishment } from "@/lib/require-auth"
+import { getRequestId, logger } from "@/lib/logger"
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID
 
@@ -49,13 +50,13 @@ export async function POST(
     const ext = contentType.includes("png") ? "png" : "jpg"
     const fileName = `logo.${ext}`
 
-    console.log("[Meta Profile Sync] Step 1: Creating upload session...")
+    logger.info("meta-profile-picture-sync", "criando sessão de upload", { requestId: getRequestId(req), establishmentId: id, fileLength })
     const sessionRes = await fetch(
       `https://graph.facebook.com/v21.0/${META_APP_ID}/uploads?file_name=${fileName}&file_length=${fileLength}&file_type=${contentType}&access_token=${accessToken}`,
       { method: "POST" }
     )
     const sessionData = await sessionRes.json()
-    console.log("[Meta Profile Sync] Session:", JSON.stringify(sessionData))
+    logger.info("meta-profile-picture-sync", "sessão de upload criada", { requestId: getRequestId(req), establishmentId: id, ok: !!sessionData?.id, error: sessionData?.error?.message })
 
     if (!sessionData.id) {
       return NextResponse.json({
@@ -66,7 +67,7 @@ export async function POST(
 
     const uploadId = sessionData.id
 
-    console.log("[Meta Profile Sync] Step 2: Uploading image...")
+    logger.info("meta-profile-picture-sync", "enviando imagem", { requestId: getRequestId(req), establishmentId: id })
     const uploadRes = await fetch(
       `https://graph.facebook.com/v21.0/${uploadId}`,
       {
@@ -79,7 +80,7 @@ export async function POST(
       }
     )
     const uploadData = await uploadRes.json()
-    console.log("[Meta Profile Sync] Upload:", JSON.stringify(uploadData))
+    logger.info("meta-profile-picture-sync", "resposta do upload", { requestId: getRequestId(req), establishmentId: id, ok: !!uploadData?.h, error: uploadData?.error?.message })
 
     if (!uploadData.h) {
       return NextResponse.json({
@@ -89,9 +90,9 @@ export async function POST(
     }
 
     const handle = uploadData.h
-    console.log("[Meta Profile Sync] Handle:", handle)
+    logger.info("meta-profile-picture-sync", "handle do upload obtido", { requestId: getRequestId(req), establishmentId: id })
 
-    console.log("[Meta Profile Sync] Step 3: Updating profile...")
+    logger.info("meta-profile-picture-sync", "atualizando o perfil", { requestId: getRequestId(req), establishmentId: id })
     const profileRes = await fetch(
       `https://graph.facebook.com/v21.0/${phoneNumberId}/whatsapp_business_profile`,
       {
@@ -107,7 +108,7 @@ export async function POST(
       }
     )
     const profileData = await profileRes.json()
-    console.log("[Meta Profile Sync] Profile:", JSON.stringify(profileData))
+    logger.info("meta-profile-picture-sync", "resposta da atualização do perfil", { requestId: getRequestId(req), establishmentId: id, success: profileData?.success, error: profileData?.error?.message })
 
     if (profileRes.ok && profileData.success) {
       return NextResponse.json({ success: true })
@@ -119,7 +120,7 @@ export async function POST(
       details: profileData,
     })
   } catch (error: any) {
-    console.error("[Meta Profile Sync] ERROR:", error.message)
+    logger.error("meta-profile-picture-sync", "erro ao sincronizar a foto de perfil", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

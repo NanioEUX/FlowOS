@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getIfoodAuth } from "@/lib/integrations/ifood"
 import { verifyAuth } from "@/lib/auth"
 import https from "https"
+import { getRequestId, logger } from "@/lib/logger"
 
 function httpsGet(path: string, token: string): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -220,7 +221,7 @@ export async function GET(req: NextRequest) {
       totalItems,
     })
   } catch (error: any) {
-    console.error("[ifood-catalog] error:", error.message)
+    logger.error("ifood-catalog", "erro ao listar o catálogo do iFood", { requestId: getRequestId(req), error: error?.message })
     return NextResponse.json(
       { error: `Erro ao buscar catálogo do iFood: ${error.message}` },
       { status: 500 }
