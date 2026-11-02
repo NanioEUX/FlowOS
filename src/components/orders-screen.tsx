@@ -785,7 +785,7 @@ export function OrdersScreen({
       {cancelModalOrderId && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
-            <h3 className="text-base font-bold text-zinc-900">Cancelar pedido?</h3>
+            <h2 className="text-base font-bold text-zinc-900">Cancelar pedido?</h2>
             <p className="text-sm text-zinc-500">
               {orders.find(o => o.id === cancelModalOrderId)?.status === "confirmed"
                 ? "Este pedido já foi confirmado. Tem certeza que deseja cancelar?"

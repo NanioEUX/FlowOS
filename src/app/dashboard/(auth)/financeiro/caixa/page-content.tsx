@@ -303,7 +303,7 @@ export default function CaixaFinanceiroPage() {
         <Card className="border-red-500/20">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Registrar Despesa no Caixa</h3>
+              <h2 className="font-semibold text-sm">Registrar Despesa no Caixa</h2>
               <button onClick={() => setShowExpenseForm(false)} aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button>
             </div>
             <input placeholder="Descrição" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} className="flex h-10 w-full items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 placeholder:text-zinc-500 focus:border-green-600 focus:outline-none" />
@@ -332,7 +332,7 @@ export default function CaixaFinanceiroPage() {
         <Card className="border-green-600/20">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Transferir Caixa</h3>
+              <h2 className="font-semibold text-sm">Transferir Caixa</h2>
               <button onClick={() => setShowTransferModal(false)} aria-label="Fechar"><X className="h-4 w-4 text-zinc-500" /></button>
             </div>
             <p className="text-xs text-zinc-500">
@@ -374,7 +374,7 @@ export default function CaixaFinanceiroPage() {
       {/* Movements */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Movimentações ({register.movements.length})</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Movimentações ({register.movements.length})</h2>
           {register.movements.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-4">Nenhuma movimentação</p>
           ) : (

@@ -1224,6 +1224,10 @@ export default function CaixaPOSPage() {
 
   return (
     <main className={`flex h-[100dvh] flex-col overflow-hidden bg-zinc-100 dark:bg-pdv-bg`}>
+      {/* F8D-022: o PDV não tinha nenhum h1 (primeiro heading era h2 do carrinho).
+          sr-only para não alterar o layout — o leitor de tela ganha um título
+          de página sem mudança visual. */}
+      <h1 className="sr-only">PDV — {user.establishment?.name || "Caixa"}</h1>
       {/* Header */}
       <div className={`flex h-14 items-center justify-between border-b px-4 lg:h-16 lg:px-8 border-zinc-200 bg-white dark:border-white/[.1] dark:bg-pdv-card`}>
         <div className="flex items-center gap-3">

@@ -169,7 +169,7 @@ export default function ReceitasPage() {
       {/* Daily breakdown */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Resumo por Dia</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Resumo por Dia</h2>
           {days.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 py-4">Nenhuma venda no período</p>
           ) : (
@@ -242,7 +242,7 @@ export default function ReceitasPage() {
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-semibold text-zinc-900">Detalhes do Pedido</h3>
+              <h2 className="font-semibold text-zinc-900">Detalhes do Pedido</h2>
               <button onClick={() => setSelectedOrder(null)} className="text-zinc-500 hover:text-zinc-600" aria-label="Fechar">
                 <X className="h-5 w-5" />
               </button>

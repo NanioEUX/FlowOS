@@ -527,7 +527,7 @@ export default function DashboardLayout({
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
                     <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-zinc-900">Reabrir iFood?</h3>
+                  <h2 className="text-lg font-semibold text-zinc-900">Reabrir iFood?</h2>
                 </div>
                 <p className="mb-6 text-sm text-zinc-600">A loja voltará a aparecer aberta no iFood imediatamente.</p>
                 <div className="flex gap-2">
@@ -541,7 +541,7 @@ export default function DashboardLayout({
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
                     <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-zinc-900">Pausar iFood</h3>
+                  <h2 className="text-lg font-semibold text-zinc-900">Pausar iFood</h2>
                 </div>
                 <p className="mb-4 text-sm text-zinc-600">A loja será pausada no iFood. Ela reabre automaticamente no próximo horário de funcionamento.</p>
                 <div className="mb-4">

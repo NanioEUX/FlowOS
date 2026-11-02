@@ -115,7 +115,7 @@ export default function FluxoCaixaPage() {
       {/* Chart */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Fluxo Diário</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Fluxo Diário</h2>
           {days.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 py-4">Nenhum dado no período</p>
           ) : (

@@ -446,7 +446,7 @@ function MetaConfig({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Profile Card */}
           <div className="rounded-xl border border-zinc-200 bg-white p-4">
-            <h4 className="text-sm font-semibold text-zinc-900 mb-3">Foto do Perfil</h4>
+            <h3 className="text-sm font-semibold text-zinc-900 mb-3">Foto do Perfil</h3>
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-zinc-100 border-2 border-zinc-200">
                 {preview ? (
@@ -487,7 +487,7 @@ function MetaConfig({
 
           {/* Consumption Card */}
           <div className="rounded-xl border border-zinc-200 bg-white p-4">
-            <h4 className="text-sm font-semibold text-zinc-900 mb-3">Consumo Mensal</h4>
+            <h3 className="text-sm font-semibold text-zinc-900 mb-3">Consumo Mensal</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 mb-1">
@@ -516,7 +516,7 @@ function MetaConfig({
 
         {/* Credit Card Section */}
         <div className="rounded-xl border border-zinc-200 bg-white p-4">
-          <h4 className="text-sm font-semibold text-zinc-900 mb-3">Cartão de Pagamento na Meta</h4>
+          <h3 className="text-sm font-semibold text-zinc-900 mb-3">Cartão de Pagamento na Meta</h3>
           
           {!hasCard ? (
             <div className="space-y-4">
@@ -640,10 +640,10 @@ function MetaConfig({
           <div className="space-y-4">
             {/* Checklist */}
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <h4 className="text-sm font-semibold text-amber-900 flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-amber-900 flex items-center gap-2 mb-3">
                 <AlertTriangle className="h-4 w-4" />
                 Antes de conectar, tenha em mãos:
-              </h4>
+              </h3>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-700 text-[10px] font-bold">1</span>
@@ -664,7 +664,7 @@ function MetaConfig({
 
             {/* Steps */}
             <div className="rounded-xl border border-zinc-200 bg-white p-4">
-              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Como vai acontecer:</h4>
+              <h3 className="text-sm font-semibold text-zinc-900 mb-3">Como vai acontecer:</h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">1</div>
@@ -1243,7 +1243,7 @@ export default function ConfigPage() {
             {/* Pagar.me (Stone) - Conta do estabelecimento */}
             <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
             <div className="flex items-center gap-2">
-            <h4 className="font-medium text-zinc-900">Stone (Pagar.me)</h4>
+            <h3 className="font-medium text-zinc-900">Stone (Pagar.me)</h3>
             <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX + Cartão</span>
             </div>
             
@@ -1425,7 +1425,7 @@ export default function ConfigPage() {
             {/* Flow/Taxa Fixa - modelo administrado
             <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 space-y-4">
             <div className="flex items-center gap-2">
-            <h4 className="font-medium text-zinc-900">Flow (Taxa Fixa)</h4>
+            <h3 className="font-medium text-zinc-900">Flow (Taxa Fixa)</h3>
             <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Taxas administradas pelo SaaS</span>
             </div>
             <div className="space-y-1">
@@ -1456,7 +1456,7 @@ export default function ConfigPage() {
               {/* Banco Inter */}
               <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-4">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-medium text-zinc-900">Banco Inter</h4>
+                  <h3 className="font-medium text-zinc-900">Banco Inter</h3>
                   <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">PIX 0% taxa</span>
                 </div>
                 <div className="rounded-lg bg-green-100/70 px-3 py-2 text-xs text-green-800">
@@ -2298,7 +2298,7 @@ export default function ConfigPage() {
             <SaasOnly>
             {false && whatsappProvider === "evolution" && (
               <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
-                <h4 className="text-sm font-semibold text-zinc-700">Evolution API</h4>
+                <h3 className="text-sm font-semibold text-zinc-700">Evolution API</h3>
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-zinc-700">URL Base</label>
                   <input
@@ -2384,7 +2384,7 @@ export default function ConfigPage() {
             {whatsappProvider && (
               <>
                 <div className="border-t border-zinc-200 pt-4 space-y-3">
-                  <h4 className="text-sm font-semibold text-zinc-700">Bot de Atendimento</h4>
+                  <h3 className="text-sm font-semibold text-zinc-700">Bot de Atendimento</h3>
 
                   <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-4 cursor-pointer hover:bg-zinc-100">
                     <input
@@ -2571,7 +2571,7 @@ export default function ConfigPage() {
 
                     {/* Inatividade */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">⏱️ Encerrar por inatividade</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">⏱️ Encerrar por inatividade</h4>
                       <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
                         <input
                           type="checkbox"
@@ -2610,7 +2610,7 @@ export default function ConfigPage() {
 
                     {/* Auto-transfer humano */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">👤 Transferir para humano</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">👤 Transferir para humano</h4>
                       <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
                         <input
                           type="checkbox"
@@ -2647,7 +2647,7 @@ export default function ConfigPage() {
                     <SaasOnly>
                     {/* Delay typing */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">⌨️ Delay entre mensagens</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">⌨️ Delay entre mensagens</h4>
                       <p className="text-xs text-zinc-500">Simula tempo de digitação pra não correr risco de ban e parecer mais humano.</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
@@ -2680,7 +2680,7 @@ export default function ConfigPage() {
 
                     {/* Fora de horário */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">🕐 Fora de horário</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">🕐 Fora de horário</h4>
                       <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 cursor-pointer hover:bg-zinc-100">
                         <input
                           type="checkbox"
@@ -2726,7 +2726,7 @@ export default function ConfigPage() {
 
                     {/* Fallback */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">🤔 Não entendeu o cliente</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">🤔 Não entendeu o cliente</h4>
                       <p className="text-xs text-zinc-500">Quando o bot não sabe responder.</p>
                       <textarea
                         value={botFallbackMessage}
@@ -2738,7 +2738,7 @@ export default function ConfigPage() {
 
                     {/* Templates de status */}
                     <div className="space-y-3 border-t border-zinc-200 pt-4">
-                      <h5 className="text-sm font-semibold text-zinc-700">📦 Mensagens de status do pedido</h5>
+                      <h4 className="text-sm font-semibold text-zinc-700">📦 Mensagens de status do pedido</h4>
                       <p className="text-xs text-zinc-500">O bot envia automaticamente quando o status do pedido muda.</p>
                       {[
                         { key: "botTemplateOrderConfirmed", label: "Confirmado", value: botTemplateOrderConfirmed, set: setBotTemplateOrderConfirmed },
@@ -2767,7 +2767,7 @@ export default function ConfigPage() {
 
             {/* Verificação por código: lembrete para quem não confirmou */}
             <div className="space-y-3 border-t border-zinc-200 pt-4">
-              <h5 className="text-sm font-semibold text-zinc-700">🔐 Lembrete de verificação</h5>
+              <h4 className="text-sm font-semibold text-zinc-700">🔐 Lembrete de verificação</h4>
               <p className="text-xs text-zinc-500">
                 Envia um lembrete no WhatsApp para quem pediu o código de verificação mas não concluiu.
               </p>

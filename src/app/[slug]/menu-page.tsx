@@ -3091,7 +3091,9 @@ onPaymentConfirmed={handlePaymentSuccess}
               <X className="h-8 w-8 text-red-400" />
             </div>
           </div>
-          <h2 className="text-xl font-bold text-red-400">Erro no pagamento</h2>
+          {/* F8D-022: tela de retorno de pagamento é um return antecipado —
+              sem este h1 ela começaria em h2 (sem heading de nível 1). */}
+          <h1 className="text-xl font-bold text-red-400">Erro no pagamento</h1>
           <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>{orderResult.paymentError}</p>
           <p className="mt-1 text-xs" style={{ color: theme.textMutedMore }}>O pedido foi criado, mas não foi possível gerar o pagamento.</p>
 

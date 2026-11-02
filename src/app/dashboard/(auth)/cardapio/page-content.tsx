@@ -2640,7 +2640,7 @@ export default function CardapioPage() {
             </div>
 
             <div className="border-t border-white/[.04] pt-4">
-              <h4 className="text-sm font-semibold text-zinc-900 mb-3">Mensagens de Pedido</h4>
+              <h3 className="text-sm font-semibold text-zinc-900 mb-3">Mensagens de Pedido</h3>
               <div className="space-y-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-zinc-700">Título de Confirmação</label>
@@ -2730,7 +2730,7 @@ export default function CardapioPage() {
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-amber-400" />
-                  <h4 className="text-sm font-semibold text-amber-800">Mensagem quando fechado</h4>
+                  <h3 className="text-sm font-semibold text-amber-800">Mensagem quando fechado</h3>
                 </div>
                 <p className="text-xs text-amber-400">Personalize a mensagem exibida quando o estabelecimento estiver fechado. Use {'{day}'} e {'{time}'} para preencher automaticamente.</p>
                 <div>

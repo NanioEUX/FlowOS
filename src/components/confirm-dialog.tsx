@@ -122,9 +122,9 @@ export function ConfirmDialog({
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
               <CheckCircle aria-hidden="true" className="h-5 w-5 text-green-600" />
             </div>
-            <h3 id={titleId} className="text-lg font-semibold text-zinc-900">
+            <h2 id={titleId} className="text-lg font-semibold text-zinc-900">
               {successTitle || title}
-            </h3>
+            </h2>
           </div>
           {successMessage && <p className="mb-2 text-sm text-zinc-600">{successMessage}</p>}
         </div>
@@ -156,9 +156,9 @@ export function ConfirmDialog({
               }`}
             />
           </div>
-          <h3 id={titleId} className="text-lg font-semibold text-zinc-900">
+          <h2 id={titleId} className="text-lg font-semibold text-zinc-900">
             {title}
-          </h3>
+          </h2>
         </div>
         <p id={messageId} className="mb-6 text-sm text-zinc-600">
           {message}

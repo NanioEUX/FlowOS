@@ -148,7 +148,7 @@ export default function VisaoGeralPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h2>
             <div className="space-y-2">
               {[
                 { label: "Entrega", value: b.byType.delivery, icon: Bike, color: "blue" },
@@ -169,7 +169,7 @@ export default function VisaoGeralPage() {
 
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { label: "Dinheiro", value: b.byPayment.money, icon: Banknote },
@@ -191,7 +191,7 @@ export default function VisaoGeralPage() {
       {/* Expenses by category */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { label: "Fixas", value: b.expensesByCategory.fixa },

@@ -39,7 +39,7 @@ export default async function TemplatesPage() {
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{t.icon || "🏪"}</span>
                 <div>
-                  <h3 className="font-bold text-zinc-900">{t.name}</h3>
+                  <h2 className="font-bold text-zinc-900">{t.name}</h2>
                   <p className="text-xs text-zinc-500">{t.slug}</p>
                 </div>
               </div>

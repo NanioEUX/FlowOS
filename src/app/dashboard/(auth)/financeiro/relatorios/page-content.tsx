@@ -174,7 +174,7 @@ export default function RelatoriosPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Tipo</h2>
             <div className="space-y-2">
               {[
                 { label: "Entrega", value: dre.breakdown.byType.delivery },
@@ -191,7 +191,7 @@ export default function RelatoriosPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <h3 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h3>
+            <h2 className="mb-3 font-semibold text-sm text-zinc-900">Receita por Pagamento</h2>
             <div className="space-y-2">
               {[
                 { label: "Dinheiro", value: dre.breakdown.byPayment.money },
@@ -212,7 +212,7 @@ export default function RelatoriosPage() {
       {/* Expenses */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Despesas por Categoria</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { label: "Fixas", value: dre.breakdown.expensesByCategory.fixa },
@@ -241,7 +241,7 @@ export default function RelatoriosPage() {
       {/* Cash flow table */}
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 font-semibold text-sm text-zinc-900">Fluxo de Caixa por Dia</h3>
+          <h2 className="mb-3 font-semibold text-sm text-zinc-900">Fluxo de Caixa por Dia</h2>
           {cf.days.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 py-4">Nenhum dado</p>
           ) : (

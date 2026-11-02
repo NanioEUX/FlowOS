@@ -320,12 +320,12 @@ export default function CaixaGerencialPage() {
                 return (
                   <Card key={type}>
                     <CardContent className="p-4">
-                      <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-2">
+                      <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-700 mb-2">
                         {type === "sale" ? <TrendingUp className="h-4 w-4 text-green-600" /> :
                          type === "injection" ? <Plus className="h-4 w-4 text-green-600" /> :
                          <Minus className="h-4 w-4 text-red-400" />}
                         {typeLabels[type]} ({items.length})
-                      </h4>
+                      </h2>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {items.map((m: any) => (
                           <div key={m.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
@@ -350,7 +350,7 @@ export default function CaixaGerencialPage() {
           {todayOrders.length > 0 && (
             <Card>
               <CardContent className="p-4">
-                <h4 className="text-sm font-semibold text-zinc-700 mb-3">Vendas Presenciais do Dia ({todayOrders.length})</h4>
+                <h2 className="text-sm font-semibold text-zinc-700 mb-3">Vendas Presenciais do Dia ({todayOrders.length})</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
                   <div className="rounded-lg bg-zinc-50 p-3 text-center">
                     <p className="text-lg font-bold text-green-600">{formatCurrency(cashSales)}</p>
@@ -556,7 +556,7 @@ export default function CaixaGerencialPage() {
               {/* Sales by payment */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Vendas por Forma de Pagamento</h4>
+                  <h2 className="text-sm font-semibold text-zinc-700 mb-3">Vendas por Forma de Pagamento</h2>
                   <div className="space-y-2">
                     {(Object.entries(summary.salesByPayment) as [string, number][]).filter(([, v]) => v > 0).map(([method, amount]) => {
                       const Icon = paymentIcons[method] || DollarSign
@@ -590,7 +590,7 @@ export default function CaixaGerencialPage() {
               {Object.keys(summary.expensesByCategory).length > 0 && (
                 <Card>
                   <CardContent className="p-4">
-                    <h4 className="text-sm font-semibold text-zinc-700 mb-3">Despesas por Categoria</h4>
+                    <h2 className="text-sm font-semibold text-zinc-700 mb-3">Despesas por Categoria</h2>
                     <div className="space-y-2">
                       {(Object.entries(summary.expensesByCategory) as [string, number][]).sort(([, a], [, b]) => b - a).map(([cat, amount]) => (
                         <div key={cat} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2">
@@ -606,7 +606,7 @@ export default function CaixaGerencialPage() {
               {/* Register info */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Informações dos Caixas</h4>
+                  <h2 className="text-sm font-semibold text-zinc-700 mb-3">Informações dos Caixas</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg bg-zinc-50 p-3">
                       <p className="text-zinc-500">Total de caixas</p>

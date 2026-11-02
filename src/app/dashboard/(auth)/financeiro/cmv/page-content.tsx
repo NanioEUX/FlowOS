@@ -169,7 +169,7 @@ export default function CmvPageContent() {
 
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 text-sm font-semibold text-zinc-900">CMV por dia</h3>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">CMV por dia</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase text-zinc-500">
@@ -212,7 +212,7 @@ export default function CmvPageContent() {
 
       <Card>
         <CardContent className="p-4">
-          <h3 className="mb-3 text-sm font-semibold text-zinc-900">Top produtos por custo</h3>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">Top produtos por custo</h2>
           <div className="space-y-2">
             {topProducts.map((p: any, i: number) => {
               const unitCost = p.quantity > 0 ? p.totalCostCents / 100 / p.quantity : 0

@@ -289,7 +289,7 @@ export default function PlanosPageContent() {
                   {plan.id === "starter" && <Zap className="h-5 w-5 text-green-600" />}
                   {plan.id === "pro" && <Star className="h-5 w-5 text-green-600" />}
                   {plan.id === "enterprise" && <Building2 className="h-5 w-5 text-green-600" />}
-                  <h3 className="text-lg font-bold text-zinc-900">{plan.name}</h3>
+                  <h2 className="text-lg font-bold text-zinc-900">{plan.name}</h2>
                 </div>
                 <p className="text-sm text-zinc-500">{plan.description}</p>
               </div>

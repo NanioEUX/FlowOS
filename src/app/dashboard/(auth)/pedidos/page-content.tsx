@@ -347,7 +347,7 @@ export default function PedidosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-zinc-900">Pedidos</h2>
+        <h1 className="text-2xl font-bold text-zinc-900">Pedidos</h1>
         <div className="flex items-center gap-2">
           <div className="rounded-lg border border-zinc-200 bg-white">
             <SoundControl
@@ -570,10 +570,10 @@ export default function PedidosPage() {
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
                   <MessageCircle className="h-5 w-5 text-green-600" />
                   Pedido via WhatsApp
-                </h3>
+                </h2>
                 <button onClick={() => setShowNewOrder(false)} aria-label="Fechar"><X className="h-5 w-5" /></button>
               </div>
               <div className="space-y-3">
@@ -635,7 +635,7 @@ function OrderSection({ title, orders, onUpdateStatus, onUpdateDelivery, deliver
 }) {
   return (
     <div>
-      {title && <h3 className="mb-3 text-sm font-semibold text-zinc-500 uppercase tracking-wider">{title}</h3>}
+      {title && <h2 className="mb-3 text-sm font-semibold text-zinc-500 uppercase tracking-wider">{title}</h2>}
       <div className="space-y-3">
         {orders.map((order) => (
           <OrderCard key={order.id} order={order} onUpdateStatus={onUpdateStatus} onUpdateDelivery={onUpdateDelivery} deliveryPeople={deliveryPeople} onUnreadUpdate={onUnreadUpdate} highlight={highlightOrderId === order.id} messages={messagesByOrder?.[order.id] || []} onMarkRead={onMarkRead} onRefreshMessages={onRefreshMessages} />
@@ -1271,7 +1271,7 @@ function OrderCard({ order, onUpdateStatus, onUpdateDelivery, deliveryPeople, on
                 <X className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900">Excluir pedido #{order.orderNumber || order.id.slice(0, 8)}</h3>
+                <h2 className="text-lg font-bold text-zinc-900">Excluir pedido #{order.orderNumber || order.id.slice(0, 8)}</h2>
                 <p className="mt-1 text-sm text-zinc-600">O pedido será cancelado e ficará no histórico. O cliente será notificado.</p>
               </div>
             </div>

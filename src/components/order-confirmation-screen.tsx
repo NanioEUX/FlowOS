@@ -134,7 +134,7 @@ export function OrderConfirmationScreen({
 
           {/* Order summary - RECEIPT STYLE */}
           <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderCard}` }}>
-            <h3 className="font-semibold text-sm mb-3" style={{ color: theme.text }}>Descrição</h3>
+            <h2 className="font-semibold text-sm mb-3" style={{ color: theme.text }}>Descrição</h2>
 
             {/* Items list */}
             <div className="space-y-2 mb-3">
