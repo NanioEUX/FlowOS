@@ -14,6 +14,7 @@ import {
 
 import crypto from "crypto"
 import { getRequestId, logger } from "@/lib/logger"
+import { extractClientRequestId, idempotencyLookup } from "@/lib/order-idempotency"
 
 /**
  * Build split rules for Pagar.me V5
@@ -84,6 +85,31 @@ export async function POST(req: NextRequest) {
     // (F6B-001…004, F6B-013, F6B-018). `total` do body é ignorado.
     const input = await buildOrderInput(req, body)
     estId = input.establishmentId
+
+    // F4B-019 — Idempotência: se o cliente reenviar o mesmo pedido (retry de rede,
+    // duplo clique, proxy), devolve o pedido já criado em vez de criar outro —
+    // evitando cobrança dupla em pagamentos online.
+    const clientRequestId = extractClientRequestId(req)
+    if (clientRequestId && estId) {
+      const existing = await prisma.order.findFirst({
+        where: idempotencyLookup(estId, clientRequestId)!,
+        include: { establishment: true },
+      })
+      if (existing) {
+        // Credenciais do tenant nunca saem na resposta pública (F6A-001)
+        for (const k of ["password","evolutionApiKey","metaAccessToken","metaWebhookVerifyToken","asaasApiKey","efiClientSecret","efiCertificate","efiWebhookToken","interClientSecret","interCertificate","interCertificatePassword","pagarmeApiKey","pagarmeWebhookKey","api99Key","ifoodAccessToken","ifoodRefreshToken","nineFoodApiKey"]) {
+          delete (existing.establishment as any)[k]
+        }
+        return NextResponse.json({
+          order: existing,
+          paymentLink: existing.paymentLink,
+          pixPayload: existing.pixPayload || "",
+          trackingUrl: `/pedido/${existing.trackingToken}`,
+          lowStockItems: [],
+        })
+      }
+    }
+
     const {
       establishment,
       establishmentId,
@@ -431,6 +457,7 @@ export async function POST(req: NextRequest) {
           trackingToken,
           status: initialStatus,
           ...(couponId ? { coupon: { connect: { id: couponId } } } : {}),
+          ...(clientRequestId ? { clientRequestId } : {}),
           orderNumber,
           tableNumber: tableNumber || null,
           isScheduled,
@@ -454,6 +481,29 @@ export async function POST(req: NextRequest) {
         })
       } catch (e: any) {
         if (e?.code !== "P2002") throw e
+        // P2002 pode ser do índice de orderNumber (corrida de MAX+1) ou do índice
+        // de clientRequestId (duas requisições simultâneas com mesma chave).
+        // Se for clientRequestId, outra requisição criou o pedido — devolve o existente.
+        const target = String(e?.meta?.target ?? "")
+        if (clientRequestId && estId && target.includes("clientRequestId")) {
+          const existing = await prisma.order.findFirst({
+            where: idempotencyLookup(estId, clientRequestId)!,
+            include: { establishment: true },
+          })
+          if (existing) {
+            // Credenciais do tenant nunca saem na resposta pública (F6A-001)
+            for (const k of ["password","evolutionApiKey","metaAccessToken","metaWebhookVerifyToken","asaasApiKey","efiClientSecret","efiCertificate","efiWebhookToken","interClientSecret","interCertificate","interCertificatePassword","pagarmeApiKey","pagarmeWebhookKey","api99Key","ifoodAccessToken","ifoodRefreshToken","nineFoodApiKey"]) {
+              delete (existing.establishment as any)[k]
+            }
+            return NextResponse.json({
+              order: existing,
+              paymentLink: existing.paymentLink,
+              pixPayload: existing.pixPayload || "",
+              trackingUrl: `/pedido/${existing.trackingToken}`,
+              lowStockItems: [],
+            })
+          }
+        }
         lowStockItems.length = 0
       }
     }
